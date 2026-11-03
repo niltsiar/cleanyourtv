@@ -22,13 +22,18 @@ private const val GRID_ROWS = 4
 private const val GRID_COLUMNS_SWEPT = 3
 
 /** Every app tile, in the dock and in the grid: HomeScreen tags each one `tile:<packageName>`. */
-private val AnyTile = By.res(Pattern.compile("tile:.+"))
+private val TILE_TAG = Pattern.compile("tile:.+")
+
+/** BySelector is a mutable builder, so each use needs a new one. */
+private fun anyTile() = By.res(TILE_TAG)
+
+private fun focusedTile() = anyTile().focused(true)
 
 /** Launches Home and waits until at least one app tile is on screen. */
 internal fun MacrobenchmarkScope.launchHome() {
     pressHome()
     startActivityAndWait()
-    check(device.wait(Until.hasObject(AnyTile), HOME_READY_TIMEOUT_MS)) { "No app tile appeared" }
+    check(device.wait(Until.hasObject(anyTile()), HOME_READY_TIMEOUT_MS)) { "No app tile appeared" }
 }
 
 /** Tile images arrive in a second emission; this lets them land so the sweep draws the real tiles. */
@@ -41,7 +46,7 @@ internal fun awaitTileImages() = Thread.sleep(IMAGES_SETTLE_MS)
  * than GRID_ROWS rows, so each return presses Up and Left only until focus arrives.
  */
 internal fun MacrobenchmarkScope.dpadSweep() {
-    val dockTiles = checkNotNull(device.findObject(By.res("dock"))) { "Dock not on screen" }.findObjects(AnyTile)
+    val dockTiles = checkNotNull(device.findObject(By.res("dock"))) { "Dock not on screen" }.findObjects(anyTile())
     check(dockTiles.isNotEmpty()) { "Dock has no tiles" }
     val dockTags = dockTiles.map { it.resourceName }.toSet()
     val firstDockTile = dockTiles.minBy { it.visibleBounds.left }.resourceName
@@ -74,7 +79,7 @@ private fun MacrobenchmarkScope.pressUntilFocused(
 ) {
     repeat(maxPresses) {
         device.waitForIdle()
-        if (device.findObject(AnyTile.focused(true))?.resourceName?.let(accept) == true) return
+        if (device.findObject(focusedTile())?.resourceName?.let(accept) == true) return
         press()
     }
     awaitFocusedTile("$description after $maxPresses presses", accept)
@@ -88,11 +93,11 @@ private fun MacrobenchmarkScope.awaitFocusedTile(
     device.waitForIdle()
     val found =
         device.wait(
-            Condition<UiDevice, String?> { it.findObject(AnyTile.focused(true))?.resourceName?.takeIf(accept) },
+            Condition<UiDevice, String?> { it.findObject(focusedTile())?.resourceName?.takeIf(accept) },
             FOCUS_TIMEOUT_MS,
         )
     checkNotNull(found) {
-        "Focus is not on $description; focused tile: ${device.findObject(AnyTile.focused(true))?.resourceName}"
+        "Focus is not on $description; focused tile: ${device.findObject(focusedTile())?.resourceName}"
     }
 }
 
