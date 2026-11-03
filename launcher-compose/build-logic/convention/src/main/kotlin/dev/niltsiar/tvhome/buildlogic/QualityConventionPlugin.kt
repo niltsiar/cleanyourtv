@@ -3,6 +3,7 @@ package dev.niltsiar.tvhome.buildlogic
 import com.android.build.api.dsl.ApplicationExtension
 import com.android.build.api.dsl.LibraryExtension
 import com.android.build.api.dsl.Lint
+import com.android.build.api.variant.ApplicationAndroidComponentsExtension
 import com.diffplug.gradle.spotless.SpotlessExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -33,6 +34,12 @@ class QualityConventionPlugin : Plugin<Project> {
 
             pluginManager.withPlugin("com.android.application") {
                 extensions.configure<ApplicationExtension> { lint.configureLint() }
+                // The `lint` task covers one variant, so check lints each flavor's debug variant.
+                extensions.configure<ApplicationAndroidComponentsExtension> {
+                    onVariants(selector().withBuildType("debug")) { variant ->
+                        tasks.named("check") { dependsOn("lint${variant.name.replaceFirstChar(Char::titlecase)}") }
+                    }
+                }
             }
             pluginManager.withPlugin("com.android.library") {
                 extensions.configure<LibraryExtension> { lint.configureLint() }

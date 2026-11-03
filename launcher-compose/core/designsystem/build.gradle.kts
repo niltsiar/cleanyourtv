@@ -7,6 +7,6 @@ android {
 }
 
 dependencies {
-    api(libs.haze)
+    implementation(libs.haze)
     implementation(libs.haze.blur)
 }

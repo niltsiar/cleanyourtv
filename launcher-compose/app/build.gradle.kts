@@ -31,7 +31,6 @@ android {
 }
 
 dependencies {
-    implementation(project(":core:model"))
     implementation(project(":core:designsystem"))
     implementation(project(":feature:home"))
     implementation(project(":data:apps"))
