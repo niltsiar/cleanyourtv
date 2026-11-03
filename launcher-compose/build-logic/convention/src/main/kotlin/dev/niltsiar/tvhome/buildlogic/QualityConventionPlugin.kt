@@ -1,0 +1,50 @@
+package dev.niltsiar.tvhome.buildlogic
+
+import com.android.build.api.dsl.ApplicationExtension
+import com.android.build.api.dsl.LibraryExtension
+import com.android.build.api.dsl.Lint
+import com.diffplug.gradle.spotless.SpotlessExtension
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.kotlin.dsl.configure
+
+/**
+ * Spotless with ktlint on every project, plus Android lint on Android modules. Applied by the other
+ * convention plugins; the root project applies it directly to cover build-logic and the build scripts.
+ */
+class QualityConventionPlugin : Plugin<Project> {
+    override fun apply(target: Project) =
+        with(target) {
+            pluginManager.apply("com.diffplug.spotless")
+
+            val ktlintVersion = libs.version("ktlint")
+            val isRoot = this == rootProject
+            extensions.configure<SpotlessExtension> {
+                kotlin {
+                    target(if (isRoot) "build-logic/**/src/**/*.kt" else "src/**/*.kt")
+                    ktlint(ktlintVersion)
+                }
+                kotlinGradle {
+                    target(if (isRoot) listOf("*.gradle.kts", "build-logic/**/*.gradle.kts") else listOf("*.gradle.kts"))
+                    targetExclude("**/build/**")
+                    ktlint(ktlintVersion)
+                }
+            }
+
+            pluginManager.withPlugin("com.android.application") {
+                extensions.configure<ApplicationExtension> { lint.configureLint() }
+            }
+            pluginManager.withPlugin("com.android.library") {
+                extensions.configure<LibraryExtension> { lint.configureLint() }
+            }
+        }
+}
+
+private fun Lint.configureLint() {
+    abortOnError = true
+    warningsAsErrors = false
+    checkDependencies = false
+    textReport = true
+    htmlReport = false
+    xmlReport = false
+}
