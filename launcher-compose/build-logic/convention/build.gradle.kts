@@ -37,9 +37,5 @@ gradlePlugin {
             id = "tvhome.android.library.compose"
             implementationClass = "dev.niltsiar.tvhome.buildlogic.AndroidLibraryComposeConventionPlugin"
         }
-        register("jvmLibrary") {
-            id = "tvhome.jvm.library"
-            implementationClass = "dev.niltsiar.tvhome.buildlogic.JvmLibraryConventionPlugin"
-        }
     }
 }

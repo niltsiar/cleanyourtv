@@ -41,7 +41,6 @@ import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import dev.chrisbanes.haze.HazePerformanceMode
 import dev.niltsiar.tvhome.core.designsystem.FocusSurface
 import dev.niltsiar.tvhome.core.designsystem.GlassIconButton
 import dev.niltsiar.tvhome.core.designsystem.GlassState
@@ -50,6 +49,8 @@ import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.glassSource
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
+import java.time.LocalDateTime
+import java.util.Locale
 
 private const val COLUMNS = DOCK_SIZE
 private val ScreenMargin = 40.dp
@@ -61,6 +62,7 @@ private val TileShape = RoundedCornerShape(12.dp)
 
 /** Where the focused row rests when it scrolls, as a fraction of the viewport height. */
 private const val FOCUS_PIVOT = 0.3f
+private const val TILE_ASPECT = 16f / 9f
 
 /**
  * The Home screen. [state] is read lazily so a focus change recomposes only the part that shows it.
@@ -72,9 +74,8 @@ public fun HomeScreen(
     onFocus: (String) -> Unit,
     onClick: (String) -> Unit,
     modifier: Modifier = Modifier,
-    performanceMode: HazePerformanceMode = HazePerformanceMode.Default,
 ) {
-    val glass = rememberGlassState(performanceMode)
+    val glass = rememberGlassState()
     Box(modifier = modifier.fillMaxSize().background(TvTheme.colors.background)) {
         Wallpaper(glass)
         HomeContent(glass, state, onFocus, onClick)
@@ -242,8 +243,6 @@ private fun TopBar(
     }
 }
 
-private const val TILE_ASPECT = 16f / 9f
-
 @Preview(name = "Home 1080p", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
 @Composable
 private fun HomeScreenPreview() {
@@ -251,7 +250,7 @@ private fun HomeScreenPreview() {
         val apps =
             listOf("Movies", "Music", "Games", "Photos", "Weather", "Browser", "Files", "Radio", "Clock", "Maps", "Notes", "Podcasts")
                 .map { AppEntry(packageName = "example.${it.lowercase()}", label = it) }
-        val state = homeUiState(apps, java.time.LocalDateTime.of(2026, 11, 3, 20, 15), "example.music", java.util.Locale.ENGLISH)
+        val state = homeUiState(apps, LocalDateTime.of(2026, 11, 3, 20, 15), "example.music", Locale.ENGLISH)
         HomeScreen(state = { state }, onFocus = {}, onClick = {})
     }
 }

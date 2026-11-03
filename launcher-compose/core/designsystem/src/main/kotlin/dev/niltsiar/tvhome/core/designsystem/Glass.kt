@@ -14,7 +14,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeInput
-import dev.chrisbanes.haze.HazePerformanceMode
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.blur.HazeBlurStyle
 import dev.chrisbanes.haze.blur.HazeColorEffect
@@ -29,15 +28,14 @@ import dev.chrisbanes.haze.rememberHazeState
 @Stable
 public class GlassState internal constructor(
     internal val haze: HazeState,
-    internal val performanceMode: HazePerformanceMode,
 ) {
     internal val input: HazeInput = HazeInput.Sources(haze)
 }
 
 @Composable
-public fun rememberGlassState(performanceMode: HazePerformanceMode = HazePerformanceMode.Default): GlassState {
+public fun rememberGlassState(): GlassState {
     val haze = rememberHazeState()
-    return remember(haze, performanceMode) { GlassState(haze, performanceMode) }
+    return remember(haze) { GlassState(haze) }
 }
 
 /** Marks this content as something glass blurs. A surface only blurs sources with a lower [zIndex]. */
@@ -69,7 +67,7 @@ public fun GlassSurface(
         modifier =
             modifier
                 .clip(shape)
-                .hazeBlur(input = glass.input, style = GlassBlurStyle, performanceMode = glass.performanceMode)
+                .hazeBlur(input = glass.input, style = GlassBlurStyle)
                 .border(1.dp, GlassRim, shape),
         content = content,
     )

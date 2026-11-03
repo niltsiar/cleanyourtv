@@ -12,8 +12,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.toBitmap
 import dev.niltsiar.tvhome.core.model.AppEntry
-import dev.niltsiar.tvhome.core.model.AppsProvider
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -21,20 +19,19 @@ import kotlinx.coroutines.flow.flowOn
 
 /**
  * Apps that declare LEANBACK_LAUNCHER or LAUNCHER, once per package, without this app.
- * Emits the labels first, then the same list with banners or icons decoded to [tileWidthPx] x [tileHeightPx].
+ * [apps] emits the labels first, then the same list with banners or icons decoded to [tileWidthPx] x [tileHeightPx].
  */
 public class PackageManagerAppsProvider(
     private val context: Context,
     private val tileWidthPx: Int,
     private val tileHeightPx: Int,
-    private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
-) : AppsProvider {
-    override val apps: Flow<List<AppEntry>> =
+) {
+    public val apps: Flow<List<AppEntry>> =
         flow {
             val resolved = queryLaunchers()
             emit(resolved.map { AppEntry(packageName = it.packageName, label = it.label) })
             emit(resolved.map { AppEntry(packageName = it.packageName, label = it.label, image = tileImage(it.info)) })
-        }.flowOn(dispatcher)
+        }.flowOn(Dispatchers.IO)
 
     private class Launcher(
         val packageName: String,

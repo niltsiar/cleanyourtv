@@ -2,7 +2,7 @@
 # Spike gate: builds one presenter flavor, installs it on the TV and prints the DoD3 numbers with PASS/FAIL.
 #
 # Usage:   scripts/spike-gate.sh molecule|transform
-# Env:     TV_SERIAL   adb serial of the TV (default 10.0.239.121:5555)
+# Env:     TV_SERIAL   adb serial of the TV, such as <tv ip>:5555 (required)
 #          ADB         adb binary (default: adb on PATH)
 #          PYTHON      python3 binary (default: python3 on PATH)
 #
@@ -18,7 +18,7 @@ case "$FLAVOR" in
     ;;
 esac
 
-TV_SERIAL="${TV_SERIAL:-10.0.239.121:5555}"
+TV_SERIAL="${TV_SERIAL:?set TV_SERIAL to the TV adb serial, such as <tv ip>:5555}"
 ADB="${ADB:-adb}"
 PYTHON="${PYTHON:-python3}"
 PACKAGE="dev.niltsiar.tvhome"
