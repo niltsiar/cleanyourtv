@@ -4,6 +4,4 @@ build/
 local.properties
 .idea/
 *.iml
-.agents/
-.claude
 .DS_Store
