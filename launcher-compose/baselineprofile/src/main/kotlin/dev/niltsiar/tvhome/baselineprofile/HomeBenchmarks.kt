@@ -15,9 +15,8 @@ private const val STARTUP_ITERATIONS = 10
 private const val SWEEP_ITERATIONS = 5
 
 /**
- * Collecting a baseline profile needs API 33+ or root, and the Sony is an unrooted API 31 user build. Without a profile,
- * ART compiles a speed-profile from the warmup runs; 3 is the count in the partial-compilation case of
- * android/performance-samples MacrobenchmarkSample.
+ * Baseline profile collection needs API 33+ or root; without a shipped profile, ART compiles a speed-profile from
+ * 3 warmup runs, as in android/performance-samples MacrobenchmarkSample.
  */
 private val Compilation = CompilationMode.Partial(BaselineProfileMode.UseIfAvailable, warmupIterations = 3)
 
