@@ -65,7 +65,8 @@ private const val FOCUS_PIVOT = 0.3f
 private const val TILE_ASPECT = 16f / 9f
 
 /**
- * The Home screen. [state] is read lazily so a focus change recomposes only the part that shows it.
+ * The Home screen. [state] is read lazily, inside the items that show each field. A focus change keeps the dock and
+ * grid list instances, so the dock and the tiles skip while the shelf label updates.
  * The wallpaper and the scrolling content are both glass sources, so the top bar blurs whatever scrolls under it.
  */
 @Composable
@@ -250,7 +251,7 @@ private fun HomeScreenPreview() {
         val apps =
             listOf("Movies", "Music", "Games", "Photos", "Weather", "Browser", "Files", "Radio", "Clock", "Maps", "Notes", "Podcasts")
                 .map { AppEntry(packageName = "example.${it.lowercase()}", label = it) }
-        val state = homeUiState(apps, LocalDateTime.of(2026, 11, 3, 20, 15), "example.music", Locale.ENGLISH)
+        val state = homeUiState(HomeApps(apps), LocalDateTime.of(2026, 11, 3, 20, 15), "example.music", Locale.ENGLISH)
         HomeScreen(state = { state }, onFocus = {}, onClick = {})
     }
 }

@@ -5,6 +5,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -35,8 +36,9 @@ public class TransformHomeViewModel(
     public val uiState: State<HomeUiState> =
         transform(HomeUiState(), viewModelScope, dispatcher) {
             val appList by apps.collectAsState(emptyList())
+            val homeApps = remember(appList) { HomeApps(appList) }
             val now by clock.collectAsState(null)
-            homeUiState(appList, now, focusedPackage, locale)
+            homeUiState(homeApps, now, focusedPackage, locale)
         }
 
     public fun onFocus(packageName: String) {

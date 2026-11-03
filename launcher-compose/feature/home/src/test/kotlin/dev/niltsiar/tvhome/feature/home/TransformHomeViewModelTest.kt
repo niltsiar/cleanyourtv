@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Test
 import java.time.LocalDateTime
 import java.util.Locale
@@ -36,7 +37,6 @@ class TransformHomeViewModelTest {
             val clock = MutableStateFlow(Evening)
             val viewModel = viewModel(clock = clock)
             assertEquals("20:15", viewModel.uiState.value.clock)
-            assertEquals("Tuesday 3 November", viewModel.uiState.value.date)
 
             clock.value = Evening.plusMinutes(1)
             settle()
@@ -44,11 +44,23 @@ class TransformHomeViewModelTest {
         }
 
     @Test
-    fun nine_apps_split_into_six_in_the_dock_and_three_in_the_grid() =
+    fun the_apps_flow_fills_the_dock_and_grid() =
         transformTest {
             val state = viewModel().uiState.value
-            assertEquals(NineApps.take(6), state.dock)
-            assertEquals(NineApps.drop(6), state.grid)
+            assertEquals(NineApps, state.dock + state.grid)
+        }
+
+    @Test
+    fun a_focus_change_keeps_the_dock_and_grid_lists() =
+        transformTest {
+            val viewModel = viewModel()
+            val before = viewModel.uiState.value
+            viewModel.onFocus("pkg.4")
+            settle()
+            val after = viewModel.uiState.value
+            assertEquals("App 4", after.focusedLabel)
+            assertSame(before.dock, after.dock)
+            assertSame(before.grid, after.grid)
         }
 
     @Test

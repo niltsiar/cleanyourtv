@@ -73,6 +73,7 @@ internal fun homePresenter(
         }
     }
     val appList by apps.collectAsState(emptyList())
+    val homeApps = remember(appList) { HomeApps(appList) }
     val now by clock.collectAsState(null)
-    return homeUiState(appList, now, focusedPackage, locale)
+    return homeUiState(homeApps, now, focusedPackage, locale)
 }

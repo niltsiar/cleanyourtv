@@ -34,9 +34,20 @@ internal sealed interface HomeEvent {
     ) : HomeEvent
 }
 
+/**
+ * The app list split into the dock and the grid. Hosts remember one per app list, so a focus change or a clock tick
+ * keeps both list instances and the screen can skip them.
+ */
+internal class HomeApps(
+    val all: List<AppEntry>,
+) {
+    val dock: List<AppEntry> = all.take(DOCK_SIZE)
+    val grid: List<AppEntry> = all.drop(DOCK_SIZE)
+}
+
 /** The mapping both hosts share; each host owns only how its inputs reach this call. */
 internal fun homeUiState(
-    apps: List<AppEntry>,
+    apps: HomeApps,
     now: LocalDateTime?,
     focusedPackage: String?,
     locale: Locale,
@@ -44,7 +55,7 @@ internal fun homeUiState(
     HomeUiState(
         clock = now?.format(DateTimeFormatter.ofPattern("HH:mm", locale)).orEmpty(),
         date = now?.format(DateTimeFormatter.ofPattern("EEEE d MMMM", locale)).orEmpty(),
-        dock = apps.take(DOCK_SIZE),
-        grid = apps.drop(DOCK_SIZE),
-        focusedLabel = (apps.firstOrNull { it.packageName == focusedPackage } ?: apps.firstOrNull())?.label.orEmpty(),
+        dock = apps.dock,
+        grid = apps.grid,
+        focusedLabel = (apps.all.firstOrNull { it.packageName == focusedPackage } ?: apps.all.firstOrNull())?.label.orEmpty(),
     )

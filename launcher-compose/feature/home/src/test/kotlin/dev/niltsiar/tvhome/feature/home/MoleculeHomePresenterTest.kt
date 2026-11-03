@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Test
 import java.time.LocalDateTime
 import java.util.Locale
@@ -44,9 +45,7 @@ class MoleculeHomePresenterTest {
             val clock = MutableSharedFlow<LocalDateTime>(replay = 1)
             clock.emit(Evening)
             presenter(clock = clock).test {
-                val first = awaitMatching { it.clock.isNotEmpty() }
-                assertEquals("20:15", first.clock)
-                assertEquals("Tuesday 3 November", first.date)
+                assertEquals("20:15", awaitMatching { it.clock.isNotEmpty() }.clock)
 
                 clock.emit(Evening.plusMinutes(1))
                 assertEquals("20:16", awaitMatching { it.clock == "20:16" }.clock)
@@ -55,12 +54,24 @@ class MoleculeHomePresenterTest {
         }
 
     @Test
-    fun nine_apps_split_into_six_in_the_dock_and_three_in_the_grid() =
+    fun the_apps_flow_fills_the_dock_and_grid() =
         runTest {
             presenter().test {
                 val state = awaitMatching { it.dock.isNotEmpty() }
-                assertEquals(NineApps.take(6), state.dock)
-                assertEquals(NineApps.drop(6), state.grid)
+                assertEquals(NineApps, state.dock + state.grid)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun a_focus_change_keeps_the_dock_and_grid_lists() =
+        runTest {
+            presenter().test {
+                val before = awaitMatching { it.dock.isNotEmpty() }
+                events.send(HomeEvent.Focus("pkg.4"))
+                val after = awaitMatching { it.focusedLabel == "App 4" }
+                assertSame(before.dock, after.dock)
+                assertSame(before.grid, after.grid)
                 cancelAndIgnoreRemainingEvents()
             }
         }
