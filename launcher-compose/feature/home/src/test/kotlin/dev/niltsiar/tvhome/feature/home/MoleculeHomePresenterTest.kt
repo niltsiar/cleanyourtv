@@ -18,13 +18,14 @@ import java.util.Locale
 
 class MoleculeHomePresenterTest {
     private val events = Channel<HomeEvent>(Channel.UNLIMITED)
+    private val eventFlow = events.receiveAsFlow()
     private val effects = Channel<HomeEffect>(Channel.UNLIMITED)
 
     private fun presenter(
         apps: Flow<List<AppEntry>> = flowOf(NineApps),
         clock: Flow<LocalDateTime> = flowOf(Evening),
     ) = moleculeFlow(RecompositionMode.Immediate) {
-        homePresenter(events.receiveAsFlow(), apps, clock, effects::trySend, Locale.ENGLISH)
+        homePresenter(eventFlow, apps, clock, effects::trySend, Locale.ENGLISH)
     }
 
     @Test

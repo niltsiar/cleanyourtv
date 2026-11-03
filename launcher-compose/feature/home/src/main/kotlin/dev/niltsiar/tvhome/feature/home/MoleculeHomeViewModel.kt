@@ -14,27 +14,35 @@ import androidx.lifecycle.viewModelScope
 import app.cash.molecule.RecompositionMode
 import app.cash.molecule.launchMolecule
 import dev.niltsiar.tvhome.core.model.AppEntry
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import java.time.LocalDateTime
 import java.util.Locale
+import kotlin.coroutines.CoroutineContext
 
 /** Hosts [homePresenter] with Molecule: an event Flow in, a StateFlow out. */
 public class MoleculeHomeViewModel(
     apps: Flow<List<AppEntry>>,
     clock: Flow<LocalDateTime>,
     locale: Locale = Locale.getDefault(),
-) : ViewModel() {
+    coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
+    recompositionMode: RecompositionMode = RecompositionMode.ContextClock,
+    context: CoroutineContext = AndroidUiDispatcher.Main,
+) : ViewModel(coroutineScope) {
     private val events = Channel<HomeEvent>(Channel.UNLIMITED)
+    private val eventFlow = events.receiveAsFlow()
     private val effectChannel = Channel<HomeEffect>(Channel.BUFFERED)
 
     public val effects: Flow<HomeEffect> = effectChannel.receiveAsFlow()
 
     public val uiState: StateFlow<HomeUiState> =
-        viewModelScope.launchMolecule(RecompositionMode.ContextClock, AndroidUiDispatcher.Main) {
-            homePresenter(events.receiveAsFlow(), apps, clock, effectChannel::trySend, locale)
+        viewModelScope.launchMolecule(recompositionMode, context) {
+            homePresenter(eventFlow, apps, clock, effectChannel::trySend, locale)
         }
 
     public fun onFocus(packageName: String) {
