@@ -1,7 +1,7 @@
 package dev.niltsiar.tvhome
 
 import android.app.Application
-import dev.zacsweers.metro.createGraph
+import dev.zacsweers.metro.createGraphFactory
 
 class TvHomeApplication : Application() {
     lateinit var graph: AppGraph
@@ -9,6 +9,6 @@ class TvHomeApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        graph = createGraph<AppGraph>()
+        graph = createGraphFactory<AppGraph.Factory>().create(this)
     }
 }

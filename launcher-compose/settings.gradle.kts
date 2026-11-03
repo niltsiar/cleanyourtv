@@ -32,4 +32,6 @@ rootProject.name = "launcher-compose"
 include(":app")
 include(":core:model")
 include(":core:designsystem")
+include(":data:apps")
 include(":feature:home")
+include(":baselineprofile")

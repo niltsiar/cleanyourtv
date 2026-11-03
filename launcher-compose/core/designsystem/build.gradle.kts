@@ -5,3 +5,8 @@ plugins {
 android {
     namespace = "dev.niltsiar.tvhome.core.designsystem"
 }
+
+dependencies {
+    api(libs.haze)
+    implementation(libs.haze.blur)
+}

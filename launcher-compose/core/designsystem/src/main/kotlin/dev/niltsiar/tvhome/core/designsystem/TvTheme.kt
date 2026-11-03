@@ -22,6 +22,8 @@ public class TvColors(
 @Immutable
 public class TvTypography(
     public val clock: TextStyle,
+    public val date: TextStyle,
+    public val shelfTitle: TextStyle,
     public val tileTitle: TextStyle,
     public val tileLabel: TextStyle,
 )
@@ -37,9 +39,11 @@ private val DarkColors =
 
 private fun typographyFor(colors: TvColors) =
     TvTypography(
-        clock = TextStyle(color = colors.onSurface, fontSize = 48.sp, fontWeight = FontWeight.Light),
-        tileTitle = TextStyle(color = colors.onSurface, fontSize = 40.sp, fontWeight = FontWeight.SemiBold),
-        tileLabel = TextStyle(color = colors.onSurfaceMuted, fontSize = 16.sp, fontWeight = FontWeight.Medium),
+        clock = TextStyle(color = colors.onSurface, fontSize = 28.sp, fontWeight = FontWeight.Light),
+        date = TextStyle(color = colors.onSurfaceMuted, fontSize = 14.sp, fontWeight = FontWeight.Medium),
+        shelfTitle = TextStyle(color = colors.onSurface, fontSize = 40.sp, fontWeight = FontWeight.SemiBold),
+        tileTitle = TextStyle(color = colors.onSurface, fontSize = 24.sp, fontWeight = FontWeight.SemiBold),
+        tileLabel = TextStyle(color = colors.onSurfaceMuted, fontSize = 13.sp, fontWeight = FontWeight.Medium),
     )
 
 @Suppress("CompositionLocalAllowlist")
