@@ -201,7 +201,7 @@ private fun AppTile(
         onClick = { onClick(app.packageName) },
         onFocused = { onFocus(app.packageName) },
         shape = TileShape,
-        modifier = modifier.aspectRatio(TILE_ASPECT),
+        modifier = modifier.aspectRatio(TILE_ASPECT).testTag("tile:${app.packageName}"),
     ) {
         Box(Modifier.fillMaxSize().background(TvTheme.colors.surface, TileShape), contentAlignment = Alignment.Center) {
             val image = app.image

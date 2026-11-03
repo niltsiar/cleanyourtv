@@ -27,6 +27,9 @@ ACTIVITY="$PACKAGE/.MainActivity"
 # Thresholds from the plan's DoD3.
 MAX_JANK_PERCENT=5
 MAX_P90_FRAME_MS=16.7
+# A frame within its deadline has overrun <= 0, so the p90 frame must not overrun at all.
+MAX_P90_OVERRUN_MS=0
+MIN_SWEEP_FRAMES=100
 MAX_PSS_MB=80
 MAX_COLD_START_MS=1500
 MAX_APK_BYTES=$((6 * 1024 * 1024))
@@ -56,8 +59,34 @@ fi
 export ANDROID_SERIAL="$TV_SERIAL"
 cd "$ROOT"
 
-echo "== Baseline profile ($FLAVOR)"
-"${GRADLE[@]}" ":app:generate${CAP}ReleaseBaselineProfile"
+SDK="$(adb_tv shell getprop ro.build.version.sdk | tr -d '\r')"
+case "$SDK" in
+  '' | *[!0-9]*)
+    echo "could not read the TV's API level (ro.build.version.sdk: '$SDK')" >&2
+    exit 1
+    ;;
+esac
+
+# Baseline profile collection needs API 33+ (or root); HomeBenchmarks compiles from warmup runs either way.
+if [ "$SDK" -ge 33 ]; then
+  echo "== Baseline profile ($FLAVOR)"
+  "${GRADLE[@]}" ":app:generate${CAP}ReleaseBaselineProfile"
+  COMPILATION="baseline profile plus a speed-profile from warmup runs (API $SDK)"
+else
+  echo "== No baseline profile: API $SDK cannot collect one without root, so the profile comes from warmup runs"
+  COMPILATION="speed-profile from warmup runs, no baseline profile (API $SDK)"
+fi
+
+# The provider in data/apps lists LEANBACK_LAUNCHER and LAUNCHER activities, one tile per package, minus Home itself.
+APP_COUNT="$(
+  for category in LEANBACK_LAUNCHER LAUNCHER; do
+    adb_tv shell cmd package query-activities --components -a android.intent.action.MAIN \
+      -c "android.intent.category.$category"
+  done | tr -d '\r' | awk -F/ -v own="$PACKAGE" '
+    NF > 1 && $1 != own { seen[$1] = 1 }
+    END { n = 0; for (p in seen) n++; print n }
+  '
+)"
 
 echo "== Build and install release APK ($FLAVOR)"
 "${GRADLE[@]}" ":app:assemble${CAP}Release"
@@ -73,9 +102,10 @@ echo "== Home idle PSS"
 adb_tv shell am force-stop "$PACKAGE"
 adb_tv shell am start -W -n "$ACTIVITY" > /dev/null
 sleep 10
+# The reader takes all of stdin before it matches, so adb never dies of SIGPIPE under pipefail.
 PSS_KB="$(adb_tv shell dumpsys meminfo "$PACKAGE" | "$PYTHON" -c '
 import re, sys
-for line in sys.stdin:
+for line in sys.stdin.read().splitlines():
     m = re.match(r"\s*TOTAL PSS:\s*(\d+)", line) or re.match(r"\s*TOTAL\s+(\d+)", line)
     if m:
         print(m.group(1))
@@ -85,6 +115,13 @@ for line in sys.stdin:
   echo "could not read TOTAL PSS from dumpsys meminfo" >&2
   exit 1
 }
+
+# The connected test run uninstalls the app when it ends, so put the release build back whatever happens.
+reinstall() {
+  echo "== Reinstall release APK ($FLAVOR)"
+  adb_tv install -r "$APK" > /dev/null || echo "could not reinstall $APK" >&2
+}
+trap reinstall EXIT
 
 echo "== Benchmarks ($FLAVOR)"
 RESULTS_DIR="$ROOT/baselineprofile/build/outputs/connected_android_test_additional_output"
@@ -96,66 +133,22 @@ JSON="$(find "$RESULTS_DIR" -name '*benchmarkData.json' -exec ls -t {} + 2> /dev
   echo "no benchmarkData.json under $RESULTS_DIR" >&2
   exit 1
 }
+KEPT="$ROOT/build/spike-gate/$FLAVOR-$(date -u +%Y%m%dT%H%M%SZ)/benchmarkData.json"
+mkdir -p "$(dirname "$KEPT")"
+cp "$JSON" "$KEPT"
+echo "results kept at $KEPT"
 
 echo
-"$PYTHON" - "$JSON" "$FLAVOR" "$APK_BYTES" "$PSS_KB" "$MAX_JANK_PERCENT" "$MAX_P90_FRAME_MS" \
-  "$MAX_PSS_MB" "$MAX_COLD_START_MS" "$MAX_APK_BYTES" << 'PY'
-import json
-import sys
-
-path, flavor, apk, pss_kb, max_jank, max_p90, max_pss, max_cold, max_apk = sys.argv[1:]
-apk, pss_kb = int(apk), int(pss_kb)
-max_jank, max_p90, max_pss, max_cold, max_apk = (
-    float(max_jank), float(max_p90), float(max_pss), float(max_cold), int(max_apk),
-)
-
-with open(path) as handle:
-    benchmarks = json.load(handle)["benchmarks"]
-
-
-def find(name_part, section, metric_name):
-    for bench in benchmarks:
-        if name_part in bench["name"] and metric_name in bench.get(section, {}):
-            return bench[section][metric_name]
-    return None
-
-
-# A frame is janky when it overran its deadline (frameOverrunMs > 0, recorded on API 31+).
-def jank_percent():
-    overrun = find("dpadSweep", "sampledMetrics", "frameOverrunMs")
-    durations = find("dpadSweep", "sampledMetrics", "frameDurationCpuMs")
-    if not overrun or not durations:
-        return None
-    frames = [v for run in durations["runs"] for v in run]
-    late = [v for run in overrun["runs"] for v in run if v > 0]
-    return 100.0 * len(late) / len(frames) if frames else None
-
-
-cold = (find("coldStartup", "metrics", "timeToInitialDisplayMs") or {}).get("median")
-p90 = (find("dpadSweep", "sampledMetrics", "frameDurationCpuMs") or {}).get("P90")
-jank = jank_percent()
-pss_mb = pss_kb / 1024.0
-
-rows = [
-    ("janky frames", jank, f"{max_jank:g} %", lambda v: v <= max_jank, "%"),
-    ("p90 frame", p90, f"{max_p90:g} ms", lambda v: v <= max_p90, " ms"),
-    ("Home idle PSS", pss_mb, f"{max_pss:g} MB", lambda v: v <= max_pss, " MB"),
-    ("cold start", cold, f"{max_cold:g} ms", lambda v: v <= max_cold, " ms"),
-    ("APK size", apk / (1024 * 1024), f"{max_apk / (1024 * 1024):g} MB", lambda v: v <= max_apk / (1024 * 1024), " MB"),
-]
-
-print(f"=== Spike gate: {flavor} ===")
-failed = False
-for label, value, limit, ok, unit in rows:
-    if value is None:
-        print(f"{label:<14} n/a (not in benchmark output)   limit <= {limit}   FAIL")
-        failed = True
-        continue
-    verdict = "PASS" if ok(value) else "FAIL"
-    failed = failed or verdict == "FAIL"
-    print(f"{label:<14} {value:8.2f}{unit:<4} limit <= {limit:<8} {verdict}")
-print(f"APK bytes      {apk}")
-print(f"results        {path}")
-print("OVERALL        " + ("FAIL" if failed else "PASS"))
-sys.exit(1 if failed else 0)
-PY
+"$PYTHON" "$ROOT/scripts/spike-gate-report.py" "$KEPT" \
+  --flavor "$FLAVOR" \
+  --compilation "$COMPILATION" \
+  --apps "$APP_COUNT" \
+  --apk-bytes "$APK_BYTES" \
+  --pss-kb "$PSS_KB" \
+  --max-jank-percent "$MAX_JANK_PERCENT" \
+  --max-p90-frame-ms "$MAX_P90_FRAME_MS" \
+  --max-p90-overrun-ms "$MAX_P90_OVERRUN_MS" \
+  --min-sweep-frames "$MIN_SWEEP_FRAMES" \
+  --max-pss-mb "$MAX_PSS_MB" \
+  --max-cold-start-ms "$MAX_COLD_START_MS" \
+  --max-apk-bytes "$MAX_APK_BYTES"

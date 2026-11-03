@@ -14,6 +14,13 @@ import org.junit.Test
 private const val STARTUP_ITERATIONS = 10
 private const val SWEEP_ITERATIONS = 5
 
+/**
+ * Collecting a baseline profile needs API 33+ or root, and the Sony is an unrooted API 31 user build. Without a profile,
+ * ART compiles a speed-profile from the warmup runs; 3 is the count in the partial-compilation case of
+ * android/performance-samples MacrobenchmarkSample.
+ */
+private val Compilation = CompilationMode.Partial(BaselineProfileMode.UseIfAvailable, warmupIterations = 3)
+
 /** The gate's measurements; `scripts/spike-gate.sh` runs this class against the connected TV. */
 @OptIn(ExperimentalMetricApi::class)
 class HomeBenchmarks {
@@ -25,7 +32,7 @@ class HomeBenchmarks {
         rule.measureRepeated(
             packageName = TARGET_PACKAGE,
             metrics = listOf(StartupTimingMetric()),
-            compilationMode = CompilationMode.Partial(BaselineProfileMode.Require),
+            compilationMode = Compilation,
             startupMode = StartupMode.COLD,
             iterations = STARTUP_ITERATIONS,
             setupBlock = { pressHome() },
@@ -38,10 +45,13 @@ class HomeBenchmarks {
         rule.measureRepeated(
             packageName = TARGET_PACKAGE,
             metrics = listOf(FrameTimingMetric(), MemoryUsageMetric(MemoryUsageMetric.Mode.Last)),
-            compilationMode = CompilationMode.Partial(BaselineProfileMode.Require),
+            compilationMode = Compilation,
             startupMode = StartupMode.WARM,
             iterations = SWEEP_ITERATIONS,
-            setupBlock = { launchHome() },
+            setupBlock = {
+                launchHome()
+                awaitTileImages()
+            },
         ) {
             dpadSweep()
         }

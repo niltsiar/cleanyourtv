@@ -12,6 +12,7 @@ class HomeBaselineProfileGenerator {
     fun generate() =
         rule.collect(packageName = TARGET_PACKAGE, includeInStartupProfile = true) {
             launchHome()
+            awaitTileImages()
             dpadSweep()
         }
 }
