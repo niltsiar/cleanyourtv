@@ -1,0 +1,127 @@
+package dev.niltsiar.tvhome.core.config
+
+/** clock_format: the 12- or 24-hour clock whatever the TV is set to, or [System] for the TV's own. */
+public enum class ClockFormat(
+    internal val jsonValue: String,
+) {
+    System("system"),
+    Hour12("12"),
+    Hour24("24"),
+}
+
+/** wallpaper_order: how a wallpaper collection rotates. */
+public enum class WallpaperOrder(
+    internal val jsonValue: String,
+) {
+    Shuffle("shuffle"),
+    Sequential("sequential"),
+}
+
+/** The time-of-day groups of wallpaper_moods. */
+public enum class WallpaperMood(
+    internal val jsonValue: String,
+) {
+    Morning("morning"),
+    Evening("evening"),
+    Night("night"),
+}
+
+/**
+ * The theme keys the launcher supports, with the defaults of the reference launcher's config.xml (and
+ * Config.java for the theme-only keys). Package names are plain strings. A blank optional string is null.
+ * Latitude and longitude are not theme keys in the reference, so they are not here.
+ */
+public data class TvConfig(
+    val dockApps: List<String> =
+        listOf("com.netflix.ninja", "com.amazon.amazonvideo.livingroom", "com.google.android.youtube.tv", "in.startv.hotstar"),
+    val fillDock: Boolean = true,
+    /** Apps never shown as tiles. The parser adds [topBarApps] here: a top-bar app leaves the grid. */
+    val hiddenApps: List<String> = listOf("com.mediatek.wwtv.tvcenter", "com.mitv.gallery"),
+    /** 1 to 8. */
+    val columns: Int = 4,
+    /** 0 to 3. */
+    val rowsBelowDock: Int = 0,
+    val singleRow: Boolean = false,
+    /** Package to the action its tile sends instead of opening the start screen. */
+    val launchActions: Map<String, String> = emptyMap(),
+    /** Package to the name its tile shows instead of the app's label. */
+    val appLabels: Map<String, String> = emptyMap(),
+    /** Package to the name of a banner drawable its tile shows instead of the app's art. */
+    val appBanners: Map<String, String> = emptyMap(),
+    val topBarApps: List<String> = emptyList(),
+    val greetingName: String? = null,
+    val showGreeting: Boolean = true,
+    val clockFormat: ClockFormat = ClockFormat.System,
+    val dateBelowClock: Boolean = false,
+    val showNetworkPill: Boolean = true,
+    val showInputsPill: Boolean = true,
+    /** 0 to 300 dp. */
+    val wifiLabelWidth: Int = 0,
+    val cinematicHome: Boolean = false,
+    /** Percent, 0 to 100. */
+    val cinematicArt: Int = 50,
+    /** Percent, 0 to 100. */
+    val cinematicScrim: Int = 100,
+    /** Opaque ARGB. */
+    val backgroundColor: Int = OPAQUE_BLACK,
+    /** Whether the theme may show a wallpaper at all. */
+    val wallpaper: Boolean = true,
+    /** 0 to 1440; 0 shows one picture. */
+    val wallpaperRotationMinutes: Int = 0,
+    /** Percent, 0 to 90. */
+    val wallpaperDim: Int = 0,
+    val wallpaperOrder: WallpaperOrder = WallpaperOrder.Shuffle,
+    /** Picture file names per mood; an empty map rotates through the whole collection. */
+    val wallpaperMoods: Map<WallpaperMood, Set<String>> = emptyMap(),
+    val wallpaperCaptions: Boolean = false,
+    /** Percent, 30 to 100. */
+    val dockOpacity: Int = 100,
+    val dockGlass: Boolean = false,
+    val animations: Boolean = true,
+    val reducedMotion: Boolean = false,
+    val focusOvershoot: Boolean = true,
+    val tileMenu: Boolean = true,
+    val appLibrary: Boolean = false,
+    val libraryApps: List<String> = emptyList(),
+    val libraryExcludedApps: List<String> = emptyList(),
+    val showLibraryPill: Boolean = true,
+    val libraryOkOpens: Boolean = false,
+    val inputSources: List<String> = emptyList(),
+    val inputAction: String? = null,
+    val inputUriScheme: String? = null,
+    val liveTvPackage: String? = "com.mediatek.wwtv.tvcenter",
+    val liveTvAction: String? = null,
+    val liveTvInputId: String? = null,
+    val bootToLiveTv: Boolean = false,
+    /** "keycode:package" or "KEYCODE_NAME:package" entries, parsed where the key service reads them. */
+    val appKeys: List<String> = emptyList(),
+    val settingsKeyKeycodes: List<Int> = emptyList(),
+    val inputKeyKeycodes: List<Int> = emptyList(),
+    val stockHomeRedirect: String? = null,
+    val powerOnHome: Boolean = false,
+    val powerOnHomeAlways: Boolean = false,
+    /** Minutes Home may sit untouched before the clock screensaver, 0 to 1440; 0 is off. */
+    val homeIdleClockMinutes: Int = 0,
+    val clockWallpaper: Boolean = false,
+    /** Percent, 0 to 90. */
+    val clockWallpaperDim: Int = 50,
+    val clockGlow: Boolean = true,
+    /** Language tag the launcher shows itself in instead of the TV's; null for the TV's. */
+    val locale: String? = null,
+)
+
+internal const val OPAQUE_BLACK: Int = 0xFF000000.toInt()
+
+/**
+ * What [parseTvConfig] found. [unknownKeys] are in neither the supported nor the unsupported set.
+ * [unsupportedKeys] are keys the reference launcher knows and this one does not use: not an error.
+ * [rejectedKeys] are supported keys whose value had a bad type or range, so the default stayed.
+ * [overlayApplied] is false when the text was too large or not a JSON object, and [config] is the defaults.
+ */
+public data class ParsedConfig(
+    val config: TvConfig,
+    val unknownKeys: List<String>,
+    val unsupportedKeys: List<String>,
+    val rejectedKeys: List<String>,
+    val overlayApplied: Boolean,
+)

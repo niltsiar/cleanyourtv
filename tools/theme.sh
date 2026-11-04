@@ -5,6 +5,7 @@
 #
 # Usage: TV_HOST=192.168.1.50 tools/theme.sh themes/aurora
 #        TV_HOST=192.168.1.50 tools/theme.sh --reset        # remove the overlay, back to config.xml
+# TV_PACKAGE (default com.gathin.tvhome) names the launcher package to push to, for another build of the launcher.
 #
 # One argument, and --reset takes none: a second word is refused rather than dropped (see below). Exit status:
 # 0 the theme is on the TV, or the reset ran; 1 the theme could not be pushed, or Home did not restart after
@@ -76,7 +77,14 @@ PY=venv/bin/python
 [ -x "$PY" ] || { echo "run: python3 -m venv tools/venv && tools/venv/bin/pip install -r tools/requirements.txt." \
   "Nothing was sent to the TV." >&2; exit 2; }
 export MSYS_NO_PATHCONV=1
-PKG=com.gathin.tvhome
+# TV_PACKAGE points the push at another build of the launcher, such as a fork's; theme_restart.py reads it too.
+PKG="${TV_PACKAGE:-com.gathin.tvhome}"
+if [[ ! "$PKG" =~ ^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$ ]]; then
+  echo "TV_PACKAGE must be an Android package name such as com.gathin.tvhome, not '$PKG'." \
+    "Nothing was sent to the TV." >&2
+  exit 2
+fi
+export TV_PACKAGE="$PKG"
 DIR=/sdcard/Android/data/$PKG/files
 # A unique marker lets the launcher clear on-TV layout/motion choices after every theme push,
 # including a push of identical config.json bytes and --reset.

@@ -16,7 +16,9 @@ import shlex
 import sys
 import time
 
-PACKAGE = "com.gathin.tvhome"
+# The launcher package; TV_PACKAGE points the tools at another build of it, such as a fork's.
+PACKAGE = os.environ.get("TV_PACKAGE") or "com.gathin.tvhome"
+PACKAGE_NAME = re.compile(r"[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+")
 SERVICES = "enabled_accessibility_services"
 FLAG = "accessibility_enabled"
 ACTION = "android.accessibilityservice.AccessibilityService"
@@ -174,6 +176,10 @@ def main(argv=None):
     # way and for the same reason.
     if words:
         print(f"theme_restart.py takes no arguments: {', '.join(words)} would not have been used. "
+              "Nothing was restarted: Home was not asked to start again.", file=sys.stderr)
+        return 2
+    if not PACKAGE_NAME.fullmatch(PACKAGE):
+        print(f"TV_PACKAGE must be an Android package name such as com.gathin.tvhome, not {PACKAGE!r}. "
               "Nothing was restarted: Home was not asked to start again.", file=sys.stderr)
         return 2
     # Both callers use Python -I, which excludes the script directory from sys.path.

@@ -1,0 +1,337 @@
+package dev.niltsiar.tvhome.core.config
+
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+
+/** The largest config.json that is read, in bytes; a bigger one is ignored as a whole. */
+internal const val MAX_CONFIG_BYTES: Int = 64 * 1024
+
+/**
+ * The keys of the reference launcher's config.json that this launcher does not use (yet). A theme that
+ * carries them is not broken, so they are listed apart from the unknown keys.
+ */
+private val unsupportedKeys: Set<String> =
+    setOf(
+        "accent_color",
+        "advanced_effects",
+        "always_show_names",
+        "ambient_glow",
+        "app_glow",
+        "app_library_selection",
+        "back_opens_clock",
+        "cinematic_dots",
+        "cinematic_white_focus",
+        "consume_volume_keys",
+        "coocaa_sources",
+        "dock_band",
+        "dock_band_all",
+        "dock_even_padding",
+        "dock_row",
+        "dock_title",
+        "fade_rows",
+        "festival",
+        "festival_until",
+        "game_day",
+        "gamepad_passthrough",
+        "glass_style",
+        "glow_snap",
+        "glow_style",
+        "greeting",
+        "handle_view_inputs",
+        "header_white",
+        "home_long_press_home",
+        "icon_only_buttons",
+        "icon_only_inputs",
+        "icon_only_vpn",
+        "inputs_cec_state_only",
+        "inputs_connected_only",
+        "key_filter",
+        "launcher_settings_button",
+        "library_button",
+        "lunar_date",
+        "lunar_utc_offset",
+        "module_cards",
+        "open_on_start_choice",
+        "open_on_start_network_wait",
+        "open_on_start_on_wake",
+        "race_calendar",
+        "reorder_button",
+        "restore_key_services",
+        "seasonal_skin",
+        "settings_key_panel",
+        "shamsi_date",
+        "show_home_settings_shortcut",
+        "show_stats",
+        "sky_intensity",
+        "source_panel_action",
+        "source_panel_extra",
+        "source_panel_service",
+        "top_menu",
+        "uniform_tiles",
+        "vpn_app",
+        "vpn_pill",
+        "wallpaper_true_color",
+        "wifi_status_color",
+        "wifi_status_warnings",
+    )
+
+// The reference's JSONTokener accepts comments and trailing commas, so a hand-edited theme that works there must here.
+@OptIn(ExperimentalSerializationApi::class)
+private val lenientJson =
+    Json {
+        isLenient = true
+        allowComments = true
+        allowTrailingComma = true
+    }
+
+/**
+ * Parses the text of a config.json over the defaults, with the reference launcher's rules: a UTF-8 byte order
+ * mark is dropped, text over [MAX_CONFIG_BYTES] or not a JSON object applies nothing, and a value of the wrong
+ * type or outside its range keeps the default (and is listed in [ParsedConfig.rejectedKeys]).
+ */
+public fun parseTvConfig(json: String): ParsedConfig {
+    val text = json.removePrefix("")
+    val root =
+        if (json.encodeToByteArray().size > MAX_CONFIG_BYTES) {
+            null
+        } else {
+            runCatching { lenientJson.parseToJsonElement(text) }.getOrNull() as? JsonObject
+        }
+    if (root == null) return ParsedConfig(TvConfig(), emptyList(), emptyList(), emptyList(), overlayApplied = false)
+
+    val d = TvConfig()
+    val o = Overlay(root)
+    val topBarApps = o.stringList("top_bar_apps", d.topBarApps)
+    val hiddenApps = o.stringList("hidden_apps", d.hiddenApps)
+    val config =
+        TvConfig(
+            dockApps = o.stringList("dock_apps", d.dockApps),
+            fillDock = o.bool("fill_dock", d.fillDock),
+            hiddenApps = hiddenApps + topBarApps.distinct().filterNot { it in hiddenApps },
+            columns = o.int("columns", d.columns, 1..8),
+            rowsBelowDock = o.int("rows_below_dock", d.rowsBelowDock, 0..3),
+            singleRow = o.bool("single_row", d.singleRow),
+            launchActions = packageMap(o.stringList("launch_actions", emptyList())),
+            appLabels = packageMap(o.stringList("app_labels", emptyList())),
+            appBanners = packageMap(o.stringList("app_banners", emptyList())),
+            topBarApps = topBarApps,
+            greetingName = o.optionalString("greeting_name", d.greetingName),
+            showGreeting = o.bool("show_greeting", d.showGreeting),
+            clockFormat = o.enum("clock_format", d.clockFormat, ClockFormat.entries) { it.jsonValue },
+            dateBelowClock = o.bool("date_below_clock", d.dateBelowClock),
+            showNetworkPill = o.bool("show_network_pill", d.showNetworkPill),
+            showInputsPill = o.bool("show_inputs_pill", d.showInputsPill),
+            wifiLabelWidth = o.int("wifi_label_width", d.wifiLabelWidth, 0..300),
+            cinematicHome = o.bool("cinematic_home", d.cinematicHome),
+            cinematicArt = o.int("cinematic_art", d.cinematicArt, 0..100),
+            cinematicScrim = o.int("cinematic_scrim", d.cinematicScrim, 0..100),
+            backgroundColor = o.color("background_color", d.backgroundColor),
+            wallpaper = o.bool("wallpaper", d.wallpaper),
+            wallpaperRotationMinutes = o.int("wallpaper_rotation_minutes", d.wallpaperRotationMinutes, 0..1440),
+            wallpaperDim = o.int("wallpaper_dim", d.wallpaperDim, 0..90),
+            wallpaperOrder = o.enum("wallpaper_order", d.wallpaperOrder, WallpaperOrder.entries) { it.jsonValue },
+            wallpaperMoods = o.moods("wallpaper_moods", d.wallpaperMoods),
+            wallpaperCaptions = o.bool("wallpaper_captions", d.wallpaperCaptions),
+            dockOpacity = o.int("dock_opacity", d.dockOpacity, 30..100),
+            dockGlass = o.bool("dock_glass", d.dockGlass),
+            animations = o.bool("animations", d.animations),
+            reducedMotion = o.bool("reduced_motion", d.reducedMotion),
+            focusOvershoot = o.bool("focus_overshoot", d.focusOvershoot),
+            tileMenu = o.bool("tile_menu", d.tileMenu),
+            appLibrary = o.bool("app_library", d.appLibrary),
+            libraryApps = o.stringList("library_apps", d.libraryApps),
+            libraryExcludedApps = o.stringList("library_excluded_apps", d.libraryExcludedApps),
+            showLibraryPill = o.bool("show_library_pill", d.showLibraryPill),
+            libraryOkOpens = o.bool("library_ok_opens", d.libraryOkOpens),
+            inputSources = o.stringList("input_sources", d.inputSources),
+            inputAction = o.optionalString("input_action", d.inputAction),
+            inputUriScheme = o.optionalString("input_uri_scheme", d.inputUriScheme),
+            liveTvPackage = o.optionalString("live_tv_package", d.liveTvPackage),
+            liveTvAction = o.optionalString("live_tv_action", d.liveTvAction),
+            liveTvInputId = o.optionalString("live_tv_input_id", d.liveTvInputId),
+            bootToLiveTv = o.bool("boot_to_live_tv", d.bootToLiveTv),
+            appKeys = o.stringList("app_keys", d.appKeys),
+            settingsKeyKeycodes = o.keycodes("settings_key_keycodes", d.settingsKeyKeycodes),
+            inputKeyKeycodes = o.keycodes("input_key_keycodes", d.inputKeyKeycodes),
+            stockHomeRedirect = o.optionalString("stock_home_redirect", d.stockHomeRedirect),
+            powerOnHome = o.bool("power_on_home", d.powerOnHome),
+            powerOnHomeAlways = o.bool("power_on_home_always", d.powerOnHomeAlways),
+            homeIdleClockMinutes = o.int("home_idle_clock_minutes", d.homeIdleClockMinutes, 0..1440),
+            clockWallpaper = o.bool("clock_wallpaper", d.clockWallpaper),
+            clockWallpaperDim = o.int("clock_wallpaper_dim", d.clockWallpaperDim, 0..90),
+            clockGlow = o.bool("clock_glow", d.clockGlow),
+            locale = o.optionalString("locale", d.locale),
+        )
+    return ParsedConfig(
+        config = config,
+        unknownKeys = root.keys.filter { it !in o.read && it !in unsupportedKeys },
+        unsupportedKeys = root.keys.filter { it in unsupportedKeys },
+        rejectedKeys = root.keys.filter { it in o.rejected },
+        overlayApplied = true,
+    )
+}
+
+/** Typed reads from one JSON object; each remembers the key it was asked for and the ones it rejected. */
+private class Overlay(
+    private val root: JsonObject,
+) {
+    val read = mutableSetOf<String>()
+    val rejected = mutableSetOf<String>()
+
+    /** The value of [key] when [convert] accepts it; a present key that it does not accept is rejected. */
+    private fun <T> value(
+        key: String,
+        default: T,
+        convert: (JsonElement) -> T?,
+    ): T {
+        read += key
+        val element = root[key] ?: return default
+        return convert(element) ?: default.also { rejected += key }
+    }
+
+    fun bool(
+        key: String,
+        default: Boolean,
+    ): Boolean = value(key, default) { (it as? JsonPrimitive)?.takeUnless { p -> p.isString }?.content?.toBooleanStrictOrNull() }
+
+    fun int(
+        key: String,
+        default: Int,
+        range: IntRange,
+    ): Int = value(key, default) { it.asInt()?.takeIf { n -> n in range } }
+
+    /** A trimmed string; blank is null, which is not a rejection. */
+    fun optionalString(
+        key: String,
+        default: String?,
+    ): String? {
+        read += key
+        val element = root[key] ?: return default
+        val text = (element as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return default.also { rejected += key }
+        return text.trim().ifEmpty { null }
+    }
+
+    /** An array's string items, trimmed; items that are not strings, or are blank, are skipped. */
+    fun stringList(
+        key: String,
+        default: List<String>,
+    ): List<String> =
+        value(key, default) { array ->
+            (array as? JsonArray)?.mapNotNull { item ->
+                (item as? JsonPrimitive)
+                    ?.takeIf { it.isString }
+                    ?.content
+                    ?.trim()
+                    ?.ifEmpty { null }
+            }
+        }
+
+    /** Positive keycodes only (vendor remotes use codes in the thousands); a list with anything else in it is rejected whole. */
+    fun keycodes(
+        key: String,
+        default: List<Int>,
+    ): List<Int> =
+        value(key, default) { array ->
+            (array as? JsonArray)?.map { item -> item.asInt()?.takeIf { it >= 1 } ?: return@value null }
+        }
+
+    fun color(
+        key: String,
+        default: Int,
+    ): Int =
+        value(key, default) { element ->
+            (element as? JsonPrimitive)
+                ?.takeIf { it.isString }
+                ?.content
+                ?.trim()
+                ?.let(::parseColor)
+                ?.or(OPAQUE_BLACK)
+        }
+
+    fun <E : Enum<E>> enum(
+        key: String,
+        default: E,
+        entries: List<E>,
+        jsonValue: (E) -> String,
+    ): E =
+        value(key, default) { element ->
+            val name = (element as? JsonPrimitive)?.takeIf { it.isString }?.content?.trim()
+            entries.firstOrNull { jsonValue(it) == name }
+        }
+
+    /** {"night": ["03-moon-lake.jpg", ...], ...}: each mood's picture names; other keys and names are left out. */
+    fun moods(
+        key: String,
+        default: Map<WallpaperMood, Set<String>>,
+    ): Map<WallpaperMood, Set<String>> =
+        value(key, default) { element ->
+            val groups = element as? JsonObject ?: return@value null
+            buildMap {
+                for (mood in WallpaperMood.entries) {
+                    val names =
+                        (groups[mood.jsonValue] as? JsonArray)
+                            ?.mapNotNull { item -> (item as? JsonPrimitive)?.takeIf { it.isString }?.content?.trim() }
+                            ?.filter(ThemeFiles::collectionImage)
+                            ?.toSet()
+                    if (!names.isNullOrEmpty()) put(mood, names)
+                }
+            }
+        }
+}
+
+/** A JSON number as the reference reads it: fractions are cut off, and anything that does not fit an Int is no number. */
+private fun JsonElement.asInt(): Int? {
+    val number = (this as? JsonPrimitive)?.takeUnless { it.isString }?.content?.toDoubleOrNull()
+    return number?.takeIf { it.isFinite() && it > Int.MIN_VALUE && it < Int.MAX_VALUE }?.toInt()
+}
+
+/** "package=value" entries; an entry without both halves is skipped, and a later entry for a package wins. */
+private fun packageMap(entries: List<String>): Map<String, String> =
+    buildMap {
+        for (entry in entries) {
+            val separator = entry.indexOf('=')
+            if (separator <= 0) continue
+            val pkg = entry.substring(0, separator).trim()
+            val value = entry.substring(separator + 1).trim()
+            if (pkg.isNotEmpty() && value.isNotEmpty()) put(pkg, value)
+        }
+    }
+
+private val colorNames: Map<String, Int> =
+    mapOf(
+        "black" to 0x000000,
+        "darkgray" to 0x444444,
+        "darkgrey" to 0x444444,
+        "gray" to 0x888888,
+        "grey" to 0x888888,
+        "lightgray" to 0xCCCCCC,
+        "lightgrey" to 0xCCCCCC,
+        "white" to 0xFFFFFF,
+        "red" to 0xFF0000,
+        "green" to 0x00FF00,
+        "lime" to 0x00FF00,
+        "blue" to 0x0000FF,
+        "yellow" to 0xFFFF00,
+        "cyan" to 0x00FFFF,
+        "aqua" to 0x00FFFF,
+        "magenta" to 0xFF00FF,
+        "fuchsia" to 0xFF00FF,
+        "maroon" to 0x800000,
+        "navy" to 0x000080,
+        "olive" to 0x808000,
+        "purple" to 0x800080,
+        "silver" to 0xC0C0C0,
+        "teal" to 0x008080,
+    )
+
+/** What android.graphics.Color.parseColor accepts: #RRGGBB, #AARRGGBB or one of its colour names; null otherwise. */
+private fun parseColor(text: String): Int? {
+    if (!text.startsWith("#")) return colorNames[text.lowercase(java.util.Locale.ROOT)]
+    val digits = text.substring(1)
+    if ((digits.length != 6 && digits.length != 8) || !digits.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }) return null
+    return digits.toLong(16).toInt()
+}

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- tools/theme.sh writes the theme through this where the adb shell cannot reach Android/data.
+             WRITE_SECURE_SETTINGS: the adb shell has it, ordinary apps cannot get it. -->
+        <provider
+            android:name=".ThemeProvider"
+            android:authorities="${applicationId}.theme"
+            android:exported="true"
+            android:permission="android.permission.WRITE_SECURE_SETTINGS" />
+    </application>
+</manifest>

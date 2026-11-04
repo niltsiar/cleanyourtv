@@ -50,7 +50,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TOOLS = ROOT / "tools"
-LAUNCHER_PKG = "com.gathin.tvhome"
+# TV_PACKAGE points the tools at another build of the launcher, such as a fork's.
+LAUNCHER_PKG = os.environ.get("TV_PACKAGE") or "com.gathin.tvhome"
 
 
 # ---------------------------------------------------------------- reading the repo
@@ -475,6 +476,10 @@ def cmd_show(name):
 
 
 def cmd_status():
+    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+", LAUNCHER_PKG):
+        sys.stderr.write(f"TV_PACKAGE must be an Android package name such as com.gathin.tvhome, not {LAUNCHER_PKG!r}.\n"
+                         "Nothing was asked of the TV.\n")
+        return 2
     have = installed_packages()
     print(f"launcher: {'installed' if LAUNCHER_PKG in have else 'not installed'}")
     print("add-ons on the TV:")

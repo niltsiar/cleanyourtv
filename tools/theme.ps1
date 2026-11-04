@@ -46,7 +46,13 @@ if (-not (Test-Path $py)) {
     [Console]::Error.WriteLine('run: python -m venv tools\venv; tools\venv\Scripts\python.exe -m pip install -r tools\requirements.txt. Nothing was sent to the TV.')
     exit 2
 }
-$pkg = 'com.gathin.tvhome'
+# TV_PACKAGE points the push at another build of the launcher, such as a fork's; theme_restart.py reads it too.
+$pkg = if ($env:TV_PACKAGE) { $env:TV_PACKAGE } else { 'com.gathin.tvhome' }
+if ($pkg -notmatch '^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$') {
+    [Console]::Error.WriteLine("TV_PACKAGE must be an Android package name such as com.gathin.tvhome, not '$pkg'. Nothing was sent to the TV.")
+    exit 2
+}
+$env:TV_PACKAGE = $pkg
 # Runs tools\tv.py or b64push.py and stops on a non-zero exit: 'Stop' only covers cmdlets, so a failed
 # native call would otherwise fall through to "Theme ... is on the TV".
 function Invoke-Tv {
