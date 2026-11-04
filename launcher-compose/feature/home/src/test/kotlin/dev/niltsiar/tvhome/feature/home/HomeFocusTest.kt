@@ -34,10 +34,10 @@ class HomeFocusTest {
 
     @Before
     fun showHome() {
-        val state = homeUiState(HomeApps(NineApps), Evening, null, Locale.ENGLISH)
+        val state = homeUiState(homeApps(), Evening, null, Locale.ENGLISH)
         compose.setContent {
             TvTheme(glassKind = GlassKind.Flat) {
-                HomeScreen(state = { state }, onFocus = {}, onClick = {}, homePresses = { homePresses })
+                HomeScreen(state = { state }, layout = SixColumns.homeLayout(), onFocus = {}, onClick = {}, homePresses = { homePresses })
             }
         }
         compose.waitForIdle()

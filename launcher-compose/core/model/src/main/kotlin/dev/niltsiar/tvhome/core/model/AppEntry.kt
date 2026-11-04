@@ -3,10 +3,23 @@ package dev.niltsiar.tvhome.core.model
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.ImageBitmap
 
-/** One launchable app as the Home screen lists it. [image] is the TV banner or the icon, sized for a tile. */
+/**
+ * One launchable app tile. [key] is the activity's component in its short form (`pkg/.Main`): a package can show
+ * two tiles, so the key, not the package, names a tile. [image] is the TV banner or the icon, sized for a tile.
+ * [leanback] is true when the package has a LEANBACK_LAUNCHER activity, so its tile launches like the TV's own.
+ */
 @Immutable
 public data class AppEntry(
+    val key: String,
     val packageName: String,
     val label: String,
     val image: ImageBitmap? = null,
+    val leanback: Boolean = false,
+)
+
+/** The tiles in Home's order, and how many of the leading ones are dock apps (the rest follow in the grid). */
+@Immutable
+public data class AppList(
+    val apps: List<AppEntry> = emptyList(),
+    val docked: Int = 0,
 )

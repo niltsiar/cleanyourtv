@@ -19,12 +19,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -52,6 +55,7 @@ import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.node.LayoutModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -60,6 +64,7 @@ import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.designsystem.FocusSurface
 import dev.niltsiar.tvhome.core.designsystem.GlassIconButton
@@ -71,11 +76,11 @@ import dev.niltsiar.tvhome.core.designsystem.glassContainer
 import dev.niltsiar.tvhome.core.designsystem.glassSource
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
+import dev.niltsiar.tvhome.core.model.AppList
 import kotlinx.coroutines.flow.drop
 import java.time.LocalDateTime
 import java.util.Locale
 
-private const val COLUMNS = DOCK_SIZE
 private val ScreenMargin = 40.dp
 private val TileGap = 14.dp
 private val TopBarTop = 20.dp
@@ -88,6 +93,7 @@ private val ShelfBottom = ContentTop + ShelfHeight
 private val ShelfFade = 40.dp
 private val ShelfFullyShown = ShelfBottom - 4.dp
 private val ShelfRise = 14.dp
+private val GridBottom = 48.dp
 private const val TILE_ASPECT = 16f / 9f
 
 /**
@@ -97,10 +103,12 @@ private const val TILE_ASPECT = 16f / 9f
  * The top bar's surfaces sit in one glass container and merge when they come near each other.
  * The shelf title stays under the top bar; rows fade out as they scroll up to it.
  * [homePresses] counts Home key presses that reach Home while it shows; each one scrolls to the top and focuses the first dock tile.
+ * [layout] is the theme's: dock size and grid columns, rows that must fit below the dock, one sideways row.
  */
 @Composable
 public fun HomeScreen(
     state: () -> HomeUiState,
+    layout: HomeLayout,
     onFocus: (String) -> Unit,
     onClick: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -110,7 +118,7 @@ public fun HomeScreen(
     val dockFocus = remember { FocusRequester() }
     Box(modifier = modifier.fillMaxSize().background(TvTheme.colors.background)) {
         Wallpaper(glass)
-        HomeContent(glass, dockFocus, state, onFocus, onClick, homePresses)
+        HomeContent(glass, dockFocus, state, layout, onFocus, onClick, homePresses)
         ShelfTitle(
             label = { state().focusedLabel },
             modifier = Modifier.padding(top = ContentTop, start = ScreenMargin).height(ShelfHeight - ShelfTitleGap),
@@ -151,14 +159,27 @@ private fun HomeContent(
     glass: GlassState,
     dockFocus: FocusRequester,
     state: () -> HomeUiState,
+    layout: HomeLayout,
     onFocus: (String) -> Unit,
     onClick: (String) -> Unit,
     homePresses: () -> Int,
     modifier: Modifier = Modifier,
 ) {
+    val density = LocalDensity.current
     // The focused tile rests one gap inside the dock panel, so at rest the dock panel's top edge is the shelf's bottom edge.
-    val pivotPx = with(LocalDensity.current) { (ShelfBottom + TileGap).toPx() }
+    val pivotPx = with(density) { (ShelfBottom + TileGap).toPx() }
     val pivotSpec = remember(pivotPx) { PivotBringIntoViewSpec(pivotPx) }
+    val window = LocalWindowInfo.current.containerSize
+    val gridWidth = with(density) { window.width.toDp() } - ScreenMargin * 2
+    val belowShelf = with(density) { window.height.toDp() } - ShelfBottom - GridBottom
+    val share =
+        if (layout.singleRow) {
+            1f
+        } else {
+            tileWidthShare(gridWidth.value, belowShelf.value, layout.columns, layout.rowsBelowDock, TileGap.value)
+        }
+    val sideMargin = ScreenMargin + gridWidth * ((1f - share) / 2f)
+    val rowTileWidth = (gridWidth - TileGap * (layout.columns + 1)) / layout.columns
     val gridState = rememberLazyGridState()
     val firstDockTile = remember { FocusRequester() }
     LaunchedEffect(gridState) {
@@ -174,8 +195,8 @@ private fun HomeContent(
     CompositionLocalProvider(LocalBringIntoViewSpec provides pivotSpec) {
         LazyVerticalGrid(
             state = gridState,
-            columns = GridCells.Fixed(COLUMNS),
-            contentPadding = PaddingValues(start = ScreenMargin, end = ScreenMargin, top = ContentTop, bottom = 48.dp),
+            columns = GridCells.Fixed(layout.columns),
+            contentPadding = PaddingValues(start = sideMargin, end = sideMargin, top = ContentTop, bottom = GridBottom),
             horizontalArrangement = Arrangement.spacedBy(TileGap),
             verticalArrangement = Arrangement.spacedBy(TileGap),
             modifier = modifier.fillMaxSize().glassSource(glass, zIndex = 1f).semantics { testTagsAsResourceId = true },
@@ -189,13 +210,15 @@ private fun HomeContent(
                     focus = dockFocus,
                     firstTile = firstDockTile,
                     dock = state().dock,
+                    layout = layout,
+                    rowTileWidth = rowTileWidth,
                     onFocus = onFocus,
                     onClick = onClick,
                     modifier = Modifier.fadeUnderShelf(gridState, "dock"),
                 )
             }
-            items(state().grid, key = { it.packageName }, contentType = { "tile" }) { app ->
-                AppTile(app = app, onFocus = onFocus, onClick = onClick, modifier = Modifier.fadeUnderShelf(gridState, app.packageName))
+            items(state().grid, key = { it.key }, contentType = { "tile" }) { app ->
+                AppTile(app = app, onFocus = onFocus, onClick = onClick, modifier = Modifier.fadeUnderShelf(gridState, app.key))
             }
         }
     }
@@ -267,12 +290,15 @@ private fun ShelfTitle(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun Dock(
     glass: GlassState,
     focus: FocusRequester,
     firstTile: FocusRequester,
     dock: List<AppEntry>,
+    layout: HomeLayout,
+    rowTileWidth: Dp,
     onFocus: (String) -> Unit,
     onClick: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -285,28 +311,68 @@ private fun Dock(
         }
     }
     GlassSurface(glass = glass, modifier = modifier.fillMaxWidth().testTag("dock")) {
-        Row(
-            modifier =
-                Modifier
-                    .focusRequester(focus)
-                    .focusRestorer()
-                    .focusGroup()
-                    .padding(TileGap),
-            horizontalArrangement = Arrangement.spacedBy(TileGap),
-        ) {
-            dock.forEachIndexed { index, app ->
-                key(app.packageName) {
-                    AppTile(
-                        app = app,
-                        onFocus = onFocus,
-                        onClick = onClick,
-                        modifier = Modifier.weight(1f).then(if (index == 0) Modifier.focusRequester(firstTile) else Modifier),
-                    )
+        if (layout.singleRow) {
+            // The grid's pivot scroll is vertical; this row scrolls sideways the usual way.
+            CompositionLocalProvider(LocalBringIntoViewSpec provides RevealBringIntoViewSpec) {
+                LazyRow(
+                    modifier = Modifier.focusRequester(focus).focusRestorer(),
+                    contentPadding = PaddingValues(TileGap),
+                    horizontalArrangement = Arrangement.spacedBy(TileGap),
+                ) {
+                    itemsIndexed(dock, key = { _, app -> app.key }) { index, app ->
+                        AppTile(
+                            app = app,
+                            onFocus = onFocus,
+                            onClick = onClick,
+                            modifier = Modifier.width(rowTileWidth).then(if (index == 0) Modifier.focusRequester(firstTile) else Modifier),
+                        )
+                    }
                 }
+            }
+        } else {
+            Row(
+                modifier =
+                    Modifier
+                        .focusRequester(focus)
+                        .focusRestorer()
+                        .focusGroup()
+                        .padding(TileGap),
+                horizontalArrangement = Arrangement.spacedBy(TileGap),
+            ) {
+                dock.forEachIndexed { index, app ->
+                    key(app.key) {
+                        AppTile(
+                            app = app,
+                            onFocus = onFocus,
+                            onClick = onClick,
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .then(if (index == 0) Modifier.focusRequester(firstTile) else Modifier)
+                                    .stopAtDockEnds(first = index == 0, last = index == dock.lastIndex),
+                        )
+                    }
+                }
+                // Slots with no app stay empty, so the tiles keep the width of a column.
+                repeat(layout.columns - dock.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }
 }
+
+/** The dock is a row of its own: Left and Right stop at its first and last tile instead of jumping to a wider grid tile. */
+private fun Modifier.stopAtDockEnds(
+    first: Boolean,
+    last: Boolean,
+): Modifier =
+    if (!first && !last) {
+        this
+    } else {
+        focusProperties {
+            if (first) left = FocusRequester.Cancel
+            if (last) right = FocusRequester.Cancel
+        }
+    }
 
 @Composable
 private fun AppTile(
@@ -316,10 +382,10 @@ private fun AppTile(
     modifier: Modifier = Modifier,
 ) {
     FocusSurface(
-        onClick = { onClick(app.packageName) },
-        onFocused = { onFocus(app.packageName) },
+        onClick = { onClick(app.key) },
+        onFocused = { onFocus(app.key) },
         shape = TileShape,
-        modifier = modifier.aspectRatio(TILE_ASPECT).testTag("tile:${app.packageName}"),
+        modifier = modifier.aspectRatio(TILE_ASPECT).testTag("tile:${app.key}"),
     ) {
         Box(Modifier.fillMaxSize().background(TvTheme.colors.surface, TileShape), contentAlignment = Alignment.Center) {
             val image = app.image
@@ -396,8 +462,9 @@ private fun HomePreview(glassKind: GlassKind) {
     TvTheme(glassKind = glassKind) {
         val apps =
             listOf("Movies", "Music", "Games", "Photos", "Weather", "Browser", "Files", "Radio", "Clock", "Maps", "Notes", "Podcasts")
-                .map { AppEntry(packageName = "example.${it.lowercase()}", label = it) }
-        val state = homeUiState(HomeApps(apps), LocalDateTime.of(2026, 11, 3, 20, 15), "example.music", Locale.ENGLISH)
-        HomeScreen(state = { state }, onFocus = {}, onClick = {})
+                .map { AppEntry(key = "example.${it.lowercase()}", packageName = "example.${it.lowercase()}", label = it) }
+        val layout = HomeLayout(columns = 6, rowsBelowDock = 0, singleRow = false, fillDock = true)
+        val state = homeUiState(HomeApps(AppList(apps), layout), LocalDateTime.of(2026, 11, 3, 20, 15), "example.music", Locale.ENGLISH)
+        HomeScreen(state = { state }, layout = layout, onFocus = {}, onClick = {})
     }
 }

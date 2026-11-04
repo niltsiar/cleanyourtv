@@ -1,5 +1,6 @@
 package dev.niltsiar.tvhome.feature.home
 
+import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -11,7 +12,7 @@ class HomeUiStateTest {
         apps: List<AppEntry> = NineApps,
         now: LocalDateTime? = Evening,
         focusedPackage: String? = null,
-    ) = homeUiState(HomeApps(apps), now, focusedPackage, Locale.ENGLISH)
+    ) = homeUiState(homeApps(apps), now, focusedPackage, Locale.ENGLISH)
 
     @Test
     fun the_time_formats_as_clock_and_date() {
@@ -57,5 +58,48 @@ class HomeUiStateTest {
         assertEquals(emptyList<Any>(), state.dock)
         assertEquals(emptyList<Any>(), state.grid)
         assertEquals("", state.focusedLabel)
+    }
+
+    @Test
+    fun dock_apps_found_come_first_and_the_rest_of_the_row_fills_up() {
+        val apps = homeApps(docked = 2)
+        assertEquals(NineApps.take(6), apps.dock)
+        assertEquals(NineApps.drop(6), apps.grid)
+    }
+
+    @Test
+    fun fill_dock_off_leaves_the_free_dock_slots_empty() {
+        val apps = homeApps(docked = 2, config = TvConfig(columns = 6, fillDock = false))
+        assertEquals(NineApps.take(2), apps.dock)
+        assertEquals(NineApps.drop(2), apps.grid)
+    }
+
+    @Test
+    fun fill_dock_off_with_no_dock_app_installed_still_fills_the_first_row() {
+        val apps = homeApps(docked = 0, config = TvConfig(columns = 6, fillDock = false))
+        assertEquals(NineApps.take(6), apps.dock)
+    }
+
+    @Test
+    fun the_columns_are_the_dock_size() {
+        val apps = homeApps(config = TvConfig(columns = 4))
+        assertEquals(NineApps.take(4), apps.dock)
+        assertEquals(NineApps.drop(4), apps.grid)
+    }
+
+    @Test
+    fun a_single_row_holds_every_app_in_the_dock() {
+        val apps = homeApps(config = TvConfig(columns = 4, singleRow = true))
+        assertEquals(NineApps, apps.dock)
+        assertEquals(emptyList<Any>(), apps.grid)
+    }
+
+    @Test
+    fun empty_dock_slots_follow_the_reference_rules() {
+        assertEquals(1, emptyDockSlots(docked = 3, dockSize = 4, tiles = 20, fill = false))
+        assertEquals(0, emptyDockSlots(docked = 3, dockSize = 4, tiles = 20, fill = true))
+        assertEquals(0, emptyDockSlots(docked = 4, dockSize = 4, tiles = 20, fill = false))
+        assertEquals(0, emptyDockSlots(docked = 0, dockSize = 4, tiles = 20, fill = false))
+        assertEquals(0, emptyDockSlots(docked = 2, dockSize = 4, tiles = 2, fill = false))
     }
 }

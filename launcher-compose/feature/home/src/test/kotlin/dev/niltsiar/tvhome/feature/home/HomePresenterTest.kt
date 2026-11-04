@@ -4,7 +4,7 @@ import app.cash.molecule.RecompositionMode
 import app.cash.molecule.moleculeFlow
 import app.cash.turbine.ReceiveTurbine
 import app.cash.turbine.test
-import dev.niltsiar.tvhome.core.model.AppEntry
+import dev.niltsiar.tvhome.core.model.AppList
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -23,10 +23,10 @@ class HomePresenterTest {
     private val effects = Channel<HomeEffect>(Channel.UNLIMITED)
 
     private fun presenter(
-        apps: Flow<List<AppEntry>> = flowOf(NineApps),
+        apps: Flow<AppList> = flowOf(AppList(NineApps)),
         clock: Flow<LocalDateTime> = flowOf(Evening),
     ) = moleculeFlow(RecompositionMode.Immediate) {
-        homePresenter(eventFlow, apps, clock, effects::trySend, Locale.ENGLISH)
+        homePresenter(eventFlow, apps, clock, SixColumns, effects::trySend, Locale.ENGLISH)
     }
 
     @Test
@@ -80,8 +80,9 @@ class HomePresenterTest {
     fun clicking_an_app_emits_a_launch_effect_for_its_package() =
         runTest {
             presenter().test {
+                awaitMatching { it.dock.isNotEmpty() }
                 events.send(HomeEvent.Click("pkg.2"))
-                assertEquals(HomeEffect.LaunchApp("pkg.2"), effects.receive())
+                assertEquals(HomeEffect.LaunchApp(NineApps[1]), effects.receive())
                 cancelAndIgnoreRemainingEvents()
             }
         }

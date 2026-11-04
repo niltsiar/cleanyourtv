@@ -1,83 +1,162 @@
 package dev.niltsiar.tvhome.data.apps
 
+import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.drawable.Drawable
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.core.graphics.createBitmap
-import androidx.core.graphics.drawable.toBitmap
+import android.util.Log
+import androidx.core.content.ContextCompat
+import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
+import dev.niltsiar.tvhome.core.model.AppList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.update
+import java.io.File
+
+private const val TAG = "TvHome.Apps"
 
 /**
- * Apps that declare LEANBACK_LAUNCHER or LAUNCHER, once per package, without this app.
- * [apps] emits the labels first, then the same list with banners or icons decoded to [tileWidthPx] x [tileHeightPx].
+ * The tiles Home shows, read the way the reference launcher reads them: the TV launcher activities, plus phone
+ * launcher activities of packages in library_apps, ordered by [arrange].
+ *
+ * [apps] emits the labels first, then the same list with banners or icons decoded to a tile 16:9 at the width
+ * [tileWidthPx] gives for the theme's columns, and again, images included, each time the installed apps change. The change comes from package broadcasts while
+ * Home is started ([onStart], [onStop]), and from PackageManager's changed-packages log when Home starts again,
+ * which catches what happened while it was stopped.
  */
 public class PackageManagerAppsProvider(
     private val context: Context,
-    private val tileWidthPx: Int,
-    private val tileHeightPx: Int,
+    private val config: TvConfig,
 ) {
-    public val apps: Flow<List<AppEntry>> =
+    private val images =
+        with(context.resources.displayMetrics) {
+            val width = tileWidthPx(widthPixels, config.columns, density)
+            TileImages(context, config.appBanners, width, width * 9 / 16)
+        }
+    private val orderFile = File(context.filesDir, ORDER_FILE_NAME)
+    private val refreshes = MutableStateFlow(0)
+    private val packageFilter =
+        IntentFilter().apply {
+            addAction(Intent.ACTION_PACKAGE_ADDED)
+            addAction(Intent.ACTION_PACKAGE_REMOVED)
+            addAction(Intent.ACTION_PACKAGE_CHANGED)
+            addDataScheme("package")
+        }
+    private val packageReceiver =
+        object : BroadcastReceiver() {
+            override fun onReceive(
+                context: Context,
+                intent: Intent,
+            ) {
+                // An update sends REMOVED then ADDED: keep the tile until the new APK is in.
+                if (intent.action == Intent.ACTION_PACKAGE_REMOVED && intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) return
+                requestRefresh()
+            }
+        }
+    private var receiving = false
+
+    /** The PackageManager sequence number the last load started from, or null before the first load. */
+    @Volatile
+    private var packageSequence: Int? = null
+
+    public val apps: Flow<AppList> =
         flow {
-            val resolved = queryLaunchers()
-            emit(resolved.map { AppEntry(packageName = it.packageName, label = it.label) })
-            emit(resolved.map { AppEntry(packageName = it.packageName, label = it.label, image = tileImage(it.info)) })
+            var seen = refreshes.value
+            val loaded = load()
+            emit(loaded.toAppList(withImages = false))
+            emit(loaded.toAppList(withImages = true))
+            // A refresh shows no bare labels first: that would blank every banner for a frame.
+            refreshes.collect { version ->
+                if (version != seen) {
+                    seen = version
+                    emit(load().toAppList(withImages = true))
+                }
+            }
         }.flowOn(Dispatchers.IO)
 
-    private class Launcher(
-        val packageName: String,
-        val label: String,
-        val info: ResolveInfo,
-    )
-
-    private fun queryLaunchers(): List<Launcher> {
-        val pm = context.packageManager
-        // LEANBACK first so a TV banner wins over a phone icon when a package has both.
-        val found =
-            listOf(Intent.CATEGORY_LEANBACK_LAUNCHER, Intent.CATEGORY_LAUNCHER)
-                .flatMap { category ->
-                    pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(category), PackageManager.MATCH_ALL)
-                }
-        return found
-            .distinctBy { it.activityInfo.packageName }
-            .filter { it.activityInfo.packageName != context.packageName }
-            .map { Launcher(it.activityInfo.packageName, it.loadLabel(pm).toString(), it) }
-            .sortedBy { it.label.lowercase() }
+    /** Home is on screen: follow package changes, and reload now if some happened while it was not. Main thread. */
+    public fun onStart() {
+        if (!receiving) {
+            ContextCompat.registerReceiver(context, packageReceiver, packageFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
+            receiving = true
+        }
+        val sequence = packageSequence ?: return
+        val changed = context.packageManager.getChangedPackages(sequence)
+        if (changed != null && changed.packageNames.isNotEmpty()) requestRefresh()
     }
 
-    private fun tileImage(info: ResolveInfo): ImageBitmap? {
-        val pm = context.packageManager
-        val banner = info.activityInfo.loadBanner(pm)
-        return if (banner != null) {
-            banner.toBitmap(tileWidthPx, tileHeightPx, Bitmap.Config.ARGB_8888).asImageBitmap()
-        } else {
-            val icon = info.loadIcon(pm) ?: return null
-            icon.centeredOnTile().asImageBitmap()
+    /** Home left the screen: package changes wait for [onStart]. Main thread. */
+    public fun onStop() {
+        if (receiving) {
+            context.unregisterReceiver(packageReceiver)
+            receiving = false
         }
     }
 
-    /** A square icon would stretch on a 16:9 tile, so draw it at tile height in the middle. */
-    private fun Drawable.centeredOnTile(): Bitmap {
-        val bitmap = createBitmap(tileWidthPx, tileHeightPx, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        val side = (tileHeightPx * ICON_FILL).toInt()
-        val left = (tileWidthPx - side) / 2
-        val top = (tileHeightPx - side) / 2
-        setBounds(left, top, left + side, top + side)
-        draw(canvas)
-        return bitmap
+    private fun requestRefresh() = refreshes.update { it + 1 }
+
+    private class Loaded(
+        val arrangement: Arrangement,
+        val infos: Map<String, ResolveInfo>,
+        val tvPackages: Set<String>,
+    )
+
+    private fun load(): Loaded {
+        val pm = context.packageManager
+        val since = packageSequence ?: 0
+        packageSequence = pm.getChangedPackages(since)?.sequenceNumber ?: since
+        val leanback = pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0)
+        val tvPackages = leanback.mapTo(HashSet()) { it.activityInfo.packageName }
+        val found = leanback.toMutableList()
+        if (config.libraryApps.isNotEmpty()) {
+            val added = config.libraryApps.toSet()
+            val seen = HashSet(tvPackages)
+            val phone = pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
+            phone.filterTo(found) { it.activityInfo.packageName in added && seen.add(it.activityInfo.packageName) }
+        }
+        val infos = HashMap<String, ResolveInfo>()
+        val candidates =
+            found.map { info ->
+                val activity = info.activityInfo
+                val key = ComponentName(activity.packageName, activity.name).flattenToShortString()
+                infos[key] = info
+                Candidate(key, activity.packageName, info.loadLabel(pm).toString(), activity.exported)
+            }
+        val arrangement = arrange(candidates, tvPackages, config, readOrder(orderFile), context.packageName)
+        return Loaded(arrangement, infos, tvPackages)
     }
 
-    private companion object {
-        const val ICON_FILL = 0.7f
+    private fun Loaded.toAppList(withImages: Boolean): AppList {
+        val pm = context.packageManager
+        val apps =
+            arrangement.tiles.map { tile ->
+                val info = infos.getValue(tile.candidate.key)
+                AppEntry(
+                    key = tile.candidate.key,
+                    packageName = tile.candidate.packageName,
+                    label = tile.label,
+                    image = if (withImages) tileImage(info, pm) else null,
+                    leanback = tile.candidate.packageName in tvPackages,
+                )
+            }
+        return AppList(apps, arrangement.docked)
+    }
+
+    /** One app's broken artwork must not take Home down: its tile shows the name instead. */
+    private fun tileImage(
+        info: ResolveInfo,
+        pm: PackageManager,
+    ) = try {
+        images.load(info.activityInfo) { info.loadIcon(pm) }
+    } catch (e: RuntimeException) {
+        Log.w(TAG, "no artwork for ${info.activityInfo.packageName}: $e")
+        null
     }
 }

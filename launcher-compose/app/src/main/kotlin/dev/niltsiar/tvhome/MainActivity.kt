@@ -2,6 +2,7 @@ package dev.niltsiar.tvhome
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
 import androidx.activity.compose.setContent
@@ -10,13 +11,14 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.model.AppEntry
 
 class MainActivity : ComponentActivity() {
+    private val graph get() = (application as TvHomeApplication).graph
     private var homePresses by mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val graph = (application as TvHomeApplication).graph
         // This is Home: Back has nowhere to go.
         onBackPressedDispatcher.addCallback(this) {}
         setContent {
@@ -26,16 +28,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        graph.appsProvider.onStart()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        graph.appsProvider.onStop()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.hasCategory(Intent.CATEGORY_HOME)) homePresses++
     }
 
-    private fun launchApp(packageName: String) {
-        val intent =
-            packageManager.getLeanbackLaunchIntentForPackage(packageName)
-                ?: packageManager.getLaunchIntentForPackage(packageName)
-                ?: return
-        startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED))
+    private fun launchApp(app: AppEntry) {
+        if (!graph.appLauncher.launch(app)) Toast.makeText(this, getString(R.string.cant_open, app.label), Toast.LENGTH_SHORT).show()
     }
 }

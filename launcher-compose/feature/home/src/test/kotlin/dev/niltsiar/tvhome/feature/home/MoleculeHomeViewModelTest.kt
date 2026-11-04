@@ -2,7 +2,9 @@ package dev.niltsiar.tvhome.feature.home
 
 import app.cash.molecule.RecompositionMode
 import app.cash.turbine.test
+import dev.niltsiar.tvhome.core.model.AppList
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -13,8 +15,9 @@ import kotlin.coroutines.EmptyCoroutineContext
 class MoleculeHomeViewModelTest {
     private fun CoroutineScope.viewModel() =
         MoleculeHomeViewModel(
-            flowOf(NineApps),
+            flowOf(AppList(NineApps)),
             flowOf(Evening),
+            SixColumns,
             Locale.ENGLISH,
             this,
             RecompositionMode.Immediate,
@@ -36,9 +39,10 @@ class MoleculeHomeViewModelTest {
     fun clicking_an_app_emits_a_launch_effect_for_its_package() =
         runTest {
             val viewModel = backgroundScope.viewModel()
+            viewModel.uiState.first { it.dock.isNotEmpty() }
             viewModel.effects.test {
                 viewModel.onClick("pkg.2")
-                assertEquals(HomeEffect.LaunchApp("pkg.2"), awaitItem())
+                assertEquals(HomeEffect.LaunchApp(NineApps[1]), awaitItem())
             }
         }
 }

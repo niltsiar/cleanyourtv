@@ -14,6 +14,7 @@ android {
 dependencies {
     api(project(":core:model"))
     api(libs.androidx.lifecycle.viewmodel)
+    api(project(":core:config"))
     implementation(project(":core:designsystem"))
     implementation(libs.molecule.runtime)
     implementation(libs.kotlinx.coroutines.android)

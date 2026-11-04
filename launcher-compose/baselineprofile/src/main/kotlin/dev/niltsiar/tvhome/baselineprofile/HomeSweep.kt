@@ -22,7 +22,7 @@ private const val GRID_ROWS = 4
 private const val GRID_COLUMNS_SWEPT = 3
 private const val TOP_BAR_STEPS = 2
 
-/** Every app tile, in the dock and in the grid: HomeScreen tags each one `tile:<packageName>`. */
+/** Every app tile, in the dock and in the grid: HomeScreen tags each one `tile:<component key>`. */
 private val TILE_TAG = Pattern.compile("tile:.+")
 
 /** BySelector is a mutable builder, so each use needs a new one. */
