@@ -111,7 +111,7 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 internal val ScreenMargin = 40.dp
-private val TileGap = 14.dp
+private val TileGap = 24.dp
 internal val TopBarTop = 20.dp
 internal val TopBarHeight = 56.dp
 private val ContentTop = TopBarTop + TopBarHeight + 20.dp
@@ -748,6 +748,12 @@ private fun HomeScreenGlassPreview() {
     HomePreview(GlassKind.Refractive)
 }
 
+@Preview(name = "Home 1080p glass 4 columns", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
+@Composable
+private fun HomeScreenFourColumnsPreview() {
+    HomePreview(GlassKind.Refractive, columns = 4)
+}
+
 @Preview(name = "Home 1080p tile menu", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
 @Composable
 private fun HomeScreenTileMenuPreview() {
@@ -849,6 +855,7 @@ private fun HomePreview(
     libraryPill: Boolean = false,
     inputs: InputsMenu = InputsMenu(available = true),
     inputsOpen: Boolean = false,
+    columns: Int = 6,
 ) {
     TvTheme(glassKind = glassKind) {
         val apps =
@@ -856,7 +863,7 @@ private fun HomePreview(
                 val id = "example.${name.lowercase()}"
                 AppEntry(key = id, packageName = id, label = name, accent = Color(PreviewAccents[i % PreviewAccents.size]))
             }
-        val layout = HomeLayout(columns = 6, rowsBelowDock = 0, singleRow = false, fillDock = true, libraryPill = libraryPill)
+        val layout = HomeLayout(columns = columns, rowsBelowDock = 0, singleRow = false, fillDock = true, libraryPill = libraryPill)
         val locale = LocalConfiguration.current.locales[0]
         val header =
             HeaderStyle(hour24 = false, datePattern = DateFormat.getBestDateTimePattern(locale, "EEEEdMMMM"), greetingName = "Sam")

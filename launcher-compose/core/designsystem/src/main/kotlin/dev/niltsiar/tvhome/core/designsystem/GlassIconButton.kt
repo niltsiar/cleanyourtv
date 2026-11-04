@@ -30,8 +30,8 @@ private val ButtonSize = 40.dp
 /**
  * A round glass button. [icon] fills a 22dp box; it gets the focus progress, a spring from 0 (idle) to 1 (focused) that
  * can overshoot. Read it in graphicsLayer or draw lambdas, never in composition, so a focus change never recomposes.
- * With a [label] the button is a pill: the label follows the icon and the pill is as wide as both, or as the
- * incoming width limit allows.
+ * An icon with a motion of its own watches [interactionSource] instead. With a [label] the button is a pill: the label
+ * follows the icon and the pill is as wide as both, or as the incoming width limit allows.
  */
 @Composable
 public fun GlassIconButton(
@@ -39,10 +39,10 @@ public fun GlassIconButton(
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     label: (@Composable RowScope.() -> Unit)? = null,
     icon: @Composable BoxScope.(focus: () -> Float) -> Unit,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
     val focused by interactionSource.collectIsFocusedAsState()
     val progress =
         animateFloatAsState(

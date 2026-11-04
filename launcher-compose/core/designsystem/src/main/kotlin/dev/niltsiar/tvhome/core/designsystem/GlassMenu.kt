@@ -111,10 +111,10 @@ public fun GlassDropdown(
                         Modifier
                             .widthIn(min = minWidth, max = maxWidth)
                             .width(IntrinsicSize.Max)
-                            .padding(10.dp)
+                            .padding(14.dp)
                             .focusProperties { exit = { FocusRequester.Cancel } }
                             .focusGroup(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                     content = content,
                 )
             }

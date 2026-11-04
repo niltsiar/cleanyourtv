@@ -97,6 +97,7 @@ private fun typographyFor(colors: TvColors): TvTypography {
                 fontSize = clockSize,
                 fontWeight = FontWeight.Light,
                 fontFamily = googleSansFlex(FontWeight.Light, clockSize, width = 125f, roundness = 100f),
+                fontFeatureSettings = "tnum",
             ),
         date =
             TextStyle(

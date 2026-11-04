@@ -4,11 +4,17 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.EaseOutCubic
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.interaction.FocusInteraction
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -47,6 +53,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalLocale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -62,17 +69,25 @@ import dev.niltsiar.tvhome.core.designsystem.glassContainer
 import dev.niltsiar.tvhome.core.designsystem.holdOk
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
+import kotlinx.coroutines.flow.collectLatest
+import kotlin.math.PI
+import kotlin.math.sin
 
 private const val ICON_VIEWPORT = 24f
 private const val INPUTS_ARROW_SLIDE = 2.5f
+private const val INPUTS_ARROW_MS = 700
 private const val SETTINGS_TURN = 90f
+private const val WIFI_LIGHT_MS = 1400
+private const val TIMELINE_SETTLE_MS = 250
 private const val ARC_DIM = 0.2f
-private const val ARC_DIM_END = 0.15f
-private const val ARC_STAGGER = 0.3f
-private const val ARC_RELIGHT = 0.35f
+private const val ARC_DIM_END = 0.2f
+private const val ARC_FIRST_LIGHT = 0.26f
+private const val ARC_STAGGER = 0.2f
+private const val ARC_RELIGHT = 0.34f
 private const val APP_ICON_ZOOM = 0.12f
 private const val APPS_ICON_GROWTH = 0.18f
 private const val DEFAULT_NETWORK_WIDTH_DP = 180
+private const val CLOCK_SLOTS = 5
 private val NetworkIconRise = 6.dp
 private val DigitRise = 10.dp
 private val ClockPillPadding = 24.dp
@@ -164,6 +179,8 @@ internal fun TopBar(
         ClockPill(glass, state, layout.dateBelowClock)
         Spacer(Modifier.weight(1f))
         if (layout.showInputsPill && inputsAvailable) {
+            val inputsSource = remember { MutableInteractionSource() }
+            val slide = rememberFocusTimeline(inputsSource, INPUTS_ARROW_MS, layout.animated)
             GlassIconButton(
                 glass,
                 stringResource(R.string.inputs),
@@ -172,10 +189,11 @@ internal fun TopBar(
                     Modifier
                         .focusRequester(input.requester(INPUTS_FOCUS))
                         .onGloballyPositioned { input.inputsBounds = it.boundsInRoot() },
-            ) { focus ->
+                interactionSource = inputsSource,
+            ) {
                 IconPart(R.drawable.ic_inputs_frame, ink)
                 IconPart(R.drawable.ic_inputs_arrow, ink) {
-                    translationX = focus() * INPUTS_ARROW_SLIDE * size.width / ICON_VIEWPORT
+                    translationX = inputsArrowSlide(slide.value) * INPUTS_ARROW_SLIDE * size.width / ICON_VIEWPORT
                 }
             }
         }
@@ -235,7 +253,7 @@ private fun ReorderButton(
 
 /** The clock, the AM/PM marker, the greeting and the date. Absent until the TV's time is valid. */
 @Composable
-private fun ClockPill(
+internal fun ClockPill(
     glass: GlassState,
     state: () -> HomeUiState,
     dateBelowClock: Boolean,
@@ -246,7 +264,7 @@ private fun ClockPill(
     val clockStyle =
         remember(typography, dateBelowClock) { if (dateBelowClock) typography.clock.copy(fontSize = 28.sp) else typography.clock }
     val dateStyle = remember(typography, dateBelowClock) { if (dateBelowClock) typography.date.copy(fontSize = 14.sp) else typography.date }
-    GlassSurface(glass = glass, modifier = Modifier.fillMaxHeight(), shape = CircleShape) {
+    GlassSurface(glass = glass, modifier = Modifier.fillMaxHeight().testTag("clock"), shape = CircleShape) {
         Row(
             modifier = Modifier.fillMaxHeight().padding(horizontal = ClockPillPadding),
             verticalAlignment = Alignment.CenterVertically,
@@ -285,14 +303,17 @@ private fun ClockTime(
     }
 }
 
-/** The clock's characters. One that changes rises into place and fades in again; the others stay. */
+/**
+ * The clock's characters, each in a slot of its own width. One that changes rises into place and fades in again; the
+ * others stay. A time with a one-digit hour gets an empty slot in front, so the pill is as wide as with two.
+ */
 @Composable
 private fun ClockDigits(
     text: String,
     style: TextStyle,
 ) {
     Row {
-        text.forEachIndexed { index, char -> key(index) { ClockDigit(char, style) } }
+        text.padStart(CLOCK_SLOTS).forEachIndexed { index, char -> key(index) { ClockDigit(char, style) } }
     }
 }
 
@@ -303,13 +324,14 @@ private fun ClockDigit(
 ) {
     val reveal = remember(char) { Animatable(0f) }
     LaunchedEffect(reveal) { reveal.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)) }
+    val blank = char == ' '
     BasicText(
-        text = char.toString(),
+        text = if (blank) "0" else char.toString(),
         style = style,
         modifier =
             Modifier.graphicsLayer {
                 compositingStrategy = CompositingStrategy.ModulateAlpha
-                alpha = reveal.value.coerceIn(0f, 1f)
+                alpha = if (blank) 0f else reveal.value.coerceIn(0f, 1f)
                 translationY = (1f - reveal.value) * DigitRise.toPx()
             },
     )
@@ -397,11 +419,14 @@ private fun NetworkButton(
     val badge = vpnBadge(network, layout)
     val showLabel = !layout.iconOnlyButtons || layout.wifiLabelWidth > 0
     val maxWidth = if (layout.iconOnlyButtons) layout.wifiLabelWidth else DEFAULT_NETWORK_WIDTH_DP
+    val interactionSource = remember { MutableInteractionSource() }
+    val light = rememberFocusTimeline(interactionSource, WIFI_LIGHT_MS, layout.animated)
     GlassIconButton(
         glass = glass,
         contentDescription = listOfNotNull(name, badge?.first).joinToString(" "),
         onClick = onClick,
         modifier = if (showLabel) Modifier.widthIn(max = maxWidth.dp) else Modifier,
+        interactionSource = interactionSource,
         label =
             if (showLabel) {
                 {
@@ -424,15 +449,18 @@ private fun NetworkButton(
             } else {
                 null
             },
-    ) { focus ->
-        IconPart(R.drawable.ic_wifi_dot, tint) { fade(wifi.value) }
+    ) {
+        IconPart(R.drawable.ic_wifi_dot, tint) {
+            fade(wifi.value)
+            alpha *= wifiLight(light.value, part = 0)
+        }
         IconPart(R.drawable.ic_wifi_arc_inner, tint) {
             fade(wifi.value)
-            alpha *= wifiArcAlpha(focus(), arc = 0)
+            alpha *= wifiLight(light.value, part = 1)
         }
         IconPart(R.drawable.ic_wifi_arc_outer, tint) {
             fade(wifi.value)
-            alpha *= wifiArcAlpha(focus(), arc = 1)
+            alpha *= wifiLight(light.value, part = 2)
         }
         IconPart(R.drawable.ic_ethernet, tint) { fade(ethernet.value) }
         IconPart(R.drawable.ic_wifi_off, tint) { fade(offline.value) }
@@ -491,17 +519,52 @@ internal fun IconPart(
 }
 
 /**
- * The Wi-Fi arcs on focus [progress] (0 idle, 1 focused): both dim at once, then light again one after another,
- * the inner arc first. Both are fully lit at 0 and from 0.8 on.
+ * One run of an icon's own motion on a [timeline] from 0 to 1: the dot (part 0), the inner arc (1) and the outer arc (2)
+ * of the Wi-Fi icon. All three fade down together, then light again one after another, each with an ease-out. Fully lit
+ * at 0 and at 1.
  */
-private fun wifiArcAlpha(
-    progress: Float,
-    arc: Int,
+internal fun wifiLight(
+    timeline: Float,
+    part: Int,
 ): Float {
-    val p = progress.coerceIn(0f, 1f)
-    val start = ARC_DIM_END + arc * ARC_STAGGER
-    return when {
-        p < ARC_DIM_END -> 1f - (1f - ARC_DIM) * p / ARC_DIM_END
-        else -> (ARC_DIM + (1f - ARC_DIM) * (p - start) / ARC_RELIGHT).coerceIn(ARC_DIM, 1f)
+    val t = timeline.coerceIn(0f, 1f)
+    if (t < ARC_DIM_END) return 1f - (1f - ARC_DIM) * FastOutSlowInEasing.transform(t / ARC_DIM_END)
+    val start = ARC_FIRST_LIGHT + part * ARC_STAGGER
+    return ARC_DIM + (1f - ARC_DIM) * EaseOutCubic.transform(((t - start) / ARC_RELIGHT).coerceIn(0f, 1f))
+}
+
+/** How far the Inputs arrow has slid on a [timeline] from 0 to 1: out and back once, 0 at both ends and 1 at the middle. */
+internal fun inputsArrowSlide(timeline: Float): Float = sin(PI.toFloat() * timeline.coerceIn(0f, 1f))
+
+/**
+ * A value that sits at 1 and runs from 0 to 1 over [durationMs] each time the button behind [interactionSource] gains
+ * focus. Losing focus mid-run settles it to 1, so nothing replays on blur. It stays at 1 while [animated] is false.
+ * Read the value in a layer or draw lambda.
+ */
+@Composable
+internal fun rememberFocusTimeline(
+    interactionSource: MutableInteractionSource,
+    durationMs: Int,
+    animated: Boolean,
+): Animatable<Float, AnimationVector1D> {
+    val timeline = remember { Animatable(1f) }
+    LaunchedEffect(interactionSource, animated) {
+        if (!animated) {
+            timeline.snapTo(1f)
+            return@LaunchedEffect
+        }
+        interactionSource.interactions.collectLatest {
+            when (it) {
+                is FocusInteraction.Focus -> {
+                    timeline.snapTo(0f)
+                    timeline.animateTo(1f, tween(durationMs, easing = LinearEasing))
+                }
+
+                is FocusInteraction.Unfocus -> {
+                    if (timeline.value < 1f) timeline.animateTo(1f, tween(TIMELINE_SETTLE_MS, easing = LinearEasing))
+                }
+            }
+        }
     }
+    return timeline
 }

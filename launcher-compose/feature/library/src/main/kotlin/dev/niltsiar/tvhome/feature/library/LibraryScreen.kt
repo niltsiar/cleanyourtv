@@ -71,12 +71,12 @@ import kotlinx.coroutines.flow.filterNotNull
 private const val DIM = 0.55f
 private val PanelMaxWidth = 800.dp
 private val PanelMargin = 32.dp
-private val PanelHeight = 280.dp
+private val PanelHeight = 300.dp
 private val PanelShape = RoundedCornerShape(26.dp)
 private val PanelRise = 56.dp
 private const val PANEL_START_SCALE = 0.92f
-private val RowPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
-private val CardGap = 12.dp
+private val RowPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp)
+private val CardGap = 16.dp
 private val HighlightGrow = 6.dp
 private val HighlightRadius = 20.dp
 private const val HIGHLIGHT_STIFFNESS = 260f

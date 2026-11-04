@@ -14,14 +14,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.inset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.semantics.Role
@@ -30,12 +33,15 @@ import androidx.compose.ui.unit.dp
 private const val FOCUSED_SCALE = 1.1f
 private val FocusSpring = spring<Float>(dampingRatio = 0.5f, stiffness = Spring.StiffnessMedium)
 private val RingWidth = 2.dp
+private val RingGap = 3.dp
 private val GlowElevation = 12.dp
 private val Gloss = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f), Color.Transparent))
 
 /**
  * A D-pad target: scales up with a small overshoot and gets a lit top, an accent ring and an accent glow while
- * focused. [onFocused] fires on gaining focus. [interactionSource] receives the press and focus events, for content
+ * focused. Only the content is clipped to [shape]; the ring floats outside it and its corners are concentric to the
+ * shape's, so a parent must leave the grown surface plus 5dp times [focusedScale] free around it or it clips the ring.
+ * [onFocused] fires on gaining focus. [interactionSource] receives the press and focus events, for content
  * that reacts to them. [accent] colours the ring and the glow; unspecified takes the theme's. [glow] turns the accent
  * glow off: the elevation shadow also shows through a translucent surface, as a dark patch, so glass has none. The
  * animation is read in the layer and draw lambdas, so a focus change never relays out. [focusedScale] is the size
@@ -65,7 +71,6 @@ public fun FocusSurface(
                     scaleY = scale
                     shadowElevation = if (glow) GlowElevation.toPx() * focus.value.coerceIn(0f, 1f) else 0f
                     this.shape = shape
-                    clip = true
                     ambientShadowColor = ringColor
                     spotShadowColor = ringColor
                 }.drawWithContent {
@@ -74,14 +79,43 @@ public fun FocusSurface(
                     if (progress > 0f) {
                         drawOutline(shape.createOutline(size, layoutDirection, this), Gloss, alpha = progress)
                         val ring = RingWidth.toPx()
-                        inset(ring / 2f) {
-                            drawOutline(shape.createOutline(size, layoutDirection, this), ringColor, alpha = progress, style = Stroke(ring))
-                        }
+                        val ringOutline = shape.createOutline(size, layoutDirection, this).grownBy(RingGap.toPx() + ring / 2f)
+                        drawOutline(ringOutline, ringColor, alpha = progress, style = Stroke(ring))
                     }
-                }.onFocusChanged {
+                }.clip(shape)
+                .onFocusChanged {
                     focused = it.isFocused
                     if (it.isFocused) onFocused()
                 }.clickable(interactionSource = interactionSource, indication = null, role = Role.Button, onClick = onClick),
         content = content,
     )
 }
+
+/**
+ * This outline pushed out by [delta] on every side, with each corner radius grown by [delta] too, so the new curve is
+ * concentric with the old one. A shape that is not a rounded rectangle grows as its bounds, with corners of [delta].
+ */
+internal fun Outline.grownBy(delta: Float): Outline =
+    when (this) {
+        is Outline.Rounded -> {
+            val r = roundRect
+            Outline.Rounded(
+                RoundRect(
+                    left = r.left - delta,
+                    top = r.top - delta,
+                    right = r.right + delta,
+                    bottom = r.bottom + delta,
+                    topLeftCornerRadius = r.topLeftCornerRadius.grownBy(delta),
+                    topRightCornerRadius = r.topRightCornerRadius.grownBy(delta),
+                    bottomRightCornerRadius = r.bottomRightCornerRadius.grownBy(delta),
+                    bottomLeftCornerRadius = r.bottomLeftCornerRadius.grownBy(delta),
+                ),
+            )
+        }
+
+        else -> {
+            Outline.Rounded(RoundRect(bounds.inflate(delta), CornerRadius(delta)))
+        }
+    }
+
+private fun CornerRadius.grownBy(delta: Float): CornerRadius = CornerRadius(x + delta, y + delta)
