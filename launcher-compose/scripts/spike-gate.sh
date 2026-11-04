@@ -6,9 +6,19 @@
 #          ADB         adb binary (default: adb on PATH)
 #          PYTHON      python3 binary (default: python3 on PATH)
 #          GLASS       refractive (default) or flat: the glass kind to build, so two builds can be compared
+#          THEME_DIR   the theme folder (with config.json) to push back after the run; required on a TV below API 34
+#          TV_HOST     the TV's address for that push (default: TV_SERIAL without its port)
 #
 # It refuses to run (exit 2) while dev.niltsiar.tvhome is the TV's Home: switch-home.sh old first, new after.
 # It installs dev.niltsiar.tvhome only. It never changes the TV's Home setting or any other package.
+#
+# The app's data: below API 34 the Macrobenchmark library resets the app's compilation by uninstalling and installing it
+# again, which deletes the pushed theme (in the app's external files directory), the Home order, the library choices and
+# the last-opened times. No Gradle flag stops that. Below API 34 the script therefore refuses to run (exit 2) unless
+# THEME_DIR names the theme folder, and it pushes that folder back with tools/theme.sh when the run ends. The order, the
+# library choices and the last-opened times stay lost. From API 34 the compilation is reset in place, and
+# android.injected.androidTest.leaveApksInstalledAfterRun=true keeps AGP from uninstalling the app after the connected
+# tests, so the data survives.
 set -euo pipefail
 
 usage() {
@@ -44,7 +54,7 @@ MAX_COLD_START_MS=1500
 MAX_APK_BYTES=$((6 * 1024 * 1024))
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-GRADLE=("$ROOT/gradlew" --console=plain "-Ptvhome.glass=$GLASS")
+GRADLE=("$ROOT/gradlew" --console=plain "-Ptvhome.glass=$GLASS" -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true)
 
 for tool in "$ADB" "$PYTHON"; do
   command -v "$tool" > /dev/null || {
@@ -94,6 +104,28 @@ if [ "$SDK" -lt 31 ]; then
   exit 2
 fi
 
+# Below API 34 Macrobenchmark reinstalls the app to reset its compilation, which deletes the app's data (see the header).
+WIPES_DATA=0
+THEME_HOST="${TV_HOST:-}"
+if [ "$SDK" -lt 34 ]; then
+  WIPES_DATA=1
+  if [ -z "${THEME_DIR:-}" ] || [ ! -f "${THEME_DIR:-}/config.json" ]; then
+    echo "the TV runs API $SDK: the benchmark reinstalls $PACKAGE, which deletes its theme, order, library choices and last-opened data." >&2
+    echo "Set THEME_DIR to the theme folder (with config.json) to push back afterwards." >&2
+    exit 2
+  fi
+  THEME_DIR="$(cd "$THEME_DIR" && pwd)"
+  if [ -z "$THEME_HOST" ]; then
+    case "$TV_SERIAL" in
+      *:*) THEME_HOST="${TV_SERIAL%:*}" ;;
+      *)
+        echo "set TV_HOST to the TV's address: TV_SERIAL '$TV_SERIAL' has no host to push the theme back to" >&2
+        exit 2
+        ;;
+    esac
+  fi
+fi
+
 # The report's frame limit is one refresh period (1000 / refresh rate), read from the TV. The active
 # display mode prints refreshRate= up to API 34 and vsyncRate= (next to peakRefreshRate=) from API 35.
 # Each field must follow "{" or ", " so refreshRate= does not match inside peakRefreshRate=. The whole
@@ -121,6 +153,24 @@ display_refresh_hz() {
 }
 
 REFRESH_HZ="$(display_refresh_hz)" || exit 1
+
+# The connected tests leave the benchmark build installed, so put the release build back whatever happens, and
+# below API 34 the theme the reinstall deleted. APK is empty until the release build exists.
+APK=""
+finish() {
+  [ -n "$APK" ] || return 0
+  echo "== Reinstall release APK"
+  adb_tv install -r "$APK" > /dev/null || {
+    echo "could not reinstall $APK" >&2
+    return 0
+  }
+  if [ "$WIPES_DATA" = 1 ]; then
+    echo "== Push the theme back"
+    TV_HOST="$THEME_HOST" TV_PACKAGE="$PACKAGE" "$ROOT/../tools/theme.sh" "$THEME_DIR" > /dev/null ||
+      echo "could not push the theme back: run TV_HOST=$THEME_HOST TV_PACKAGE=$PACKAGE tools/theme.sh $THEME_DIR" >&2
+  fi
+}
+trap finish EXIT
 
 # Baseline profile collection needs API 33+ (or root); HomeBenchmarks compiles from warmup runs either way.
 if [ "$SDK" -ge 33 ]; then
@@ -170,13 +220,6 @@ for line in sys.stdin.read().splitlines():
   echo "could not read TOTAL PSS from dumpsys meminfo" >&2
   exit 1
 }
-
-# The connected test run uninstalls the app when it ends, so put the release build back whatever happens.
-reinstall() {
-  echo "== Reinstall release APK"
-  adb_tv install -r "$APK" > /dev/null || echo "could not reinstall $APK" >&2
-}
-trap reinstall EXIT
 
 echo "== Benchmarks"
 RESULTS_DIR="$ROOT/baselineprofile/build/outputs/connected_android_test_additional_output"
