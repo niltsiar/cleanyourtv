@@ -7,6 +7,7 @@
 #          PYTHON      python3 binary (default: python3 on PATH)
 #          GLASS       refractive (default) or flat: the glass kind to build, so two builds can be compared
 #
+# It refuses to run (exit 2) while dev.niltsiar.tvhome is the TV's Home: switch-home.sh old first, new after.
 # It installs dev.niltsiar.tvhome only. It never changes the TV's Home setting or any other package.
 set -euo pipefail
 
@@ -61,6 +62,19 @@ if ! adb_tv get-state > /dev/null 2>&1; then
     exit 1
   }
 fi
+
+# While we are Home, the system relaunches us after the benchmark's force-stop, so coldStartup is not cold.
+HOME_ACTIVITY="$(
+  adb_tv shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME 2> /dev/null |
+    tr -d '\r' | tail -n 1
+)" || HOME_ACTIVITY=""
+case "$HOME_ACTIVITY" in
+  "$PACKAGE"/*)
+    echo "$PACKAGE is the TV's Home ($HOME_ACTIVITY), so the cold-start benchmark would not start cold." >&2
+    echo "Run scripts/switch-home.sh old first, run this gate, then run scripts/switch-home.sh new." >&2
+    exit 2
+    ;;
+esac
 
 # Gradle's connected-test and profile tasks use every attached device unless told which one.
 export ANDROID_SERIAL="$TV_SERIAL"
