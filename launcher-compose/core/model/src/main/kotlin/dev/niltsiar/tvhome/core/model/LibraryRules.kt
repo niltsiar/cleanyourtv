@@ -52,7 +52,7 @@ public fun isRecent(
 ): Boolean = installedAt > 0 && installedAt <= now && now - installedAt <= RECENT_MS
 
 /** Missing shortcuts first; recent installs lead that group, the newest first. The caller sorts ties by label. */
-public fun comparePriority(
+internal fun comparePriority(
     a: LibraryApp,
     b: LibraryApp,
     now: Long,
@@ -66,7 +66,7 @@ public fun comparePriority(
 }
 
 /** Selection mode: apps on Home first, then by label, then by package. */
-public fun compareSelection(
+internal fun compareSelection(
     a: LibraryApp,
     b: LibraryApp,
     collator: Collator,

@@ -19,8 +19,6 @@ public class ThemeDirectory(
     public val dir: File? get() = context.getExternalFilesDir(null)
     public val wallpaperFile: File? get() = dir?.resolve(ThemeFiles.WALLPAPER_JPG)
     public val wallpapersFolder: File? get() = dir?.resolve(ThemeFiles.WALLPAPERS)
-    public val captionsFile: File? get() = wallpapersFolder?.resolve(ThemeFiles.CAPTIONS)
-    public val revisionFile: File? get() = dir?.resolve(ThemeFiles.THEME_REVISION)
 
     /**
      * config.json parsed over the defaults. Home can start before external storage is mounted, so then the

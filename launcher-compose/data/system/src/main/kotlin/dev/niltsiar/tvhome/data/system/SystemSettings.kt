@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.provider.Settings
 import android.util.Log
 import androidx.core.net.toUri
+import dev.niltsiar.tvhome.core.model.tvLaunchIntent
 
 private const val TAG = "TvHome.Settings"
 private val AospTvSettings = ComponentName("com.android.tv.settings", "com.android.tv.settings.MainSettings")
@@ -17,7 +18,7 @@ private val AospTvSettings = ComponentName("com.android.tv.settings", "com.andro
  * activities ("package/class") tried in order when no standard handler is usable. [vpnApp] is the package the
  * network button opens instead of Wi-Fi settings, when it is installed.
  */
-public class SystemSettings(
+public class SystemSettings internal constructor(
     private val context: Context,
     private val fallbackComponents: List<String>,
     private val vpnApp: String?,
@@ -71,11 +72,7 @@ public class SystemSettings(
 
     private fun appInfoIntent(packageName: String) = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:$packageName".toUri())
 
-    private fun vpnAppIntent(): Intent? {
-        val pkg = vpnApp ?: return null
-        val pm = context.packageManager
-        return pm.getLeanbackLaunchIntentForPackage(pkg) ?: pm.getLaunchIntentForPackage(pkg)
-    }
+    private fun vpnAppIntent(): Intent? = vpnApp?.let(context.packageManager::tvLaunchIntent)
 
     private fun isInstalled(packageName: String): Boolean =
         try {

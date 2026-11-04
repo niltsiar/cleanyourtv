@@ -2,9 +2,9 @@ package dev.niltsiar.tvhome.data.inputs
 
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.provider.Settings
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.model.tvLaunchIntent
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -48,12 +48,6 @@ internal fun openOnStartOnWake(
     onWake: Boolean,
 ): Boolean = choice && onWake
 
-/** The app's TV entry point, or its phone one; null when it is uninstalled or disabled, so Home stays. */
-internal fun startIntent(
-    pm: PackageManager,
-    pkg: String,
-): Intent? = pm.getLeanbackLaunchIntentForPackage(pkg) ?: pm.getLaunchIntentForPackage(pkg)
-
 /**
  * boot_to_live_tv, or the Open on start app: the first time Home comes up after the TV starts, open that instead.
  * Once per boot, keyed on Settings.Global.BOOT_COUNT and committed to disk before the app starts: on a low-memory TV
@@ -80,7 +74,7 @@ public class OpenOnStart(
                 val target = if (config.bootToLiveTv) config.liveTvPackage else app
                 if (!openOnStartDue(boot, prefs.getInt(BOOT_KEY, -1), target, context.packageName)) return@withContext null
                 if (!prefs.edit().putInt(BOOT_KEY, boot).commit()) return@withContext null
-                if (config.bootToLiveTv) liveTv.appIntent() else startIntent(context.packageManager, app)
+                if (config.bootToLiveTv) liveTv.appIntent() else context.packageManager.tvLaunchIntent(app)
             } ?: return
         openWhenReady(intent, open)
     }
@@ -93,7 +87,7 @@ public class OpenOnStart(
         if (!openOnStartOnWake(config.openOnStartChoice, config.openOnStartOnWake)) return
         val app = pickedApp()
         if (app.isEmpty() || app == context.packageName) return
-        startIntent(context.packageManager, app)?.let { openWhenReady(it, open) }
+        context.packageManager.tvLaunchIntent(app)?.let { openWhenReady(it, open) }
     }
 
     private suspend fun pickedApp(): String = withContext(io) { openOnStartPackage(context, config) }

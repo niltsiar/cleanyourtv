@@ -9,6 +9,7 @@ import android.media.tv.TvContract
 import android.os.Build
 import android.util.Log
 import dev.niltsiar.tvhome.core.model.HomeActions
+import dev.niltsiar.tvhome.core.model.tvLaunchIntent
 import dev.niltsiar.tvhome.data.system.SystemSettings
 
 private const val TAG = "TvHome.Keys"
@@ -60,9 +61,7 @@ internal class TargetLauncher(
     }
 
     private fun openApp(packageName: String) {
-        val pm = context.packageManager
-        val open = pm.getLeanbackLaunchIntentForPackage(packageName) ?: pm.getLaunchIntentForPackage(packageName)
-        if (open != null) start(open)
+        context.packageManager.tvLaunchIntent(packageName)?.let(::start)
     }
 
     private fun run(action: ActionWord) {
