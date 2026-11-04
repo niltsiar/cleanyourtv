@@ -33,6 +33,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,6 +71,7 @@ import dev.niltsiar.tvhome.core.designsystem.glassContainer
 import dev.niltsiar.tvhome.core.designsystem.glassSource
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
+import kotlinx.coroutines.flow.drop
 import java.time.LocalDateTime
 import java.util.Locale
 
@@ -94,6 +96,7 @@ private const val TILE_ASPECT = 16f / 9f
  * The wallpaper and the scrolling content are both glass sources, so the top bar and the dock glass what is behind them.
  * The top bar's surfaces sit in one glass container and merge when they come near each other.
  * The shelf title stays under the top bar; rows fade out as they scroll up to it.
+ * [homePresses] counts Home key presses that reach Home while it shows; each one scrolls to the top and focuses the first dock tile.
  */
 @Composable
 public fun HomeScreen(
@@ -101,12 +104,13 @@ public fun HomeScreen(
     onFocus: (String) -> Unit,
     onClick: (String) -> Unit,
     modifier: Modifier = Modifier,
+    homePresses: () -> Int = { 0 },
 ) {
     val glass = rememberGlassState()
     val dockFocus = remember { FocusRequester() }
     Box(modifier = modifier.fillMaxSize().background(TvTheme.colors.background)) {
         Wallpaper(glass)
-        HomeContent(glass, dockFocus, state, onFocus, onClick)
+        HomeContent(glass, dockFocus, state, onFocus, onClick, homePresses)
         ShelfTitle(
             label = { state().focusedLabel },
             modifier = Modifier.padding(top = ContentTop, start = ScreenMargin).height(ShelfHeight - ShelfTitleGap),
@@ -149,12 +153,24 @@ private fun HomeContent(
     state: () -> HomeUiState,
     onFocus: (String) -> Unit,
     onClick: (String) -> Unit,
+    homePresses: () -> Int,
     modifier: Modifier = Modifier,
 ) {
     // The focused tile rests one gap inside the dock panel, so at rest the dock panel's top edge is the shelf's bottom edge.
     val pivotPx = with(LocalDensity.current) { (ShelfBottom + TileGap).toPx() }
     val pivotSpec = remember(pivotPx) { PivotBringIntoViewSpec(pivotPx) }
     val gridState = rememberLazyGridState()
+    val firstDockTile = remember { FocusRequester() }
+    LaunchedEffect(gridState) {
+        snapshotFlow(homePresses).drop(1).collect {
+            gridState.scrollToItem(0)
+            if (state().dock.isNotEmpty()) {
+                // The dock attaches during the layout that follows the scroll.
+                withFrameNanos { }
+                firstDockTile.requestFocus()
+            }
+        }
+    }
     CompositionLocalProvider(LocalBringIntoViewSpec provides pivotSpec) {
         LazyVerticalGrid(
             state = gridState,
@@ -171,6 +187,7 @@ private fun HomeContent(
                 Dock(
                     glass = glass,
                     focus = dockFocus,
+                    firstTile = firstDockTile,
                     dock = state().dock,
                     onFocus = onFocus,
                     onClick = onClick,
@@ -254,12 +271,12 @@ private fun ShelfTitle(
 private fun Dock(
     glass: GlassState,
     focus: FocusRequester,
+    firstTile: FocusRequester,
     dock: List<AppEntry>,
     onFocus: (String) -> Unit,
     onClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val firstTile = remember { FocusRequester() }
     LaunchedEffect(dock.isNotEmpty()) {
         if (dock.isNotEmpty()) {
             // The grid attaches its items during layout, after this effect starts.

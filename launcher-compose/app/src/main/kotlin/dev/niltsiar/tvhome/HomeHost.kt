@@ -14,6 +14,7 @@ import dev.niltsiar.tvhome.feature.home.minuteClock
 internal fun HomeHost(
     graph: AppGraph,
     onLaunchApp: (String) -> Unit,
+    homePresses: () -> Int,
     viewModel: MoleculeHomeViewModel = viewModel { MoleculeHomeViewModel(graph.appsProvider.apps, minuteClock()) },
 ) {
     LaunchedEffect(viewModel) {
@@ -24,5 +25,5 @@ internal fun HomeHost(
         }
     }
     val state = viewModel.uiState.collectAsStateWithLifecycle()
-    HomeScreen(state = { state.value }, onFocus = viewModel::onFocus, onClick = viewModel::onClick)
+    HomeScreen(state = { state.value }, onFocus = viewModel::onFocus, onClick = viewModel::onClick, homePresses = homePresses)
 }

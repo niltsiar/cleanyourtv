@@ -1,5 +1,8 @@
 package dev.niltsiar.tvhome.feature.home
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasAnyAncestor
@@ -27,12 +30,14 @@ class HomeFocusTest {
     @get:Rule
     val compose = createComposeRule()
 
+    private var homePresses by mutableIntStateOf(0)
+
     @Before
     fun showHome() {
         val state = homeUiState(HomeApps(NineApps), Evening, null, Locale.ENGLISH)
         compose.setContent {
             TvTheme(glassKind = GlassKind.Flat) {
-                HomeScreen(state = { state }, onFocus = {}, onClick = {})
+                HomeScreen(state = { state }, onFocus = {}, onClick = {}, homePresses = { homePresses })
             }
         }
         compose.waitForIdle()
@@ -63,5 +68,16 @@ class HomeFocusTest {
         press(Key.DirectionDown)
 
         compose.onNodeWithTag("tile:pkg.3").assertIsFocused()
+    }
+
+    @Test
+    fun home_pressed_while_in_the_grid_focuses_the_first_dock_tile() {
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+
+        homePresses++
+        compose.waitForIdle()
+
+        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
     }
 }
