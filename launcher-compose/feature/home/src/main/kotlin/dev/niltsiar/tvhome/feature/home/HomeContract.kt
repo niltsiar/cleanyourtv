@@ -1,18 +1,24 @@
 package dev.niltsiar.tvhome.feature.home
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
  * What the screen shows. [clock], [amPm], [date] and [greeting] are empty or null until the TV's time is valid.
  * [topBarApps] are the top_bar_apps that can be opened. [wallpaper] is the picture behind Home and its caption.
+ * [shelf] is the cinematic shelf's app while focus is on a dock tile, null otherwise and without cinematic_home.
  */
 @Immutable
 public data class HomeUiState(
@@ -26,6 +32,21 @@ public data class HomeUiState(
     val grid: List<AppEntry> = emptyList(),
     val focusedLabel: String = "",
     val wallpaper: Wallpaper = Wallpaper(),
+    val shelf: Shelf? = null,
+)
+
+/**
+ * The dock app the cinematic shelf shows: its [key] and [label], the [accent] colour of its art, its [position] among
+ * the [count] dock apps (one dot each) and [lastOpened], the relative time Home last opened it, null if it never did.
+ */
+@Immutable
+public data class Shelf(
+    val key: String,
+    val label: String,
+    val accent: Color,
+    val position: Int,
+    val count: Int,
+    val lastOpened: String?,
 )
 
 /** One-shot results the host handles outside the UI state. */
@@ -53,6 +74,10 @@ public class HomeSources(
     public val datePattern: String,
     /** Whether the TV is set to the 24-hour clock; read when the clock_format is system. */
     public val systemHour24: () -> Boolean,
+    /** Tile key to the milliseconds since the epoch of the last time Home opened it. */
+    public val lastOpened: Flow<Map<String, Long>> = flowOf(emptyMap()),
+    /** The softened art of a tile for the cinematic shelf; null for a tile without art. */
+    public val heroArt: suspend (String) -> ImageBitmap? = { null },
 )
 
 internal sealed interface HomeEvent {
@@ -124,6 +149,9 @@ internal fun homeUiState(
     network: NetworkState = NetworkState(),
     topBarApps: List<AppEntry> = emptyList(),
     wallpaper: Wallpaper = Wallpaper(),
+    cinematic: Boolean = false,
+    lastOpened: Map<String, Long> = emptyMap(),
+    zone: ZoneId = ZoneId.systemDefault(),
 ): HomeUiState =
     HomeUiState(
         clock = now?.let { clockText(it, header.hour24, locale) }.orEmpty(),
@@ -136,4 +164,36 @@ internal fun homeUiState(
         grid = apps.grid,
         focusedLabel = (apps.all.firstOrNull { it.key == focusedKey } ?: apps.all.firstOrNull())?.label.orEmpty(),
         wallpaper = wallpaper,
+        shelf = if (cinematic) shelfFor(apps, focusedKey, lastOpened, now, header.hour24, zone) else null,
     )
+
+/**
+ * The shelf for the focused app, resolved like the label: an unknown key gives the first app. Null when that app is
+ * not in the dock. The "last opened" line waits for a valid time.
+ */
+internal fun shelfFor(
+    apps: HomeApps,
+    focusedKey: String?,
+    lastOpened: Map<String, Long>,
+    now: LocalDateTime?,
+    hour24: Boolean,
+    zone: ZoneId,
+): Shelf? {
+    val app = apps.all.firstOrNull { it.key == focusedKey } ?: apps.all.firstOrNull() ?: return null
+    val position = apps.dock.indexOfFirst { it.key == app.key }
+    if (position < 0) return null
+    val opened = lastOpened[app.key]
+    return Shelf(
+        key = app.key,
+        label = app.label,
+        accent = app.accent,
+        position = position,
+        count = apps.dock.size,
+        lastOpened =
+            if (opened == null || now == null) {
+                null
+            } else {
+                describeLastOpened(LocalDateTime.ofInstant(Instant.ofEpochMilli(opened), zone), now, hour24)
+            },
+    )
+}

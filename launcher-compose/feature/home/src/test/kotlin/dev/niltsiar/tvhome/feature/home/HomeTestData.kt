@@ -28,4 +28,14 @@ internal fun sources(
     topBarApps: Flow<List<AppEntry>> = flowOf(emptyList()),
     wallpaper: Flow<Wallpaper> = flowOf(Wallpaper()),
     systemHour24: () -> Boolean = { true },
-) = HomeSources(apps, clock, network, topBarApps, wallpaper, datePattern = "EEEE d MMMM", systemHour24 = systemHour24)
+    lastOpened: Flow<Map<String, Long>> = flowOf(emptyMap()),
+) = HomeSources(
+    apps,
+    clock,
+    network,
+    topBarApps,
+    wallpaper,
+    datePattern = "EEEE d MMMM",
+    systemHour24 = systemHour24,
+    lastOpened = lastOpened,
+)

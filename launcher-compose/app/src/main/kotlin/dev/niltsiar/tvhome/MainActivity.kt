@@ -57,7 +57,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun launchApp(app: AppEntry) {
-        if (!graph.appLauncher.launch(app)) cantOpen(app.label)
+        if (!graph.appLauncher.launch(app)) {
+            cantOpen(app.label)
+        } else if (graph.config.cinematicHome) {
+            graph.lastOpened.record(app.key)
+        }
     }
 
     private fun openSettings() {

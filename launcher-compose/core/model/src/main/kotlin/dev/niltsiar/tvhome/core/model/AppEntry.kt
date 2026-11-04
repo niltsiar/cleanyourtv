@@ -1,12 +1,15 @@
 package dev.niltsiar.tvhome.core.model
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 
 /**
  * One launchable app tile. [key] is the activity's component in its short form (`pkg/.Main`): a package can show
  * two tiles, so the key, not the package, names a tile. [image] is the TV banner or the icon, sized for a tile.
- * [leanback] is true when the package has a LEANBACK_LAUNCHER activity, so its tile launches like the TV's own.
+ * [accent] is the vivid colour of the art, which the focus highlight and the cinematic shelf take; unspecified while
+ * the art is not loaded. [leanback] is true when the package has a LEANBACK_LAUNCHER activity, so its tile launches like
+ * the TV's own.
  */
 @Immutable
 public data class AppEntry(
@@ -14,6 +17,7 @@ public data class AppEntry(
     val packageName: String,
     val label: String,
     val image: ImageBitmap? = null,
+    val accent: Color = Color.Unspecified,
     val leanback: Boolean = false,
 )
 

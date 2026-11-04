@@ -40,6 +40,8 @@ class TvConfigParserTest {
         assertEquals(0xFF000000.toInt(), config.backgroundColor)
         assertTrue(config.wallpaper && config.fillDock && config.showGreeting && config.tileMenu && config.clockGlow)
         assertFalse(config.appLibrary || config.cinematicHome || config.singleRow || config.powerOnHomeAlways)
+        assertTrue(config.cinematicDots && config.ambientGlow)
+        assertFalse(config.cinematicWhiteFocus || config.glowSnap || config.appGlow)
     }
 
     @Test
@@ -208,6 +210,23 @@ class TvConfigParserTest {
         assertEquals(listOf("dock_title", "festival", "game_day"), parsed.unsupportedKeys)
         assertEquals(listOf("nonsense", "dock_titel"), parsed.unknownKeys)
         assertEquals(5, parsed.config.columns)
+    }
+
+    @Test
+    fun the_cinematic_and_glow_keys_are_read_and_a_wrong_type_keeps_the_default() {
+        val parsed =
+            parseTvConfig(
+                """{"cinematic_dots": false, "cinematic_white_focus": true, "ambient_glow": false, "glow_snap": true, "app_glow": true}""",
+            )
+        val config = parsed.config
+        assertFalse(config.cinematicDots || config.ambientGlow)
+        assertTrue(config.cinematicWhiteFocus && config.glowSnap && config.appGlow)
+        assertEquals(emptyList<String>(), parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys)
+
+        val wrong = parseTvConfig("""{"cinematic_dots": "no", "app_glow": 1}""")
+        assertTrue(wrong.config.cinematicDots)
+        assertFalse(wrong.config.appGlow)
+        assertEquals(listOf("cinematic_dots", "app_glow"), wrong.rejectedKeys)
     }
 
     @Test

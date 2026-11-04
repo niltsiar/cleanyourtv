@@ -16,9 +16,11 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Test
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.util.Locale
 
 class HomePresenterTest {
@@ -122,6 +124,28 @@ class HomePresenterTest {
             val online = NetworkState(NetworkLink.Ethernet, validated = true)
             presenter(sources(network = flowOf(online))).test {
                 assertEquals(online, awaitMatching { it.network == online }.network)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun a_cinematic_theme_shows_when_the_focused_dock_app_was_last_opened() =
+        runTest {
+            val fiveMinutesAgo = Evening.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() - 5 * 60_000L
+            val opened = flowOf(mapOf("pkg.2" to fiveMinutesAgo))
+            presenter(sources(lastOpened = opened), SixColumns.copy(cinematicHome = true)).test {
+                events.send(HomeEvent.Focus("pkg.2"))
+                assertEquals("5 minutes ago", awaitMatching { it.shelf?.lastOpened != null }.shelf?.lastOpened)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun the_default_theme_has_no_shelf() =
+        runTest {
+            presenter().test {
+                events.send(HomeEvent.Focus("pkg.2"))
+                assertNull(awaitMatching { it.focusedLabel == "App 2" }.shelf)
                 cancelAndIgnoreRemainingEvents()
             }
         }

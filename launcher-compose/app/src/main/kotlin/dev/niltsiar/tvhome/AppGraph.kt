@@ -5,6 +5,7 @@ import android.text.format.DateFormat
 import dev.niltsiar.tvhome.core.config.ThemeDirectory
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.data.apps.AppLauncher
+import dev.niltsiar.tvhome.data.apps.LastOpened
 import dev.niltsiar.tvhome.data.apps.PackageManagerAppsProvider
 import dev.niltsiar.tvhome.data.system.NetworkMonitor
 import dev.niltsiar.tvhome.data.system.SystemSettings
@@ -22,6 +23,7 @@ interface AppGraph {
     val config: TvConfig
     val appsProvider: PackageManagerAppsProvider
     val appLauncher: AppLauncher
+    val lastOpened: LastOpened
     val networkMonitor: NetworkMonitor
     val timeChanges: TimeChanges
     val systemSettings: SystemSettings
@@ -46,6 +48,10 @@ interface AppGraph {
         application: Application,
         config: TvConfig,
     ): AppLauncher = AppLauncher(application, config.launchActions)
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideLastOpened(application: Application): LastOpened = LastOpened(application)
 
     @Provides
     @SingleIn(AppScope::class)
@@ -79,6 +85,7 @@ interface AppGraph {
     fun provideHomeSources(
         application: Application,
         appsProvider: PackageManagerAppsProvider,
+        lastOpened: LastOpened,
         networkMonitor: NetworkMonitor,
         timeChanges: TimeChanges,
         wallpaperProvider: WallpaperProvider,
@@ -92,6 +99,8 @@ interface AppGraph {
             wallpaper = wallpaperProvider.wallpaper(clock),
             datePattern = application.getString(R.string.date_format),
             systemHour24 = { DateFormat.is24HourFormat(application) },
+            lastOpened = lastOpened.times,
+            heroArt = appsProvider::heroArt,
         )
     }
 

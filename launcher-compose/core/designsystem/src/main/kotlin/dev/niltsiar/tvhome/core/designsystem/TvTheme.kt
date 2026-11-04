@@ -33,6 +33,8 @@ public class TvTypography(
     public val greeting: TextStyle,
     public val pillLabel: TextStyle,
     public val shelfTitle: TextStyle,
+    public val cinematicTitle: TextStyle,
+    public val cinematicMeta: TextStyle,
     public val tileLabel: TextStyle,
     public val caption: TextStyle,
 )
@@ -78,6 +80,8 @@ private fun typographyFor(colors: TvColors): TvTypography {
     val greetingSize = 11.sp
     val pillLabelSize = 16.sp
     val shelfTitleSize = 40.sp
+    val cinematicTitleSize = 68.sp
+    val cinematicMetaSize = 15.sp
     val tileLabelSize = 16.sp
     val captionSize = 15.sp
     return TvTypography(
@@ -124,6 +128,21 @@ private fun typographyFor(colors: TvColors): TvTypography {
                 fontSize = shelfTitleSize,
                 fontWeight = FontWeight.SemiBold,
                 fontFamily = googleSansFlex(FontWeight.SemiBold, shelfTitleSize, width = 112f, roundness = 100f),
+            ),
+        cinematicTitle =
+            TextStyle(
+                color = colors.onSurface,
+                fontSize = cinematicTitleSize,
+                fontWeight = FontWeight.Light,
+                letterSpacing = (-0.025).em,
+                fontFamily = googleSansFlex(FontWeight.Light, cinematicTitleSize, width = 112f, roundness = 100f),
+            ),
+        cinematicMeta =
+            TextStyle(
+                color = colors.onSurface.copy(alpha = 0.7f),
+                fontSize = cinematicMetaSize,
+                fontWeight = FontWeight.Normal,
+                fontFamily = googleSansFlex(FontWeight.Normal, cinematicMetaSize, width = 100f, roundness = 0f),
             ),
         tileLabel =
             TextStyle(

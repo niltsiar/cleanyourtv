@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.inset
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 
@@ -35,9 +36,9 @@ private val Gloss = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f
 /**
  * A D-pad target: scales up with a small overshoot and gets a lit top, an accent ring and an accent glow while
  * focused. [onFocused] fires on gaining focus. [interactionSource] receives the press and focus events, for content
- * that reacts to them. [glow] turns the accent glow off: the elevation shadow also shows through a translucent
- * surface, as a dark patch, so glass has none. The animation is read in the layer and draw lambdas, so a focus
- * change never relays out.
+ * that reacts to them. [accent] colours the ring and the glow; unspecified takes the theme's. [glow] turns the accent
+ * glow off: the elevation shadow also shows through a translucent surface, as a dark patch, so glass has none. The
+ * animation is read in the layer and draw lambdas, so a focus change never relays out.
  */
 @Composable
 public fun FocusSurface(
@@ -47,11 +48,12 @@ public fun FocusSurface(
     onFocused: () -> Unit = {},
     interactionSource: MutableInteractionSource? = null,
     glow: Boolean = true,
+    accent: Color = Color.Unspecified,
     content: @Composable BoxScope.() -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
     val focus = animateFloatAsState(if (focused) 1f else 0f, FocusSpring, label = "focus")
-    val accent = TvTheme.colors.accent
+    val ringColor = accent.takeOrElse { TvTheme.colors.accent }
     Box(
         modifier =
             modifier
@@ -62,8 +64,8 @@ public fun FocusSurface(
                     shadowElevation = if (glow) GlowElevation.toPx() * focus.value.coerceIn(0f, 1f) else 0f
                     this.shape = shape
                     clip = true
-                    ambientShadowColor = accent
-                    spotShadowColor = accent
+                    ambientShadowColor = ringColor
+                    spotShadowColor = ringColor
                 }.drawWithContent {
                     drawContent()
                     val progress = focus.value.coerceIn(0f, 1f)
@@ -71,7 +73,7 @@ public fun FocusSurface(
                         drawOutline(shape.createOutline(size, layoutDirection, this), Gloss, alpha = progress)
                         val ring = RingWidth.toPx()
                         inset(ring / 2f) {
-                            drawOutline(shape.createOutline(size, layoutDirection, this), accent, alpha = progress, style = Stroke(ring))
+                            drawOutline(shape.createOutline(size, layoutDirection, this), ringColor, alpha = progress, style = Stroke(ring))
                         }
                     }
                 }.onFocusChanged {

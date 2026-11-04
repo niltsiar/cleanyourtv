@@ -50,7 +50,8 @@ private val Scrim = Brush.verticalGradient(listOf(Color(0x33000000), Color(0xB30
 /**
  * What is behind Home, drawn in the draw phase only: the picture, a scrim that keeps the white text readable on any
  * picture, then the time-of-day sky. A new picture cross-fades in over the old one with no recomposition per frame
- * and no offscreen layer. It is a glass source, so the panels above it sample what it draws.
+ * and no offscreen layer. The [cinematic] shelf's art, glow and scrim come last. It is a glass source, so the panels
+ * above it sample what it draws.
  */
 @Composable
 internal fun WallpaperBackdrop(
@@ -58,6 +59,7 @@ internal fun WallpaperBackdrop(
     wallpaper: () -> Wallpaper,
     layout: WallpaperLayout,
     modifier: Modifier = Modifier,
+    cinematic: CinematicBackdrop? = null,
 ) {
     val picture by remember(wallpaper) { derivedStateOf { wallpaper().picture } }
     val sky by remember(wallpaper) { derivedStateOf { wallpaper().sky } }
@@ -72,6 +74,7 @@ internal fun WallpaperBackdrop(
                 .drawBehind {
                     fade.draw(this)
                     if (skyAlpha > 0f) sky?.let { drawSky(it, skyAlpha) }
+                    cinematic?.draw(this)
                 },
     )
 }

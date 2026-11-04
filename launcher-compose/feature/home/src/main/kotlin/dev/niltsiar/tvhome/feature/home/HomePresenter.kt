@@ -20,6 +20,7 @@ private val NoApps = AppList()
 private val NoTopBarApps = emptyList<AppEntry>()
 private val NoNetwork = NetworkState()
 private val NoWallpaper = Wallpaper()
+private val NoOpened = emptyMap<String, Long>()
 
 /** Home's state logic for any host that runs a composable: Molecule today. It uses the Compose runtime only. */
 @Composable
@@ -65,11 +66,23 @@ internal fun homePresenter(
     val now by sources.clock.collectAsState(null)
     val network by sources.network.collectAsState(NoNetwork)
     val wallpaper by sources.wallpaper.collectAsState(NoWallpaper)
+    val lastOpened by sources.lastOpened.collectAsState(NoOpened)
     // Read again with each new time, which also follows the TV's 12/24-hour setting after a stop and start of Home.
     val hour24 = remember(now, config.clockFormat) { config.clockFormat.is24Hour(sources.systemHour24) }
     val header =
         remember(hour24, config, sources.datePattern) {
             HeaderStyle(hour24, sources.datePattern, config.showGreeting, config.greetingName)
         }
-    return homeUiState(homeApps, now, focusedKey, locale, header, network, topBarApps, wallpaper)
+    return homeUiState(
+        homeApps,
+        now,
+        focusedKey,
+        locale,
+        header,
+        network,
+        topBarApps,
+        wallpaper,
+        cinematic = config.cinematicHome,
+        lastOpened = lastOpened,
+    )
 }

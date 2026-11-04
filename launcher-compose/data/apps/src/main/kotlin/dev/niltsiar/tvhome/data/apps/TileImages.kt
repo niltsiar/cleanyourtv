@@ -50,6 +50,12 @@ internal fun isBannerShaped(
 /** A bundled banner is named `banner_*`; any other app_banners value is ignored. */
 internal fun isBundledBannerName(name: String?): Boolean = name != null && name.startsWith(BUNDLED_BANNER_PREFIX)
 
+/** What one tile shows: its [image] (null when the app has no art) and the [accent] colour picked from the art, as ARGB. */
+internal class TileArt(
+    val image: ImageBitmap?,
+    val accent: Int,
+)
+
 /** Draws the artwork of one tile: a bundled banner from app_banners, the app's banner, or its icon. */
 internal class TileImages(
     private val context: Context,
@@ -60,13 +66,27 @@ internal class TileImages(
     fun load(
         activity: ActivityInfo,
         icon: () -> Drawable?,
-    ): ImageBitmap? {
-        val banner = bundledBanner(appBanners[activity.packageName]) ?: appBanner(activity)
-        return if (banner != null) {
-            banner.toBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888).asImageBitmap()
-        } else {
-            icon()?.centeredOnTile()?.asImageBitmap()
+    ): TileArt {
+        val banner = banner(activity)
+        if (banner != null) {
+            return TileArt(banner.toBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888).asImageBitmap(), accentOf(banner))
         }
+        val drawable = icon() ?: return TileArt(null, NO_ART_ACCENT)
+        return TileArt(drawable.centeredOnTile().asImageBitmap(), accentOf(drawable))
+    }
+
+    /** The art the cinematic shelf softens: the tile's banner, else its icon. */
+    fun artwork(
+        activity: ActivityInfo,
+        icon: () -> Drawable?,
+    ): Drawable? = banner(activity) ?: icon()
+
+    private fun banner(activity: ActivityInfo): Drawable? = bundledBanner(appBanners[activity.packageName]) ?: appBanner(activity)
+
+    private fun accentOf(art: Drawable): Int {
+        val pixels = IntArray(VIVID_SIDE * VIVID_SIDE)
+        art.toBitmap(VIVID_SIDE, VIVID_SIDE, Bitmap.Config.ARGB_8888).getPixels(pixels, 0, VIVID_SIDE, 0, 0, VIVID_SIDE, VIVID_SIDE)
+        return vividColor(pixels)
     }
 
     private fun bundledBanner(name: String?): Drawable? {

@@ -70,6 +70,16 @@ public data class TvConfig(
     val cinematicArt: Int = 50,
     /** Percent, 0 to 100. */
     val cinematicScrim: Int = 100,
+    /** With [cinematicHome]: false leaves out the dock position dots under the app's name. */
+    val cinematicDots: Boolean = true,
+    /** With [cinematicHome]: the dock keeps the neutral focus highlight instead of the focused app's colour. */
+    val cinematicWhiteFocus: Boolean = false,
+    /** The glow in the focused app's colour behind the cinematic shelf. */
+    val ambientGlow: Boolean = true,
+    /** The glow takes a new app's colour in one frame instead of dipping and fading. */
+    val glowSnap: Boolean = false,
+    /** The focus highlight takes the focused app's colour on every tile, as the cinematic shelf does for the dock. */
+    val appGlow: Boolean = false,
     /** Opaque ARGB. */
     val backgroundColor: Int = OPAQUE_BLACK,
     /** Whether the theme may show a wallpaper at all. */

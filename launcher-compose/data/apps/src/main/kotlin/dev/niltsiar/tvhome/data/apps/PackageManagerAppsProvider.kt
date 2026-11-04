@@ -8,6 +8,8 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.util.Log
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.core.content.ContextCompat
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
@@ -18,7 +20,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.roundToInt
 
 private const val TAG = "TvHome.Apps"
@@ -64,6 +68,11 @@ public class PackageManagerAppsProvider(
         }
     private var receiving = false
 
+    /** The activities of the list on screen, for [heroArt]. */
+    @Volatile
+    private var infos: Map<String, ResolveInfo> = emptyMap()
+    private val heroArts = ConcurrentHashMap<String, ImageBitmap>()
+
     /** The PackageManager sequence number the last load started from, or null before the first load. */
     @Volatile
     private var packageSequence: Int? = null
@@ -95,6 +104,27 @@ public class PackageManagerAppsProvider(
                 }
             }
         }.flowOn(Dispatchers.IO)
+
+    /**
+     * The softened art of the tile [key] for the cinematic shelf, made on the first ask and kept until the app list
+     * changes; null when the tile is gone or has no art.
+     */
+    public suspend fun heroArt(key: String): ImageBitmap? =
+        withContext(Dispatchers.IO) {
+            heroArts[key] ?: run {
+                val loaded = infos
+                val info = loaded[key] ?: return@run null
+                val art =
+                    try {
+                        images.artwork(info.activityInfo) { info.loadIcon(context.packageManager) }?.let(::heroArtFrom)
+                    } catch (e: RuntimeException) {
+                        Log.w(TAG, "no hero art for $key: $e")
+                        null
+                    }
+                if (art != null && loaded === infos) heroArts[key] = art
+                art
+            }
+        }
 
     /** Home is on screen: follow package changes, and reload now if some happened while it was not. Main thread. */
     public fun onStart() {
@@ -148,6 +178,8 @@ public class PackageManagerAppsProvider(
                 Candidate(key, activity.packageName, info.loadLabel(pm).toString(), activity.exported)
             }
         val arrangement = arrange(candidates, tvPackages, config, readOrder(orderFile), context.packageName)
+        this.infos = infos
+        heroArts.clear()
         return Loaded(arrangement, infos, tvPackages)
     }
 
@@ -156,11 +188,13 @@ public class PackageManagerAppsProvider(
         val apps =
             arrangement.tiles.map { tile ->
                 val info = infos.getValue(tile.candidate.key)
+                val art = if (withImages) tileArt(info, pm) else null
                 AppEntry(
                     key = tile.candidate.key,
                     packageName = tile.candidate.packageName,
                     label = tile.label,
-                    image = if (withImages) tileImage(info, pm) else null,
+                    image = art?.image,
+                    accent = art?.let { Color(it.accent) } ?: Color.Unspecified,
                     leanback = tile.candidate.packageName in tvPackages,
                 )
             }
@@ -168,13 +202,13 @@ public class PackageManagerAppsProvider(
     }
 
     /** One app's broken artwork must not take Home down: its tile shows the name instead. */
-    private fun tileImage(
+    private fun tileArt(
         info: ResolveInfo,
         pm: PackageManager,
     ) = try {
         images.load(info.activityInfo) { info.loadIcon(pm) }
     } catch (e: RuntimeException) {
         Log.w(TAG, "no artwork for ${info.activityInfo.packageName}: $e")
-        null
+        TileArt(null, NO_ART_ACCENT)
     }
 }
