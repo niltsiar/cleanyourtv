@@ -7,7 +7,12 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 
 @Immutable
@@ -36,13 +41,67 @@ private val DarkColors =
         accent = Color(0xFF7CB7FF),
     )
 
-private fun typographyFor(colors: TvColors) =
-    TvTypography(
-        clock = TextStyle(color = colors.onSurface, fontSize = 28.sp, fontWeight = FontWeight.Light),
-        date = TextStyle(color = colors.onSurfaceMuted, fontSize = 14.sp, fontWeight = FontWeight.Medium),
-        shelfTitle = TextStyle(color = colors.onSurface, fontSize = 40.sp, fontWeight = FontWeight.SemiBold),
-        tileLabel = TextStyle(color = colors.onSurfaceMuted, fontSize = 13.sp, fontWeight = FontWeight.Medium),
+/**
+ * One face from the bundled Google Sans Flex variable font. Width, optical size and roundness are fixed per
+ * style, so each style gets its own family.
+ */
+private fun googleSansFlex(
+    weight: FontWeight,
+    size: TextUnit,
+    width: Float,
+    roundness: Float,
+): FontFamily =
+    FontFamily(
+        Font(
+            resId = R.font.google_sans_flex,
+            weight = weight,
+            variationSettings =
+                FontVariation.Settings(
+                    weight,
+                    FontStyle.Normal,
+                    FontVariation.width(width),
+                    FontVariation.opticalSizing(size),
+                    FontVariation.Setting("ROND", roundness),
+                ),
+        ),
     )
+
+private fun typographyFor(colors: TvColors): TvTypography {
+    val clockSize = 28.sp
+    val dateSize = 14.sp
+    val shelfTitleSize = 40.sp
+    val tileLabelSize = 13.sp
+    return TvTypography(
+        clock =
+            TextStyle(
+                color = colors.onSurface,
+                fontSize = clockSize,
+                fontWeight = FontWeight.Light,
+                fontFamily = googleSansFlex(FontWeight.Light, clockSize, width = 125f, roundness = 100f),
+            ),
+        date =
+            TextStyle(
+                color = colors.onSurfaceMuted,
+                fontSize = dateSize,
+                fontWeight = FontWeight.Medium,
+                fontFamily = googleSansFlex(FontWeight.Medium, dateSize, width = 100f, roundness = 0f),
+            ),
+        shelfTitle =
+            TextStyle(
+                color = colors.onSurface,
+                fontSize = shelfTitleSize,
+                fontWeight = FontWeight.SemiBold,
+                fontFamily = googleSansFlex(FontWeight.SemiBold, shelfTitleSize, width = 112f, roundness = 100f),
+            ),
+        tileLabel =
+            TextStyle(
+                color = colors.onSurfaceMuted,
+                fontSize = tileLabelSize,
+                fontWeight = FontWeight.Medium,
+                fontFamily = googleSansFlex(FontWeight.Medium, tileLabelSize, width = 100f, roundness = 0f),
+            ),
+    )
+}
 
 @Suppress("CompositionLocalAllowlist")
 private val LocalTvColors = staticCompositionLocalOf { DarkColors }
