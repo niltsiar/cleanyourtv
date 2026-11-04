@@ -20,6 +20,7 @@ private const val IMAGES_SETTLE_MS = 2_000L
 private const val DOCK_STEPS = 5
 private const val GRID_ROWS = 4
 private const val GRID_COLUMNS_SWEPT = 3
+private const val TOP_BAR_STEPS = 2
 
 /** Every app tile, in the dock and in the grid: HomeScreen tags each one `tile:<packageName>`. */
 private val TILE_TAG = Pattern.compile("tile:.+")
@@ -41,8 +42,9 @@ internal fun awaitTileImages() = Thread.sleep(IMAGES_SETTLE_MS)
 
 /**
  * The scripted journey: right across the dock, down into the grid, right and left, back up and left, then one
- * burst down with no wait between presses, as a held key sends, and back up. The key sequence is fixed, so every
- * run does the same work; the two checks prove that focus started on the first dock tile and reached the grid.
+ * burst down with no wait between presses, as a held key sends, and back up, and last up into the top bar's
+ * buttons and back down. The key sequence is fixed, so every run does the same work; the two checks prove that
+ * focus started on the first dock tile and reached the grid.
  */
 internal fun MacrobenchmarkScope.dpadSweep() {
     val dockTiles = checkNotNull(device.findObject(By.res("dock"))) { "Dock not on screen" }.findObjects(anyTile())
@@ -61,6 +63,10 @@ internal fun MacrobenchmarkScope.dpadSweep() {
 
     pressWithoutWaiting(KeyEvent.KEYCODE_DPAD_DOWN, GRID_ROWS)
     repeat(GRID_ROWS) { device.pressDPadUp() }
+
+    device.pressDPadUp()
+    repeat(TOP_BAR_STEPS) { device.pressDPadRight() }
+    device.pressDPadDown()
 }
 
 private fun MacrobenchmarkScope.awaitFocusedTile(
