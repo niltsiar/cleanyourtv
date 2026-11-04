@@ -3,6 +3,7 @@ package dev.niltsiar.tvhome.feature.home
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +32,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Brush
@@ -83,11 +85,13 @@ public fun HomeScreen(
     modifier: Modifier = Modifier,
 ) {
     val glass = rememberGlassState()
+    val dockFocus = remember { FocusRequester() }
     Box(modifier = modifier.fillMaxSize().background(TvTheme.colors.background)) {
         Wallpaper(glass)
-        HomeContent(glass, state, onFocus, onClick)
+        HomeContent(glass, dockFocus, state, onFocus, onClick)
         TopBar(
             glass = glass,
+            dockFocus = dockFocus,
             clock = { state().clock },
             date = { state().date },
             modifier = Modifier.align(Alignment.TopCenter),
@@ -119,6 +123,7 @@ private fun Wallpaper(
 @Composable
 private fun HomeContent(
     glass: GlassState,
+    dockFocus: FocusRequester,
     state: () -> HomeUiState,
     onFocus: (String) -> Unit,
     onClick: (String) -> Unit,
@@ -137,7 +142,7 @@ private fun HomeContent(
                 Shelf(label = state().focusedLabel)
             }
             item(key = "dock", span = { GridItemSpan(maxLineSpan) }, contentType = "dock") {
-                Dock(glass = glass, dock = state().dock, onFocus = onFocus, onClick = onClick)
+                Dock(glass = glass, focus = dockFocus, dock = state().dock, onFocus = onFocus, onClick = onClick)
             }
             items(state().grid, key = { it.packageName }, contentType = { "tile" }) { app ->
                 AppTile(app = app, onFocus = onFocus, onClick = onClick)
@@ -164,6 +169,7 @@ private fun Shelf(
 @Composable
 private fun Dock(
     glass: GlassState,
+    focus: FocusRequester,
     dock: List<AppEntry>,
     onFocus: (String) -> Unit,
     onClick: (String) -> Unit,
@@ -179,7 +185,12 @@ private fun Dock(
     }
     GlassSurface(glass = glass, modifier = modifier.fillMaxWidth().testTag("dock")) {
         Row(
-            modifier = Modifier.focusRestorer().padding(TileGap),
+            modifier =
+                Modifier
+                    .focusRequester(focus)
+                    .focusRestorer()
+                    .focusGroup()
+                    .padding(TileGap),
             horizontalArrangement = Arrangement.spacedBy(TileGap),
         ) {
             dock.forEachIndexed { index, app ->
@@ -228,6 +239,7 @@ private fun AppTile(
 @Composable
 private fun TopBar(
     glass: GlassState,
+    dockFocus: FocusRequester,
     clock: () -> String,
     date: () -> String,
     modifier: Modifier = Modifier,
@@ -238,6 +250,7 @@ private fun TopBar(
                 .padding(top = TopBarTop, start = ScreenMargin, end = ScreenMargin)
                 .fillMaxWidth()
                 .height(TopBarHeight)
+                .focusProperties { down = dockFocus }
                 .glassContainer(glass),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
