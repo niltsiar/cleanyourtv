@@ -6,7 +6,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /** clock_format: a chosen 12 or 24 wins without asking the TV; "system" asks [system] (the TV's own setting). */
-internal fun ClockFormat.is24Hour(system: () -> Boolean): Boolean =
+public fun ClockFormat.is24Hour(system: () -> Boolean): Boolean =
     when (this) {
         ClockFormat.Hour24 -> true
         ClockFormat.Hour12 -> false

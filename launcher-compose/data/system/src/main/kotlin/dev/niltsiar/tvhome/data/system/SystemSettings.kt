@@ -22,11 +22,18 @@ public class SystemSettings(
     private val fallbackComponents: List<String>,
     private val vpnApp: String?,
 ) {
+    /** With the vendor settings activities this module ships. */
+    public constructor(context: Context, vpnApp: String?) :
+        this(context, context.resources.getStringArray(R.array.settings_fallback_components).toList(), vpnApp)
+
     /** True when the system accepted the intent. */
     public fun openSettings(): Boolean = open(intent(Settings.ACTION_SETTINGS))
 
     /** The VPN app when one is set and launchable, else Wi-Fi settings. */
     public fun openNetwork(): Boolean = open(vpnAppIntent() ?: intent(Settings.ACTION_WIFI_SETTINGS))
+
+    /** True when the system accepted the intent. Always Wi-Fi settings: the remote's "wifi" key must not open the VPN app. */
+    public fun openWifiSettings(): Boolean = open(intent(Settings.ACTION_WIFI_SETTINGS))
 
     /** True when the TV has an App info page to open; CVTE's settings app has none. */
     public fun hasAppInfo(packageName: String): Boolean =

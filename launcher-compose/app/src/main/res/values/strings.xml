@@ -1,16 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Home</string>
+    <string name="dream_name">Clock</string>
     <string name="cant_open">Can\'t open %1$s</string>
     <string name="not_available">Not available on this TV</string>
     <string name="no_inputs">No inputs found</string>
     <string name="order_not_saved">Couldn\'t save the new order</string>
     <!-- The date beside the clock, as a java.time pattern. -->
     <string name="date_format">EEEE  d MMMM</string>
-    <!-- Vendor settings activities tried in order when no standard handler is usable; each package must also be visible through queries in the manifest. -->
-    <string-array name="settings_fallback_components" translatable="false">
-        <item>com.xiaomi.mitv.settings/com.xiaomi.mitv.settings.entry.MainActivity</item>
-        <item>com.tcl.settings/com.tcl.settings.ui.MainActivity</item>
-        <item>com.amazon.tv.launcher/com.amazon.tv.launcher.ui.MainSettingsActivity</item>
-    </string-array>
 </resources>

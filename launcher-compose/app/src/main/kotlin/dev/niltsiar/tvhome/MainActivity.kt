@@ -1,5 +1,6 @@
 package dev.niltsiar.tvhome
 
+import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.BroadcastReceiver
 import android.content.ComponentName
@@ -8,6 +9,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.view.KeyEvent
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
@@ -28,8 +30,10 @@ import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
+import dev.niltsiar.tvhome.core.model.HomeActions
 import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.feature.library.MoleculeLibraryViewModel
+import dev.niltsiar.tvhome.service.keys.VendorKeys
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -40,6 +44,17 @@ class MainActivity : ComponentActivity() {
     private var homePresses by mutableIntStateOf(0)
     private var inputsRequests by mutableIntStateOf(0)
     private var bootOpening: Job? = null
+
+    /**
+     * Between onResume and onPause: Home is in front. The lifecycle state is not enough, it only reaches RESUMED after
+     * onResume returns. The idle clock and the vendor keys run only then: a key's UP can still reach Home after onPause,
+     * when that key opened another app.
+     */
+    private var resumed = false
+    private val vendorKeys by lazy { VendorKeys(this, graph.config, graph.systemSettings, ::openSettings) }
+    private val idleClock by lazy {
+        IdleClock(graph.config.homeIdleClockMinutes * MILLIS_PER_MINUTE, { resumed }, ::showClock)
+    }
     private val wakeReceiver =
         object : BroadcastReceiver() {
             override fun onReceive(
@@ -55,8 +70,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // This is Home: Back has nowhere to go.
-        onBackPressedDispatcher.addCallback(this) {}
+        // This is Home: Back has nowhere to go, unless back_opens_clock.
+        onBackPressedDispatcher.addCallback(this) { if (graph.config.backOpensClock) showClock() }
         // Not after a recreate: the launch intent survives it and would open the library or the list again.
         if (savedInstanceState == null && !openLibraryIfAsked(intent)) openInputsIfAsked(intent)
         applyViewInputsHandler(graph.config.handleViewInputs)
@@ -121,13 +136,32 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        resumed = true
         bootOpening = lifecycleScope.launch { graph.openOnStart.openAfterBoot(::openIntent) }
+        idleClock.restart()
     }
+
+    /** Any key or touch on Home restarts the countdown to the idle clock. */
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        idleClock.restart()
+    }
+
+    /**
+     * Vendor keys (TCL's Netflix button, 4062) never reach the key service, only the focused window, so their app_keys
+     * entries run here too or nowhere; so does a Settings button the service is not there to take. Only while resumed:
+     * onPause releases Home's holds, and a DOWN taken after that would arm one nothing releases.
+     */
+    @SuppressLint("RestrictedApi") // androidx marks the override restricted, but it is the only hook that sees every key first
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean = (resumed && vendorKeys.handle(event)) || super.dispatchKeyEvent(event)
 
     /** Leaving Home before the network came back keeps the boot's app closed; its boot is already written. */
     override fun onPause() {
         super.onPause()
+        resumed = false
         bootOpening?.cancel()
+        vendorKeys.release()
+        idleClock.cancel()
     }
 
     override fun onDestroy() {
@@ -145,15 +179,19 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * ACTION_APP_LIBRARY, sent by the "library" action word of app_keys: open the App library over Home. The intent is
+     * [HomeActions.APP_LIBRARY], sent by the "library" action word of app_keys: open the App library over Home. The intent is
      * replaced so a later recreate does not open it again. With app_library off there is no library, so the press only
      * brings Home forward.
      */
     private fun openLibraryIfAsked(intent: Intent?): Boolean {
-        if (intent?.action != ACTION_APP_LIBRARY) return false
+        if (intent?.action != HomeActions.APP_LIBRARY) return false
         setIntent(Intent(Intent.ACTION_MAIN))
         if (graph.config.appLibrary) library.onOpen()
         return true
+    }
+
+    private fun showClock() {
+        startActivity(Intent(this, ClockActivity::class.java))
     }
 
     private fun launchApp(app: AppEntry) {
@@ -173,7 +211,7 @@ class MainActivity : ComponentActivity() {
      * first, as for the Home key.
      */
     private fun openInputsIfAsked(intent: Intent?): Boolean {
-        if (intent?.action != ACTION_VIEW_INPUTS) return false
+        if (intent?.action != HomeActions.VIEW_INPUTS) return false
         setIntent(Intent(Intent.ACTION_MAIN))
         if (graph.config.appLibrary) library.onClose()
         inputsRequests++
@@ -246,11 +284,7 @@ class MainActivity : ComponentActivity() {
         Toast.makeText(this, getString(R.string.cant_open, what), Toast.LENGTH_SHORT).show()
     }
 
-    companion object {
-        /** Sent by the "library" action word of the remote key service: open the App library over Home. */
-        const val ACTION_APP_LIBRARY: String = "dev.niltsiar.tvhome.action.APP_LIBRARY"
-
-        /** The system's input switcher, which InputsRequestActivity forwards while handle_view_inputs is on. */
-        const val ACTION_VIEW_INPUTS: String = "com.android.tv.action.VIEW_INPUTS"
+    private companion object {
+        const val MILLIS_PER_MINUTE = 60_000L
     }
 }

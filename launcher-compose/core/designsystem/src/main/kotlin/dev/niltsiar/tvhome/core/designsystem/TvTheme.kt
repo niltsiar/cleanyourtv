@@ -37,6 +37,9 @@ public class TvTypography(
     public val cinematicMeta: TextStyle,
     public val tileLabel: TextStyle,
     public val caption: TextStyle,
+    public val screensaverClock: TextStyle,
+    public val screensaverAmPm: TextStyle,
+    public val screensaverDate: TextStyle,
 )
 
 private val DarkColors =
@@ -84,6 +87,9 @@ private fun typographyFor(colors: TvColors): TvTypography {
     val cinematicMetaSize = 15.sp
     val tileLabelSize = 16.sp
     val captionSize = 15.sp
+    val screensaverClockSize = 160.sp
+    val screensaverAmPmSize = 26.sp
+    val screensaverDateSize = 20.sp
     return TvTypography(
         clock =
             TextStyle(
@@ -157,6 +163,31 @@ private fun typographyFor(colors: TvColors): TvTypography {
                 fontSize = captionSize,
                 fontWeight = FontWeight.Normal,
                 fontFamily = googleSansFlex(FontWeight.Normal, captionSize, width = 100f, roundness = 0f),
+            ),
+        screensaverClock =
+            TextStyle(
+                color = Color.White.copy(alpha = 0.92f),
+                fontSize = screensaverClockSize,
+                fontWeight = FontWeight.ExtraLight,
+                letterSpacing = (-0.03).em,
+                lineHeight = screensaverClockSize,
+                fontFamily = googleSansFlex(FontWeight.ExtraLight, screensaverClockSize, width = 118f, roundness = 100f),
+            ),
+        screensaverAmPm =
+            TextStyle(
+                color = Color.White.copy(alpha = 0.6f),
+                fontSize = screensaverAmPmSize,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 0.1.em,
+                fontFamily = googleSansFlex(FontWeight.Medium, screensaverAmPmSize, width = 100f, roundness = 100f),
+            ),
+        screensaverDate =
+            TextStyle(
+                color = Color.White.copy(alpha = 0.55f),
+                fontSize = screensaverDateSize,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 0.16.em,
+                fontFamily = googleSansFlex(FontWeight.Medium, screensaverDateSize, width = 100f, roundness = 100f),
             ),
     )
 }

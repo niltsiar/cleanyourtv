@@ -57,7 +57,7 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="com.gathin.tvhome.category.DOCK_CARD" />
         </intent>
-        <!-- stock_home_redirect: HomeKeyService looks up the stock launcher's HOME activity. -->
+        <!-- stock_home_redirect: KeyService looks up the stock launcher's HOME activity. -->
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.HOME" />
@@ -115,5 +115,32 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <!-- The clock screensaver started by Home after home_idle_clock_minutes, on Back with back_opens_clock and by the
+             "screensaver" word of app_keys where the firmware has no screensaver of its own. -->
+        <activity
+            android:name=".ClockActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen">
+            <intent-filter>
+                <action android:name="dev.niltsiar.tvhome.action.CLOCK" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Screensaver: pick it in Settings, or `settings put secure screensaver_components
+             dev.niltsiar.tvhome/.ClockDream` over adb (scripts/switch-home.sh does). -->
+        <service
+            android:name=".ClockDream"
+            android:exported="true"
+            android:label="@string/dream_name"
+            android:permission="android.permission.BIND_DREAM_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.dreams.DreamService" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

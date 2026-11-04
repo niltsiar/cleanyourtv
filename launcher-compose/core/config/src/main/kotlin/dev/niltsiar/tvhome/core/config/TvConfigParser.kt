@@ -22,8 +22,6 @@ private val unsupportedKeys: Set<String> =
         "accent_color",
         "advanced_effects",
         "always_show_names",
-        "back_opens_clock",
-        "consume_volume_keys",
         "dock_band",
         "dock_band_all",
         "dock_even_padding",
@@ -32,15 +30,12 @@ private val unsupportedKeys: Set<String> =
         "festival",
         "festival_until",
         "game_day",
-        "gamepad_passthrough",
         "glass_style",
         "glow_style",
         "greeting",
         "header_white",
-        "home_long_press_home",
         "icon_only_inputs",
         "icon_only_vpn",
-        "key_filter",
         "launcher_settings_button",
         "lunar_date",
         "lunar_utc_offset",
@@ -160,11 +155,17 @@ public fun parseTvConfig(json: String): ParsedConfig {
             openOnStartNetworkWait = o.int("open_on_start_network_wait", d.openOnStartNetworkWait, 0..600),
             appKeys = o.stringList("app_keys", d.appKeys),
             settingsKeyKeycodes = o.keycodes("settings_key_keycodes", d.settingsKeyKeycodes),
+            settingsKeyScancodes = o.keycodes("settings_key_scancodes", d.settingsKeyScancodes),
             inputKeyKeycodes = o.keycodes("input_key_keycodes", d.inputKeyKeycodes),
+            keyFilter = o.bool("key_filter", d.keyFilter),
+            gamepadPassthrough = o.bool("gamepad_passthrough", d.gamepadPassthrough),
+            consumeVolumeKeys = o.bool("consume_volume_keys", d.consumeVolumeKeys),
             stockHomeRedirect = o.optionalString("stock_home_redirect", d.stockHomeRedirect),
+            homeLongPressHome = o.bool("home_long_press_home", d.homeLongPressHome),
             powerOnHome = o.bool("power_on_home", d.powerOnHome),
             powerOnHomeAlways = o.bool("power_on_home_always", d.powerOnHomeAlways),
             homeIdleClockMinutes = o.int("home_idle_clock_minutes", d.homeIdleClockMinutes, 0..1440),
+            backOpensClock = o.bool("back_opens_clock", d.backOpensClock),
             clockWallpaper = o.bool("clock_wallpaper", d.clockWallpaper),
             clockWallpaperDim = o.int("clock_wallpaper_dim", d.clockWallpaperDim, 0..90),
             clockGlow = o.bool("clock_glow", d.clockGlow),
@@ -260,7 +261,7 @@ private class Overlay(
             }
         }
 
-    /** Positive keycodes only (vendor remotes use codes in the thousands); a list with anything else in it is rejected whole. */
+    /** Positive keycodes or scancodes only (vendor remotes use codes in the thousands); a list with anything else in it is rejected whole. */
     fun keycodes(
         key: String,
         default: List<Int>,

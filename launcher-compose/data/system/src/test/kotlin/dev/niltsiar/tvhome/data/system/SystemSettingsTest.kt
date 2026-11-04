@@ -15,8 +15,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [31])
 class SystemSettingsTest {
     private val app = RuntimeEnvironment.getApplication()
     private val packages = shadowOf(app.packageManager)
@@ -106,6 +108,23 @@ class SystemSettingsTest {
         assertEquals(true, settings(vpnApp = "com.vpn.missing").openNetwork())
 
         assertEquals(Settings.ACTION_WIFI_SETTINGS, shadowOf(app).nextStartedActivity.action)
+    }
+
+    @Test
+    fun the_wifi_key_opens_wifi_settings_even_with_a_vpn_app() {
+        installVpnApp()
+        answerStandardAction("com.android.settings.Settings")
+
+        assertEquals(true, settings(vpnApp = "com.vpn.app").openWifiSettings())
+
+        assertEquals(Settings.ACTION_WIFI_SETTINGS, shadowOf(app).nextStartedActivity.action)
+    }
+
+    @Test
+    fun the_default_constructor_knows_the_vendor_settings_activities() {
+        packages.installPackage(PackageInfo().apply { packageName = "com.tcl.settings" })
+
+        assertEquals("com.tcl.settings.ui.MainActivity", SystemSettings(app, null).intent(Settings.ACTION_SETTINGS).component?.className)
     }
 
     @Test

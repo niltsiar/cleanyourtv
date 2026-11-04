@@ -31,6 +31,17 @@ internal fun openOnStartDue(
     self: String,
 ): Boolean = boot >= 0 && boot != handledBoot && !pkg.isNullOrEmpty() && pkg != self
 
+/** The package picked as the Open on start app in Launcher settings, or empty when the row is off or nothing was picked. */
+public fun openOnStartPackage(
+    context: Context,
+    config: TvConfig,
+): String =
+    if (config.openOnStartChoice) {
+        context.getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE).getString(OPEN_ON_START_KEY, "").orEmpty()
+    } else {
+        ""
+    }
+
 /** open_on_start_on_wake needs the Open on start row, which is where the app is picked. */
 internal fun openOnStartOnWake(
     choice: Boolean,
@@ -85,14 +96,7 @@ public class OpenOnStart(
         startIntent(context.packageManager, app)?.let { openWhenReady(it, open) }
     }
 
-    private suspend fun pickedApp(): String =
-        if (config.openOnStartChoice) {
-            withContext(
-                io,
-            ) { context.getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE).getString(OPEN_ON_START_KEY, "").orEmpty() }
-        } else {
-            ""
-        }
+    private suspend fun pickedApp(): String = withContext(io) { openOnStartPackage(context, config) }
 
     /** Home stays on screen until the network is validated or open_on_start_network_wait is over. Leaving Home cancels the wait. */
     private suspend fun openWhenReady(

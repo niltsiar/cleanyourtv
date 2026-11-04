@@ -147,12 +147,25 @@ public data class TvConfig(
     /** "keycode:package" or "KEYCODE_NAME:package" entries, parsed where the key service reads them. */
     val appKeys: List<String> = emptyList(),
     val settingsKeyKeycodes: List<Int> = emptyList(),
+    /** Raw scancodes of remote buttons that open Settings, for remotes that send no usable keycode. */
+    val settingsKeyScancodes: List<Int> = emptyList(),
     val inputKeyKeycodes: List<Int> = emptyList(),
+    /** False keeps the key service from filtering key events, for firmware that loses key repeat once any service filters. */
+    val keyFilter: Boolean = true,
+    /** With [keyFilter]: the key service stops filtering while a game controller is connected. */
+    val gamepadPassthrough: Boolean = false,
+    /** The key service swallows Volume Up and Down and repeats a held one itself. */
+    val consumeVolumeKeys: Boolean = false,
+    /** Package of the stock launcher whose home screen is sent back here; null leaves it alone. */
     val stockHomeRedirect: String? = null,
+    /** The key service takes every Home press, a held one too, instead of Android's long-press action. */
+    val homeLongPressHome: Boolean = false,
     val powerOnHome: Boolean = false,
     val powerOnHomeAlways: Boolean = false,
     /** Minutes Home may sit untouched before the clock screensaver, 0 to 1440; 0 is off. */
     val homeIdleClockMinutes: Int = 0,
+    /** Back on Home opens the clock screensaver instead of doing nothing. */
+    val backOpensClock: Boolean = false,
     val clockWallpaper: Boolean = false,
     /** Percent, 0 to 90. */
     val clockWallpaperDim: Int = 50,

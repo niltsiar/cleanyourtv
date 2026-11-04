@@ -14,6 +14,7 @@ import dev.niltsiar.tvhome.data.inputs.OpenOnStart
 import dev.niltsiar.tvhome.data.system.NetworkMonitor
 import dev.niltsiar.tvhome.data.system.SystemSettings
 import dev.niltsiar.tvhome.data.system.TimeChanges
+import dev.niltsiar.tvhome.data.wallpaper.ScreensaverWallpaper
 import dev.niltsiar.tvhome.data.wallpaper.WallpaperProvider
 import dev.niltsiar.tvhome.feature.home.HomeSources
 import dev.niltsiar.tvhome.feature.home.minuteClock
@@ -34,6 +35,7 @@ interface AppGraph {
     val timeChanges: TimeChanges
     val systemSettings: SystemSettings
     val wallpaperProvider: WallpaperProvider
+    val screensaverWallpaper: ScreensaverWallpaper
     val homeSources: HomeSources
     val librarySources: LibrarySources
     val inputsProvider: InputsProvider
@@ -106,12 +108,7 @@ interface AppGraph {
     fun provideSystemSettings(
         application: Application,
         config: TvConfig,
-    ): SystemSettings =
-        SystemSettings(
-            application,
-            application.resources.getStringArray(R.array.settings_fallback_components).toList(),
-            config.vpnApp,
-        )
+    ): SystemSettings = SystemSettings(application, config.vpnApp)
 
     @Provides
     @SingleIn(AppScope::class)
@@ -119,6 +116,13 @@ interface AppGraph {
         application: Application,
         config: TvConfig,
     ): WallpaperProvider = WallpaperProvider(application, config, ThemeDirectory(application))
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideScreensaverWallpaper(
+        application: Application,
+        config: TvConfig,
+    ): ScreensaverWallpaper = ScreensaverWallpaper(application, config, ThemeDirectory(application))
 
     @Provides
     @SingleIn(AppScope::class)

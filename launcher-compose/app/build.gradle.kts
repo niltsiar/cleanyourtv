@@ -43,8 +43,10 @@ android {
 dependencies {
     implementation(project(":core:config"))
     implementation(project(":core:designsystem"))
+    implementation(project(":feature:clock"))
     implementation(project(":feature:home"))
     implementation(project(":feature:library"))
+    implementation(project(":service:keys"))
     implementation(project(":data:apps"))
     implementation(project(":data:inputs"))
     implementation(project(":data:system"))

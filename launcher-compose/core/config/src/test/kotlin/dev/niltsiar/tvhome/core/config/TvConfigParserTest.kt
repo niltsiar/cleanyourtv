@@ -68,6 +68,11 @@ class TvConfigParserTest {
                 config.openOnStartOnWake,
         )
         assertEquals(0, config.openOnStartNetworkWait)
+        assertTrue(config.keyFilter)
+        assertFalse(config.gamepadPassthrough || config.consumeVolumeKeys || config.homeLongPressHome)
+        assertFalse(config.backOpensClock || config.powerOnHome)
+        assertEquals(emptyList<Int>(), config.settingsKeyKeycodes + config.settingsKeyScancodes + config.inputKeyKeycodes)
+        assertEquals(null, config.stockHomeRedirect)
     }
 
     @Test
@@ -159,6 +164,35 @@ class TvConfigParserTest {
 
         val good = parseTvConfig("""{"settings_key_keycodes": [172, 1001]}""")
         assertEquals(listOf(172, 1001), good.config.settingsKeyKeycodes)
+    }
+
+    @Test
+    fun the_remote_key_service_keys_are_read_and_a_wrong_type_keeps_the_default() {
+        val parsed =
+            parseTvConfig(
+                """{"key_filter": false, "gamepad_passthrough": true, "consume_volume_keys": true, "home_long_press_home": true,
+                   "back_opens_clock": true, "settings_key_scancodes": [159], "stock_home_redirect": " com.google.android.apps.tv.launcherx ",
+                   "app_keys": ["scan:490:com.wbd.hbomax", "hold:KEYCODE_BUTTON_8:org.xbmc.kodi"]}""",
+            )
+        val config = parsed.config
+        assertFalse(config.keyFilter)
+        assertTrue(config.gamepadPassthrough && config.consumeVolumeKeys && config.homeLongPressHome && config.backOpensClock)
+        assertEquals(listOf(159), config.settingsKeyScancodes)
+        assertEquals("com.google.android.apps.tv.launcherx", config.stockHomeRedirect)
+        assertEquals(listOf("scan:490:com.wbd.hbomax", "hold:KEYCODE_BUTTON_8:org.xbmc.kodi"), config.appKeys)
+        assertEquals(emptyList<String>(), parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys)
+
+        val wrong = parseTvConfig("""{"key_filter": "no", "consume_volume_keys": 1, "settings_key_scancodes": [0]}""")
+        assertTrue(wrong.config.keyFilter)
+        assertFalse(wrong.config.consumeVolumeKeys)
+        assertEquals(emptyList<Int>(), wrong.config.settingsKeyScancodes)
+        assertEquals(listOf("key_filter", "consume_volume_keys", "settings_key_scancodes"), wrong.rejectedKeys)
+    }
+
+    @Test
+    fun settings_key_panel_stays_unsupported_because_the_panel_does_not_exist() {
+        val parsed = parseTvConfig("""{"settings_key_panel": true}""")
+        assertEquals(listOf("settings_key_panel"), parsed.unsupportedKeys)
     }
 
     @Test

@@ -45,10 +45,12 @@ public class WallpaperProvider internal constructor(
     private val zone: () -> ZoneId = ZoneId::systemDefault,
     private val random: Random = Random.Default,
 ) {
+    /** [dim] is the percent painted into each picture: wallpaper_dim for Home, clock_wallpaper_dim for the screensaver. */
     public constructor(
         context: Context,
         config: TvConfig,
         theme: ThemeDirectory,
+        dim: Int = config.wallpaperDim,
     ) : this(
         config = config,
         single = theme.wallpaperFile,
@@ -56,7 +58,7 @@ public class WallpaperProvider internal constructor(
         preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE),
         decode =
             with(context.resources.displayMetrics) {
-                WallpaperDecoder(widthPixels, heightPixels, config.wallpaperTrueColor, config.wallpaperDim)::decode
+                WallpaperDecoder(widthPixels, heightPixels, config.wallpaperTrueColor, dim)::decode
             },
     )
 
