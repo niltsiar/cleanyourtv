@@ -35,7 +35,9 @@ private val Gloss = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f
 /**
  * A D-pad target: scales up with a small overshoot and gets a lit top, an accent ring and an accent glow while
  * focused. [onFocused] fires on gaining focus. [interactionSource] receives the press and focus events, for content
- * that reacts to them. The animation is read in the layer and draw lambdas, so a focus change never relays out.
+ * that reacts to them. [glow] turns the accent glow off: the elevation shadow also shows through a translucent
+ * surface, as a dark patch, so glass has none. The animation is read in the layer and draw lambdas, so a focus
+ * change never relays out.
  */
 @Composable
 public fun FocusSurface(
@@ -44,6 +46,7 @@ public fun FocusSurface(
     shape: Shape = RoundedCornerShape(16.dp),
     onFocused: () -> Unit = {},
     interactionSource: MutableInteractionSource? = null,
+    glow: Boolean = true,
     content: @Composable BoxScope.() -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
@@ -56,8 +59,9 @@ public fun FocusSurface(
                     val scale = 1f + (FOCUSED_SCALE - 1f) * focus.value
                     scaleX = scale
                     scaleY = scale
-                    shadowElevation = GlowElevation.toPx() * focus.value.coerceIn(0f, 1f)
+                    shadowElevation = if (glow) GlowElevation.toPx() * focus.value.coerceIn(0f, 1f) else 0f
                     this.shape = shape
+                    clip = true
                     ambientShadowColor = accent
                     spotShadowColor = accent
                 }.drawWithContent {

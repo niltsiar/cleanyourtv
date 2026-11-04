@@ -1,5 +1,6 @@
 package dev.niltsiar.tvhome.feature.home
 
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -46,7 +47,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Measurable
@@ -95,6 +98,13 @@ private val ShelfFullyShown = ShelfBottom - 4.dp
 private val ShelfRise = 14.dp
 private val GridBottom = 48.dp
 private const val TILE_ASPECT = 16f / 9f
+private const val ICON_VIEWPORT = 24f
+private const val INPUTS_ARROW_SLIDE = 2.5f
+private const val SETTINGS_TURN = 90f
+private const val ARC_DIM = 0.2f
+private const val ARC_DIM_END = 0.15f
+private const val ARC_STAGGER = 0.3f
+private const val ARC_RELIGHT = 0.35f
 
 /**
  * The Home screen. [state] is read lazily, inside the items that show each field. A focus change keeps the dock and
@@ -433,15 +443,54 @@ private fun TopBar(
             }
         }
         Spacer(Modifier.weight(1f))
-        GlassIconButton(glass, painterResource(R.drawable.ic_inputs), stringResource(R.string.inputs), onClick = {})
-        GlassIconButton(glass, painterResource(R.drawable.ic_wifi), stringResource(R.string.wifi), onClick = {})
-        GlassIconButton(
-            glass,
-            painterResource(R.drawable.ic_settings),
-            stringResource(R.string.settings),
-            onClick = {},
-            focusedRotation = 90f,
-        )
+        GlassIconButton(glass, stringResource(R.string.inputs), onClick = {}) { focus ->
+            IconPart(R.drawable.ic_inputs_frame)
+            IconPart(R.drawable.ic_inputs_arrow) {
+                translationX = focus() * INPUTS_ARROW_SLIDE * size.width / ICON_VIEWPORT
+            }
+        }
+        GlassIconButton(glass, stringResource(R.string.wifi), onClick = {}) { focus ->
+            IconPart(R.drawable.ic_wifi_dot)
+            IconPart(R.drawable.ic_wifi_arc_inner) { alpha = wifiArcAlpha(focus(), arc = 0) }
+            IconPart(R.drawable.ic_wifi_arc_outer) { alpha = wifiArcAlpha(focus(), arc = 1) }
+        }
+        GlassIconButton(glass, stringResource(R.string.settings), onClick = {}) { focus ->
+            IconPart(R.drawable.ic_settings) { rotationZ = SETTINGS_TURN * focus() }
+        }
+    }
+}
+
+/** One layer of a top bar icon, drawn over the others in the same 24-unit viewport; [layer] runs in the draw phase. */
+@Composable
+private fun IconPart(
+    @DrawableRes icon: Int,
+    layer: GraphicsLayerScope.() -> Unit = {},
+) {
+    Image(
+        painter = painterResource(icon),
+        contentDescription = null,
+        modifier =
+            Modifier.fillMaxSize().graphicsLayer {
+                compositingStrategy = CompositingStrategy.ModulateAlpha
+                layer()
+            },
+        colorFilter = ColorFilter.tint(TvTheme.colors.onSurface),
+    )
+}
+
+/**
+ * The Wi-Fi arcs on focus [progress] (0 idle, 1 focused): both dim at once, then light again one after another,
+ * the inner arc first. Both are fully lit at 0 and from 0.8 on.
+ */
+private fun wifiArcAlpha(
+    progress: Float,
+    arc: Int,
+): Float {
+    val p = progress.coerceIn(0f, 1f)
+    val start = ARC_DIM_END + arc * ARC_STAGGER
+    return when {
+        p < ARC_DIM_END -> 1f - (1f - ARC_DIM) * p / ARC_DIM_END
+        else -> (ARC_DIM + (1f - ARC_DIM) * (p - start) / ARC_RELIGHT).coerceIn(ARC_DIM, 1f)
     }
 }
 

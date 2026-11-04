@@ -3,9 +3,10 @@ package dev.niltsiar.tvhome.core.designsystem
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
@@ -13,37 +14,41 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
-/** [focusedRotation] turns the icon by that many degrees, with a spring, while the button has focus. */
+/**
+ * A round glass button. [icon] fills a 22dp box; it gets the focus progress, a spring from 0 (idle) to 1 (focused) that
+ * can overshoot. Read it in graphicsLayer or draw lambdas, never in composition, so a focus change never recomposes.
+ */
 @Composable
 public fun GlassIconButton(
     glass: GlassState,
-    painter: Painter,
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    focusedRotation: Float = 0f,
+    icon: @Composable BoxScope.(focus: () -> Float) -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val focused by interactionSource.collectIsFocusedAsState()
-    val rotation =
+    val progress =
         animateFloatAsState(
-            if (focused) focusedRotation else 0f,
+            if (focused) 1f else 0f,
             spring(dampingRatio = 0.55f, stiffness = Spring.StiffnessLow),
-            label = "iconRotation",
+            label = "iconFocus",
         )
-    FocusSurface(onClick = onClick, modifier = modifier.size(40.dp), shape = CircleShape, interactionSource = interactionSource) {
+    FocusSurface(
+        onClick = onClick,
+        modifier = modifier.size(40.dp),
+        shape = CircleShape,
+        interactionSource = interactionSource,
+        glow = false,
+    ) {
         GlassSurface(glass = glass, modifier = Modifier.matchParentSize(), shape = CircleShape, interactionSource = interactionSource) {
-            Image(
-                painter = painter,
-                contentDescription = contentDescription,
-                modifier = Modifier.align(Alignment.Center).size(22.dp).graphicsLayer { rotationZ = rotation.value },
-                colorFilter = ColorFilter.tint(TvTheme.colors.onSurface),
-            )
+            Box(Modifier.align(Alignment.Center).size(22.dp).semantics { this.contentDescription = contentDescription }) {
+                icon { progress.value }
+            }
         }
     }
 }
