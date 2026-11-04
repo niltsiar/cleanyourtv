@@ -22,10 +22,8 @@ ACTIVITY="$PACKAGE/.MainActivity"
 
 # Thresholds from the plan's DoD3.
 MAX_JANK_PERCENT=5
-MAX_P90_FRAME_MS=16.7
-# A frame within its deadline has overrun <= 0, so the p90 frame must not overrun at all.
-MAX_P90_OVERRUN_MS=0
-MIN_SWEEP_FRAMES=100
+# The sweep presses 32 keys, so fewer frames than this means focus did not move.
+MIN_SWEEP_FRAMES=30
 MAX_PSS_MB=80
 MAX_COLD_START_MS=1500
 MAX_APK_BYTES=$((6 * 1024 * 1024))
@@ -61,6 +59,28 @@ case "$SDK" in
     exit 1
     ;;
 esac
+
+# The report derives its frame budget (1000 / refresh rate) from this. The whole dump is read into
+# a variable and parsed without a pipe, so nothing dies of SIGPIPE under pipefail.
+display_refresh_hz() {
+  local dump line hz=""
+  dump="$(adb_tv shell dumpsys display 2> /dev/null | tr -d '\r')" || true
+  if [[ "$dump" == *mActiveSfDisplayMode=* ]]; then
+    line="${dump#*mActiveSfDisplayMode=}"
+    line="${line%%$'\n'*}"
+    if [[ "$line" == *refreshRate=* ]]; then
+      hz="${line#*refreshRate=}"
+      hz="${hz%%[!0-9.]*}"
+    fi
+  fi
+  if ! awk -v hz="$hz" 'BEGIN { exit !(hz ~ /^[0-9]+(\.[0-9]+)?$/ && hz + 0 > 0) }'; then
+    echo "could not read the display refresh rate from dumpsys display (mActiveSfDisplayMode)" >&2
+    return 1
+  fi
+  echo "$hz"
+}
+
+REFRESH_HZ="$(display_refresh_hz)" || exit 1
 
 # Baseline profile collection needs API 33+ (or root); HomeBenchmarks compiles from warmup runs either way.
 if [ "$SDK" -ge 33 ]; then
@@ -139,9 +159,8 @@ echo
   --apps "$APP_COUNT" \
   --apk-bytes "$APK_BYTES" \
   --pss-kb "$PSS_KB" \
+  --refresh-hz "$REFRESH_HZ" \
   --max-jank-percent "$MAX_JANK_PERCENT" \
-  --max-p90-frame-ms "$MAX_P90_FRAME_MS" \
-  --max-p90-overrun-ms "$MAX_P90_OVERRUN_MS" \
   --min-sweep-frames "$MIN_SWEEP_FRAMES" \
   --max-pss-mb "$MAX_PSS_MB" \
   --max-cold-start-ms "$MAX_COLD_START_MS" \
