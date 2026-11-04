@@ -35,15 +35,18 @@ def find(name_part, section, metric_name):
     return None
 
 
+NO_DATA = "not in benchmark output"
+
+
 # A frame is janky when its CPU time or its overrun exceeds one refresh period. A frame that only
 # slips one refresh behind a full buffer queue has a small positive overrun and is not a visible hitch.
 # The two series of a run list the same frames in the same order, so they are paired frame by frame.
-def jank_percent():
+def jank_percent(budget_ms):
     """Returns (percent or None, why it is None)."""
     overrun = find("dpadSweep", "sampledMetrics", "frameOverrunMs")
     durations = find("dpadSweep", "sampledMetrics", "frameDurationCpuMs")
     if not overrun or not durations:
-        return None, "not in benchmark output"
+        return None, NO_DATA
     if [len(run) for run in overrun["runs"]] != [len(run) for run in durations["runs"]]:
         return None, "frameOverrunMs and frameDurationCpuMs differ in length"
     pairs = [
@@ -62,25 +65,24 @@ def fewest_sweep_frames():
 
 
 mb = 1024 * 1024
-jank, jank_note = jank_percent()
-na_notes = {"janky frames": jank_note}
+jank, jank_note = jank_percent(budget_ms)
 rows = [
-    ("janky frames", jank, "<=", args.max_jank_percent, "%"),
-    ("p90 frame CPU", (find("dpadSweep", "sampledMetrics", "frameDurationCpuMs") or {}).get("P90"), "<=", budget_ms, " ms"),
-    ("p90 overrun", (find("dpadSweep", "sampledMetrics", "frameOverrunMs") or {}).get("P90"), "<=", budget_ms, " ms"),
-    ("sweep frames", fewest_sweep_frames(), ">=", args.min_sweep_frames, ""),
-    ("Home idle PSS", args.pss_kb / 1024.0, "<=", args.max_pss_mb, " MB"),
-    ("cold start", (find("coldStartup", "metrics", "timeToInitialDisplayMs") or {}).get("median"), "<=", args.max_cold_start_ms, " ms"),
-    ("APK size", args.apk_bytes / mb, "<=", args.max_apk_bytes / mb, " MB"),
+    ("janky frames", jank, "<=", args.max_jank_percent, "%", jank_note),
+    ("p90 frame CPU", (find("dpadSweep", "sampledMetrics", "frameDurationCpuMs") or {}).get("P90"), "<=", budget_ms, " ms", NO_DATA),
+    ("p90 overrun", (find("dpadSweep", "sampledMetrics", "frameOverrunMs") or {}).get("P90"), "<=", budget_ms, " ms", NO_DATA),
+    ("sweep frames", fewest_sweep_frames(), ">=", args.min_sweep_frames, "", NO_DATA),
+    ("Home idle PSS", args.pss_kb / 1024.0, "<=", args.max_pss_mb, " MB", NO_DATA),
+    ("cold start", (find("coldStartup", "metrics", "timeToInitialDisplayMs") or {}).get("median"), "<=", args.max_cold_start_ms, " ms", NO_DATA),
+    ("APK size", args.apk_bytes / mb, "<=", args.max_apk_bytes / mb, " MB", NO_DATA),
 ]
 
 print("=== Spike gate ===")
 print(f"frame budget   {budget_ms:.2f} ms ({args.refresh_hz:.1f} Hz)")
 failed = False
-for label, value, op, limit, unit in rows:
+for label, value, op, limit, unit, note in rows:
     bound = f"{op} {limit:.4g}{unit}"
     if value is None:
-        print(f"{label:<14} n/a ({na_notes.get(label, 'not in benchmark output')})   limit {bound}   FAIL")
+        print(f"{label:<14} n/a ({note})   limit {bound}   FAIL")
         failed = True
         continue
     ok = value <= limit if op == "<=" else value >= limit

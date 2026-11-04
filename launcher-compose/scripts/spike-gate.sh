@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Spike gate: builds the release APK, installs it on the TV and prints the DoD3 numbers with PASS/FAIL.
+# Spike gate: builds the release APK, installs it on the TV and prints the gate numbers with PASS/FAIL.
 #
 # Usage:   scripts/spike-gate.sh
 # Env:     TV_SERIAL   adb serial of the TV, such as <tv ip>:5555 (required)
@@ -20,9 +20,8 @@ PYTHON="${PYTHON:-python3}"
 PACKAGE="dev.niltsiar.tvhome"
 ACTIVITY="$PACKAGE/.MainActivity"
 
-# Thresholds from the plan's DoD3.
 MAX_JANK_PERCENT=5
-# The sweep presses 32 keys, so fewer frames than this means focus did not move.
+# Fewer frames than this means the sweep in HomeSweep.kt did not move focus.
 MIN_SWEEP_FRAMES=30
 MAX_PSS_MB=80
 MAX_COLD_START_MS=1500
@@ -60,24 +59,36 @@ case "$SDK" in
     ;;
 esac
 
-# The report derives its frame budget (1000 / refresh rate) from this. The whole dump is read into
-# a variable and parsed without a pipe, so nothing dies of SIGPIPE under pipefail.
+# The jank and overrun rows need frameOverrunMs, which Macrobenchmark records only on API 31+.
+if [ "$SDK" -lt 31 ]; then
+  echo "the TV runs API $SDK; the jank and overrun rows need frameOverrunMs, recorded only on API 31+" >&2
+  exit 2
+fi
+
+# The report's frame limit is one refresh period (1000 / refresh rate), read from the TV. The active
+# display mode prints refreshRate= up to API 34 and vsyncRate= (next to peakRefreshRate=) from API 35.
+# Each field must follow "{" or ", " so refreshRate= does not match inside peakRefreshRate=. The whole
+# dump is read into a variable and parsed without a pipe, so nothing dies of SIGPIPE under pipefail.
 display_refresh_hz() {
-  local dump line hz=""
+  local dump line field hz=""
   dump="$(adb_tv shell dumpsys display 2> /dev/null | tr -d '\r')" || true
   if [[ "$dump" == *mActiveSfDisplayMode=* ]]; then
     line="${dump#*mActiveSfDisplayMode=}"
     line="${line%%$'\n'*}"
-    if [[ "$line" == *refreshRate=* ]]; then
-      hz="${line#*refreshRate=}"
-      hz="${hz%%[!0-9.]*}"
-    fi
+    line=", ${line#*\{}"
+    for field in vsyncRate refreshRate; do
+      if [[ "$line" == *", $field="* ]]; then
+        hz="${line#*", $field="}"
+        hz="${hz%%[!0-9.]*}"
+        if awk -v hz="$hz" 'BEGIN { exit !(hz ~ /^[0-9]+(\.[0-9]+)?$/ && hz + 0 > 0) }'; then
+          echo "$hz"
+          return 0
+        fi
+      fi
+    done
   fi
-  if ! awk -v hz="$hz" 'BEGIN { exit !(hz ~ /^[0-9]+(\.[0-9]+)?$/ && hz + 0 > 0) }'; then
-    echo "could not read the display refresh rate from dumpsys display (mActiveSfDisplayMode)" >&2
-    return 1
-  fi
-  echo "$hz"
+  echo "could not read the display refresh rate (vsyncRate= or refreshRate=) from mActiveSfDisplayMode in dumpsys display" >&2
+  return 1
 }
 
 REFRESH_HZ="$(display_refresh_hz)" || exit 1
