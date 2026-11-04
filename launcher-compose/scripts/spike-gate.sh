@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Spike gate: builds one presenter flavor, installs it on the TV and prints the DoD3 numbers with PASS/FAIL.
+# Spike gate: builds the release APK, installs it on the TV and prints the DoD3 numbers with PASS/FAIL.
 #
-# Usage:   scripts/spike-gate.sh molecule|transform
+# Usage:   scripts/spike-gate.sh
 # Env:     TV_SERIAL   adb serial of the TV, such as <tv ip>:5555 (required)
 #          ADB         adb binary (default: adb on PATH)
 #          PYTHON      python3 binary (default: python3 on PATH)
@@ -9,14 +9,10 @@
 # It installs dev.niltsiar.tvhome only. It never changes the TV's Home setting or any other package.
 set -euo pipefail
 
-FLAVOR="${1:-}"
-case "$FLAVOR" in
-  molecule | transform) ;;
-  *)
-    echo "usage: $0 molecule|transform" >&2
-    exit 2
-    ;;
-esac
+if [ "$#" -ne 0 ]; then
+  echo "usage: $0" >&2
+  exit 2
+fi
 
 TV_SERIAL="${TV_SERIAL:?set TV_SERIAL to the TV adb serial, such as <tv ip>:5555}"
 ADB="${ADB:-adb}"
@@ -35,7 +31,6 @@ MAX_COLD_START_MS=1500
 MAX_APK_BYTES=$((6 * 1024 * 1024))
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CAP="$(printf '%s' "${FLAVOR:0:1}" | tr '[:lower:]' '[:upper:]')${FLAVOR:1}"
 GRADLE=("$ROOT/gradlew" --console=plain)
 
 for tool in "$ADB" "$PYTHON"; do
@@ -69,8 +64,8 @@ esac
 
 # Baseline profile collection needs API 33+ (or root); HomeBenchmarks compiles from warmup runs either way.
 if [ "$SDK" -ge 33 ]; then
-  echo "== Baseline profile ($FLAVOR)"
-  "${GRADLE[@]}" ":app:generate${CAP}ReleaseBaselineProfile"
+  echo "== Baseline profile"
+  "${GRADLE[@]}" ":app:generateReleaseBaselineProfile"
   COMPILATION="baseline profile plus a speed-profile from warmup runs (API $SDK)"
 else
   echo "== No baseline profile: API $SDK cannot collect one without root, so the profile comes from warmup runs"
@@ -88,11 +83,11 @@ APP_COUNT="$(
   '
 )"
 
-echo "== Build and install release APK ($FLAVOR)"
-"${GRADLE[@]}" ":app:assemble${CAP}Release"
-APK="$(find "$ROOT/app/build/outputs/apk/$FLAVOR/release" -name '*.apk' | head -n 1)"
+echo "== Build and install release APK"
+"${GRADLE[@]}" ":app:assembleRelease"
+APK="$(find "$ROOT/app/build/outputs/apk/release" -name '*.apk' | head -n 1)"
 [ -n "$APK" ] || {
-  echo "no release APK found for $FLAVOR" >&2
+  echo "no release APK found" >&2
   exit 1
 }
 APK_BYTES="$(wc -c < "$APK" | tr -d ' ')"
@@ -118,29 +113,28 @@ for line in sys.stdin.read().splitlines():
 
 # The connected test run uninstalls the app when it ends, so put the release build back whatever happens.
 reinstall() {
-  echo "== Reinstall release APK ($FLAVOR)"
+  echo "== Reinstall release APK"
   adb_tv install -r "$APK" > /dev/null || echo "could not reinstall $APK" >&2
 }
 trap reinstall EXIT
 
-echo "== Benchmarks ($FLAVOR)"
+echo "== Benchmarks"
 RESULTS_DIR="$ROOT/baselineprofile/build/outputs/connected_android_test_additional_output"
 rm -rf "$RESULTS_DIR"
-"${GRADLE[@]}" ":baselineprofile:connected${CAP}BenchmarkReleaseAndroidTest" \
+"${GRADLE[@]}" ":baselineprofile:connectedBenchmarkReleaseAndroidTest" \
   -Pandroid.testInstrumentationRunnerArguments.class=dev.niltsiar.tvhome.baselineprofile.HomeBenchmarks
 JSON="$(find "$RESULTS_DIR" -name '*benchmarkData.json' -exec ls -t {} + 2> /dev/null | head -n 1 || true)"
 [ -n "$JSON" ] || {
   echo "no benchmarkData.json under $RESULTS_DIR" >&2
   exit 1
 }
-KEPT="$ROOT/build/spike-gate/$FLAVOR-$(date -u +%Y%m%dT%H%M%SZ)/benchmarkData.json"
+KEPT="$ROOT/build/spike-gate/$(date -u +%Y%m%dT%H%M%SZ)/benchmarkData.json"
 mkdir -p "$(dirname "$KEPT")"
 cp "$JSON" "$KEPT"
 echo "results kept at $KEPT"
 
 echo
 "$PYTHON" "$ROOT/scripts/spike-gate-report.py" "$KEPT" \
-  --flavor "$FLAVOR" \
   --compilation "$COMPILATION" \
   --apps "$APP_COUNT" \
   --apk-bytes "$APK_BYTES" \

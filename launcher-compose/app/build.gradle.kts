@@ -13,12 +13,6 @@ android {
         versionName = "0.1.0"
     }
 
-    flavorDimensions += "presenter"
-    productFlavors {
-        create("molecule") { dimension = "presenter" }
-        create("transform") { dimension = "presenter" }
-    }
-
     buildTypes {
         release {
             isMinifyEnabled = true

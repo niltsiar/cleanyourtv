@@ -9,7 +9,6 @@ import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument("json_path")
-parser.add_argument("--flavor", required=True)
 parser.add_argument("--compilation", required=True)
 parser.add_argument("--apps", required=True)
 parser.add_argument("--apk-bytes", type=int, required=True)
@@ -62,7 +61,7 @@ rows = [
     ("APK size", args.apk_bytes / mb, "<=", args.max_apk_bytes / mb, " MB"),
 ]
 
-print(f"=== Spike gate: {args.flavor} ===")
+print("=== Spike gate ===")
 failed = False
 for label, value, op, limit, unit in rows:
     bound = f"{op} {limit:g}{unit}"

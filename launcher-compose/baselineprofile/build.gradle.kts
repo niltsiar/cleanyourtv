@@ -11,12 +11,6 @@ android {
     }
 
     targetProjectPath = ":app"
-
-    flavorDimensions += "presenter"
-    productFlavors {
-        create("molecule") { dimension = "presenter" }
-        create("transform") { dimension = "presenter" }
-    }
 }
 
 baselineProfile {

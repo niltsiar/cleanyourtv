@@ -35,7 +35,7 @@ internal sealed interface HomeEvent {
 }
 
 /**
- * The app list split into the dock and the grid. Hosts remember one per app list, so a focus change or a clock tick
+ * The app list split into the dock and the grid. The host remembers one per app list, so a focus change or a clock tick
  * keeps both list instances and the screen can skip them.
  */
 internal class HomeApps(
@@ -45,7 +45,7 @@ internal class HomeApps(
     val grid: List<AppEntry> = all.drop(DOCK_SIZE)
 }
 
-/** The mapping both hosts share; each host owns only how its inputs reach this call. */
+/** The mapping from inputs to Home state. It is host-independent: a host only decides how its inputs reach this call. */
 internal fun homeUiState(
     apps: HomeApps,
     now: LocalDateTime?,

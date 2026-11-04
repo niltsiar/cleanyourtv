@@ -34,7 +34,7 @@ class QualityConventionPlugin : Plugin<Project> {
 
             pluginManager.withPlugin("com.android.application") {
                 extensions.configure<ApplicationExtension> { lint.configureLint() }
-                // The `lint` task covers one variant, so check lints each flavor's debug variant.
+                // The `lint` task covers one variant, so check lints every debug variant.
                 extensions.configure<ApplicationAndroidComponentsExtension> {
                     onVariants(selector().withBuildType("debug")) { variant ->
                         tasks.named("check") { dependsOn("lint${variant.name.replaceFirstChar(Char::titlecase)}") }
