@@ -67,10 +67,10 @@ private fun googleSansFlex(
     )
 
 private fun typographyFor(colors: TvColors): TvTypography {
-    val clockSize = 28.sp
-    val dateSize = 14.sp
+    val clockSize = 32.sp
+    val dateSize = 18.sp
     val shelfTitleSize = 40.sp
-    val tileLabelSize = 13.sp
+    val tileLabelSize = 16.sp
     return TvTypography(
         clock =
             TextStyle(

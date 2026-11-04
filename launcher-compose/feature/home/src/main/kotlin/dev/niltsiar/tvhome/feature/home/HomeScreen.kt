@@ -1,5 +1,8 @@
 package dev.niltsiar.tvhome.feature.home
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -18,8 +21,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -37,7 +42,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -66,9 +73,12 @@ private val TopBarTop = 20.dp
 private val TopBarHeight = 56.dp
 private val ContentTop = TopBarTop + TopBarHeight + 20.dp
 private val TileShape = RoundedCornerShape(12.dp)
-
-/** Where the focused row rests when it scrolls, as a fraction of the viewport height. */
-private const val FOCUS_PIVOT = 0.3f
+private val ShelfHeight = 72.dp
+private val ShelfTitleGap = 12.dp
+private val ShelfBottom = ContentTop + ShelfHeight
+private val ShelfFade = 40.dp
+private val ShelfFullyShown = ShelfBottom - 4.dp
+private val ShelfRise = 14.dp
 private const val TILE_ASPECT = 16f / 9f
 
 /**
@@ -76,6 +86,7 @@ private const val TILE_ASPECT = 16f / 9f
  * grid list instances, so the dock and the tiles skip while the shelf label updates.
  * The wallpaper and the scrolling content are both glass sources, so the top bar and the dock glass what is behind them.
  * The top bar's surfaces sit in one glass container and merge when they come near each other.
+ * The shelf title stays under the top bar; rows fade out as they scroll up to it.
  */
 @Composable
 public fun HomeScreen(
@@ -89,6 +100,10 @@ public fun HomeScreen(
     Box(modifier = modifier.fillMaxSize().background(TvTheme.colors.background)) {
         Wallpaper(glass)
         HomeContent(glass, dockFocus, state, onFocus, onClick)
+        ShelfTitle(
+            label = { state().focusedLabel },
+            modifier = Modifier.padding(top = ContentTop, start = ScreenMargin).height(ShelfHeight - ShelfTitleGap),
+        )
         TopBar(
             glass = glass,
             dockFocus = dockFocus,
@@ -129,9 +144,13 @@ private fun HomeContent(
     onClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val pivotSpec = remember { PivotBringIntoViewSpec(FOCUS_PIVOT) }
+    // The focused tile rests one gap inside the dock panel, so at rest the dock panel's top edge is the shelf's bottom edge.
+    val pivotPx = with(LocalDensity.current) { (ShelfBottom + TileGap).toPx() }
+    val pivotSpec = remember(pivotPx) { PivotBringIntoViewSpec(pivotPx) }
+    val gridState = rememberLazyGridState()
     CompositionLocalProvider(LocalBringIntoViewSpec provides pivotSpec) {
         LazyVerticalGrid(
+            state = gridState,
             columns = GridCells.Fixed(COLUMNS),
             contentPadding = PaddingValues(start = ScreenMargin, end = ScreenMargin, top = ContentTop, bottom = 48.dp),
             horizontalArrangement = Arrangement.spacedBy(TileGap),
@@ -139,29 +158,58 @@ private fun HomeContent(
             modifier = modifier.fillMaxSize().glassSource(glass, zIndex = 1f).semantics { testTagsAsResourceId = true },
         ) {
             item(key = "shelf", span = { GridItemSpan(maxLineSpan) }, contentType = "shelf") {
-                Shelf(label = state().focusedLabel)
+                Spacer(Modifier.fillMaxWidth().height(ShelfHeight))
             }
             item(key = "dock", span = { GridItemSpan(maxLineSpan) }, contentType = "dock") {
-                Dock(glass = glass, focus = dockFocus, dock = state().dock, onFocus = onFocus, onClick = onClick)
+                Dock(
+                    glass = glass,
+                    focus = dockFocus,
+                    dock = state().dock,
+                    onFocus = onFocus,
+                    onClick = onClick,
+                    modifier = Modifier.fadeUnderShelf(gridState, "dock"),
+                )
             }
             items(state().grid, key = { it.packageName }, contentType = { "tile" }) { app ->
-                AppTile(app = app, onFocus = onFocus, onClick = onClick)
+                AppTile(app = app, onFocus = onFocus, onClick = onClick, modifier = Modifier.fadeUnderShelf(gridState, app.packageName))
             }
         }
     }
 }
 
+/** Fades the item with the row it is in: fully visible from just above the shelf's bottom edge down, gone [ShelfFade] above that. */
+private fun Modifier.fadeUnderShelf(
+    grid: LazyGridState,
+    key: Any,
+): Modifier =
+    graphicsLayer {
+        val info = grid.layoutInfo
+        val item = info.visibleItemsInfo.firstOrNull { it.key == key } ?: return@graphicsLayer
+        val top = item.offset.y - info.viewportStartOffset
+        val fade = ShelfFade.toPx()
+        alpha = ((top - (ShelfFullyShown.toPx() - fade)) / fade).coerceIn(0f, 1f)
+    }
+
+/** The focused app's name. It rises into place and fades in again each time the label changes. */
 @Composable
-private fun Shelf(
-    label: String,
+private fun ShelfTitle(
+    label: () -> String,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier = modifier.fillMaxWidth().height(110.dp), contentAlignment = Alignment.BottomStart) {
+    val text = label()
+    val reveal = remember(text) { Animatable(0f) }
+    LaunchedEffect(reveal) { reveal.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)) }
+    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.BottomStart) {
         BasicText(
-            text = label,
+            text = text,
             style = TvTheme.typography.shelfTitle,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            modifier =
+                Modifier.graphicsLayer {
+                    alpha = (0.3f + 0.7f * reveal.value).coerceIn(0f, 1f)
+                    translationY = (1f - reveal.value) * ShelfRise.toPx()
+                },
         )
     }
 }
@@ -268,7 +316,13 @@ private fun TopBar(
         Spacer(Modifier.weight(1f))
         GlassIconButton(glass, painterResource(R.drawable.ic_inputs), stringResource(R.string.inputs), onClick = {})
         GlassIconButton(glass, painterResource(R.drawable.ic_wifi), stringResource(R.string.wifi), onClick = {})
-        GlassIconButton(glass, painterResource(R.drawable.ic_settings), stringResource(R.string.settings), onClick = {})
+        GlassIconButton(
+            glass,
+            painterResource(R.drawable.ic_settings),
+            stringResource(R.string.settings),
+            onClick = {},
+            focusedRotation = 90f,
+        )
     }
 }
 

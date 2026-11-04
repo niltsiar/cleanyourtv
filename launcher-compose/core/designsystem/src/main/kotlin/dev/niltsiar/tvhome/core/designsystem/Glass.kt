@@ -1,5 +1,6 @@
 package dev.niltsiar.tvhome.core.designsystem
 
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.InteractionSource
@@ -9,10 +10,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.HazeState
@@ -68,12 +71,32 @@ public fun Modifier.glassContainer(glass: GlassState): Modifier =
         GlassKind.Flat -> this
     }
 
-private const val GLASS_TINT_ALPHA = 0.38f
+private const val GLASS_VEIL_ALPHA = 0.14f
 private const val FLAT_SCRIM_ALPHA = 0.62f
+
+/**
+ * Below API 33 Haze draws a software fallback with no refraction, blur or rim shader. Its body is the sharp content
+ * behind plus the tint, and its rim is the edge stroke, so these values carry the look there. From API 33 the
+ * shader draws the rim and these stay at the built-in values.
+ */
+private val GlassLook =
+    GlassStyle {
+        // The theme is dark-only: keep the dark material response whatever the system appearance is.
+        contrast(0.08f)
+        whitePoint(-0.22f)
+        chromaMultiplier(1.1f)
+        lightPosition(BiasAlignment(-0.7f, -1f))
+        specularIntensity(0.8f)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            ambientResponse(1f)
+            edgeSoftness(1.5.dp)
+            edgeShadow(Color.White.copy(alpha = 0.2f))
+        }
+    }
 
 private val GlassInteractions =
     GlassStyle {
-        focused { lightingIntensity(0.35f) }
+        focused { lightingIntensity(0.9f) }
         pressed {
             lightingIntensity(1f)
             refractionMultiplier(1.08f)
@@ -90,8 +113,9 @@ private val GlassPanelShape = RoundedCornerShape(20.dp)
 @Composable
 private fun rememberRefractiveGlassStyle(shape: RoundedCornerShape): GlassStyle {
     val colors = TvTheme.colors
-    val base = GlassStyle.regular.material3(containerColor = colors.surface, tint = colors.background.copy(alpha = GLASS_TINT_ALPHA))
-    return remember(base, shape) { base.then(GlassInteractions).then { shape(shape) } }
+    val veil = lerp(colors.onSurface, colors.accent, 0.35f).copy(alpha = GLASS_VEIL_ALPHA)
+    val base = GlassStyle.regular.material3(containerColor = colors.surface, tint = veil)
+    return remember(base, shape) { base.then(GlassLook).then(GlassInteractions).then { shape(shape) } }
 }
 
 /**
