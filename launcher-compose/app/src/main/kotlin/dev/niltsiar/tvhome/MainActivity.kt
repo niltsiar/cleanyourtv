@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 
 class MainActivity : ComponentActivity() {
@@ -11,7 +12,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val graph = (application as TvHomeApplication).graph
         setContent {
-            TvTheme {
+            TvTheme(glassKind = GlassKind.valueOf(BuildConfig.GLASS_KIND)) {
                 HomeHost(graph = graph, onLaunchApp = ::launchApp)
             }
         }

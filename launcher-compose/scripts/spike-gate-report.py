@@ -9,6 +9,7 @@ import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument("json_path")
+parser.add_argument("--build", required=True)
 parser.add_argument("--compilation", required=True)
 parser.add_argument("--apps", required=True)
 parser.add_argument("--apk-bytes", type=int, required=True)
@@ -77,6 +78,7 @@ rows = [
 ]
 
 print("=== Spike gate ===")
+print(f"build          {args.build}")
 print(f"frame budget   {budget_ms:.2f} ms ({args.refresh_hz:.1f} Hz)")
 failed = False
 for label, value, op, limit, unit, note in rows:
