@@ -45,7 +45,7 @@ internal class HomeApps(
     val grid: List<AppEntry> = all.drop(DOCK_SIZE)
 }
 
-/** The mapping from inputs to Home state. It is host-independent: a host only decides how its inputs reach this call. */
+/** The mapping from inputs to Home state. The host only decides how its inputs reach this call. */
 internal fun homeUiState(
     apps: HomeApps,
     now: LocalDateTime?,

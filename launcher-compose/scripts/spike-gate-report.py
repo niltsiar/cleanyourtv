@@ -51,8 +51,8 @@ def jank_percent():
         for cpu_run, late_run in zip(durations["runs"], overrun["runs"])
         for cpu, late in zip(cpu_run, late_run)
     ]
-    janky = [1 for cpu, late in pairs if cpu > budget_ms or late > budget_ms]
-    return (100.0 * len(janky) / len(pairs), "") if pairs else (None, "no sweep frames")
+    janky = sum(1 for cpu, late in pairs if cpu > budget_ms or late > budget_ms)
+    return (100.0 * janky / len(pairs), "") if pairs else (None, "no sweep frames")
 
 
 # A sweep run that drew few frames did not move focus, so it measured nothing.
