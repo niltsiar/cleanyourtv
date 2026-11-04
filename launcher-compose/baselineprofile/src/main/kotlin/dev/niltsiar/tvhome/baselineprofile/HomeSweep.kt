@@ -8,6 +8,7 @@ import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.Condition
+import androidx.test.uiautomator.StaleObjectException
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
 import java.util.regex.Pattern
@@ -77,7 +78,14 @@ private fun MacrobenchmarkScope.awaitFocusedTile(
     device.waitForIdle()
     val found =
         device.wait(
-            Condition<UiDevice, String?> { it.findObject(focusedTile())?.resourceName?.takeIf(accept) },
+            Condition<UiDevice, String?> {
+                // Home recomposes while images land and can replace the node between the find and the read.
+                try {
+                    it.findObject(focusedTile())?.resourceName?.takeIf(accept)
+                } catch (_: StaleObjectException) {
+                    null
+                }
+            },
             FOCUS_TIMEOUT_MS,
         )
     checkNotNull(found) {
