@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import app.cash.molecule.RecompositionMode
 import app.cash.molecule.launchMolecule
 import dev.niltsiar.tvhome.core.config.TvConfig
-import dev.niltsiar.tvhome.core.model.AppList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,14 +13,12 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
-import java.time.LocalDateTime
 import java.util.Locale
 import kotlin.coroutines.CoroutineContext
 
 /** Hosts [homePresenter] with Molecule: an event Flow in, a StateFlow out. */
 public class MoleculeHomeViewModel(
-    apps: Flow<AppList>,
-    clock: Flow<LocalDateTime>,
+    sources: HomeSources,
     config: TvConfig,
     locale: Locale = Locale.getDefault(),
     coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
@@ -36,7 +33,7 @@ public class MoleculeHomeViewModel(
 
     public val uiState: StateFlow<HomeUiState> =
         viewModelScope.launchMolecule(recompositionMode, context) {
-            homePresenter(eventFlow, apps, clock, config, effectChannel::trySend, locale)
+            homePresenter(eventFlow, sources, config, effectChannel::trySend, locale)
         }
 
     public fun onFocus(key: String) {
@@ -45,5 +42,13 @@ public class MoleculeHomeViewModel(
 
     public fun onClick(key: String) {
         events.trySend(HomeEvent.Click(key))
+    }
+
+    public fun onOpenSettings() {
+        events.trySend(HomeEvent.OpenSettings)
+    }
+
+    public fun onOpenNetwork() {
+        events.trySend(HomeEvent.OpenNetwork)
     }
 }

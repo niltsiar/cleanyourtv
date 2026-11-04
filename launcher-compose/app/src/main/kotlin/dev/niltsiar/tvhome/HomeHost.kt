@@ -10,30 +10,38 @@ import dev.niltsiar.tvhome.feature.home.HomeEffect
 import dev.niltsiar.tvhome.feature.home.HomeScreen
 import dev.niltsiar.tvhome.feature.home.MoleculeHomeViewModel
 import dev.niltsiar.tvhome.feature.home.homeLayout
-import dev.niltsiar.tvhome.feature.home.minuteClock
+import dev.niltsiar.tvhome.feature.home.topBarLayout
 
 /** Home state comes from the Molecule-hosted presenter. */
 @Composable
 internal fun HomeHost(
     graph: AppGraph,
     onLaunchApp: (AppEntry) -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenNetwork: () -> Unit,
     homePresses: () -> Int,
-    viewModel: MoleculeHomeViewModel = viewModel { MoleculeHomeViewModel(graph.appsProvider.apps, minuteClock(), graph.config) },
+    viewModel: MoleculeHomeViewModel = viewModel { MoleculeHomeViewModel(graph.homeSources, graph.config) },
 ) {
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
             when (effect) {
                 is HomeEffect.LaunchApp -> onLaunchApp(effect.app)
+                HomeEffect.OpenSettings -> onOpenSettings()
+                HomeEffect.OpenNetwork -> onOpenNetwork()
             }
         }
     }
     val state = viewModel.uiState.collectAsStateWithLifecycle()
     val layout = remember(graph) { graph.config.homeLayout() }
+    val topBar = remember(graph) { graph.config.topBarLayout() }
     HomeScreen(
         state = { state.value },
         layout = layout,
         onFocus = viewModel::onFocus,
         onClick = viewModel::onClick,
         homePresses = homePresses,
+        topBar = topBar,
+        onOpenSettings = viewModel::onOpenSettings,
+        onOpenNetwork = viewModel::onOpenNetwork,
     )
 }

@@ -12,7 +12,8 @@ class HomeUiStateTest {
         apps: List<AppEntry> = NineApps,
         now: LocalDateTime? = Evening,
         focusedPackage: String? = null,
-    ) = homeUiState(homeApps(apps), now, focusedPackage, Locale.ENGLISH)
+        header: HeaderStyle = HeaderStyle(),
+    ) = homeUiState(homeApps(apps), now, focusedPackage, Locale.ENGLISH, header)
 
     @Test
     fun the_time_formats_as_clock_and_date() {
@@ -101,5 +102,31 @@ class HomeUiStateTest {
         assertEquals(0, emptyDockSlots(docked = 4, dockSize = 4, tiles = 20, fill = false))
         assertEquals(0, emptyDockSlots(docked = 0, dockSize = 4, tiles = 20, fill = false))
         assertEquals(0, emptyDockSlots(docked = 2, dockSize = 4, tiles = 2, fill = false))
+    }
+
+    @Test
+    fun the_twelve_hour_clock_has_no_leading_zero_and_an_am_pm_marker() {
+        val state = state(header = HeaderStyle(hour24 = false))
+        assertEquals("8:15" to "PM", state.clock to state.amPm)
+        val midnight = state(now = Evening.withHour(0).withMinute(5), header = HeaderStyle(hour24 = false))
+        assertEquals("12:05" to "AM", midnight.clock to midnight.amPm)
+        assertEquals("", state().amPm)
+    }
+
+    @Test
+    fun the_date_follows_the_pattern_from_the_resources() {
+        assertEquals("Tuesday  3 November", state(header = HeaderStyle(datePattern = "EEEE  d MMMM")).date)
+    }
+
+    @Test
+    fun the_greeting_names_the_part_of_the_day_and_the_configured_name() {
+        assertEquals(Greeting(DayPart.Evening, "Sam"), state(header = HeaderStyle(greetingName = "Sam")).greeting)
+        assertEquals(Greeting(DayPart.Evening, null), state().greeting)
+    }
+
+    @Test
+    fun show_greeting_false_and_no_time_both_leave_no_greeting() {
+        assertEquals(null, state(header = HeaderStyle(showGreeting = false)).greeting)
+        assertEquals(null, state(now = null).greeting)
     }
 }

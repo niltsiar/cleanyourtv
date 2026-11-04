@@ -3,14 +3,24 @@ package dev.niltsiar.tvhome.feature.home
 import androidx.compose.runtime.Immutable
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
+import dev.niltsiar.tvhome.core.model.NetworkState
+import kotlinx.coroutines.flow.Flow
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+/**
+ * What the screen shows. [clock], [amPm], [date] and [greeting] are empty or null until the TV's time is valid.
+ * [topBarApps] are the top_bar_apps that can be opened.
+ */
 @Immutable
 public data class HomeUiState(
     val clock: String = "",
+    val amPm: String = "",
     val date: String = "",
+    val greeting: Greeting? = null,
+    val network: NetworkState = NetworkState(),
+    val topBarApps: List<AppEntry> = emptyList(),
     val dock: List<AppEntry> = emptyList(),
     val grid: List<AppEntry> = emptyList(),
     val focusedLabel: String = "",
@@ -21,7 +31,26 @@ public sealed interface HomeEffect {
     public data class LaunchApp(
         val app: AppEntry,
     ) : HomeEffect
+
+    /** The Settings button was pressed: open the TV's system settings. */
+    public data object OpenSettings : HomeEffect
+
+    /** The network button was pressed: open the VPN app or Wi-Fi settings. */
+    public data object OpenNetwork : HomeEffect
 }
+
+/** What the host feeds Home besides the theme: its data sources and two system formats. */
+public class HomeSources(
+    public val apps: Flow<AppList>,
+    /** The local time, again each minute; null while the TV's time is not valid. */
+    public val clock: Flow<LocalDateTime?>,
+    public val network: Flow<NetworkState>,
+    public val topBarApps: Flow<List<AppEntry>>,
+    /** The date_format pattern for [DateTimeFormatter]. */
+    public val datePattern: String,
+    /** Whether the TV is set to the 24-hour clock; read when the clock_format is system. */
+    public val systemHour24: () -> Boolean,
+)
 
 internal sealed interface HomeEvent {
     data class Focus(
@@ -31,6 +60,10 @@ internal sealed interface HomeEvent {
     data class Click(
         val key: String,
     ) : HomeEvent
+
+    data object OpenSettings : HomeEvent
+
+    data object OpenNetwork : HomeEvent
 }
 
 /**
@@ -70,16 +103,31 @@ internal fun emptyDockSlots(
     fill: Boolean,
 ): Int = if (fill || docked <= 0 || docked >= dockSize || tiles <= docked) 0 else dockSize - docked
 
+/** The theme and system choices that shape the clock block. */
+internal data class HeaderStyle(
+    val hour24: Boolean = true,
+    val datePattern: String = "EEEE d MMMM",
+    val showGreeting: Boolean = true,
+    val greetingName: String? = null,
+)
+
 /** The mapping from inputs to Home state. [homePresenter] only decides how its inputs reach this call. */
 internal fun homeUiState(
     apps: HomeApps,
     now: LocalDateTime?,
     focusedKey: String?,
     locale: Locale,
+    header: HeaderStyle = HeaderStyle(),
+    network: NetworkState = NetworkState(),
+    topBarApps: List<AppEntry> = emptyList(),
 ): HomeUiState =
     HomeUiState(
-        clock = now?.format(DateTimeFormatter.ofPattern("HH:mm", locale)).orEmpty(),
-        date = now?.format(DateTimeFormatter.ofPattern("EEEE d MMMM", locale)).orEmpty(),
+        clock = now?.let { clockText(it, header.hour24, locale) }.orEmpty(),
+        amPm = now?.let { amPmText(it, header.hour24, locale) }.orEmpty(),
+        date = now?.format(DateTimeFormatter.ofPattern(header.datePattern, locale)).orEmpty(),
+        greeting = if (now != null && header.showGreeting) Greeting(dayPart(now.hour, locale), header.greetingName) else null,
+        network = network,
+        topBarApps = topBarApps,
         dock = apps.dock,
         grid = apps.grid,
         focusedLabel = (apps.all.firstOrNull { it.key == focusedKey } ?: apps.all.firstOrNull())?.label.orEmpty(),

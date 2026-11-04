@@ -80,14 +80,16 @@ import dev.niltsiar.tvhome.core.designsystem.glassSource
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
+import dev.niltsiar.tvhome.core.model.NetworkLink
+import dev.niltsiar.tvhome.core.model.NetworkState
 import kotlinx.coroutines.flow.drop
 import java.time.LocalDateTime
 import java.util.Locale
 
-private val ScreenMargin = 40.dp
+internal val ScreenMargin = 40.dp
 private val TileGap = 14.dp
-private val TopBarTop = 20.dp
-private val TopBarHeight = 56.dp
+internal val TopBarTop = 20.dp
+internal val TopBarHeight = 56.dp
 private val ContentTop = TopBarTop + TopBarHeight + 20.dp
 private val TileShape = RoundedCornerShape(12.dp)
 private val ShelfHeight = 72.dp
@@ -98,13 +100,6 @@ private val ShelfFullyShown = ShelfBottom - 4.dp
 private val ShelfRise = 14.dp
 private val GridBottom = 48.dp
 private const val TILE_ASPECT = 16f / 9f
-private const val ICON_VIEWPORT = 24f
-private const val INPUTS_ARROW_SLIDE = 2.5f
-private const val SETTINGS_TURN = 90f
-private const val ARC_DIM = 0.2f
-private const val ARC_DIM_END = 0.15f
-private const val ARC_STAGGER = 0.3f
-private const val ARC_RELIGHT = 0.35f
 
 /**
  * The Home screen. [state] is read lazily, inside the items that show each field. A focus change keeps the dock and
@@ -114,6 +109,7 @@ private const val ARC_RELIGHT = 0.35f
  * The shelf title stays under the top bar; rows fade out as they scroll up to it.
  * [homePresses] counts Home key presses that reach Home while it shows; each one scrolls to the top and focuses the first dock tile.
  * [layout] is the theme's: dock size and grid columns, rows that must fit below the dock, one sideways row.
+ * [topBar] is the theme's top bar: which buttons show and how.
  */
 @Composable
 public fun HomeScreen(
@@ -123,6 +119,9 @@ public fun HomeScreen(
     onClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     homePresses: () -> Int = { 0 },
+    topBar: TopBarLayout = TopBarLayout(),
+    onOpenSettings: () -> Unit = {},
+    onOpenNetwork: () -> Unit = {},
 ) {
     val glass = rememberGlassState()
     val dockFocus = remember { FocusRequester() }
@@ -136,8 +135,11 @@ public fun HomeScreen(
         TopBar(
             glass = glass,
             dockFocus = dockFocus,
-            clock = { state().clock },
-            date = { state().date },
+            state = state,
+            layout = topBar,
+            onAppClick = onClick,
+            onOpenSettings = onOpenSettings,
+            onOpenNetwork = onOpenNetwork,
             modifier = Modifier.align(Alignment.TopCenter),
         )
     }
@@ -413,87 +415,6 @@ private fun AppTile(
     }
 }
 
-@Composable
-private fun TopBar(
-    glass: GlassState,
-    dockFocus: FocusRequester,
-    clock: () -> String,
-    date: () -> String,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier =
-            modifier
-                .padding(top = TopBarTop, start = ScreenMargin, end = ScreenMargin)
-                .fillMaxWidth()
-                .height(TopBarHeight)
-                .focusProperties { down = dockFocus }
-                .glassContainer(glass),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        GlassSurface(glass = glass, modifier = Modifier.fillMaxHeight(), shape = CircleShape) {
-            Row(
-                modifier = Modifier.fillMaxHeight().padding(horizontal = 24.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                BasicText(text = clock(), style = TvTheme.typography.clock)
-                BasicText(text = date(), style = TvTheme.typography.date)
-            }
-        }
-        Spacer(Modifier.weight(1f))
-        GlassIconButton(glass, stringResource(R.string.inputs), onClick = {}) { focus ->
-            IconPart(R.drawable.ic_inputs_frame)
-            IconPart(R.drawable.ic_inputs_arrow) {
-                translationX = focus() * INPUTS_ARROW_SLIDE * size.width / ICON_VIEWPORT
-            }
-        }
-        GlassIconButton(glass, stringResource(R.string.wifi), onClick = {}) { focus ->
-            IconPart(R.drawable.ic_wifi_dot)
-            IconPart(R.drawable.ic_wifi_arc_inner) { alpha = wifiArcAlpha(focus(), arc = 0) }
-            IconPart(R.drawable.ic_wifi_arc_outer) { alpha = wifiArcAlpha(focus(), arc = 1) }
-        }
-        GlassIconButton(glass, stringResource(R.string.settings), onClick = {}) { focus ->
-            IconPart(R.drawable.ic_settings) { rotationZ = SETTINGS_TURN * focus() }
-        }
-    }
-}
-
-/** One layer of a top bar icon, drawn over the others in the same 24-unit viewport; [layer] runs in the draw phase. */
-@Composable
-private fun IconPart(
-    @DrawableRes icon: Int,
-    layer: GraphicsLayerScope.() -> Unit = {},
-) {
-    Image(
-        painter = painterResource(icon),
-        contentDescription = null,
-        modifier =
-            Modifier.fillMaxSize().graphicsLayer {
-                compositingStrategy = CompositingStrategy.ModulateAlpha
-                layer()
-            },
-        colorFilter = ColorFilter.tint(TvTheme.colors.onSurface),
-    )
-}
-
-/**
- * The Wi-Fi arcs on focus [progress] (0 idle, 1 focused): both dim at once, then light again one after another,
- * the inner arc first. Both are fully lit at 0 and from 0.8 on.
- */
-private fun wifiArcAlpha(
-    progress: Float,
-    arc: Int,
-): Float {
-    val p = progress.coerceIn(0f, 1f)
-    val start = ARC_DIM_END + arc * ARC_STAGGER
-    return when {
-        p < ARC_DIM_END -> 1f - (1f - ARC_DIM) * p / ARC_DIM_END
-        else -> (ARC_DIM + (1f - ARC_DIM) * (p - start) / ARC_RELIGHT).coerceIn(ARC_DIM, 1f)
-    }
-}
-
 @Preview(name = "Home 1080p glass", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
 @Composable
 private fun HomeScreenGlassPreview() {
@@ -513,7 +434,17 @@ private fun HomePreview(glassKind: GlassKind) {
             listOf("Movies", "Music", "Games", "Photos", "Weather", "Browser", "Files", "Radio", "Clock", "Maps", "Notes", "Podcasts")
                 .map { AppEntry(key = "example.${it.lowercase()}", packageName = "example.${it.lowercase()}", label = it) }
         val layout = HomeLayout(columns = 6, rowsBelowDock = 0, singleRow = false, fillDock = true)
-        val state = homeUiState(HomeApps(AppList(apps), layout), LocalDateTime.of(2026, 11, 3, 20, 15), "example.music", Locale.ENGLISH)
-        HomeScreen(state = { state }, layout = layout, onFocus = {}, onClick = {})
+        val header = HeaderStyle(hour24 = false, datePattern = "EEEE  d MMMM", greetingName = "Sam")
+        val network = NetworkState(NetworkLink.Wifi, ssid = "Living room", validated = true)
+        val state =
+            homeUiState(
+                HomeApps(AppList(apps), layout),
+                LocalDateTime.of(2026, 11, 3, 20, 15),
+                "example.music",
+                Locale.ENGLISH,
+                header,
+                network,
+            )
+        HomeScreen(state = { state }, layout = layout, onFocus = {}, onClick = {}, topBar = TopBarLayout(wifiStatusColor = true))
     }
 }

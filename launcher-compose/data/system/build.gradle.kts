@@ -1,0 +1,20 @@
+plugins {
+    id("tvhome.android.library")
+}
+
+android {
+    namespace = "dev.niltsiar.tvhome.data.system"
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+}
+
+dependencies {
+    api(project(":core:model"))
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.kotlinx.coroutines.android)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+}

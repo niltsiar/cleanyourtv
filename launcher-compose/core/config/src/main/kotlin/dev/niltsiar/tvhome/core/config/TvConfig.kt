@@ -55,8 +55,16 @@ public data class TvConfig(
     val dateBelowClock: Boolean = false,
     val showNetworkPill: Boolean = true,
     val showInputsPill: Boolean = true,
-    /** 0 to 300 dp. */
+    /** Wi-Fi and Settings as round icon buttons, without their names. */
+    val iconOnlyButtons: Boolean = false,
+    /** 0 to 300 dp: with [iconOnlyButtons], the network name stays beside the Wi-Fi icon up to this width. */
     val wifiLabelWidth: Int = 0,
+    /** The Wi-Fi icon turns green while the TV is online. */
+    val wifiStatusColor: Boolean = false,
+    /** With [wifiStatusColor]: orange while connected without internet, red while offline. */
+    val wifiStatusWarnings: Boolean = false,
+    /** Package of the VPN app the network button opens instead of Wi-Fi settings. */
+    val vpnApp: String? = null,
     val cinematicHome: Boolean = false,
     /** Percent, 0 to 100. */
     val cinematicArt: Int = 50,

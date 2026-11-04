@@ -4,9 +4,12 @@ import app.cash.molecule.RecompositionMode
 import app.cash.molecule.moleculeFlow
 import app.cash.turbine.ReceiveTurbine
 import app.cash.turbine.test
-import dev.niltsiar.tvhome.core.model.AppList
+import dev.niltsiar.tvhome.core.config.ClockFormat
+import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.model.AppEntry
+import dev.niltsiar.tvhome.core.model.NetworkLink
+import dev.niltsiar.tvhome.core.model.NetworkState
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -23,10 +26,10 @@ class HomePresenterTest {
     private val effects = Channel<HomeEffect>(Channel.UNLIMITED)
 
     private fun presenter(
-        apps: Flow<AppList> = flowOf(AppList(NineApps)),
-        clock: Flow<LocalDateTime> = flowOf(Evening),
+        sources: HomeSources = sources(),
+        config: TvConfig = SixColumns,
     ) = moleculeFlow(RecompositionMode.Immediate) {
-        homePresenter(eventFlow, apps, clock, SixColumns, effects::trySend, Locale.ENGLISH)
+        homePresenter(eventFlow, sources, config, effects::trySend, Locale.ENGLISH)
     }
 
     @Test
@@ -44,7 +47,7 @@ class HomePresenterTest {
         runTest {
             val clock = MutableSharedFlow<LocalDateTime>(replay = 1)
             clock.emit(Evening)
-            presenter(clock = clock).test {
+            presenter(sources(clock = clock)).test {
                 assertEquals("20:15", awaitMatching { it.clock.isNotEmpty() }.clock)
 
                 clock.emit(Evening.plusMinutes(1))
@@ -83,6 +86,74 @@ class HomePresenterTest {
                 awaitMatching { it.dock.isNotEmpty() }
                 events.send(HomeEvent.Click("pkg.2"))
                 assertEquals(HomeEffect.LaunchApp(NineApps[1]), effects.receive())
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun clicking_a_top_bar_app_emits_a_launch_effect_for_it() =
+        runTest {
+            val chat = AppEntry(key = "com.chat/.Main", packageName = "com.chat", label = "Chat")
+            presenter(sources(topBarApps = flowOf(listOf(chat)))).test {
+                awaitMatching { it.topBarApps.isNotEmpty() }
+                events.send(HomeEvent.Click("com.chat/.Main"))
+                assertEquals(HomeEffect.LaunchApp(chat), effects.receive())
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun the_settings_and_network_buttons_emit_their_effects() =
+        runTest {
+            presenter().test {
+                awaitMatching { it.dock.isNotEmpty() }
+                events.send(HomeEvent.OpenSettings)
+                assertEquals(HomeEffect.OpenSettings, effects.receive())
+                events.send(HomeEvent.OpenNetwork)
+                assertEquals(HomeEffect.OpenNetwork, effects.receive())
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun the_network_flow_reaches_the_state() =
+        runTest {
+            val online = NetworkState(NetworkLink.Ethernet, validated = true)
+            presenter(sources(network = flowOf(online))).test {
+                assertEquals(online, awaitMatching { it.network == online }.network)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun an_invalid_time_hides_the_clock_block_until_a_valid_one_arrives() =
+        runTest {
+            val clock = MutableSharedFlow<LocalDateTime?>(replay = 1)
+            clock.emit(null)
+            presenter(sources(clock = clock)).test {
+                val hidden = awaitMatching { it.dock.isNotEmpty() }
+                assertEquals(listOf("", "", "", null), listOf(hidden.clock, hidden.amPm, hidden.date, hidden.greeting))
+
+                clock.emit(Evening)
+                val shown = awaitMatching { it.clock.isNotEmpty() }
+                assertEquals(DayPart.Evening, shown.greeting?.part)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun clock_format_system_follows_the_tv_and_a_chosen_format_does_not() =
+        runTest {
+            presenter(sources(systemHour24 = { false }), TvConfig(columns = 6, clockFormat = ClockFormat.System)).test {
+                val state = awaitMatching { it.clock.isNotEmpty() }
+                assertEquals("8:15" to "PM", state.clock to state.amPm)
+                cancelAndIgnoreRemainingEvents()
+            }
+            presenter(
+                sources(systemHour24 = { error("the TV is not asked") }),
+                TvConfig(columns = 6, clockFormat = ClockFormat.Hour24),
+            ).test {
+                assertEquals("20:15", awaitMatching { it.clock.isNotEmpty() }.clock)
                 cancelAndIgnoreRemainingEvents()
             }
         }

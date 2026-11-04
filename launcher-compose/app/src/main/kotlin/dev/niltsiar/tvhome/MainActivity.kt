@@ -12,6 +12,7 @@ import androidx.compose.runtime.setValue
 import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
+import dev.niltsiar.tvhome.feature.home.R as FeatureR
 
 class MainActivity : ComponentActivity() {
     private val graph get() = (application as TvHomeApplication).graph
@@ -23,7 +24,13 @@ class MainActivity : ComponentActivity() {
         onBackPressedDispatcher.addCallback(this) {}
         setContent {
             TvTheme(glassKind = GlassKind.valueOf(BuildConfig.GLASS_KIND)) {
-                HomeHost(graph = graph, onLaunchApp = ::launchApp, homePresses = { homePresses })
+                HomeHost(
+                    graph = graph,
+                    onLaunchApp = ::launchApp,
+                    onOpenSettings = ::openSettings,
+                    onOpenNetwork = ::openNetwork,
+                    homePresses = { homePresses },
+                )
             }
         }
     }
@@ -31,11 +38,15 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         graph.appsProvider.onStart()
+        graph.networkMonitor.onStart()
+        graph.timeChanges.onStart()
     }
 
     override fun onStop() {
         super.onStop()
         graph.appsProvider.onStop()
+        graph.networkMonitor.onStop()
+        graph.timeChanges.onStop()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -44,6 +55,18 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun launchApp(app: AppEntry) {
-        if (!graph.appLauncher.launch(app)) Toast.makeText(this, getString(R.string.cant_open, app.label), Toast.LENGTH_SHORT).show()
+        if (!graph.appLauncher.launch(app)) cantOpen(app.label)
+    }
+
+    private fun openSettings() {
+        if (!graph.systemSettings.openSettings()) cantOpen(getString(FeatureR.string.settings))
+    }
+
+    private fun openNetwork() {
+        if (!graph.systemSettings.openNetwork()) cantOpen(getString(FeatureR.string.wifi))
+    }
+
+    private fun cantOpen(what: String) {
+        Toast.makeText(this, getString(R.string.cant_open, what), Toast.LENGTH_SHORT).show()
     }
 }

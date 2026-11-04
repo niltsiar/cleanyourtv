@@ -3,6 +3,9 @@ package dev.niltsiar.tvhome.feature.home
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
+import dev.niltsiar.tvhome.core.model.NetworkState
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import java.time.LocalDateTime
 
 internal val NineApps = (1..9).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") }
@@ -16,3 +19,11 @@ internal fun homeApps(
     docked: Int = 0,
     config: TvConfig = SixColumns,
 ) = HomeApps(AppList(apps, docked), config.homeLayout())
+
+internal fun sources(
+    apps: Flow<AppList> = flowOf(AppList(NineApps)),
+    clock: Flow<LocalDateTime?> = flowOf(Evening),
+    network: Flow<NetworkState> = flowOf(NetworkState()),
+    topBarApps: Flow<List<AppEntry>> = flowOf(emptyList()),
+    systemHour24: () -> Boolean = { true },
+) = HomeSources(apps, clock, network, topBarApps, datePattern = "EEEE d MMMM", systemHour24 = systemHour24)

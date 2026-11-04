@@ -19,8 +19,10 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.update
 import java.io.File
+import kotlin.math.roundToInt
 
 private const val TAG = "TvHome.Apps"
+private const val TOP_BAR_ICON_DP = 22
 
 /**
  * The tiles Home shows, read the way the reference launcher reads them: the TV launcher activities, plus phone
@@ -81,6 +83,19 @@ public class PackageManagerAppsProvider(
             }
         }.flowOn(Dispatchers.IO)
 
+    /** The top_bar_apps that can be opened, loaded again each time the installed apps change. */
+    public val topBarApps: Flow<List<AppEntry>> =
+        flow {
+            var seen = refreshes.value
+            emit(loadTopBarApps())
+            refreshes.collect { version ->
+                if (version != seen) {
+                    seen = version
+                    emit(loadTopBarApps())
+                }
+            }
+        }.flowOn(Dispatchers.IO)
+
     /** Home is on screen: follow package changes, and reload now if some happened while it was not. Main thread. */
     public fun onStart() {
         if (!receiving) {
@@ -99,6 +114,9 @@ public class PackageManagerAppsProvider(
             receiving = false
         }
     }
+
+    private fun loadTopBarApps() =
+        loadTopBarApps(context, config.topBarApps, (TOP_BAR_ICON_DP * context.resources.displayMetrics.density).roundToInt())
 
     private fun requestRefresh() = refreshes.update { it + 1 }
 

@@ -44,7 +44,6 @@ private val unsupportedKeys: Set<String> =
         "handle_view_inputs",
         "header_white",
         "home_long_press_home",
-        "icon_only_buttons",
         "icon_only_inputs",
         "icon_only_vpn",
         "inputs_cec_state_only",
@@ -72,11 +71,8 @@ private val unsupportedKeys: Set<String> =
         "source_panel_service",
         "top_menu",
         "uniform_tiles",
-        "vpn_app",
         "vpn_pill",
         "wallpaper_true_color",
-        "wifi_status_color",
-        "wifi_status_warnings",
     )
 
 // The reference's JSONTokener accepts comments and trailing commas, so a hand-edited theme that works there must here.
@@ -125,7 +121,11 @@ public fun parseTvConfig(json: String): ParsedConfig {
             dateBelowClock = o.bool("date_below_clock", d.dateBelowClock),
             showNetworkPill = o.bool("show_network_pill", d.showNetworkPill),
             showInputsPill = o.bool("show_inputs_pill", d.showInputsPill),
+            iconOnlyButtons = o.bool("icon_only_buttons", d.iconOnlyButtons),
             wifiLabelWidth = o.int("wifi_label_width", d.wifiLabelWidth, 0..300),
+            wifiStatusColor = o.bool("wifi_status_color", d.wifiStatusColor),
+            wifiStatusWarnings = o.bool("wifi_status_warnings", d.wifiStatusWarnings),
+            vpnApp = o.optionalString("vpn_app", d.vpnApp),
             cinematicHome = o.bool("cinematic_home", d.cinematicHome),
             cinematicArt = o.int("cinematic_art", d.cinematicArt, 0..100),
             cinematicScrim = o.int("cinematic_scrim", d.cinematicScrim, 0..100),

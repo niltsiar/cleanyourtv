@@ -7,7 +7,8 @@
 #          OLD_HOME    package of the old launcher (default: com.gathin.tvhome)
 #
 # It sets the Home activity, starts Home, and checks that the chosen launcher is in front. It never
-# enables, disables, uninstalls or force-stops a package, and it never changes a setting. Both launchers
+# enables, disables, uninstalls or force-stops a package, and it never changes a setting (new also grants the
+# launcher its location permission, which the Wi-Fi name needs). Both launchers
 # stay installed and enabled, so each switch can be undone with the other argument.
 set -euo pipefail
 
@@ -56,6 +57,12 @@ case "$PM_PATH" in
     exit 1
     ;;
 esac
+
+if [ "$1" = new ]; then
+  # Reading the Wi-Fi name needs it and the launcher never asks; a TV that refuses leaves the network button without a name.
+  echo "== Grant location (for the Wi-Fi name)"
+  adb_tv shell pm grant "$PACKAGE" android.permission.ACCESS_FINE_LOCATION > /dev/null 2>&1 || echo "not granted; the network button will not show the Wi-Fi name"
+fi
 
 echo "== Set $ACTIVITY as Home"
 adb_tv shell cmd package set-home-activity --user 0 "$ACTIVITY"

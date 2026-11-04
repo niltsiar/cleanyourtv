@@ -40,6 +40,7 @@ dependencies {
     implementation(project(":core:designsystem"))
     implementation(project(":feature:home"))
     implementation(project(":data:apps"))
+    implementation(project(":data:system"))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

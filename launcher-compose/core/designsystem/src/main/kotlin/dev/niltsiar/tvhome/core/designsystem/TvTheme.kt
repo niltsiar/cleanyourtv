@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 
 @Immutable
@@ -28,6 +29,9 @@ public class TvColors(
 public class TvTypography(
     public val clock: TextStyle,
     public val date: TextStyle,
+    public val amPm: TextStyle,
+    public val greeting: TextStyle,
+    public val pillLabel: TextStyle,
     public val shelfTitle: TextStyle,
     public val tileLabel: TextStyle,
 )
@@ -69,6 +73,9 @@ private fun googleSansFlex(
 private fun typographyFor(colors: TvColors): TvTypography {
     val clockSize = 32.sp
     val dateSize = 18.sp
+    val amPmSize = 14.sp
+    val greetingSize = 11.sp
+    val pillLabelSize = 16.sp
     val shelfTitleSize = 40.sp
     val tileLabelSize = 16.sp
     return TvTypography(
@@ -85,6 +92,29 @@ private fun typographyFor(colors: TvColors): TvTypography {
                 fontSize = dateSize,
                 fontWeight = FontWeight.Medium,
                 fontFamily = googleSansFlex(FontWeight.Medium, dateSize, width = 100f, roundness = 0f),
+            ),
+        amPm =
+            TextStyle(
+                color = colors.onSurfaceMuted,
+                fontSize = amPmSize,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 0.08.em,
+                fontFamily = googleSansFlex(FontWeight.Medium, amPmSize, width = 100f, roundness = 0f),
+            ),
+        greeting =
+            TextStyle(
+                color = colors.onSurfaceMuted,
+                fontSize = greetingSize,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 0.18.em,
+                fontFamily = googleSansFlex(FontWeight.Medium, greetingSize, width = 100f, roundness = 0f),
+            ),
+        pillLabel =
+            TextStyle(
+                color = colors.onSurface,
+                fontSize = pillLabelSize,
+                fontWeight = FontWeight.Medium,
+                fontFamily = googleSansFlex(FontWeight.Medium, pillLabelSize, width = 100f, roundness = 0f),
             ),
         shelfTitle =
             TextStyle(

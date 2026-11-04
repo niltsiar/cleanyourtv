@@ -2,10 +2,8 @@ package dev.niltsiar.tvhome.feature.home
 
 import app.cash.molecule.RecompositionMode
 import app.cash.turbine.test
-import dev.niltsiar.tvhome.core.model.AppList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -15,8 +13,7 @@ import kotlin.coroutines.EmptyCoroutineContext
 class MoleculeHomeViewModelTest {
     private fun CoroutineScope.viewModel() =
         MoleculeHomeViewModel(
-            flowOf(AppList(NineApps)),
-            flowOf(Evening),
+            sources(),
             SixColumns,
             Locale.ENGLISH,
             this,
@@ -43,6 +40,19 @@ class MoleculeHomeViewModelTest {
             viewModel.effects.test {
                 viewModel.onClick("pkg.2")
                 assertEquals(HomeEffect.LaunchApp(NineApps[1]), awaitItem())
+            }
+        }
+
+    @Test
+    fun the_settings_button_emits_an_open_settings_effect() =
+        runTest {
+            val viewModel = backgroundScope.viewModel()
+            viewModel.uiState.first { it.dock.isNotEmpty() }
+            viewModel.effects.test {
+                viewModel.onOpenSettings()
+                assertEquals(HomeEffect.OpenSettings, awaitItem())
+                viewModel.onOpenNetwork()
+                assertEquals(HomeEffect.OpenNetwork, awaitItem())
             }
         }
 }
