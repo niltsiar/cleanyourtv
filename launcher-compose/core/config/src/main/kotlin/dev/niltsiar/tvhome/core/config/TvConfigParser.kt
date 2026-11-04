@@ -7,6 +7,9 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
+private const val LATITUDE = "latitude"
+private const val LONGITUDE = "longitude"
+
 /** The largest config.json that is read, in bytes; a bigger one is ignored as a whole. */
 internal const val MAX_CONFIG_BYTES: Int = 64 * 1024
 
@@ -65,14 +68,12 @@ private val unsupportedKeys: Set<String> =
         "shamsi_date",
         "show_home_settings_shortcut",
         "show_stats",
-        "sky_intensity",
         "source_panel_action",
         "source_panel_extra",
         "source_panel_service",
         "top_menu",
         "uniform_tiles",
         "vpn_pill",
-        "wallpaper_true_color",
     )
 
 // The reference's JSONTokener accepts comments and trailing commas, so a hand-edited theme that works there must here.
@@ -136,6 +137,9 @@ public fun parseTvConfig(json: String): ParsedConfig {
             wallpaperOrder = o.enum("wallpaper_order", d.wallpaperOrder, WallpaperOrder.entries) { it.jsonValue },
             wallpaperMoods = o.moods("wallpaper_moods", d.wallpaperMoods),
             wallpaperCaptions = o.bool("wallpaper_captions", d.wallpaperCaptions),
+            wallpaperTrueColor = o.bool("wallpaper_true_color", d.wallpaperTrueColor),
+            skyIntensity = o.int("sky_intensity", d.skyIntensity, 0..100),
+            place = o.place(d.place),
             dockOpacity = o.int("dock_opacity", d.dockOpacity, 30..100),
             dockGlass = o.bool("dock_glass", d.dockGlass),
             animations = o.bool("animations", d.animations),
@@ -203,6 +207,32 @@ private class Overlay(
         default: Int,
         range: IntRange,
     ): Int = value(key, default) { it.asInt()?.takeIf { n -> n in range } }
+
+    /**
+     * "latitude" and "longitude" together: JSON numbers in range. A key that is bad or has no partner is rejected
+     * and the place stays [default].
+     */
+    fun place(default: Place?): Place? {
+        read += LATITUDE
+        read += LONGITUDE
+        val latitude = coordinate(LATITUDE, 90.0)
+        val longitude = coordinate(LONGITUDE, 180.0)
+        if (latitude == null || longitude == null) {
+            rejected += listOfNotNull(LATITUDE.takeIf { LATITUDE in root }, LONGITUDE.takeIf { LONGITUDE in root })
+            return default
+        }
+        return Place(latitude, longitude)
+    }
+
+    private fun coordinate(
+        key: String,
+        limit: Double,
+    ): Double? =
+        (root[key] as? JsonPrimitive)
+            ?.takeUnless { it.isString }
+            ?.content
+            ?.toDoubleOrNull()
+            ?.takeIf { it.isFinite() && it in -limit..limit }
 
     /** A trimmed string; blank is null, which is not a rejection. */
     fun optionalString(

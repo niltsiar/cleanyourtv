@@ -40,6 +40,7 @@ class MainActivity : ComponentActivity() {
         graph.appsProvider.onStart()
         graph.networkMonitor.onStart()
         graph.timeChanges.onStart()
+        graph.wallpaperProvider.onStart()
     }
 
     override fun onStop() {
@@ -47,6 +48,7 @@ class MainActivity : ComponentActivity() {
         graph.appsProvider.onStop()
         graph.networkMonitor.onStop()
         graph.timeChanges.onStop()
+        graph.wallpaperProvider.onStop()
     }
 
     override fun onNewIntent(intent: Intent) {

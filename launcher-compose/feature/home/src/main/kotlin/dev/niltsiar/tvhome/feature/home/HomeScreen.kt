@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.GraphicsLayerScope
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Measurable
@@ -60,7 +61,7 @@ import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
@@ -82,6 +83,7 @@ import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
+import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.flow.drop
 import java.time.LocalDateTime
 import java.util.Locale
@@ -91,6 +93,7 @@ private val TileGap = 14.dp
 internal val TopBarTop = 20.dp
 internal val TopBarHeight = 56.dp
 private val ContentTop = TopBarTop + TopBarHeight + 20.dp
+private val CaptionTop = TopBarTop + TopBarHeight + 8.dp
 private val TileShape = RoundedCornerShape(12.dp)
 private val ShelfHeight = 72.dp
 private val ShelfTitleGap = 12.dp
@@ -110,6 +113,7 @@ private const val TILE_ASPECT = 16f / 9f
  * [homePresses] counts Home key presses that reach Home while it shows; each one scrolls to the top and focuses the first dock tile.
  * [layout] is the theme's: dock size and grid columns, rows that must fit below the dock, one sideways row.
  * [topBar] is the theme's top bar: which buttons show and how.
+ * [wallpaperLayout] is the theme's say over the picture behind Home, which [HomeUiState.wallpaper] supplies.
  */
 @Composable
 public fun HomeScreen(
@@ -120,17 +124,23 @@ public fun HomeScreen(
     modifier: Modifier = Modifier,
     homePresses: () -> Int = { 0 },
     topBar: TopBarLayout = TopBarLayout(),
+    wallpaperLayout: WallpaperLayout = WallpaperLayout(),
     onOpenSettings: () -> Unit = {},
     onOpenNetwork: () -> Unit = {},
 ) {
     val glass = rememberGlassState()
     val dockFocus = remember { FocusRequester() }
-    Box(modifier = modifier.fillMaxSize().background(TvTheme.colors.background)) {
-        Wallpaper(glass)
+    Box(modifier = modifier.fillMaxSize().background(wallpaperLayout.background)) {
+        WallpaperBackdrop(glass, wallpaper = { state().wallpaper }, layout = wallpaperLayout)
         HomeContent(glass, dockFocus, state, layout, onFocus, onClick, homePresses)
         ShelfTitle(
             label = { state().focusedLabel },
             modifier = Modifier.padding(top = ContentTop, start = ScreenMargin).height(ShelfHeight - ShelfTitleGap),
+        )
+        WallpaperCaption(
+            caption = { state().wallpaper.caption },
+            crossfade = wallpaperLayout.crossfade,
+            modifier = Modifier.align(Alignment.TopEnd).padding(top = CaptionTop, end = ScreenMargin),
         )
         TopBar(
             glass = glass,
@@ -141,26 +151,6 @@ public fun HomeScreen(
             onOpenSettings = onOpenSettings,
             onOpenNetwork = onOpenNetwork,
             modifier = Modifier.align(Alignment.TopCenter),
-        )
-    }
-}
-
-@Composable
-private fun Wallpaper(
-    glass: GlassState,
-    modifier: Modifier = Modifier,
-) {
-    Box(modifier = modifier.fillMaxSize().glassSource(glass)) {
-        Image(
-            painter = painterResource(R.drawable.wallpaper),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-        )
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(Color(0x33000000), Color(0xB305060A)))),
         )
     }
 }
@@ -436,6 +426,7 @@ private fun HomePreview(glassKind: GlassKind) {
         val layout = HomeLayout(columns = 6, rowsBelowDock = 0, singleRow = false, fillDock = true)
         val header = HeaderStyle(hour24 = false, datePattern = "EEEE  d MMMM", greetingName = "Sam")
         val network = NetworkState(NetworkLink.Wifi, ssid = "Living room", validated = true)
+        val wallpaper = Wallpaper(picture = ImageBitmap.imageResource(R.drawable.wallpaper), caption = "Red Spider Nebula · Hubble")
         val state =
             homeUiState(
                 HomeApps(AppList(apps), layout),
@@ -444,6 +435,7 @@ private fun HomePreview(glassKind: GlassKind) {
                 Locale.ENGLISH,
                 header,
                 network,
+                wallpaper = wallpaper,
             )
         HomeScreen(state = { state }, layout = layout, onFocus = {}, onClick = {}, topBar = TopBarLayout(wifiStatusColor = true))
     }

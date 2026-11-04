@@ -41,6 +41,7 @@ dependencies {
     implementation(project(":feature:home"))
     implementation(project(":data:apps"))
     implementation(project(":data:system"))
+    implementation(project(":data:wallpaper"))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

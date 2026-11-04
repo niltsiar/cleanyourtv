@@ -12,12 +12,14 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
 import dev.niltsiar.tvhome.core.model.NetworkState
+import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.flow.Flow
 import java.util.Locale
 
 private val NoApps = AppList()
 private val NoTopBarApps = emptyList<AppEntry>()
 private val NoNetwork = NetworkState()
+private val NoWallpaper = Wallpaper()
 
 /** Home's state logic for any host that runs a composable: Molecule today. It uses the Compose runtime only. */
 @Composable
@@ -62,11 +64,12 @@ internal fun homePresenter(
     val homeApps = remember(appList, layout) { HomeApps(appList, layout) }
     val now by sources.clock.collectAsState(null)
     val network by sources.network.collectAsState(NoNetwork)
+    val wallpaper by sources.wallpaper.collectAsState(NoWallpaper)
     // Read again with each new time, which also follows the TV's 12/24-hour setting after a stop and start of Home.
     val hour24 = remember(now, config.clockFormat) { config.clockFormat.is24Hour(sources.systemHour24) }
     val header =
         remember(hour24, config, sources.datePattern) {
             HeaderStyle(hour24, sources.datePattern, config.showGreeting, config.greetingName)
         }
-    return homeUiState(homeApps, now, focusedKey, locale, header, network, topBarApps)
+    return homeUiState(homeApps, now, focusedKey, locale, header, network, topBarApps, wallpaper)
 }

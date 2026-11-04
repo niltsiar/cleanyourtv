@@ -9,6 +9,7 @@ import dev.niltsiar.tvhome.data.apps.PackageManagerAppsProvider
 import dev.niltsiar.tvhome.data.system.NetworkMonitor
 import dev.niltsiar.tvhome.data.system.SystemSettings
 import dev.niltsiar.tvhome.data.system.TimeChanges
+import dev.niltsiar.tvhome.data.wallpaper.WallpaperProvider
 import dev.niltsiar.tvhome.feature.home.HomeSources
 import dev.niltsiar.tvhome.feature.home.minuteClock
 import dev.zacsweers.metro.AppScope
@@ -24,6 +25,7 @@ interface AppGraph {
     val networkMonitor: NetworkMonitor
     val timeChanges: TimeChanges
     val systemSettings: SystemSettings
+    val wallpaperProvider: WallpaperProvider
     val homeSources: HomeSources
 
     /** Read once per process: a pushed theme restarts Home, as in the reference launcher. */
@@ -67,20 +69,31 @@ interface AppGraph {
 
     @Provides
     @SingleIn(AppScope::class)
+    fun provideWallpaperProvider(
+        application: Application,
+        config: TvConfig,
+    ): WallpaperProvider = WallpaperProvider(application, config, ThemeDirectory(application))
+
+    @Provides
+    @SingleIn(AppScope::class)
     fun provideHomeSources(
         application: Application,
         appsProvider: PackageManagerAppsProvider,
         networkMonitor: NetworkMonitor,
         timeChanges: TimeChanges,
-    ): HomeSources =
-        HomeSources(
+        wallpaperProvider: WallpaperProvider,
+    ): HomeSources {
+        val clock = minuteClock(timeChanges.changes)
+        return HomeSources(
             apps = appsProvider.apps,
-            clock = minuteClock(timeChanges.changes),
+            clock = clock,
             network = networkMonitor.state,
             topBarApps = appsProvider.topBarApps,
+            wallpaper = wallpaperProvider.wallpaper(clock),
             datePattern = application.getString(R.string.date_format),
             systemHour24 = { DateFormat.is24HourFormat(application) },
         )
+    }
 
     @DependencyGraph.Factory
     fun interface Factory {

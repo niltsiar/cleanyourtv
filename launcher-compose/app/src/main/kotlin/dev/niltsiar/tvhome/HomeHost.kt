@@ -11,6 +11,7 @@ import dev.niltsiar.tvhome.feature.home.HomeScreen
 import dev.niltsiar.tvhome.feature.home.MoleculeHomeViewModel
 import dev.niltsiar.tvhome.feature.home.homeLayout
 import dev.niltsiar.tvhome.feature.home.topBarLayout
+import dev.niltsiar.tvhome.feature.home.wallpaperLayout
 
 /** Home state comes from the Molecule-hosted presenter. */
 @Composable
@@ -34,6 +35,7 @@ internal fun HomeHost(
     val state = viewModel.uiState.collectAsStateWithLifecycle()
     val layout = remember(graph) { graph.config.homeLayout() }
     val topBar = remember(graph) { graph.config.topBarLayout() }
+    val wallpaperLayout = remember(graph) { graph.config.wallpaperLayout() }
     HomeScreen(
         state = { state.value },
         layout = layout,
@@ -41,6 +43,7 @@ internal fun HomeHost(
         onClick = viewModel::onClick,
         homePresses = homePresses,
         topBar = topBar,
+        wallpaperLayout = wallpaperLayout,
         onOpenSettings = viewModel::onOpenSettings,
         onOpenNetwork = viewModel::onOpenNetwork,
     )

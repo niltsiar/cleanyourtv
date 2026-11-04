@@ -29,7 +29,7 @@ public enum class WallpaperMood(
 /**
  * The theme keys the launcher supports, with the defaults of the reference launcher's config.xml (and
  * Config.java for the theme-only keys). Package names are plain strings. A blank optional string is null.
- * Latitude and longitude are not theme keys in the reference, so they are not here.
+ * [place] comes from the latitude and longitude keys, which this launcher adds: the reference reads them from config.xml.
  */
 public data class TvConfig(
     val dockApps: List<String> =
@@ -82,6 +82,12 @@ public data class TvConfig(
     /** Picture file names per mood; an empty map rotates through the whole collection. */
     val wallpaperMoods: Map<WallpaperMood, Set<String>> = emptyMap(),
     val wallpaperCaptions: Boolean = false,
+    /** Decode wallpapers in 32-bit colour instead of RGB_565. */
+    val wallpaperTrueColor: Boolean = false,
+    /** Percent, 0 to 100; 0 shows no time-of-day sky. */
+    val skyIntensity: Int = 0,
+    /** Where the TV is, for the sun's times; null uses fixed times. */
+    val place: Place? = null,
     /** Percent, 30 to 100. */
     val dockOpacity: Int = 100,
     val dockGlass: Boolean = false,
@@ -116,6 +122,12 @@ public data class TvConfig(
     val clockGlow: Boolean = true,
     /** Language tag the launcher shows itself in instead of the TV's; null for the TV's. */
     val locale: String? = null,
+)
+
+/** A point on Earth: [latitude] -90 to 90 and [longitude] -180 to 180, in degrees. */
+public data class Place(
+    val latitude: Double,
+    val longitude: Double,
 )
 
 internal const val OPAQUE_BLACK: Int = 0xFF000000.toInt()

@@ -34,6 +34,7 @@ public class TvTypography(
     public val pillLabel: TextStyle,
     public val shelfTitle: TextStyle,
     public val tileLabel: TextStyle,
+    public val caption: TextStyle,
 )
 
 private val DarkColors =
@@ -78,6 +79,7 @@ private fun typographyFor(colors: TvColors): TvTypography {
     val pillLabelSize = 16.sp
     val shelfTitleSize = 40.sp
     val tileLabelSize = 16.sp
+    val captionSize = 15.sp
     return TvTypography(
         clock =
             TextStyle(
@@ -129,6 +131,13 @@ private fun typographyFor(colors: TvColors): TvTypography {
                 fontSize = tileLabelSize,
                 fontWeight = FontWeight.Medium,
                 fontFamily = googleSansFlex(FontWeight.Medium, tileLabelSize, width = 100f, roundness = 0f),
+            ),
+        caption =
+            TextStyle(
+                color = colors.onSurface.copy(alpha = 0.85f),
+                fontSize = captionSize,
+                fontWeight = FontWeight.Normal,
+                fontFamily = googleSansFlex(FontWeight.Normal, captionSize, width = 100f, roundness = 0f),
             ),
     )
 }

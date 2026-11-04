@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
 import dev.niltsiar.tvhome.core.model.NetworkState
+import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -11,7 +12,7 @@ import java.util.Locale
 
 /**
  * What the screen shows. [clock], [amPm], [date] and [greeting] are empty or null until the TV's time is valid.
- * [topBarApps] are the top_bar_apps that can be opened.
+ * [topBarApps] are the top_bar_apps that can be opened. [wallpaper] is the picture behind Home and its caption.
  */
 @Immutable
 public data class HomeUiState(
@@ -24,6 +25,7 @@ public data class HomeUiState(
     val dock: List<AppEntry> = emptyList(),
     val grid: List<AppEntry> = emptyList(),
     val focusedLabel: String = "",
+    val wallpaper: Wallpaper = Wallpaper(),
 )
 
 /** One-shot results the host handles outside the UI state. */
@@ -46,6 +48,7 @@ public class HomeSources(
     public val clock: Flow<LocalDateTime?>,
     public val network: Flow<NetworkState>,
     public val topBarApps: Flow<List<AppEntry>>,
+    public val wallpaper: Flow<Wallpaper>,
     /** The date_format pattern for [DateTimeFormatter]. */
     public val datePattern: String,
     /** Whether the TV is set to the 24-hour clock; read when the clock_format is system. */
@@ -120,6 +123,7 @@ internal fun homeUiState(
     header: HeaderStyle = HeaderStyle(),
     network: NetworkState = NetworkState(),
     topBarApps: List<AppEntry> = emptyList(),
+    wallpaper: Wallpaper = Wallpaper(),
 ): HomeUiState =
     HomeUiState(
         clock = now?.let { clockText(it, header.hour24, locale) }.orEmpty(),
@@ -131,4 +135,5 @@ internal fun homeUiState(
         dock = apps.dock,
         grid = apps.grid,
         focusedLabel = (apps.all.firstOrNull { it.key == focusedKey } ?: apps.all.firstOrNull())?.label.orEmpty(),
+        wallpaper = wallpaper,
     )

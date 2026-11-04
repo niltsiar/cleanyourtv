@@ -9,6 +9,7 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
+import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
@@ -121,6 +122,16 @@ class HomePresenterTest {
             val online = NetworkState(NetworkLink.Ethernet, validated = true)
             presenter(sources(network = flowOf(online))).test {
                 assertEquals(online, awaitMatching { it.network == online }.network)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun the_wallpaper_flow_reaches_the_state() =
+        runTest {
+            val dusk = Wallpaper(caption = "Dusk")
+            presenter(sources(wallpaper = flowOf(dusk))).test {
+                assertEquals(dusk, awaitMatching { it.wallpaper == dusk }.wallpaper)
                 cancelAndIgnoreRemainingEvents()
             }
         }

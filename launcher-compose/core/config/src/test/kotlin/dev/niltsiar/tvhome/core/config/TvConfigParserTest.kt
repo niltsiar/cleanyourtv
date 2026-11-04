@@ -80,6 +80,7 @@ class TvConfigParserTest {
             Triple("cinematic_scrim", 0..100, { it.cinematicScrim }),
             Triple("wallpaper_rotation_minutes", 0..1440, { it.wallpaperRotationMinutes }),
             Triple("wallpaper_dim", 0..90, { it.wallpaperDim }),
+            Triple("sky_intensity", 0..100, { it.skyIntensity }),
             Triple("dock_opacity", 30..100, { it.dockOpacity }),
             Triple("home_idle_clock_minutes", 0..1440, { it.homeIdleClockMinutes }),
             Triple("clock_wallpaper_dim", 0..90, { it.clockWallpaperDim }),
@@ -202,9 +203,9 @@ class TvConfigParserTest {
     fun keys_the_reference_knows_but_this_launcher_does_not_use_are_unsupported_not_unknown() {
         val parsed =
             parseTvConfig(
-                """{"dock_title": false, "columns": 5, "festival": "diwali", "sky_intensity": 40, "nonsense": 1, "dock_titel": true}""",
+                """{"dock_title": false, "columns": 5, "festival": "diwali", "game_day": "x", "nonsense": 1, "dock_titel": true}""",
             )
-        assertEquals(listOf("dock_title", "festival", "sky_intensity"), parsed.unsupportedKeys)
+        assertEquals(listOf("dock_title", "festival", "game_day"), parsed.unsupportedKeys)
         assertEquals(listOf("nonsense", "dock_titel"), parsed.unknownKeys)
         assertEquals(5, parsed.config.columns)
     }
@@ -222,5 +223,31 @@ class TvConfigParserTest {
         assertEquals("com.vpn.app", config.vpnApp)
         assertEquals(emptyList<String>(), parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys)
         assertEquals(null, parseTvConfig("""{"vpn_app": "  "}""").config.vpnApp)
+    }
+
+    @Test
+    fun latitude_and_longitude_together_set_the_place() {
+        val parsed = parseTvConfig("""{"latitude": 40.4168, "longitude": -3.7038}""")
+        assertEquals(Place(40.4168, -3.7038), parsed.config.place)
+        assertEquals(emptyList<String>(), parsed.unknownKeys + parsed.unsupportedKeys + parsed.rejectedKeys)
+        assertEquals(Place(-90.0, 180.0), parseTvConfig("""{"latitude": -90, "longitude": 180}""").config.place)
+    }
+
+    @Test
+    fun a_place_needs_both_keys_in_range_as_numbers() {
+        val cases =
+            mapOf(
+                """{"latitude": 40.4}""" to listOf("latitude"),
+                """{"longitude": -3.7}""" to listOf("longitude"),
+                """{"latitude": 90.1, "longitude": 0}""" to listOf("latitude", "longitude"),
+                """{"latitude": 0, "longitude": -180.1}""" to listOf("latitude", "longitude"),
+                """{"latitude": "40.4", "longitude": -3.7}""" to listOf("latitude", "longitude"),
+                """{"latitude": 40.4, "longitude": null}""" to listOf("latitude", "longitude"),
+            )
+        for ((text, rejected) in cases) {
+            val parsed = parseTvConfig(text)
+            assertEquals(text, null, parsed.config.place)
+            assertEquals(text, rejected, parsed.rejectedKeys)
+        }
     }
 }
