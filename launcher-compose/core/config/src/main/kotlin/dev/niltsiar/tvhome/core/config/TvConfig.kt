@@ -110,6 +110,10 @@ public data class TvConfig(
     /** A top-bar button turns reorder mode on and off. */
     val reorderButton: Boolean = false,
     val appLibrary: Boolean = false,
+    /** With [appLibrary]: OK in the library changes an app's Home shortcut, never opens it. */
+    val appLibrarySelection: Boolean = false,
+    /** With [appLibrary]: a round top-bar button opens the library. */
+    val libraryButton: Boolean = false,
     val libraryApps: List<String> = emptyList(),
     val libraryExcludedApps: List<String> = emptyList(),
     val showLibraryPill: Boolean = true,

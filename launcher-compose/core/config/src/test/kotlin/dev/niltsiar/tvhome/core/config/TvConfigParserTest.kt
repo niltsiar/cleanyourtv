@@ -44,6 +44,9 @@ class TvConfigParserTest {
         assertFalse(config.cinematicWhiteFocus || config.glowSnap || config.appGlow)
         assertTrue(config.dockRow)
         assertFalse(config.reorderButton)
+        assertFalse(config.appLibrarySelection || config.libraryButton || config.libraryOkOpens)
+        assertTrue(config.showLibraryPill)
+        assertEquals(emptyList<String>(), config.libraryApps + config.libraryExcludedApps)
     }
 
     @Test
@@ -283,5 +286,23 @@ class TvConfigParserTest {
         assertTrue(wrong.config.dockRow)
         assertFalse(wrong.config.reorderButton)
         assertEquals(listOf("dock_row", "reorder_button"), wrong.rejectedKeys)
+    }
+
+    @Test
+    fun the_app_library_keys_are_read() {
+        val parsed =
+            parseTvConfig(
+                """{"app_library": true, "app_library_selection": true, "library_button": true, "show_library_pill": false,
+                    "library_ok_opens": true, "library_apps": ["a.b"], "library_excluded_apps": ["c.d"]}""",
+            )
+        val config = parsed.config
+        assertTrue(config.appLibrary && config.appLibrarySelection && config.libraryButton && config.libraryOkOpens)
+        assertFalse(config.showLibraryPill)
+        assertEquals(listOf("a.b") to listOf("c.d"), config.libraryApps to config.libraryExcludedApps)
+        assertEquals(emptyList<String>(), parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys)
+
+        val wrong = parseTvConfig("""{"app_library_selection": "yes", "library_button": 1}""")
+        assertFalse(wrong.config.appLibrarySelection || wrong.config.libraryButton)
+        assertEquals(listOf("app_library_selection", "library_button"), wrong.rejectedKeys)
     }
 }

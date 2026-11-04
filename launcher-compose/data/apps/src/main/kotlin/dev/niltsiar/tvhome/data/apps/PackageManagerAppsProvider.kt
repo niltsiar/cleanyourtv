@@ -30,7 +30,7 @@ private const val TOP_BAR_ICON_DP = 22
 
 /**
  * The tiles Home shows, read the way the reference launcher reads them: the TV launcher activities, plus phone
- * launcher activities of packages in library_apps, ordered by [arrange].
+ * launcher activities of packages added in the library or through library_apps, ordered by [arrange].
  *
  * [apps] emits the labels first, then the same list with banners or icons decoded to a tile 16:9 at the width
  * [tileWidthPx] gives for the theme's columns, and again, images included, each time the installed apps change. The change comes from package broadcasts while
@@ -47,6 +47,7 @@ public class PackageManagerAppsProvider(
             TileImages(context, config.appBanners, width, width * 9 / 16)
         }
     private val orderFile = File(context.filesDir, ORDER_FILE_NAME)
+    internal val library = LibraryStore(context.filesDir)
     private val refreshes = MutableStateFlow(0)
     private val packageFilter =
         IntentFilter().apply {
@@ -135,6 +136,15 @@ public class PackageManagerAppsProvider(
         docked: Int,
     ): Boolean = withContext(Dispatchers.IO) { writeOrder(orderFile, Order(Order.dockKey(config.dockApps), keys, docked)) }
 
+    /** Counts the loads asked for: package changes and [libraryChanged]. A collector starts at the current count. */
+    internal val changes: Flow<Int> get() = refreshes
+
+    /** The owner's library choices changed: load the tiles again. */
+    internal fun libraryChanged() = requestRefresh()
+
+    /** The library choices with the config's library_apps added. */
+    internal fun libraryChoices(): LibraryChoices = library.load().let { it.copy(added = it.added + config.libraryApps) }
+
     /** Home is on screen: follow package changes, and reload now if some happened while it was not. Main thread. */
     public fun onStart() {
         if (!receiving) {
@@ -172,11 +182,11 @@ public class PackageManagerAppsProvider(
         val leanback = pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0)
         val tvPackages = leanback.mapTo(HashSet()) { it.activityInfo.packageName }
         val found = leanback.toMutableList()
-        if (config.libraryApps.isNotEmpty()) {
-            val added = config.libraryApps.toSet()
+        val choices = libraryChoices()
+        if (choices.added.isNotEmpty()) {
             val seen = HashSet(tvPackages)
             val phone = pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
-            phone.filterTo(found) { it.activityInfo.packageName in added && seen.add(it.activityInfo.packageName) }
+            phone.filterTo(found) { it.activityInfo.packageName in choices.added && seen.add(it.activityInfo.packageName) }
         }
         val infos = HashMap<String, ResolveInfo>()
         val candidates =
@@ -186,7 +196,7 @@ public class PackageManagerAppsProvider(
                 infos[key] = info
                 Candidate(key, activity.packageName, info.loadLabel(pm).toString(), activity.exported)
             }
-        val arrangement = arrange(candidates, tvPackages, config, readOrder(orderFile), context.packageName)
+        val arrangement = arrange(candidates, tvPackages, config, readOrder(orderFile), context.packageName, choices)
         this.infos = infos
         heroArts.clear()
         return Loaded(arrangement, infos, tvPackages)

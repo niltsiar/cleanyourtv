@@ -57,6 +57,7 @@ import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.designsystem.GlassSurface
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.glassContainer
+import dev.niltsiar.tvhome.core.designsystem.holdOk
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
 
@@ -68,6 +69,7 @@ private const val ARC_DIM_END = 0.15f
 private const val ARC_STAGGER = 0.3f
 private const val ARC_RELIGHT = 0.35f
 private const val APP_ICON_ZOOM = 0.12f
+private const val APPS_ICON_GROWTH = 0.18f
 private const val DEFAULT_NETWORK_WIDTH_DP = 180
 private val NetworkIconRise = 6.dp
 private val DigitRise = 10.dp
@@ -81,7 +83,7 @@ private val OfflineRed = Color(0xFFFF453A)
  * shows its name beside the icon unless [iconOnlyButtons] is set; then a [wifiLabelWidth] over 0 caps the button at
  * that many dp and keeps the name. [wifiStatusColor] tints the icon by the connection ([wifiStatusWarnings] adds orange
  * and red). [vpnApp] says a VPN app is set, so a VPN that is down is worth a badge. [dateBelowClock] stacks the date under the clock.
- * [reorderButton] adds a button that turns reorder mode on and off.
+ * [reorderButton] adds a button that turns reorder mode on and off, [libraryButton] one that opens the App library.
  */
 @Immutable
 public data class TopBarLayout(
@@ -94,6 +96,7 @@ public data class TopBarLayout(
     val vpnApp: Boolean = false,
     val dateBelowClock: Boolean = false,
     val reorderButton: Boolean = false,
+    val libraryButton: Boolean = false,
 )
 
 public fun TvConfig.topBarLayout(): TopBarLayout =
@@ -107,6 +110,7 @@ public fun TvConfig.topBarLayout(): TopBarLayout =
         vpnApp = vpnApp != null,
         dateBelowClock = dateBelowClock,
         reorderButton = reorderButton,
+        libraryButton = appLibrary && libraryButton,
     )
 
 /**
@@ -134,6 +138,7 @@ internal fun TopBar(
     onAppClick: (String) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenNetwork: () -> Unit,
+    onOpenLibrary: () -> Unit,
     input: HomeInput,
     modifier: Modifier = Modifier,
 ) {
@@ -163,18 +168,39 @@ internal fun TopBar(
         TopBarApps(glass, state, onAppClick)
         if (layout.showNetworkPill) NetworkButton(glass, state, layout, ink, onOpenNetwork)
         if (layout.reorderButton) ReorderButton(glass, input, ink)
+        if (layout.libraryButton) {
+            GlassIconButton(
+                glass,
+                stringResource(R.string.library_entry),
+                onClick = onOpenLibrary,
+                modifier = Modifier.focusRequester(input.requester(LIBRARY_BUTTON_FOCUS)),
+            ) { focus -> AppsIcon(ink, focus) }
+        }
         GlassIconButton(
             glass,
             stringResource(R.string.settings),
             onClick = onOpenSettings,
             modifier =
-                Modifier.focusRequester(input.requester(SETTINGS_FOCUS)).holdOk(input, onHold = { bounds ->
+                Modifier.focusRequester(input.requester(SETTINGS_FOCUS)).holdOk(input.hold, onHold = { bounds ->
                     input.anchor.value = bounds
                     input.actions.onSettingsMenu()
                 }),
         ) { focus ->
             IconPart(R.drawable.ic_settings, ink) { rotationZ = SETTINGS_TURN * focus() }
         }
+    }
+}
+
+/** The nine-square icon of the App library; it grows with focus. */
+@Composable
+internal fun AppsIcon(
+    ink: State<Color>,
+    focus: () -> Float,
+) {
+    IconPart(R.drawable.ic_apps, ink) {
+        val grow = 1f + APPS_ICON_GROWTH * focus()
+        scaleX = grow
+        scaleY = grow
     }
 }
 
@@ -434,7 +460,7 @@ private fun vpnBadge(
  * phase and [tint] is read in the draw phase, so neither a focus change nor a colour change recomposes.
  */
 @Composable
-private fun IconPart(
+internal fun IconPart(
     @DrawableRes icon: Int,
     tint: State<Color>,
     layer: GraphicsLayerScope.() -> Unit = {},

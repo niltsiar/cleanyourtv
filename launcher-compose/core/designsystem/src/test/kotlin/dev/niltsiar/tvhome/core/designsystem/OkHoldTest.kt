@@ -1,4 +1,4 @@
-package dev.niltsiar.tvhome.feature.home
+package dev.niltsiar.tvhome.core.designsystem
 
 import android.view.KeyEvent
 import org.junit.Assert.assertFalse

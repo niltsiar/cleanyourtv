@@ -6,6 +6,7 @@ import dev.niltsiar.tvhome.core.config.ThemeDirectory
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.data.apps.AppLauncher
 import dev.niltsiar.tvhome.data.apps.LastOpened
+import dev.niltsiar.tvhome.data.apps.LibraryCatalog
 import dev.niltsiar.tvhome.data.apps.PackageManagerAppsProvider
 import dev.niltsiar.tvhome.data.system.NetworkMonitor
 import dev.niltsiar.tvhome.data.system.SystemSettings
@@ -13,6 +14,7 @@ import dev.niltsiar.tvhome.data.system.TimeChanges
 import dev.niltsiar.tvhome.data.wallpaper.WallpaperProvider
 import dev.niltsiar.tvhome.feature.home.HomeSources
 import dev.niltsiar.tvhome.feature.home.minuteClock
+import dev.niltsiar.tvhome.feature.library.LibrarySources
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
@@ -29,6 +31,7 @@ interface AppGraph {
     val systemSettings: SystemSettings
     val wallpaperProvider: WallpaperProvider
     val homeSources: HomeSources
+    val librarySources: LibrarySources
 
     /** Read once per process: a pushed theme restarts Home, as in the reference launcher. */
     @Provides
@@ -41,6 +44,14 @@ interface AppGraph {
         application: Application,
         config: TvConfig,
     ): PackageManagerAppsProvider = PackageManagerAppsProvider(application, config)
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideLibraryCatalog(
+        application: Application,
+        config: TvConfig,
+        appsProvider: PackageManagerAppsProvider,
+    ): LibraryCatalog = LibraryCatalog(application, config, appsProvider)
 
     @Provides
     @SingleIn(AppScope::class)
@@ -90,6 +101,7 @@ interface AppGraph {
         timeChanges: TimeChanges,
         wallpaperProvider: WallpaperProvider,
         systemSettings: SystemSettings,
+        libraryCatalog: LibraryCatalog,
     ): HomeSources {
         val clock = minuteClock(timeChanges.changes)
         return HomeSources(
@@ -105,8 +117,24 @@ interface AppGraph {
             hasAppInfo = systemSettings::hasAppInfo,
             hasNativeSettings = systemSettings::hasNativeSettings,
             saveOrder = appsProvider::saveOrder,
+            removeFromHome = { libraryCatalog.setOnHome(it, false) },
         )
     }
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideLibrarySources(
+        libraryCatalog: LibraryCatalog,
+        systemSettings: SystemSettings,
+    ): LibrarySources =
+        LibrarySources(
+            load = libraryCatalog::load,
+            changes = libraryCatalog.changes,
+            art = libraryCatalog::art,
+            setOnHome = libraryCatalog::setOnHome,
+            hasAppInfo = systemSettings::hasAppInfo,
+            release = libraryCatalog::release,
+        )
 
     @DependencyGraph.Factory
     fun interface Factory {

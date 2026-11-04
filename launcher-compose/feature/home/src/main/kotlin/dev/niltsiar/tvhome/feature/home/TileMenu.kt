@@ -7,6 +7,7 @@ public enum class MenuRow {
     AddToDock,
     ReplaceInDock,
     Move,
+    RemoveFromHome,
     AppInfo,
     NativeSettings,
     EditDock,
@@ -39,16 +40,18 @@ public class HomeActions(
 
 /**
  * The tile menu's rows: "Add to dock" for a grid tile or "Replace in dock" for a dock tile (with dock_row only),
- * "Move", and "App info" where the TV has a page for it. "Remove from Home" comes with the app library.
+ * "Move", "Remove from Home" with the app library, and "App info" where the TV has a page for it.
  */
 internal fun tileMenuRows(
     dockRow: Boolean,
     inDock: Boolean,
     appInfo: Boolean,
+    library: Boolean = false,
 ): List<MenuRow> =
     buildList {
         if (dockRow) add(if (inDock) MenuRow.ReplaceInDock else MenuRow.AddToDock)
         add(MenuRow.Move)
+        if (library) add(MenuRow.RemoveFromHome)
         if (appInfo) add(MenuRow.AppInfo)
     }
 

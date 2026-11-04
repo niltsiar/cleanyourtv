@@ -32,6 +32,7 @@ internal fun sources(
     hasAppInfo: (String) -> Boolean = { true },
     hasNativeSettings: () -> Boolean = { false },
     saveOrder: suspend (List<String>, Int) -> Boolean = { _, _ -> true },
+    removeFromHome: suspend (String) -> Boolean = { true },
 ) = HomeSources(
     apps,
     clock,
@@ -44,4 +45,5 @@ internal fun sources(
     hasAppInfo = hasAppInfo,
     hasNativeSettings = hasNativeSettings,
     saveOrder = saveOrder,
+    removeFromHome = removeFromHome,
 )

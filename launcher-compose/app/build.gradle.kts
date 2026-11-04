@@ -24,6 +24,11 @@ android {
         buildConfigField("String", "GLASS_KIND", "\"$glassKind\"")
     }
 
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+        unitTests.isIncludeAndroidResources = true
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -39,6 +44,7 @@ dependencies {
     implementation(project(":core:config"))
     implementation(project(":core:designsystem"))
     implementation(project(":feature:home"))
+    implementation(project(":feature:library"))
     implementation(project(":data:apps"))
     implementation(project(":data:system"))
     implementation(project(":data:wallpaper"))
@@ -47,4 +53,11 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.profileinstaller)
     baselineProfile(project(":baselineprofile"))
+
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.molecule.runtime)
+    testImplementation(libs.kotlinx.coroutines.android)
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

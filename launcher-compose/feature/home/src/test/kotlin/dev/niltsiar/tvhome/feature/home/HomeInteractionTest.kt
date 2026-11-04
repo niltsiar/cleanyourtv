@@ -22,6 +22,13 @@ class HomeInteractionTest {
     private val effects = Channel<HomeEffect>(Channel.UNLIMITED)
     private val saves = mutableListOf<Pair<List<String>, Int>>()
     private var saveWorks = true
+    private val removed = mutableListOf<String>()
+    private var removeWorks = true
+
+    private fun removeFromHome(pkg: String): Boolean {
+        removed += pkg
+        return removeWorks
+    }
 
     private fun saveOrder(
         keys: List<String>,
@@ -37,7 +44,10 @@ class HomeInteractionTest {
         appInfo: Boolean = true,
         nativeSettings: Boolean = false,
     ): Flow<HomeUiState> {
-        val sources = sources(apps = apps, hasAppInfo = { appInfo }, hasNativeSettings = { nativeSettings }, saveOrder = ::saveOrder)
+        val sources =
+            sources(apps = apps, hasAppInfo = {
+                appInfo
+            }, hasNativeSettings = { nativeSettings }, saveOrder = ::saveOrder, removeFromHome = ::removeFromHome)
         return moleculeFlow(RecompositionMode.Immediate) {
             homePresenter(eventFlow, sources, config, effects::trySend, Locale.ENGLISH)
         }
@@ -60,6 +70,52 @@ class HomeInteractionTest {
                 events.send(HomeEvent.TileMenu("pkg.8", held = false))
                 val grid = awaitMatching { it.menu != null }.menu
                 assertEquals(HomeMenu("pkg.8", listOf(MenuRow.AddToDock, MenuRow.Move, MenuRow.AppInfo)), grid)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun with_the_app_library_the_tile_menu_removes_the_app_from_home_and_asks_for_focus_back_on_its_tile() =
+        runTest {
+            presenter(SixColumns.copy(appLibrary = true)).test {
+                awaitMatching { it.dock.isNotEmpty() }
+                events.send(HomeEvent.TileMenu("pkg.8", held = true))
+                val menu = awaitMatching { it.menu != null }.menu
+                assertEquals(listOf(MenuRow.AddToDock, MenuRow.Move, MenuRow.RemoveFromHome, MenuRow.AppInfo), menu?.rows)
+
+                events.send(HomeEvent.MenuPick(MenuRow.RemoveFromHome))
+                val closed = awaitMatching { it.menu == null }
+
+                assertEquals(listOf("pkg.8"), removed)
+                assertEquals("pkg.8", closed.focusRequest?.target)
+                assertEquals(true, effects.tryReceive().isFailure)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun a_removal_that_was_not_saved_says_so() =
+        runTest {
+            removeWorks = false
+            presenter(SixColumns.copy(appLibrary = true)).test {
+                awaitMatching { it.dock.isNotEmpty() }
+                events.send(HomeEvent.TileMenu("pkg.2", held = true))
+                awaitMatching { it.menu != null }
+                events.send(HomeEvent.MenuPick(MenuRow.RemoveFromHome))
+
+                assertEquals(HomeEffect.LibrarySaveFailed, effects.receive())
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun without_the_app_library_the_tile_menu_has_no_remove_row() =
+        runTest {
+            presenter().test {
+                awaitMatching { it.dock.isNotEmpty() }
+                events.send(HomeEvent.TileMenu("pkg.8", held = true))
+
+                assertEquals(false, awaitMatching { it.menu != null }.menu?.rows?.contains(MenuRow.RemoveFromHome))
                 cancelAndIgnoreRemainingEvents()
             }
         }

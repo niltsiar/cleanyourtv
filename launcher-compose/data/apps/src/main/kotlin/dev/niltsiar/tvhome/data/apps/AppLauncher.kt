@@ -16,9 +16,16 @@ public class AppLauncher(
     private val context: Context,
     private val launchActions: Map<String, String>,
 ) {
-    /** True when the system accepted the launch. */
-    public fun launch(app: AppEntry): Boolean {
-        val intent = launchIntent(app, launchActions[app.packageName]) { context.packageManager.resolveActivity(it, 0) != null }
+    /** True when the system accepted the launch. The library passes false for [useLaunchAction]: it opens the app itself. */
+    public fun launch(
+        app: AppEntry,
+        useLaunchAction: Boolean = true,
+    ): Boolean {
+        val intent =
+            launchIntent(app, if (useLaunchAction) launchActions[app.packageName] else null) {
+                context.packageManager.resolveActivity(it, 0) !=
+                    null
+            }
         if (intent == null) return false
         return try {
             context.startActivity(intent)

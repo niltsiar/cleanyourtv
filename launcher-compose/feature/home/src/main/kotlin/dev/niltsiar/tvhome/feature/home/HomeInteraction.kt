@@ -86,7 +86,7 @@ internal class HomeInteraction(
         val app = apps.all.firstOrNull { it.key == event.key } ?: return
         when {
             config.tileMenu -> {
-                val rows = tileMenuRows(config.dockRow, inDock(apps, app.key), sources.hasAppInfo(app.packageName))
+                val rows = tileMenuRows(config.dockRow, inDock(apps, app.key), sources.hasAppInfo(app.packageName), config.appLibrary)
                 menu = HomeMenu(app.key, rows)
             }
 
@@ -122,6 +122,12 @@ internal class HomeInteraction(
 
             MenuRow.ReplaceInDock -> {
                 if (!startDockEditFor(key, inDock = true)) focus(key)
+            }
+
+            MenuRow.RemoveFromHome -> {
+                val app = shown.all.firstOrNull { it.key == key }
+                if (app != null && !sources.removeFromHome(app.packageName)) effect(HomeEffect.LibrarySaveFailed)
+                focus(key)
             }
 
             MenuRow.AppInfo -> {

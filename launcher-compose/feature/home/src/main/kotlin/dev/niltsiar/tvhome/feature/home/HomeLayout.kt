@@ -2,12 +2,14 @@ package dev.niltsiar.tvhome.feature.home
 
 import androidx.compose.runtime.Immutable
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.model.AppEntry
+import dev.niltsiar.tvhome.core.model.showLibraryPill
 
 /**
  * The shape of the dock and grid, from the theme: [columns] is the dock's size and the grid's width, [rowsBelowDock]
  * the grid rows that must fit under the dock, [singleRow] one sideways row of every app, and [fillDock] whether grid
  * apps take the dock slots that dock_apps leaves free, [tileMenu] whether a held OK or MENU opens a tile's menu (else a held
- * OK opens its App info).
+ * OK opens its App info), and [libraryPill] whether the App library pill follows the last row.
  */
 @Immutable
 public data class HomeLayout(
@@ -16,6 +18,7 @@ public data class HomeLayout(
     val singleRow: Boolean,
     val fillDock: Boolean,
     val tileMenu: Boolean = true,
+    val libraryPill: Boolean = false,
 )
 
 public fun TvConfig.homeLayout(): HomeLayout =
@@ -25,6 +28,7 @@ public fun TvConfig.homeLayout(): HomeLayout =
         singleRow = singleRow,
         fillDock = fillDock,
         tileMenu = tileMenu,
+        libraryPill = showLibraryPill(appLibrary, libraryButton, showLibraryPill),
     )
 
 private const val MIN_TILE_SHARE = 0.85f
@@ -48,4 +52,40 @@ internal fun tileWidthShare(
     val tilesWidth = (availableHeight - (rows + 2) * gap) * TILE_ASPECT * columns
     val fitting = (tilesWidth + (columns + 1) * gap + rows * (columns - 1) * gap) / (rows + 1)
     return (fitting / gridWidth).coerceIn(MIN_TILE_SHARE, 1f)
+}
+
+/**
+ * The grid tile that Down must reach from the tile at [row] and [column] (row -1 is the dock) when the cell straight
+ * below does not exist, so the library pill under the last row does not capture the key; null when a tile is below or
+ * the tile is in the last row. [gridCount] tiles fill the grid [columns] wide.
+ */
+internal fun gridDownOverride(
+    row: Int,
+    column: Int,
+    gridCount: Int,
+    columns: Int,
+): Int? {
+    if (gridCount <= 0 || columns <= 0) return null
+    val below = (row + 1) * columns + column
+    val lastRow = (gridCount - 1) / columns
+    return if (row + 1 <= lastRow && below > gridCount - 1) gridCount - 1 else null
+}
+
+/**
+ * The key of the tile Up from the library pill reaches: in the last row of the grid (the dock when the grid is empty),
+ * under the column of the tile that had focus last, or the last-focused tile itself in a single row. Null with no tile.
+ */
+internal fun pillUpKey(
+    dock: List<AppEntry>,
+    grid: List<AppEntry>,
+    columns: Int,
+    singleRow: Boolean,
+    focusedKey: String?,
+): String? {
+    if (singleRow) return dock.firstOrNull { it.key == focusedKey }?.key ?: dock.lastOrNull()?.key
+    val inGrid = grid.indexOfFirst { it.key == focusedKey }
+    val column = if (inGrid >= 0) inGrid % columns else dock.indexOfFirst { it.key == focusedKey }.coerceAtLeast(0)
+    if (grid.isEmpty()) return dock.getOrNull(column.coerceAtMost(dock.lastIndex))?.key
+    val lastRowStart = (grid.lastIndex / columns) * columns
+    return grid[minOf(lastRowStart + column, grid.lastIndex)].key
 }

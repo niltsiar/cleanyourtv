@@ -3,6 +3,7 @@
   <string name="inputs">Inputs</string>
   <string name="wifi">Wi-Fi</string>
   <string name="settings">Settings</string>
+  <string name="library_entry">App library</string>
   <string name="ethernet">Ethernet</string>
   <string name="offline">Offline</string>
   <string name="vpn">VPN</string>
@@ -19,6 +20,8 @@
   <string name="tile_add_to_dock">Add to dock</string>
   <string name="tile_replace_in_dock">Replace with another app</string>
   <string name="tile_move">Move</string>
+  <string name="tile_remove_from_home">Remove from Home</string>
+  <string name="library_save_failed">Could not save the shortcut</string>
   <string name="dock_edit">Edit dock</string>
   <string name="reorder">Reorder apps</string>
   <string name="reorder_hint">OK picks up an app, arrows move it, Back places it. Back again to finish.</string>

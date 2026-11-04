@@ -31,6 +31,18 @@ class TileMenuRowsTest {
     }
 
     @Test
+    fun the_app_library_adds_remove_from_home_between_move_and_app_info() {
+        assertEquals(
+            listOf(MenuRow.ReplaceInDock, MenuRow.Move, MenuRow.RemoveFromHome, MenuRow.AppInfo),
+            tileMenuRows(dockRow = true, inDock = true, appInfo = true, library = true),
+        )
+        assertEquals(
+            listOf(MenuRow.Move, MenuRow.RemoveFromHome),
+            tileMenuRows(dockRow = false, inDock = false, appInfo = false, library = true),
+        )
+    }
+
+    @Test
     fun the_settings_menu_offers_native_settings_edit_dock_and_reorder_in_that_order() {
         assertEquals(
             listOf(MenuRow.NativeSettings, MenuRow.EditDock, MenuRow.Reorder),

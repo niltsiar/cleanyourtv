@@ -50,6 +50,12 @@ public data class FocusRequest(
 /** The [FocusRequest.target] of the Settings button: a tile key always has a slash. */
 public const val SETTINGS_FOCUS: String = "settings"
 
+/** The [FocusRequest.target] of the library pill after the last row. */
+public const val LIBRARY_FOCUS: String = "library"
+
+/** The [FocusRequest.target] of the library button in the top bar. */
+public const val LIBRARY_BUTTON_FOCUS: String = "library-button"
+
 /**
  * The dock app the cinematic shelf shows: its [key] and [label], the [accent] colour of its art, its [position] among
  * the [count] dock apps (one dot each) and [lastOpened], the relative time Home last opened it, null if it never did.
@@ -86,6 +92,9 @@ public sealed interface HomeEffect {
 
     /** The new tile order could not be written. */
     public data object OrderNotSaved : HomeEffect
+
+    /** The choice to take an app off Home could not be written. */
+    public data object LibrarySaveFailed : HomeEffect
 }
 
 /** What the host feeds Home besides the theme: its data sources and two system formats. */
@@ -110,6 +119,8 @@ public class HomeSources(
     public val hasNativeSettings: () -> Boolean = { false },
     /** Keeps the tile order: keys first to last, and with fill_dock off how many lead the dock (else -1). False when it was not written. */
     public val saveOrder: suspend (List<String>, Int) -> Boolean = { _, _ -> true },
+    /** Takes a package off Home, where the library keeps that choice. False when it was not written. */
+    public val removeFromHome: suspend (String) -> Boolean = { true },
 )
 
 internal sealed interface HomeEvent {

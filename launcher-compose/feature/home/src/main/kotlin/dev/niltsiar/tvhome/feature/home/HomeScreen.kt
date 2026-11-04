@@ -27,7 +27,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -91,6 +91,7 @@ import dev.niltsiar.tvhome.core.designsystem.GlassSurface
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.glassContainer
 import dev.niltsiar.tvhome.core.designsystem.glassSource
+import dev.niltsiar.tvhome.core.designsystem.holdOk
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
@@ -117,6 +118,7 @@ private val ShelfFullyShownInset = 4.dp
 private val ShelfRise = 14.dp
 private val GridBottom = 48.dp
 private val HintBottom = 28.dp
+private val LibraryRowHeight = 84.dp
 private const val TILE_ASPECT = 16f / 9f
 
 /** The grid items before the first grid tile: the shelf spacer and the dock. */
@@ -137,6 +139,9 @@ private const val GRID_ITEMS_BEFORE = 2
  * [actions] carry the tile menu, the Settings menu and the reorder and edit-dock modes to the state. Holding OK on a tile
  * or the Settings button, or MENU on a tile, opens its menu; in a mode OK and the arrows move tiles. An open menu hangs from
  * the item that opened it, and from [menuAnchor] (in the screen's coordinates) until one does.
+ * [glass] is what glass surfaces draw from; the host shares it with the screens it shows over Home. The library pill
+ * after the last row ([HomeLayout.libraryPill]) and the top bar's library button call [onOpenLibrary]; when
+ * [libraryOpen] goes false again, focus returns to the one that opened it (the pill for any other way in).
  */
 @Composable
 public fun HomeScreen(
@@ -154,11 +159,14 @@ public fun HomeScreen(
     onOpenNetwork: () -> Unit = {},
     actions: HomeActions = HomeActions(),
     menuAnchor: Rect = Rect.Zero,
+    glass: GlassState = rememberGlassState(),
+    libraryOpen: () -> Boolean = { false },
+    onOpenLibrary: () -> Unit = {},
 ) {
-    val glass = rememberGlassState()
     val dockFocus = remember { FocusRequester() }
     val currentState = rememberUpdatedState(state)
     val currentActions = rememberUpdatedState(actions)
+    val currentOpenLibrary = rememberUpdatedState(onOpenLibrary)
     val input =
         remember {
             HomeInput(
@@ -166,6 +174,7 @@ public fun HomeScreen(
                 carried = derivedStateOf { currentState.value().reorder?.carried },
                 dimmed = derivedStateOf { currentState.value().reorder?.dimmed ?: emptySet() },
                 reordering = derivedStateOf { currentState.value().reorder != null },
+                openLibrary = currentOpenLibrary,
             ).also { it.anchor.value = menuAnchor }
         }
     val menu by remember { derivedStateOf { currentState.value().menu } }
@@ -184,7 +193,21 @@ public fun HomeScreen(
                 .onPreviewKeyEvent { input.onPreview(it, currentState.value()) },
     ) {
         WallpaperBackdrop(glass, wallpaper = { state().wallpaper }, layout = wallpaperLayout, cinematic = backdrop)
-        HomeContent(glass, dockFocus, gridState, input, state, layout, shelfLayout, ContentTop + shelfHeight, onFocus, onClick, homePresses)
+        HomeContent(
+            glass,
+            dockFocus,
+            gridState,
+            input,
+            state,
+            layout,
+            shelfLayout,
+            ContentTop + shelfHeight,
+            onFocus,
+            onClick,
+            homePresses,
+            libraryOpen,
+            onOpenLibrary,
+        )
         if (shelfLayout.cinematic) CinematicShelf(shelf = { state().shelf }, layout = shelfLayout, modifier = shelfModifier)
         ShelfTitle(
             label = { state().let { if (shelfLayout.cinematic && it.shelf != null) "" else it.focusedLabel } },
@@ -203,6 +226,10 @@ public fun HomeScreen(
             onAppClick = onClick,
             onOpenSettings = onOpenSettings,
             onOpenNetwork = onOpenNetwork,
+            onOpenLibrary = {
+                input.fromTopBar = true
+                onOpenLibrary()
+            },
             input = input,
             modifier = Modifier.align(Alignment.TopCenter),
         )
@@ -227,6 +254,8 @@ private fun HomeContent(
     onFocus: (String) -> Unit,
     onClick: (String) -> Unit,
     homePresses: () -> Int,
+    libraryOpen: () -> Boolean,
+    onOpenLibrary: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
@@ -246,18 +275,17 @@ private fun HomeContent(
     val rowTileWidth = (gridWidth - TileGap * (layout.columns + 1)) / layout.columns
     val firstDockTile = remember { FocusRequester() }
     LaunchedEffect(gridState) {
-        snapshotFlow { state().focusRequest }.filterNotNull().collect { request ->
-            // The tile may be off screen, or about to be built in the other container by the list that just changed.
-            val inGrid = state().grid.indexOfFirst { it.key == request.target }
-            val shown = gridState.layoutInfo.visibleItemsInfo
-            if (inGrid >= 0) {
-                if (shown.none { it.key == request.target }) gridState.scrollToItem(inGrid + GRID_ITEMS_BEFORE)
-            } else if (shown.none { it.key == "dock" }) {
-                gridState.scrollToItem(0)
+        snapshotFlow { state().focusRequest }.filterNotNull().collect { request -> focusOn(request.target, gridState, state, input) }
+    }
+    LaunchedEffect(gridState) {
+        var wasOpen = false
+        snapshotFlow(libraryOpen).collect { open ->
+            if (wasOpen && !open) {
+                val target = if (input.fromTopBar) LIBRARY_BUTTON_FOCUS else LIBRARY_FOCUS
+                input.fromTopBar = false
+                focusOn(target, gridState, state, input)
             }
-            withFrameNanos { }
-            withFrameNanos { }
-            input.focus(request.target)
+            wasOpen = open
         }
     }
     LaunchedEffect(gridState) {
@@ -284,6 +312,7 @@ private fun HomeContent(
                     .onFocusChanged { input.gridFocused = it.hasFocus }
                     .semantics { testTagsAsResourceId = true },
         ) {
+            val grid = state().grid
             item(key = "shelf", span = { GridItemSpan(maxLineSpan) }, contentType = "shelf") {
                 Spacer(Modifier.fillMaxWidth().height(shelfBottom - ContentTop))
             }
@@ -294,6 +323,7 @@ private fun HomeContent(
                     firstTile = firstDockTile,
                     input = input,
                     dock = state().dock,
+                    grid = grid,
                     layout = layout,
                     shelfLayout = shelfLayout,
                     rowTileWidth = rowTileWidth,
@@ -302,7 +332,7 @@ private fun HomeContent(
                     modifier = Modifier.fadeUnderShelf(gridState, "dock", shelfBottom),
                 )
             }
-            items(state().grid, key = { it.key }, contentType = { "tile" }) { app ->
+            itemsIndexed(grid, key = { _, app -> app.key }, contentType = { _, _ -> "tile" }) { index, app ->
                 AppTile(
                     app = app,
                     accent = shelfLayout.focusAccent(app.accent, inDock = false),
@@ -310,11 +340,93 @@ private fun HomeContent(
                     onClick = onClick,
                     input = input,
                     tileMenu = layout.tileMenu,
-                    modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null).fadeUnderShelf(gridState, app.key, shelfBottom),
+                    modifier =
+                        Modifier
+                            .animateItem(fadeInSpec = null, fadeOutSpec = null)
+                            .fadeUnderShelf(gridState, app.key, shelfBottom)
+                            .towardLibrary(
+                                input,
+                                layout,
+                                grid,
+                                last = index == grid.lastIndex,
+                                row = index / layout.columns,
+                                column =
+                                    index % layout.columns,
+                            ),
                 )
+            }
+            if (layout.libraryPill) {
+                item(key = LIBRARY_FOCUS, span = { GridItemSpan(maxLineSpan) }, contentType = "library") {
+                    LibraryPill(glass, input, state, layout, onOpenLibrary)
+                }
             }
         }
     }
+}
+
+/**
+ * Moves focus to [target], a tile key or [SETTINGS_FOCUS], [LIBRARY_FOCUS] or [LIBRARY_BUTTON_FOCUS]. The tile may be off
+ * screen, or about to be built in the other container by the list that just changed.
+ */
+private suspend fun focusOn(
+    target: String,
+    gridState: LazyGridState,
+    state: () -> HomeUiState,
+    input: HomeInput,
+) {
+    val grid = state().grid
+    val inGrid = grid.indexOfFirst { it.key == target }
+    val shown = gridState.layoutInfo.visibleItemsInfo
+    when {
+        inGrid >= 0 -> if (shown.none { it.key == target }) gridState.scrollToItem(inGrid + GRID_ITEMS_BEFORE)
+        target == LIBRARY_FOCUS -> if (shown.none { it.key == LIBRARY_FOCUS }) gridState.scrollToItem(GRID_ITEMS_BEFORE + grid.size)
+        shown.none { it.key == "dock" } -> gridState.scrollToItem(0)
+    }
+    withFrameNanos { }
+    withFrameNanos { }
+    input.focus(target)
+}
+
+/**
+ * The App library pill after the last row. Only Up leaves it, to the tile in the last row under the column that had
+ * focus last.
+ */
+@Composable
+private fun LibraryPill(
+    glass: GlassState,
+    input: HomeInput,
+    state: () -> HomeUiState,
+    layout: HomeLayout,
+    onOpen: () -> Unit,
+) {
+    val ink = rememberUpdatedState(TvTheme.colors.onSurface)
+    Box(modifier = Modifier.fillMaxWidth().height(LibraryRowHeight), contentAlignment = Alignment.Center) {
+        GlassIconButton(
+            glass = glass,
+            contentDescription = stringResource(R.string.library_entry),
+            onClick = onOpen,
+            modifier =
+                Modifier
+                    .testTag("library:pill")
+                    .focusProperties {
+                        left = FocusRequester.Cancel
+                        right = FocusRequester.Cancel
+                        down = FocusRequester.Cancel
+                        pillUp(input, state(), layout)?.let { up = it }
+                    }.focusRequester(input.requester(LIBRARY_FOCUS))
+                    .onFocusChanged { input.pillFocused = it.isFocused },
+            label = { BasicText(stringResource(R.string.library_entry), style = TvTheme.typography.pillLabel, maxLines = 1) },
+        ) { focus -> AppsIcon(ink, focus) }
+    }
+}
+
+private fun pillUp(
+    input: HomeInput,
+    state: HomeUiState,
+    layout: HomeLayout,
+): FocusRequester? {
+    val key = pillUpKey(state.dock, state.grid, layout.columns, layout.singleRow, input.focusedKey) ?: return null
+    return input.requester(key)
 }
 
 /** Fades the item with the row it is in: fully visible from just above the shelf's bottom edge down, gone [ShelfFade] above that. */
@@ -395,6 +507,7 @@ private fun Dock(
     firstTile: FocusRequester,
     input: HomeInput,
     dock: List<AppEntry>,
+    grid: List<AppEntry>,
     layout: HomeLayout,
     shelfLayout: ShelfLayout,
     rowTileWidth: Dp,
@@ -430,7 +543,8 @@ private fun Dock(
                                 Modifier
                                     .animateItem(fadeInSpec = null, fadeOutSpec = null)
                                     .width(rowTileWidth)
-                                    .then(if (index == 0) Modifier.focusRequester(firstTile) else Modifier),
+                                    .then(if (index == 0) Modifier.focusRequester(firstTile) else Modifier)
+                                    .towardLibrary(input, layout, grid, last = index == dock.lastIndex, row = -1, column = index),
                         )
                     }
                 }
@@ -459,7 +573,14 @@ private fun Dock(
                                     .weight(1f)
                                     .slideToIndex(index, TileGap)
                                     .then(if (index == 0) Modifier.focusRequester(firstTile) else Modifier)
-                                    .stopAtDockEnds(first = index == 0, last = index == dock.lastIndex),
+                                    .stopAtDockEnds(
+                                        first = index == 0,
+                                        last = index == dock.lastIndex,
+                                        input,
+                                        layout,
+                                        grid,
+                                        column = index,
+                                    ),
                         )
                     }
                 }
@@ -470,19 +591,64 @@ private fun Dock(
     }
 }
 
-/** The dock is a row of its own: Left and Right stop at its first and last tile instead of jumping to a wider grid tile. */
+/**
+ * The dock is a row of its own: Left and Right stop at its first and last tile instead of jumping to a wider grid tile.
+ * With the library pill, Right from the last tile of a dock with no grid below goes to the pill, and Down from a dock tile
+ * with no tile below it goes to the grid's last tile.
+ */
 private fun Modifier.stopAtDockEnds(
     first: Boolean,
     last: Boolean,
-): Modifier =
-    if (!first && !last) {
+    input: HomeInput,
+    layout: HomeLayout,
+    grid: List<AppEntry>,
+    column: Int,
+): Modifier {
+    val down = libraryDown(input, layout, grid, row = -1, column = column)
+    return if (!first && !last && down == null) {
         this
     } else {
         focusProperties {
             if (first) left = FocusRequester.Cancel
-            if (last) right = FocusRequester.Cancel
+            if (last) right = if (layout.libraryPill && grid.isEmpty()) input.requester(LIBRARY_FOCUS) else FocusRequester.Cancel
+            if (down != null) this.down = down
         }
     }
+}
+
+/** The tile Down from [row] ([row] -1 is the dock) reaches when the row below it is short and the library pill follows. */
+private fun libraryDown(
+    input: HomeInput,
+    layout: HomeLayout,
+    grid: List<AppEntry>,
+    row: Int,
+    column: Int,
+): FocusRequester? {
+    if (!layout.libraryPill) return null
+    return gridDownOverride(row, column, grid.size, layout.columns)?.let { input.requester(grid[it].key) }
+}
+
+/**
+ * Keys toward the library pill from a tile of the grid or the dock row: Right from the last tile, and Down to the last
+ * tile from a tile whose cell below is empty, so the pill, which spans the row below, does not capture it.
+ */
+private fun Modifier.towardLibrary(
+    input: HomeInput,
+    layout: HomeLayout,
+    grid: List<AppEntry>,
+    last: Boolean,
+    row: Int,
+    column: Int,
+): Modifier {
+    if (!layout.libraryPill) return this
+    val rightTo = if (last && (row >= 0 || grid.isEmpty())) input.requester(LIBRARY_FOCUS) else null
+    val downTo = libraryDown(input, layout, grid, row, column)
+    if (rightTo == null && downTo == null) return this
+    return focusProperties {
+        if (rightTo != null) right = rightTo
+        if (downTo != null) down = downTo
+    }
+}
 
 @Composable
 private fun AppTile(
@@ -499,7 +665,10 @@ private fun AppTile(
     val requester = remember(input, key) { input.requester(key) }
     FocusSurface(
         onClick = { onClick(key) },
-        onFocused = { onFocus(key) },
+        onFocused = {
+            input.focusedKey = key
+            onFocus(key)
+        },
         shape = TileShape,
         accent = accent,
         modifier =
@@ -509,7 +678,7 @@ private fun AppTile(
                 .testTag("tile:$key")
                 .focusRequester(requester)
                 .holdOk(
-                    input,
+                    input.hold,
                     onHold = { bounds ->
                         input.anchor.value = bounds
                         input.actions.onTileMenu(key, true)
@@ -568,6 +737,12 @@ private fun HomeScreenReorderPreview() {
     )
 }
 
+@Preview(name = "Home 1080p library pill", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
+@Composable
+private fun HomeScreenLibraryPillPreview() {
+    HomePreview(GlassKind.Refractive, focused = LIBRARY_FOCUS, appCount = 9, libraryPill = true)
+}
+
 @Preview(name = "Home 1080p flat", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
 @Composable
 private fun HomeScreenFlatPreview() {
@@ -595,14 +770,16 @@ private fun HomePreview(
     menuAnchor: Rect = Rect.Zero,
     reorder: ReorderView? = null,
     focused: String = "example.movies",
+    appCount: Int = PreviewNames.size,
+    libraryPill: Boolean = false,
 ) {
     TvTheme(glassKind = glassKind) {
         val apps =
-            PreviewNames.mapIndexed { i, name ->
+            PreviewNames.take(appCount).mapIndexed { i, name ->
                 val id = "example.${name.lowercase()}"
                 AppEntry(key = id, packageName = id, label = name, accent = Color(PreviewAccents[i % PreviewAccents.size]))
             }
-        val layout = HomeLayout(columns = 6, rowsBelowDock = 0, singleRow = false, fillDock = true)
+        val layout = HomeLayout(columns = 6, rowsBelowDock = 0, singleRow = false, fillDock = true, libraryPill = libraryPill)
         val header = HeaderStyle(hour24 = false, datePattern = "EEEE  d MMMM", greetingName = "Sam")
         val network = NetworkState(NetworkLink.Wifi, ssid = "Living room", validated = true)
         val wallpaper = Wallpaper(picture = ImageBitmap.imageResource(R.drawable.wallpaper), caption = "Red Spider Nebula · Hubble")

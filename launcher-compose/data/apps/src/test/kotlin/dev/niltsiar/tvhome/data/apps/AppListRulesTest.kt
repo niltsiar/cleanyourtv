@@ -19,7 +19,8 @@ class AppListRulesTest {
         config: TvConfig = this.config,
         order: Order? = null,
         tv: Set<String> = candidates.map { it.packageName }.toSet(),
-    ) = arrange(candidates.toList(), tv, config, order, ownPackage = "own")
+        choices: LibraryChoices = LibraryChoices(added = config.libraryApps.toSet()),
+    ) = arrange(candidates.toList(), tv, config, order, ownPackage = "own", choices = choices)
 
     private fun Arrangement.keys() = tiles.map { it.candidate.packageName }
 
@@ -81,6 +82,26 @@ class AppListRulesTest {
         val result = arrange(candidate("hidden"), config = config.copy(libraryApps = listOf("hidden")), tv = setOf("hidden"))
 
         assertEquals(listOf("hidden"), result.keys())
+    }
+
+    @Test
+    fun a_package_the_owner_added_in_the_library_shows_like_one_from_library_apps() {
+        val candidates = arrayOf(candidate("phone"), candidate("hidden"), candidate("tv"))
+        val tv = setOf("hidden", "tv")
+
+        val result = arrange(*candidates, tv = tv, choices = LibraryChoices(added = setOf("phone", "hidden")))
+
+        assertEquals(setOf("phone", "hidden", "tv"), result.keys().toSet())
+    }
+
+    @Test
+    fun a_package_the_owner_removed_never_shows_whatever_else_adds_it() {
+        val candidates = arrayOf(candidate("tv"), candidate("docked", "Docked"), candidate("seeded"), candidate("kept"))
+        val choices = LibraryChoices(added = setOf("seeded", "docked"), removed = setOf("tv", "docked", "seeded"))
+
+        val result = arrange(*candidates, config = config.copy(libraryApps = listOf("seeded")), choices = choices)
+
+        assertEquals(listOf("kept"), result.keys())
     }
 
     @Test

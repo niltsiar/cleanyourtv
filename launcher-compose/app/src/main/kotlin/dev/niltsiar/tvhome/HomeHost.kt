@@ -7,6 +7,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.feature.home.HomeEffect
 import dev.niltsiar.tvhome.feature.home.HomeScreen
@@ -26,6 +27,10 @@ internal fun HomeHost(
     onOpenAppInfo: (String) -> Unit,
     onOpenNativeSettings: () -> Unit,
     onOrderNotSaved: () -> Unit,
+    onLibrarySaveFailed: () -> Unit,
+    glass: GlassState,
+    libraryOpen: () -> Boolean,
+    onOpenLibrary: () -> Unit,
     homePresses: () -> Int,
     viewModel: MoleculeHomeViewModel = viewModel { MoleculeHomeViewModel(graph.homeSources, graph.config) },
 ) {
@@ -38,6 +43,7 @@ internal fun HomeHost(
                 is HomeEffect.OpenAppInfo -> onOpenAppInfo(effect.packageName)
                 HomeEffect.OpenNativeSettings -> onOpenNativeSettings()
                 HomeEffect.OrderNotSaved -> onOrderNotSaved()
+                HomeEffect.LibrarySaveFailed -> onLibrarySaveFailed()
             }
         }
     }
@@ -60,5 +66,8 @@ internal fun HomeHost(
         onOpenSettings = viewModel::onOpenSettings,
         onOpenNetwork = viewModel::onOpenNetwork,
         actions = viewModel.actions,
+        glass = glass,
+        libraryOpen = libraryOpen,
+        onOpenLibrary = onOpenLibrary,
     )
 }

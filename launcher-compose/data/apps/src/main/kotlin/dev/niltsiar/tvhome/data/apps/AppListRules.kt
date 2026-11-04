@@ -26,8 +26,9 @@ internal data class Arrangement(
 
 /**
  * Picks and orders the tiles. [candidates] come in query order, TV launcher activities first.
- * A tile needs an exported activity in another package, and is shown when the package is a TV app that is not
- * hidden, or was added through library_apps. Two tiles with one package and one name are one tile.
+ * A tile needs an exported activity in another package, and is shown by [LibraryChoices.showsOnHome]: a TV app that
+ * the theme does not hide, or a package added in the library or through library_apps, unless the owner removed it.
+ * Two tiles with one package and one name are one tile.
  * Order: the saved order, then dock_apps, then name.
  */
 internal fun arrange(
@@ -36,14 +37,14 @@ internal fun arrange(
     config: TvConfig,
     order: Order?,
     ownPackage: String,
+    choices: LibraryChoices = LibraryChoices(added = config.libraryApps.toSet()),
 ): Arrangement {
     val hidden = config.hiddenApps.toSet()
-    val added = config.libraryApps.toSet()
     val seen = HashSet<String>()
     val tiles =
         candidates.mapNotNull { candidate ->
             val pkg = candidate.packageName
-            val shown = pkg in added || (pkg in tvPackages && pkg !in hidden)
+            val shown = choices.showsOnHome(pkg, tvApp = pkg in tvPackages, hidden = pkg in hidden)
             if (pkg == ownPackage || !candidate.exported || !shown) return@mapNotNull null
             val label = cleanLabel(config.appLabels[pkg] ?: candidate.label, pkg)
             if (seen.add("$pkg\n$label")) Tile(candidate, label) else null
