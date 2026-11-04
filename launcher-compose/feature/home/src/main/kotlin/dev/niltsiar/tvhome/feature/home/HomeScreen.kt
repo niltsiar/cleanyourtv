@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,6 +19,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -43,9 +46,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.designsystem.FocusSurface
 import dev.niltsiar.tvhome.core.designsystem.GlassIconButton
+import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.designsystem.GlassSurface
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.designsystem.glassContainer
 import dev.niltsiar.tvhome.core.designsystem.glassSource
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
@@ -67,7 +72,8 @@ private const val TILE_ASPECT = 16f / 9f
 /**
  * The Home screen. [state] is read lazily, inside the items that show each field. A focus change keeps the dock and
  * grid list instances, so the dock and the tiles skip while the shelf label updates.
- * The wallpaper and the scrolling content are both glass sources, so the top bar blurs whatever scrolls under it.
+ * The wallpaper and the scrolling content are both glass sources, so the top bar and the dock glass what is behind them.
+ * The top bar's surfaces sit in one glass container and merge when they come near each other.
  */
 @Composable
 public fun HomeScreen(
@@ -226,28 +232,48 @@ private fun TopBar(
     date: () -> String,
     modifier: Modifier = Modifier,
 ) {
-    GlassSurface(
-        glass = glass,
-        modifier = modifier.padding(top = TopBarTop, start = ScreenMargin, end = ScreenMargin).fillMaxWidth().height(TopBarHeight),
+    Row(
+        modifier =
+            modifier
+                .padding(top = TopBarTop, start = ScreenMargin, end = ScreenMargin)
+                .fillMaxWidth()
+                .height(TopBarHeight)
+                .glassContainer(glass),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            BasicText(text = clock(), style = TvTheme.typography.clock)
-            BasicText(text = date(), style = TvTheme.typography.date, modifier = Modifier.weight(1f))
-            GlassIconButton(glass, painterResource(R.drawable.ic_inputs), stringResource(R.string.inputs), onClick = {})
-            GlassIconButton(glass, painterResource(R.drawable.ic_wifi), stringResource(R.string.wifi), onClick = {})
-            GlassIconButton(glass, painterResource(R.drawable.ic_settings), stringResource(R.string.settings), onClick = {})
+        GlassSurface(glass = glass, modifier = Modifier.fillMaxHeight(), shape = CircleShape) {
+            Row(
+                modifier = Modifier.fillMaxHeight().padding(horizontal = 24.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                BasicText(text = clock(), style = TvTheme.typography.clock)
+                BasicText(text = date(), style = TvTheme.typography.date)
+            }
         }
+        Spacer(Modifier.weight(1f))
+        GlassIconButton(glass, painterResource(R.drawable.ic_inputs), stringResource(R.string.inputs), onClick = {})
+        GlassIconButton(glass, painterResource(R.drawable.ic_wifi), stringResource(R.string.wifi), onClick = {})
+        GlassIconButton(glass, painterResource(R.drawable.ic_settings), stringResource(R.string.settings), onClick = {})
     }
 }
 
 @Preview(name = "Home 1080p", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
 @Composable
 private fun HomeScreenPreview() {
-    TvTheme {
+    HomePreview(GlassKind.HazeGlass)
+}
+
+@Preview(name = "Home 1080p flat", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
+@Composable
+private fun HomeScreenFlatPreview() {
+    HomePreview(GlassKind.Flat)
+}
+
+@Composable
+private fun HomePreview(glassKind: GlassKind) {
+    TvTheme(glassKind = glassKind) {
         val apps =
             listOf("Movies", "Music", "Games", "Photos", "Weather", "Browser", "Files", "Radio", "Clock", "Maps", "Notes", "Podcasts")
                 .map { AppEntry(packageName = "example.${it.lowercase()}", label = it) }

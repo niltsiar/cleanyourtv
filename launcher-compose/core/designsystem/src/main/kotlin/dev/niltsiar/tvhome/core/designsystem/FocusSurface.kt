@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,13 +25,17 @@ import androidx.compose.ui.unit.dp
 private const val FOCUSED_SCALE = 1.1f
 private const val FOCUS_ANIMATION_MS = 120
 
-/** A D-pad target: scales up and gets an accent border and glow while focused. [onFocused] fires on gaining focus. */
+/**
+ * A D-pad target: scales up and gets an accent border and glow while focused. [onFocused] fires on gaining focus.
+ * [interactionSource] receives the press and focus events, for content that reacts to them.
+ */
 @Composable
 public fun FocusSurface(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(16.dp),
     onFocused: () -> Unit = {},
+    interactionSource: MutableInteractionSource? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
@@ -47,7 +52,7 @@ public fun FocusSurface(
                 .onFocusChanged {
                     focused = it.isFocused
                     if (it.isFocused) onFocused()
-                }.clickable(interactionSource = null, indication = null, role = Role.Button, onClick = onClick),
+                }.clickable(interactionSource = interactionSource, indication = null, role = Role.Button, onClick = onClick),
         content = content,
     )
 }

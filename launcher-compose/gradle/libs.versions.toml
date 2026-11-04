@@ -60,8 +60,8 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 
 # Glass
 haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
-haze-blur = { module = "dev.chrisbanes.haze:haze-blur", version.ref = "haze" }
 haze-glass = { module = "dev.chrisbanes.haze:haze-glass", version.ref = "haze" }
+haze-glass-material3 = { module = "dev.chrisbanes.haze:haze-glass-material3", version.ref = "haze" }
 
 # Presenters
 molecule-runtime = { module = "app.cash.molecule:molecule-runtime", version.ref = "molecule" }

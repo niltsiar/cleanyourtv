@@ -1,9 +1,11 @@
 package dev.niltsiar.tvhome.core.designsystem
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
@@ -18,8 +20,9 @@ public fun GlassIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    FocusSurface(onClick = onClick, modifier = modifier.size(40.dp), shape = CircleShape) {
-        GlassSurface(glass = glass, modifier = Modifier.matchParentSize(), shape = CircleShape) {
+    val interactionSource = remember { MutableInteractionSource() }
+    FocusSurface(onClick = onClick, modifier = modifier.size(40.dp), shape = CircleShape, interactionSource = interactionSource) {
+        GlassSurface(glass = glass, modifier = Modifier.matchParentSize(), shape = CircleShape, interactionSource = interactionSource) {
             Image(
                 painter = painter,
                 contentDescription = contentDescription,
