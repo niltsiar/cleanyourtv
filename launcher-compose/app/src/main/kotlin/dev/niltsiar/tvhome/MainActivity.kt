@@ -29,6 +29,9 @@ class MainActivity : ComponentActivity() {
                     onLaunchApp = ::launchApp,
                     onOpenSettings = ::openSettings,
                     onOpenNetwork = ::openNetwork,
+                    onOpenAppInfo = ::openAppInfo,
+                    onOpenNativeSettings = ::openNativeSettings,
+                    onOrderNotSaved = ::orderNotSaved,
                     homePresses = { homePresses },
                 )
             }
@@ -70,6 +73,18 @@ class MainActivity : ComponentActivity() {
 
     private fun openNetwork() {
         if (!graph.systemSettings.openNetwork()) cantOpen(getString(FeatureR.string.wifi))
+    }
+
+    private fun openAppInfo(packageName: String) {
+        if (!graph.systemSettings.openAppInfo(packageName)) cantOpen(getString(FeatureR.string.app_info))
+    }
+
+    private fun openNativeSettings() {
+        if (!graph.systemSettings.openNativeSettings()) cantOpen(getString(FeatureR.string.native_settings))
+    }
+
+    private fun orderNotSaved() {
+        Toast.makeText(this, R.string.order_not_saved, Toast.LENGTH_SHORT).show()
     }
 
     private fun cantOpen(what: String) {

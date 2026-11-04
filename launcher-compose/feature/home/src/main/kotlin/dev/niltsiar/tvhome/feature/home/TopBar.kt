@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -80,6 +81,7 @@ private val OfflineRed = Color(0xFFFF453A)
  * shows its name beside the icon unless [iconOnlyButtons] is set; then a [wifiLabelWidth] over 0 caps the button at
  * that many dp and keeps the name. [wifiStatusColor] tints the icon by the connection ([wifiStatusWarnings] adds orange
  * and red). [vpnApp] says a VPN app is set, so a VPN that is down is worth a badge. [dateBelowClock] stacks the date under the clock.
+ * [reorderButton] adds a button that turns reorder mode on and off.
  */
 @Immutable
 public data class TopBarLayout(
@@ -91,6 +93,7 @@ public data class TopBarLayout(
     val wifiStatusWarnings: Boolean = false,
     val vpnApp: Boolean = false,
     val dateBelowClock: Boolean = false,
+    val reorderButton: Boolean = false,
 )
 
 public fun TvConfig.topBarLayout(): TopBarLayout =
@@ -103,6 +106,7 @@ public fun TvConfig.topBarLayout(): TopBarLayout =
         wifiStatusWarnings = wifiStatusWarnings,
         vpnApp = vpnApp != null,
         dateBelowClock = dateBelowClock,
+        reorderButton = reorderButton,
     )
 
 /**
@@ -130,6 +134,7 @@ internal fun TopBar(
     onAppClick: (String) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenNetwork: () -> Unit,
+    input: HomeInput,
     modifier: Modifier = Modifier,
 ) {
     val ink = rememberUpdatedState(TvTheme.colors.onSurface)
@@ -157,9 +162,34 @@ internal fun TopBar(
         }
         TopBarApps(glass, state, onAppClick)
         if (layout.showNetworkPill) NetworkButton(glass, state, layout, ink, onOpenNetwork)
-        GlassIconButton(glass, stringResource(R.string.settings), onClick = onOpenSettings) { focus ->
+        if (layout.reorderButton) ReorderButton(glass, input, ink)
+        GlassIconButton(
+            glass,
+            stringResource(R.string.settings),
+            onClick = onOpenSettings,
+            modifier =
+                Modifier.focusRequester(input.requester(SETTINGS_FOCUS)).holdOk(input, onHold = { bounds ->
+                    input.anchor.value = bounds
+                    input.actions.onSettingsMenu()
+                }),
+        ) { focus ->
             IconPart(R.drawable.ic_settings, ink) { rotationZ = SETTINGS_TURN * focus() }
         }
+    }
+}
+
+/** Turns reorder mode on and off; its icon takes the accent colour while the mode is on. */
+@Composable
+private fun ReorderButton(
+    glass: GlassState,
+    input: HomeInput,
+    ink: State<Color>,
+) {
+    val accent = TvTheme.colors.accent
+    val reordering by input.reordering
+    val tint = animateColorAsState(if (reordering) accent else ink.value, tween(NETWORK_FADE_MS), label = "reorderTint")
+    GlassIconButton(glass, stringResource(R.string.reorder), onClick = input.actions.onToggleReorder) {
+        IconPart(R.drawable.ic_reorder, tint)
     }
 }
 

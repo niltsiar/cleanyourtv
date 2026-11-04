@@ -6,6 +6,7 @@ import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageInfo
 import android.content.pm.ResolveInfo
+import android.net.Uri
 import android.provider.Settings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -105,5 +106,44 @@ class SystemSettingsTest {
         assertEquals(true, settings(vpnApp = "com.vpn.missing").openNetwork())
 
         assertEquals(Settings.ACTION_WIFI_SETTINGS, shadowOf(app).nextStartedActivity.action)
+    }
+
+    @Test
+    fun app_info_is_offered_only_where_the_tv_has_a_page_for_it() {
+        assertEquals(false, settings().hasAppInfo("com.example.app"))
+
+        packages.addResolveInfoForIntent(
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:com.example.app")),
+            ResolveInfo().apply {
+                activityInfo =
+                    ActivityInfo().apply {
+                        name = "AppInfo"
+                        packageName = "com.android.settings"
+                    }
+            },
+        )
+
+        assertEquals(true, settings().hasAppInfo("com.example.app"))
+    }
+
+    @Test
+    fun opening_app_info_sends_the_details_action_for_the_package() {
+        assertEquals(true, settings().openAppInfo("com.example.app"))
+
+        val started = shadowOf(app).nextStartedActivity
+        assertEquals(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, started.action)
+        assertEquals("package:com.example.app", started.dataString)
+    }
+
+    @Test
+    fun native_settings_exist_only_while_a_vendor_settings_app_is_installed() {
+        assertEquals(false, settings().hasNativeSettings())
+        assertEquals(false, settings().openNativeSettings())
+
+        install("com.vendor.settings")
+
+        assertEquals(true, settings().hasNativeSettings())
+        assertEquals(true, settings().openNativeSettings())
+        assertEquals(ComponentName.unflattenFromString(vendor), shadowOf(app).nextStartedActivity.component)
     }
 }

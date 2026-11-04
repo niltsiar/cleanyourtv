@@ -29,6 +29,9 @@ internal fun sources(
     wallpaper: Flow<Wallpaper> = flowOf(Wallpaper()),
     systemHour24: () -> Boolean = { true },
     lastOpened: Flow<Map<String, Long>> = flowOf(emptyMap()),
+    hasAppInfo: (String) -> Boolean = { true },
+    hasNativeSettings: () -> Boolean = { false },
+    saveOrder: suspend (List<String>, Int) -> Boolean = { _, _ -> true },
 ) = HomeSources(
     apps,
     clock,
@@ -38,4 +41,7 @@ internal fun sources(
     datePattern = "EEEE d MMMM",
     systemHour24 = systemHour24,
     lastOpened = lastOpened,
+    hasAppInfo = hasAppInfo,
+    hasNativeSettings = hasNativeSettings,
+    saveOrder = saveOrder,
 )

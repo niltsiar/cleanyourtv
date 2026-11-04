@@ -42,6 +42,8 @@ class TvConfigParserTest {
         assertFalse(config.appLibrary || config.cinematicHome || config.singleRow || config.powerOnHomeAlways)
         assertTrue(config.cinematicDots && config.ambientGlow)
         assertFalse(config.cinematicWhiteFocus || config.glowSnap || config.appGlow)
+        assertTrue(config.dockRow)
+        assertFalse(config.reorderButton)
     }
 
     @Test
@@ -268,5 +270,18 @@ class TvConfigParserTest {
             assertEquals(text, null, parsed.config.place)
             assertEquals(text, rejected, parsed.rejectedKeys)
         }
+    }
+
+    @Test
+    fun the_tile_menu_dock_row_and_reorder_button_keys_are_read() {
+        val parsed = parseTvConfig("""{"tile_menu": false, "dock_row": false, "reorder_button": true}""")
+        assertFalse(parsed.config.tileMenu || parsed.config.dockRow)
+        assertTrue(parsed.config.reorderButton)
+        assertEquals(emptyList<String>(), parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys)
+
+        val wrong = parseTvConfig("""{"dock_row": "no", "reorder_button": 1}""")
+        assertTrue(wrong.config.dockRow)
+        assertFalse(wrong.config.reorderButton)
+        assertEquals(listOf("dock_row", "reorder_button"), wrong.rejectedKeys)
     }
 }

@@ -126,6 +126,15 @@ public class PackageManagerAppsProvider(
             }
         }
 
+    /**
+     * Keeps the owner's tile order: [keys] first to last. [docked] says how many lead the dock when fill_dock is off,
+     * else it is -1. The next load sorts by it. False, with a log line, when the file could not be written.
+     */
+    public suspend fun saveOrder(
+        keys: List<String>,
+        docked: Int,
+    ): Boolean = withContext(Dispatchers.IO) { writeOrder(orderFile, Order(Order.dockKey(config.dockApps), keys, docked)) }
+
     /** Home is on screen: follow package changes, and reload now if some happened while it was not. Main thread. */
     public fun onStart() {
         if (!receiving) {

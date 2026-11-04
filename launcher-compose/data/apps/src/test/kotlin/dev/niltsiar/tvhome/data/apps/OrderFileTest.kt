@@ -45,4 +45,24 @@ class OrderFileTest {
 
         assertFalse(writeOrder(notAFolder.resolve("order.txt"), Order("a", emptyList())))
     }
+
+    @Test
+    fun the_file_holds_the_reference_text() {
+        val file = folder.newFile()
+
+        writeOrder(file, Order("a,b", listOf("x/.X", "y/.Y"), docked = 1))
+
+        assertEquals("tvhome-order 1\ndock a,b\ndocked 1\nx/.X\ny/.Y\n", file.readText())
+    }
+
+    @Test
+    fun a_second_write_replaces_the_first_whole_and_leaves_no_backup() {
+        val file = folder.newFile()
+        writeOrder(file, Order("a", listOf("x/.X", "y/.Y", "z/.Z")))
+
+        writeOrder(file, Order("a", listOf("z/.Z")))
+
+        assertEquals(Order("a", listOf("z/.Z")), readOrder(file))
+        assertEquals(listOf(file.name), folder.root.list()!!.toList())
+    }
 }

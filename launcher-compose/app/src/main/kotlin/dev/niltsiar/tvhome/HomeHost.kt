@@ -3,6 +3,8 @@ package dev.niltsiar.tvhome
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.niltsiar.tvhome.core.model.AppEntry
@@ -21,6 +23,9 @@ internal fun HomeHost(
     onLaunchApp: (AppEntry) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenNetwork: () -> Unit,
+    onOpenAppInfo: (String) -> Unit,
+    onOpenNativeSettings: () -> Unit,
+    onOrderNotSaved: () -> Unit,
     homePresses: () -> Int,
     viewModel: MoleculeHomeViewModel = viewModel { MoleculeHomeViewModel(graph.homeSources, graph.config) },
 ) {
@@ -30,9 +35,13 @@ internal fun HomeHost(
                 is HomeEffect.LaunchApp -> onLaunchApp(effect.app)
                 HomeEffect.OpenSettings -> onOpenSettings()
                 HomeEffect.OpenNetwork -> onOpenNetwork()
+                is HomeEffect.OpenAppInfo -> onOpenAppInfo(effect.packageName)
+                HomeEffect.OpenNativeSettings -> onOpenNativeSettings()
+                HomeEffect.OrderNotSaved -> onOrderNotSaved()
             }
         }
     }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.onStopped() }
     val state = viewModel.uiState.collectAsStateWithLifecycle()
     val layout = remember(graph) { graph.config.homeLayout() }
     val topBar = remember(graph) { graph.config.topBarLayout() }
@@ -50,5 +59,6 @@ internal fun HomeHost(
         heroArt = graph.homeSources.heroArt,
         onOpenSettings = viewModel::onOpenSettings,
         onOpenNetwork = viewModel::onOpenNetwork,
+        actions = viewModel.actions,
     )
 }

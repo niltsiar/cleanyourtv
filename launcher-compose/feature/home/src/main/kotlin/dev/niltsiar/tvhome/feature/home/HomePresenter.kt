@@ -4,10 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
@@ -31,17 +29,45 @@ internal fun homePresenter(
     onEffect: (HomeEffect) -> Unit,
     locale: Locale,
 ): HomeUiState {
-    var focusedKey by remember { mutableStateOf<String?>(null) }
     val appList by sources.apps.collectAsState(NoApps)
     val currentAppList by rememberUpdatedState(appList)
     val topBarApps by sources.topBarApps.collectAsState(NoTopBarApps)
     val currentTopBarApps by rememberUpdatedState(topBarApps)
     val currentOnEffect by rememberUpdatedState(onEffect)
+    val layout = remember(config) { config.homeLayout() }
+    val interaction = remember(sources, config) { HomeInteraction(sources, config) { currentOnEffect(it) } }
+    val session = interaction.session
+    val saved = interaction.saved?.takeIf { it.base === appList }
+    val shownList =
+        remember(appList, saved, session?.keys) {
+            when {
+                session != null -> appList.arranged(session.keys, 0)
+                saved != null -> appList.arranged(saved.change.keys, saved.change.docked)
+                else -> appList
+            }
+        }
+    // A session shows every dock slot filled, so that each place holds a tile that can move.
+    val homeApps =
+        remember(shownList, layout, session != null) {
+            HomeApps(
+                shownList,
+                if (session !=
+                    null
+                ) {
+                    layout.copy(fillDock = true)
+                } else {
+                    layout
+                },
+            )
+        }
+    interaction.list = appList
+    interaction.shown = homeApps
+    LaunchedEffect(appList) { interaction.listChanged() }
     LaunchedEffect(events) {
         events.collect { event ->
             when (event) {
                 is HomeEvent.Focus -> {
-                    focusedKey = event.key
+                    interaction.focusedKey = event.key
                 }
 
                 is HomeEvent.Click -> {
@@ -58,11 +84,13 @@ internal fun homePresenter(
                 HomeEvent.OpenNetwork -> {
                     currentOnEffect(HomeEffect.OpenNetwork)
                 }
+
+                else -> {
+                    interaction.handle(event)
+                }
             }
         }
     }
-    val layout = remember(config) { config.homeLayout() }
-    val homeApps = remember(appList, layout) { HomeApps(appList, layout) }
     val now by sources.clock.collectAsState(null)
     val network by sources.network.collectAsState(NoNetwork)
     val wallpaper by sources.wallpaper.collectAsState(NoWallpaper)
@@ -76,7 +104,7 @@ internal fun homePresenter(
     return homeUiState(
         homeApps,
         now,
-        focusedKey,
+        interaction.focusedKey,
         locale,
         header,
         network,
@@ -84,5 +112,8 @@ internal fun homePresenter(
         wallpaper,
         cinematic = config.cinematicHome,
         lastOpened = lastOpened,
+        menu = interaction.menu,
+        reorder = remember(session) { session?.view() },
+        focusRequest = interaction.focusRequest,
     )
 }

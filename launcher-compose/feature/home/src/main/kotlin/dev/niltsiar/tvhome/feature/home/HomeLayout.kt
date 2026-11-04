@@ -6,7 +6,8 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 /**
  * The shape of the dock and grid, from the theme: [columns] is the dock's size and the grid's width, [rowsBelowDock]
  * the grid rows that must fit under the dock, [singleRow] one sideways row of every app, and [fillDock] whether grid
- * apps take the dock slots that dock_apps leaves free.
+ * apps take the dock slots that dock_apps leaves free, [tileMenu] whether a held OK or MENU opens a tile's menu (else a held
+ * OK opens its App info).
  */
 @Immutable
 public data class HomeLayout(
@@ -14,10 +15,17 @@ public data class HomeLayout(
     val rowsBelowDock: Int,
     val singleRow: Boolean,
     val fillDock: Boolean,
+    val tileMenu: Boolean = true,
 )
 
 public fun TvConfig.homeLayout(): HomeLayout =
-    HomeLayout(columns = columns, rowsBelowDock = rowsBelowDock, singleRow = singleRow, fillDock = fillDock)
+    HomeLayout(
+        columns = columns,
+        rowsBelowDock = rowsBelowDock,
+        singleRow = singleRow,
+        fillDock = fillDock,
+        tileMenu = tileMenu,
+    )
 
 private const val MIN_TILE_SHARE = 0.85f
 private const val TILE_ASPECT = 16f / 9f

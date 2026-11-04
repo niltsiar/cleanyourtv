@@ -19,6 +19,8 @@ import java.util.Locale
  * What the screen shows. [clock], [amPm], [date] and [greeting] are empty or null until the TV's time is valid.
  * [topBarApps] are the top_bar_apps that can be opened. [wallpaper] is the picture behind Home and its caption.
  * [shelf] is the cinematic shelf's app while focus is on a dock tile, null otherwise and without cinematic_home.
+ * [menu] is the open tile or Settings menu, [reorder] a reorder or edit-dock session, and [focusRequest] asks the
+ * screen to move focus to a tile or the Settings button.
  */
 @Immutable
 public data class HomeUiState(
@@ -33,7 +35,20 @@ public data class HomeUiState(
     val focusedLabel: String = "",
     val wallpaper: Wallpaper = Wallpaper(),
     val shelf: Shelf? = null,
+    val menu: HomeMenu? = null,
+    val reorder: ReorderView? = null,
+    val focusRequest: FocusRequest? = null,
 )
+
+/** Focus goes to the tile with this key, or to the Settings button for [SETTINGS_FOCUS]. A new [token] asks again. */
+@Immutable
+public data class FocusRequest(
+    val target: String,
+    val token: Int,
+)
+
+/** The [FocusRequest.target] of the Settings button: a tile key always has a slash. */
+public const val SETTINGS_FOCUS: String = "settings"
 
 /**
  * The dock app the cinematic shelf shows: its [key] and [label], the [accent] colour of its art, its [position] among
@@ -60,6 +75,17 @@ public sealed interface HomeEffect {
 
     /** The network button was pressed: open the VPN app or Wi-Fi settings. */
     public data object OpenNetwork : HomeEffect
+
+    /** Open the TV's App info page for a package. */
+    public data class OpenAppInfo(
+        val packageName: String,
+    ) : HomeEffect
+
+    /** Open the vendor settings app the Settings menu offers. */
+    public data object OpenNativeSettings : HomeEffect
+
+    /** The new tile order could not be written. */
+    public data object OrderNotSaved : HomeEffect
 }
 
 /** What the host feeds Home besides the theme: its data sources and two system formats. */
@@ -78,6 +104,12 @@ public class HomeSources(
     public val lastOpened: Flow<Map<String, Long>> = flowOf(emptyMap()),
     /** The softened art of a tile for the cinematic shelf; null for a tile without art. */
     public val heroArt: suspend (String) -> ImageBitmap? = { null },
+    /** Whether the TV has an App info page for a package. */
+    public val hasAppInfo: (String) -> Boolean = { false },
+    /** Whether a vendor settings app is installed, for the Settings menu's "Native settings". */
+    public val hasNativeSettings: () -> Boolean = { false },
+    /** Keeps the tile order: keys first to last, and with fill_dock off how many lead the dock (else -1). False when it was not written. */
+    public val saveOrder: suspend (List<String>, Int) -> Boolean = { _, _ -> true },
 )
 
 internal sealed interface HomeEvent {
@@ -92,6 +124,31 @@ internal sealed interface HomeEvent {
     data object OpenSettings : HomeEvent
 
     data object OpenNetwork : HomeEvent
+
+    /** A held OK or the MENU key on a tile. */
+    data class TileMenu(
+        val key: String,
+        val held: Boolean,
+    ) : HomeEvent
+
+    data object SettingsMenu : HomeEvent
+
+    data class MenuPick(
+        val row: MenuRow,
+    ) : HomeEvent
+
+    data object Back : HomeEvent
+
+    data object ToggleReorder : HomeEvent
+
+    data class ReorderMove(
+        val arrow: Arrow,
+    ) : HomeEvent
+
+    data object ReorderOk : HomeEvent
+
+    /** Home left the screen. */
+    data object Stopped : HomeEvent
 }
 
 /**
@@ -152,6 +209,9 @@ internal fun homeUiState(
     cinematic: Boolean = false,
     lastOpened: Map<String, Long> = emptyMap(),
     zone: ZoneId = ZoneId.systemDefault(),
+    menu: HomeMenu? = null,
+    reorder: ReorderView? = null,
+    focusRequest: FocusRequest? = null,
 ): HomeUiState =
     HomeUiState(
         clock = now?.let { clockText(it, header.hour24, locale) }.orEmpty(),
@@ -165,6 +225,9 @@ internal fun homeUiState(
         focusedLabel = (apps.all.firstOrNull { it.key == focusedKey } ?: apps.all.firstOrNull())?.label.orEmpty(),
         wallpaper = wallpaper,
         shelf = if (cinematic) shelfFor(apps, focusedKey, lastOpened, now, header.hour24, zone) else null,
+        menu = menu,
+        reorder = reorder,
+        focusRequest = focusRequest,
     )
 
 /**
@@ -196,4 +259,18 @@ internal fun shelfFor(
                 describeLastOpened(LocalDateTime.ofInstant(Instant.ofEpochMilli(opened), zone), now, hour24)
             },
     )
+}
+
+/**
+ * [list] in the order of [keys]: the tiles of those keys first, then any other tiles (new installs) as they were.
+ * [docked] is the new count of leading dock apps.
+ */
+internal fun AppList.arranged(
+    keys: List<String>,
+    docked: Int,
+): AppList {
+    val byKey = apps.associateBy { it.key }
+    val ordered = keys.mapNotNull(byKey::get)
+    val rest = apps.filter { it.key !in keys.toSet() }
+    return AppList(ordered + rest, docked.coerceAtLeast(0))
 }

@@ -89,6 +89,7 @@ interface AppGraph {
         networkMonitor: NetworkMonitor,
         timeChanges: TimeChanges,
         wallpaperProvider: WallpaperProvider,
+        systemSettings: SystemSettings,
     ): HomeSources {
         val clock = minuteClock(timeChanges.changes)
         return HomeSources(
@@ -101,6 +102,9 @@ interface AppGraph {
             systemHour24 = { DateFormat.is24HourFormat(application) },
             lastOpened = lastOpened.times,
             heroArt = appsProvider::heroArt,
+            hasAppInfo = systemSettings::hasAppInfo,
+            hasNativeSettings = systemSettings::hasNativeSettings,
+            saveOrder = appsProvider::saveOrder,
         )
     }
 

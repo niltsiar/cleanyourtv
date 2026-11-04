@@ -1,5 +1,6 @@
 package dev.niltsiar.tvhome.feature.home
 
+import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -35,8 +36,11 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -45,7 +49,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Canvas
@@ -56,6 +62,7 @@ import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasureResult
@@ -91,6 +98,7 @@ import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filterNotNull
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.Locale
@@ -108,7 +116,11 @@ private val ShelfFade = 40.dp
 private val ShelfFullyShownInset = 4.dp
 private val ShelfRise = 14.dp
 private val GridBottom = 48.dp
+private val HintBottom = 28.dp
 private const val TILE_ASPECT = 16f / 9f
+
+/** The grid items before the first grid tile: the shelf spacer and the dock. */
+private const val GRID_ITEMS_BEFORE = 2
 
 /**
  * The Home screen. [state] is read lazily, inside the items that show each field. A focus change keeps the dock and
@@ -122,6 +134,9 @@ private const val TILE_ASPECT = 16f / 9f
  * [wallpaperLayout] is the theme's say over the picture behind Home, which [HomeUiState.wallpaper] supplies.
  * [shelfLayout] is the theme's cinematic shelf and focus colours; [heroArt] gives it the softened art of a tile.
  * The cinematic shelf makes the shelf taller.
+ * [actions] carry the tile menu, the Settings menu and the reorder and edit-dock modes to the state. Holding OK on a tile
+ * or the Settings button, or MENU on a tile, opens its menu; in a mode OK and the arrows move tiles. An open menu hangs from
+ * the item that opened it, and from [menuAnchor] (in the screen's coordinates) until one does.
  */
 @Composable
 public fun HomeScreen(
@@ -137,15 +152,39 @@ public fun HomeScreen(
     heroArt: suspend (String) -> ImageBitmap? = { null },
     onOpenSettings: () -> Unit = {},
     onOpenNetwork: () -> Unit = {},
+    actions: HomeActions = HomeActions(),
+    menuAnchor: Rect = Rect.Zero,
 ) {
     val glass = rememberGlassState()
     val dockFocus = remember { FocusRequester() }
+    val currentState = rememberUpdatedState(state)
+    val currentActions = rememberUpdatedState(actions)
+    val input =
+        remember {
+            HomeInput(
+                currentActions,
+                carried = derivedStateOf { currentState.value().reorder?.carried },
+                dimmed = derivedStateOf { currentState.value().reorder?.dimmed ?: emptySet() },
+                reordering = derivedStateOf { currentState.value().reorder != null },
+            ).also { it.anchor.value = menuAnchor }
+        }
+    val menu by remember { derivedStateOf { currentState.value().menu } }
+    val hint by remember { derivedStateOf { currentState.value().reorder?.hint } }
+    val backOpen by remember { derivedStateOf { currentState.value().let { it.menu != null || it.reorder != null } } }
+    BackHandler(enabled = backOpen) { currentActions.value.onBack() }
+    val gridState = rememberLazyGridState()
     val backdrop = rememberCinematicBackdrop(shelfLayout, shelf = { state().shelf }, heroArt = heroArt)
     val shelfHeight = if (shelfLayout.cinematic) CinematicShelfHeight else ShelfHeight
     val shelfModifier = Modifier.padding(top = ContentTop, start = ScreenMargin).height(shelfHeight - ShelfTitleGap)
-    Box(modifier = modifier.fillMaxSize().background(wallpaperLayout.background)) {
+    Box(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(wallpaperLayout.background)
+                .onPreviewKeyEvent { input.onPreview(it, currentState.value()) },
+    ) {
         WallpaperBackdrop(glass, wallpaper = { state().wallpaper }, layout = wallpaperLayout, cinematic = backdrop)
-        HomeContent(glass, dockFocus, state, layout, shelfLayout, ContentTop + shelfHeight, onFocus, onClick, homePresses)
+        HomeContent(glass, dockFocus, gridState, input, state, layout, shelfLayout, ContentTop + shelfHeight, onFocus, onClick, homePresses)
         if (shelfLayout.cinematic) CinematicShelf(shelf = { state().shelf }, layout = shelfLayout, modifier = shelfModifier)
         ShelfTitle(
             label = { state().let { if (shelfLayout.cinematic && it.shelf != null) "" else it.focusedLabel } },
@@ -164,8 +203,13 @@ public fun HomeScreen(
             onAppClick = onClick,
             onOpenSettings = onOpenSettings,
             onOpenNetwork = onOpenNetwork,
+            input = input,
             modifier = Modifier.align(Alignment.TopCenter),
         )
+        hint?.let { ReorderHintPill(glass, it, Modifier.align(Alignment.BottomCenter).padding(bottom = HintBottom)) }
+        menu?.let { open ->
+            key(open) { MenuOverlay(glass, open.rows, input.anchor, alignEnd = open.tileKey == null, onPick = input.actions.onMenuPick) }
+        }
     }
 }
 
@@ -174,6 +218,8 @@ public fun HomeScreen(
 private fun HomeContent(
     glass: GlassState,
     dockFocus: FocusRequester,
+    gridState: LazyGridState,
+    input: HomeInput,
     state: () -> HomeUiState,
     layout: HomeLayout,
     shelfLayout: ShelfLayout,
@@ -198,8 +244,22 @@ private fun HomeContent(
         }
     val sideMargin = ScreenMargin + gridWidth * ((1f - share) / 2f)
     val rowTileWidth = (gridWidth - TileGap * (layout.columns + 1)) / layout.columns
-    val gridState = rememberLazyGridState()
     val firstDockTile = remember { FocusRequester() }
+    LaunchedEffect(gridState) {
+        snapshotFlow { state().focusRequest }.filterNotNull().collect { request ->
+            // The tile may be off screen, or about to be built in the other container by the list that just changed.
+            val inGrid = state().grid.indexOfFirst { it.key == request.target }
+            val shown = gridState.layoutInfo.visibleItemsInfo
+            if (inGrid >= 0) {
+                if (shown.none { it.key == request.target }) gridState.scrollToItem(inGrid + GRID_ITEMS_BEFORE)
+            } else if (shown.none { it.key == "dock" }) {
+                gridState.scrollToItem(0)
+            }
+            withFrameNanos { }
+            withFrameNanos { }
+            input.focus(request.target)
+        }
+    }
     LaunchedEffect(gridState) {
         snapshotFlow(homePresses).drop(1).collect {
             gridState.scrollToItem(0)
@@ -217,7 +277,12 @@ private fun HomeContent(
             contentPadding = PaddingValues(start = sideMargin, end = sideMargin, top = ContentTop, bottom = GridBottom),
             horizontalArrangement = Arrangement.spacedBy(TileGap),
             verticalArrangement = Arrangement.spacedBy(TileGap),
-            modifier = modifier.fillMaxSize().glassSource(glass, zIndex = 1f).semantics { testTagsAsResourceId = true },
+            modifier =
+                modifier
+                    .fillMaxSize()
+                    .glassSource(glass, zIndex = 1f)
+                    .onFocusChanged { input.gridFocused = it.hasFocus }
+                    .semantics { testTagsAsResourceId = true },
         ) {
             item(key = "shelf", span = { GridItemSpan(maxLineSpan) }, contentType = "shelf") {
                 Spacer(Modifier.fillMaxWidth().height(shelfBottom - ContentTop))
@@ -227,6 +292,7 @@ private fun HomeContent(
                     glass = glass,
                     focus = dockFocus,
                     firstTile = firstDockTile,
+                    input = input,
                     dock = state().dock,
                     layout = layout,
                     shelfLayout = shelfLayout,
@@ -242,7 +308,9 @@ private fun HomeContent(
                     accent = shelfLayout.focusAccent(app.accent, inDock = false),
                     onFocus = onFocus,
                     onClick = onClick,
-                    modifier = Modifier.fadeUnderShelf(gridState, app.key, shelfBottom),
+                    input = input,
+                    tileMenu = layout.tileMenu,
+                    modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null).fadeUnderShelf(gridState, app.key, shelfBottom),
                 )
             }
         }
@@ -325,6 +393,7 @@ private fun Dock(
     glass: GlassState,
     focus: FocusRequester,
     firstTile: FocusRequester,
+    input: HomeInput,
     dock: List<AppEntry>,
     layout: HomeLayout,
     shelfLayout: ShelfLayout,
@@ -355,7 +424,13 @@ private fun Dock(
                             accent = shelfLayout.focusAccent(app.accent, inDock = true),
                             onFocus = onFocus,
                             onClick = onClick,
-                            modifier = Modifier.width(rowTileWidth).then(if (index == 0) Modifier.focusRequester(firstTile) else Modifier),
+                            input = input,
+                            tileMenu = layout.tileMenu,
+                            modifier =
+                                Modifier
+                                    .animateItem(fadeInSpec = null, fadeOutSpec = null)
+                                    .width(rowTileWidth)
+                                    .then(if (index == 0) Modifier.focusRequester(firstTile) else Modifier),
                         )
                     }
                 }
@@ -377,9 +452,12 @@ private fun Dock(
                             accent = shelfLayout.focusAccent(app.accent, inDock = true),
                             onFocus = onFocus,
                             onClick = onClick,
+                            input = input,
+                            tileMenu = layout.tileMenu,
                             modifier =
                                 Modifier
                                     .weight(1f)
+                                    .slideToIndex(index, TileGap)
                                     .then(if (index == 0) Modifier.focusRequester(firstTile) else Modifier)
                                     .stopAtDockEnds(first = index == 0, last = index == dock.lastIndex),
                         )
@@ -412,14 +490,40 @@ private fun AppTile(
     accent: Color,
     onFocus: (String) -> Unit,
     onClick: (String) -> Unit,
+    input: HomeInput,
+    tileMenu: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val key = app.key
+    val reordering by input.reordering
+    val requester = remember(input, key) { input.requester(key) }
     FocusSurface(
-        onClick = { onClick(app.key) },
-        onFocused = { onFocus(app.key) },
+        onClick = { onClick(key) },
+        onFocused = { onFocus(key) },
         shape = TileShape,
         accent = accent,
-        modifier = modifier.aspectRatio(TILE_ASPECT).testTag("tile:${app.key}"),
+        modifier =
+            modifier
+                .then(if (reordering) Modifier.reorderLook(key, input) else Modifier)
+                .aspectRatio(TILE_ASPECT)
+                .testTag("tile:$key")
+                .focusRequester(requester)
+                .holdOk(
+                    input,
+                    onHold = { bounds ->
+                        input.anchor.value = bounds
+                        input.actions.onTileMenu(key, true)
+                    },
+                    onMenuKey =
+                        if (tileMenu) {
+                            { bounds ->
+                                input.anchor.value = bounds
+                                input.actions.onTileMenu(key, false)
+                            }
+                        } else {
+                            null
+                        },
+                ),
     ) {
         Box(Modifier.fillMaxSize().background(TvTheme.colors.surface, TileShape), contentAlignment = Alignment.Center) {
             val image = app.image
@@ -443,12 +547,35 @@ private fun HomeScreenGlassPreview() {
     HomePreview(GlassKind.Refractive)
 }
 
+@Preview(name = "Home 1080p tile menu", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
+@Composable
+private fun HomeScreenTileMenuPreview() {
+    HomePreview(
+        GlassKind.Refractive,
+        menu = HomeMenu("example.movies", listOf(MenuRow.ReplaceInDock, MenuRow.Move, MenuRow.AppInfo)),
+        menuAnchor = Rect(left = 110f, top = 520f, right = 380f, bottom = 672f),
+    )
+}
+
+@Preview(name = "Home 1080p reorder", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
+@Composable
+private fun HomeScreenReorderPreview() {
+    val others = PreviewNames.map { "example.${it.lowercase()}" } - "example.music"
+    HomePreview(
+        GlassKind.Refractive,
+        reorder = ReorderView(carried = "example.music", dimmed = others.toSet(), hint = ReorderHint.Reorder),
+        focused = "example.music",
+    )
+}
+
 @Preview(name = "Home 1080p flat", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
 @Composable
 private fun HomeScreenFlatPreview() {
     HomePreview(GlassKind.Flat)
 }
 
+private val PreviewNames =
+    listOf("Movies", "Music", "Games", "Photos", "Weather", "Browser", "Files", "Radio", "Clock", "Maps", "Notes", "Podcasts")
 private val PreviewAccents = listOf(0xFFE53935, 0xFFE91E63, 0xFF8E24AA, 0xFF3949AB, 0xFF1E88E5, 0xFF00ACC1)
 
 /** The softened art of a colourful app: a diagonal blend, as the 48 by 27 picture the shelf stretches over the screen. */
@@ -462,14 +589,19 @@ private fun previewArt(accent: Color): ImageBitmap {
 
 /** Home as the owner sees it: the cinematic shelf, with the first dock tile focused (the dock takes focus when it shows). */
 @Composable
-private fun HomePreview(glassKind: GlassKind) {
+private fun HomePreview(
+    glassKind: GlassKind,
+    menu: HomeMenu? = null,
+    menuAnchor: Rect = Rect.Zero,
+    reorder: ReorderView? = null,
+    focused: String = "example.movies",
+) {
     TvTheme(glassKind = glassKind) {
         val apps =
-            listOf("Movies", "Music", "Games", "Photos", "Weather", "Browser", "Files", "Radio", "Clock", "Maps", "Notes", "Podcasts")
-                .mapIndexed { i, name ->
-                    val id = "example.${name.lowercase()}"
-                    AppEntry(key = id, packageName = id, label = name, accent = Color(PreviewAccents[i % PreviewAccents.size]))
-                }
+            PreviewNames.mapIndexed { i, name ->
+                val id = "example.${name.lowercase()}"
+                AppEntry(key = id, packageName = id, label = name, accent = Color(PreviewAccents[i % PreviewAccents.size]))
+            }
         val layout = HomeLayout(columns = 6, rowsBelowDock = 0, singleRow = false, fillDock = true)
         val header = HeaderStyle(hour24 = false, datePattern = "EEEE  d MMMM", greetingName = "Sam")
         val network = NetworkState(NetworkLink.Wifi, ssid = "Living room", validated = true)
@@ -485,13 +617,16 @@ private fun HomePreview(glassKind: GlassKind) {
             homeUiState(
                 HomeApps(AppList(apps), layout),
                 now,
-                "example.movies",
+                focused,
                 Locale.ENGLISH,
                 header,
                 network,
                 wallpaper = wallpaper,
                 cinematic = true,
                 lastOpened = mapOf("example.movies" to yesterday),
+                menu = menu,
+                reorder = reorder,
+                focusRequest = FocusRequest(focused, 1),
             )
         val art = remember { previewArt(Color(PreviewAccents[0])) }
         HomeScreen(
@@ -502,6 +637,7 @@ private fun HomePreview(glassKind: GlassKind) {
             topBar = TopBarLayout(wifiStatusColor = true),
             shelfLayout = ShelfLayout(cinematic = true, animated = false),
             heroArt = { art },
+            menuAnchor = menuAnchor,
         )
     }
 }

@@ -101,10 +101,14 @@ public data class TvConfig(
     /** Percent, 30 to 100. */
     val dockOpacity: Int = 100,
     val dockGlass: Boolean = false,
+    /** The first row is a dock: its tiles can be replaced from the tile menu and the Settings menu. */
+    val dockRow: Boolean = true,
     val animations: Boolean = true,
     val reducedMotion: Boolean = false,
     val focusOvershoot: Boolean = true,
     val tileMenu: Boolean = true,
+    /** A top-bar button turns reorder mode on and off. */
+    val reorderButton: Boolean = false,
     val appLibrary: Boolean = false,
     val libraryApps: List<String> = emptyList(),
     val libraryExcludedApps: List<String> = emptyList(),

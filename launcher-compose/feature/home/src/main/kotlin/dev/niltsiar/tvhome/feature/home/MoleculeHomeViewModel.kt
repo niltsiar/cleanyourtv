@@ -51,4 +51,21 @@ public class MoleculeHomeViewModel(
     public fun onOpenNetwork() {
         events.trySend(HomeEvent.OpenNetwork)
     }
+
+    /** The menus and the reorder and edit-dock modes. */
+    public val actions: HomeActions =
+        HomeActions(
+            onTileMenu = { key, held -> events.trySend(HomeEvent.TileMenu(key, held)) },
+            onSettingsMenu = { events.trySend(HomeEvent.SettingsMenu) },
+            onMenuPick = { events.trySend(HomeEvent.MenuPick(it)) },
+            onBack = { events.trySend(HomeEvent.Back) },
+            onToggleReorder = { events.trySend(HomeEvent.ToggleReorder) },
+            onReorderMove = { events.trySend(HomeEvent.ReorderMove(it)) },
+            onReorderOk = { events.trySend(HomeEvent.ReorderOk) },
+        )
+
+    /** Home left the screen: a reorder ends and saves, a menu closes. */
+    public fun onStopped() {
+        events.trySend(HomeEvent.Stopped)
+    }
 }

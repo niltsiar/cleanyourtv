@@ -38,7 +38,8 @@ private val Gloss = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f
  * focused. [onFocused] fires on gaining focus. [interactionSource] receives the press and focus events, for content
  * that reacts to them. [accent] colours the ring and the glow; unspecified takes the theme's. [glow] turns the accent
  * glow off: the elevation shadow also shows through a translucent surface, as a dark patch, so glass has none. The
- * animation is read in the layer and draw lambdas, so a focus change never relays out.
+ * animation is read in the layer and draw lambdas, so a focus change never relays out. [focusedScale] is the size
+ * it grows to; a surface that fills its parent grows less than a tile.
  */
 @Composable
 public fun FocusSurface(
@@ -49,6 +50,7 @@ public fun FocusSurface(
     interactionSource: MutableInteractionSource? = null,
     glow: Boolean = true,
     accent: Color = Color.Unspecified,
+    focusedScale: Float = FOCUSED_SCALE,
     content: @Composable BoxScope.() -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
@@ -58,7 +60,7 @@ public fun FocusSurface(
         modifier =
             modifier
                 .graphicsLayer {
-                    val scale = 1f + (FOCUSED_SCALE - 1f) * focus.value
+                    val scale = 1f + (focusedScale - 1f) * focus.value
                     scaleX = scale
                     scaleY = scale
                     shadowElevation = if (glow) GlowElevation.toPx() * focus.value.coerceIn(0f, 1f) else 0f
