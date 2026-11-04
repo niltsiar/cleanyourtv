@@ -42,8 +42,14 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.Measurable
+import androidx.compose.ui.layout.MeasureResult
+import androidx.compose.ui.layout.MeasureScope
+import androidx.compose.ui.node.LayoutModifierNode
+import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -52,6 +58,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.designsystem.FocusSurface
 import dev.niltsiar.tvhome.core.designsystem.GlassIconButton
@@ -181,14 +188,42 @@ private fun HomeContent(
 private fun Modifier.fadeUnderShelf(
     grid: LazyGridState,
     key: Any,
-): Modifier =
-    graphicsLayer {
-        val info = grid.layoutInfo
-        val item = info.visibleItemsInfo.firstOrNull { it.key == key } ?: return@graphicsLayer
-        val top = item.offset.y - info.viewportStartOffset
-        val fade = ShelfFade.toPx()
-        alpha = ((top - (ShelfFullyShown.toPx() - fade)) / fade).coerceIn(0f, 1f)
+): Modifier = this then FadeUnderShelfElement(grid, key)
+
+private data class FadeUnderShelfElement(
+    val grid: LazyGridState,
+    val key: Any,
+) : ModifierNodeElement<FadeUnderShelfNode>() {
+    override fun create() = FadeUnderShelfNode(grid, key)
+
+    override fun update(node: FadeUnderShelfNode) {
+        node.grid = grid
+        node.key = key
     }
+}
+
+private class FadeUnderShelfNode(
+    var grid: LazyGridState,
+    var key: Any,
+) : Modifier.Node(),
+    LayoutModifierNode {
+    override fun MeasureScope.measure(
+        measurable: Measurable,
+        constraints: Constraints,
+    ): MeasureResult {
+        val placeable = measurable.measure(constraints)
+        return layout(placeable.width, placeable.height) {
+            placeable.placeWithLayer(0, 0) {
+                compositingStrategy = CompositingStrategy.ModulateAlpha
+                val info = grid.layoutInfo
+                val item = info.visibleItemsInfo.firstOrNull { it.key == key } ?: return@placeWithLayer
+                val top = item.offset.y - info.viewportStartOffset
+                val fade = ShelfFade.toPx()
+                alpha = ((top - (ShelfFullyShown.toPx() - fade)) / fade).coerceIn(0f, 1f)
+            }
+        }
+    }
+}
 
 /** The focused app's name. It rises into place and fades in again each time the label changes. */
 @Composable
@@ -207,6 +242,7 @@ private fun ShelfTitle(
             overflow = TextOverflow.Ellipsis,
             modifier =
                 Modifier.graphicsLayer {
+                    compositingStrategy = CompositingStrategy.ModulateAlpha
                     alpha = (0.3f + 0.7f * reveal.value).coerceIn(0f, 1f)
                     translationY = (1f - reveal.value) * ShelfRise.toPx()
                 },
