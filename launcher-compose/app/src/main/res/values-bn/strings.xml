@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">হোম</string>
+    <string name="dream_name">ঘড়ি</string>
+    <string name="cant_open">%1$s খোলা যাচ্ছে না</string>
+    <string name="not_available">এই টিভিতে এভাইলেবল নেই</string>
+    <string name="no_inputs">কোনো ইনপুট পাওয়া যায়নি</string>
+    <string name="order_not_saved">নতুন ক্রম সেভ করা যায়নি</string>
+    <string name="date_format">EEEE, d MMMM</string>
+</resources>

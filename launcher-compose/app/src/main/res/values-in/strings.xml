@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Beranda</string>
+    <string name="dream_name">Jam</string>
+    <string name="cant_open">Tidak dapat membuka %1$s</string>
+    <string name="not_available">Tidak tersedia di TV ini</string>
+    <string name="no_inputs">Tidak ada input ditemukan</string>
+    <string name="order_not_saved">Tidak dapat menyimpan urutan baru</string>
+</resources>

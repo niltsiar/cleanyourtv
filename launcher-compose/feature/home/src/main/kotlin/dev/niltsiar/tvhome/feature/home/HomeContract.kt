@@ -12,7 +12,6 @@ import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
-import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -67,7 +66,7 @@ public const val LIBRARY_BUTTON_FOCUS: String = "library-button"
 
 /**
  * The dock app the cinematic shelf shows: its [key] and [label], the [accent] colour of its art, its [position] among
- * the [count] dock apps (one dot each) and [lastOpened], the relative time Home last opened it, null if it never did.
+ * the [count] dock apps (one dot each) and [lastOpened], when Home last opened it, null if it never did.
  */
 @Immutable
 public data class Shelf(
@@ -76,7 +75,7 @@ public data class Shelf(
     val accent: Color,
     val position: Int,
     val count: Int,
-    val lastOpened: String?,
+    val lastOpened: OpenedAt?,
 )
 
 /** One-shot results the host handles outside the UI state. */
@@ -297,7 +296,7 @@ internal fun shelfFor(
             if (opened == null || now == null) {
                 null
             } else {
-                describeLastOpened(LocalDateTime.ofInstant(Instant.ofEpochMilli(opened), zone), now, hour24)
+                OpenedAt(opened, now.atZone(zone).toInstant().toEpochMilli(), hour24)
             },
     )
 }

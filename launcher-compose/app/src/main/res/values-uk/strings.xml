@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Головний екран</string>
+    <string name="dream_name">Годинник</string>
+    <string name="cant_open">Не вдалося відкрити %1$s</string>
+    <string name="not_available">Недоступно на цьому телевізорі</string>
+    <string name="no_inputs">Джерел не знайдено</string>
+    <string name="order_not_saved">Не вдалося зберегти новий порядок</string>
+    <string name="date_format">EEEE, d MMMM</string>
+</resources>

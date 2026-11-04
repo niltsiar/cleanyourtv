@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -122,8 +123,10 @@ internal fun CinematicShelf(
 
 /** "Last opened <time>" with the time in white; a space when there is none, which keeps the line's height. */
 @Composable
-private fun lastOpenedLine(relative: String?): AnnotatedString {
-    if (relative == null) return AnnotatedString(" ")
+private fun lastOpenedLine(opened: OpenedAt?): AnnotatedString {
+    if (opened == null) return AnnotatedString(" ")
+    val context = LocalContext.current
+    val relative = remember(opened) { describeLastOpened(context, opened) }
     val text = stringResource(R.string.last_opened, relative)
     val at = text.indexOf(relative)
     return remember(text, relative) {

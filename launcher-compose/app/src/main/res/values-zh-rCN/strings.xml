@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">主屏幕</string>
+    <string name="dream_name">时钟</string>
+    <string name="cant_open">无法打开 %1$s</string>
+    <string name="not_available">此电视不支持该功能</string>
+    <string name="no_inputs">未找到输入源</string>
+    <string name="order_not_saved">无法保存新顺序</string>
+    <string name="date_format">M月d日 EEEE</string>
+</resources>

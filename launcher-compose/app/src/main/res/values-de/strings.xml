@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Home</string>
+    <string name="dream_name">Uhr</string>
+    <string name="cant_open">%1$s lässt sich nicht öffnen</string>
+    <string name="not_available">Auf diesem TV nicht verfügbar</string>
+    <string name="no_inputs">Keine Quellen gefunden</string>
+    <string name="order_not_saved">Neue Reihenfolge konnte nicht gespeichert werden</string>
+    <string name="date_format">EEEE, d. MMMM</string>
+</resources>

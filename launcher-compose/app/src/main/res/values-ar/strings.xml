@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">الرئيسية</string>
+    <string name="dream_name">الساعة</string>
+    <string name="cant_open">تعذّر فتح %1$s</string>
+    <string name="not_available">غير متاح على هذا التلفاز</string>
+    <string name="no_inputs">لم يتم العثور على مدخلات</string>
+    <string name="order_not_saved">تعذّر حفظ الترتيب الجديد</string>
+    <string name="date_format">EEEE  d MMMM</string>
+</resources>

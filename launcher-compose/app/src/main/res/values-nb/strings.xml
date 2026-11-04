@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Hjem</string>
+    <string name="dream_name">Klokke</string>
+    <string name="cant_open">Kan ikke åpne %1$s</string>
+    <string name="not_available">Ikke tilgjengelig på denne TV-en</string>
+    <string name="no_inputs">Fant ingen innganger</string>
+    <string name="order_not_saved">Kunne ikke lagre den nye rekkefølgen</string>
+    <string name="date_format">EEEE d. MMMM</string>
+</resources>

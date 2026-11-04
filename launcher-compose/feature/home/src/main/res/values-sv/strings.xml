@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="inputs">Ingångar</string>
+  <string name="live_tv">Live-TV</string>
+  <string name="more_inputs">Fler ingångar</string>
+  <string name="input_connected">Ansluten</string>
+  <string name="input_not_connected">Ingen enhet</string>
+  <string name="wifi">Wi-Fi</string>
+  <string name="settings">Inställningar</string>
+  <string name="library_entry">Appbibliotek</string>
+  <string name="ethernet">Ethernet</string>
+  <string name="offline">Frånkopplad</string>
+  <string name="vpn">VPN</string>
+  <string name="vpn_off">VPN av</string>
+  <string name="good_morning">God morgon</string>
+  <string name="good_afternoon">God eftermiddag</string>
+  <string name="good_evening">God kväll</string>
+  <string name="good_forenoon">God förmiddag</string>
+  <string name="good_night">God natt</string>
+  <string name="greeting_with_name">%1$s, %2$s</string>
+  <string name="last_opened">Senast öppnad %1$s</string>
+  <string name="app_info">Appinfo</string>
+  <string name="native_settings">Tillverkarens inställningar</string>
+  <string name="tile_add_to_dock">Lägg till i favoritraden</string>
+  <string name="tile_replace_in_dock">Ersätt med en annan app</string>
+  <string name="tile_move">Flytta</string>
+  <string name="tile_remove_from_home">Ta bort från startskärmen</string>
+  <string name="library_save_failed">Kunde inte spara genvägen</string>
+  <string name="dock_edit">Redigera favoritraden</string>
+  <string name="reorder">Ändra ordning på appar</string>
+  <string name="reorder_hint">OK plockar upp en app, pilarna flyttar den, Tillbaka placerar den. Tillbaka igen för att avsluta.</string>
+  <string name="dock_edit_hint">Välj platsen i favoritraden som du vill ändra och tryck OK. Tillbaka för att avsluta.</string>
+  <string name="dock_edit_pick_app">Välj nu appen som ska ligga där och tryck OK. Tillbaka för att välja en annan plats.</string>
+  <string name="dock_edit_pick_place">Välj en plats i favoritraden för appen och tryck OK. Tillbaka för att avbryta.</string>
+</resources>

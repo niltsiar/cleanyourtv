@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Màn hình chính</string>
+    <string name="dream_name">Đồng hồ</string>
+    <string name="cant_open">Không mở được %1$s</string>
+    <string name="not_available">TV này không hỗ trợ</string>
+    <string name="no_inputs">Không tìm thấy nguồn vào</string>
+    <string name="order_not_saved">Không lưu được thứ tự mới</string>
+    <string name="date_format">EEEE, d MMMM</string>
+</resources>

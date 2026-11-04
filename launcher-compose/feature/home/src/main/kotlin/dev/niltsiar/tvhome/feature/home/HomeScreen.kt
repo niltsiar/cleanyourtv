@@ -1,5 +1,6 @@
 package dev.niltsiar.tvhome.feature.home
 
+import android.text.format.DateFormat
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
@@ -69,6 +70,7 @@ import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.node.LayoutModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
@@ -107,7 +109,6 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.util.Locale
 
 internal val ScreenMargin = 40.dp
 private val TileGap = 14.dp
@@ -785,6 +786,23 @@ private fun HomeScreenLibraryPillPreview() {
     HomePreview(GlassKind.Refractive, focused = LIBRARY_FOCUS, appCount = 9, libraryPill = true)
 }
 
+@Preview(name = "Home 1080p Spanish", device = "spec:width=1920px,height=1080px,dpi=320", locale = "es-rES", showBackground = true)
+@Composable
+private fun HomeScreenSpanishPreview() {
+    HomePreview(GlassKind.Refractive)
+}
+
+@Preview(name = "Home 1080p reorder Spanish", device = "spec:width=1920px,height=1080px,dpi=320", locale = "es-rES", showBackground = true)
+@Composable
+private fun HomeScreenReorderSpanishPreview() {
+    val others = PreviewNames.map { "example.${it.lowercase()}" } - "example.music"
+    HomePreview(
+        GlassKind.Refractive,
+        reorder = ReorderView(carried = "example.music", dimmed = others.toSet(), hint = ReorderHint.DockChooseApp),
+        focused = "example.music",
+    )
+}
+
 @Preview(name = "Home 1080p flat", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
 @Composable
 private fun HomeScreenFlatPreview() {
@@ -839,7 +857,9 @@ private fun HomePreview(
                 AppEntry(key = id, packageName = id, label = name, accent = Color(PreviewAccents[i % PreviewAccents.size]))
             }
         val layout = HomeLayout(columns = 6, rowsBelowDock = 0, singleRow = false, fillDock = true, libraryPill = libraryPill)
-        val header = HeaderStyle(hour24 = false, datePattern = "EEEE  d MMMM", greetingName = "Sam")
+        val locale = LocalConfiguration.current.locales[0]
+        val header =
+            HeaderStyle(hour24 = false, datePattern = DateFormat.getBestDateTimePattern(locale, "EEEEdMMMM"), greetingName = "Sam")
         val network = NetworkState(NetworkLink.Wifi, ssid = "Living room", validated = true)
         val wallpaper = Wallpaper(picture = ImageBitmap.imageResource(R.drawable.wallpaper), caption = "Red Spider Nebula · Hubble")
         val now = LocalDateTime.of(2026, 11, 3, 20, 15)
@@ -854,7 +874,7 @@ private fun HomePreview(
                 HomeApps(AppList(apps), layout),
                 now,
                 focused,
-                Locale.ENGLISH,
+                locale,
                 header,
                 network,
                 wallpaper = wallpaper,

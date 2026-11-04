@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Hem</string>
+    <string name="dream_name">Klocka</string>
+    <string name="cant_open">Kan inte öppna %1$s</string>
+    <string name="not_available">Inte tillgängligt på den här TV:n</string>
+    <string name="no_inputs">Inga ingångar hittades</string>
+    <string name="order_not_saved">Kunde inte spara den nya ordningen</string>
+    <string name="date_format">EEEE d MMMM</string>
+</resources>

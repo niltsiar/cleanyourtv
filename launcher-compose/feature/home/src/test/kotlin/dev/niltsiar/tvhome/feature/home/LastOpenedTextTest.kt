@@ -2,16 +2,28 @@ package dev.niltsiar.tvhome.feature.home
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
 import java.time.LocalDateTime
+import java.time.ZoneId
+import java.util.Locale
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [31])
 class LastOpenedTextTest {
+    private val zone = ZoneId.systemDefault()
     private val now = LocalDateTime.of(2026, 11, 3, 20, 15)
 
     private fun describe(
         opened: LocalDateTime,
         hour24: Boolean = false,
         at: LocalDateTime = now,
-    ) = describeLastOpened(opened, at, hour24)
+        locale: Locale = Locale.ENGLISH,
+    ) = describeLastOpened(RuntimeEnvironment.getApplication(), OpenedAt(millis(opened), millis(at), hour24), locale, zone)
+
+    private fun millis(time: LocalDateTime) = time.atZone(zone).toInstant().toEpochMilli()
 
     @Test
     fun within_the_hour_it_counts_minutes() {
@@ -54,5 +66,15 @@ class LastOpenedTextTest {
         assertEquals("today, 12:10 AM", describe(midnight))
         assertEquals("today, 12:00", describe(noon, hour24 = true))
         assertEquals("today, 00:10", describe(midnight, hour24 = true))
+    }
+
+    @Test
+    @Config(qualifiers = "es-rES")
+    fun spanish_gets_the_words_of_the_tvs_language() {
+        val spanish = Locale.forLanguageTag("es-ES")
+        Locale.setDefault(spanish)
+
+        assertEquals("hace 5 minutos", describe(now.minusMinutes(5), locale = spanish))
+        assertEquals("ayer, 21:40", describe(LocalDateTime.of(2026, 11, 2, 21, 40), hour24 = true, locale = spanish))
     }
 }

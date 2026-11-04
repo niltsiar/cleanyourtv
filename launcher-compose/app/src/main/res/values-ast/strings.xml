@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Aniciu</string>
+    <string name="dream_name">Reló</string>
+    <string name="cant_open">Nun se pue abrir %1$s</string>
+    <string name="not_available">Non disponible nesta TV</string>
+    <string name="no_inputs">Nun s\'atoparon entraes</string>
+    <string name="order_not_saved">Nun se pudo guardar el nuevu orde</string>
+    <string name="date_format">EEEE d MMMM</string>
+</resources>

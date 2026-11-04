@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="app_library">Libreria app</string>
+  <string name="library_empty">Nessuna app avviabile trovata</string>
+  <string name="library_on_home">In Home</string>
+  <string name="library_add_home">Aggiungi a Home</string>
+  <string name="library_remove_shortcut">Rimuovi da Home</string>
+  <string name="library_open">Apri</string>
+  <string name="library_app_info">Info app</string>
+  <string name="library_recent">Nuova · Aggiungi a Home</string>
+  <string name="library_hint_add">Premi per aggiungere a Home · Tieni premuto per le opzioni</string>
+  <string name="library_hint_open">Premi per aprire · Tieni premuto per le opzioni</string>
+  <plurals name="library_app_count">
+    <item quantity="one">%1$d app</item>
+    <item quantity="other">%1$d app</item>
+  </plurals>
+</resources>

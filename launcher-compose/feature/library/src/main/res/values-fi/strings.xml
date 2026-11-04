@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="app_library">Sovelluskirjasto</string>
+  <string name="library_empty">Käynnistettäviä sovelluksia ei löytynyt</string>
+  <string name="library_on_home">Kotinäkymässä</string>
+  <string name="library_add_home">Lisää kotinäkymään</string>
+  <string name="library_remove_shortcut">Poista kotinäkymästä</string>
+  <string name="library_open">Avaa</string>
+  <string name="library_app_info">Sovelluksen tiedot</string>
+  <string name="library_recent">Uusi · Lisää kotinäkymään</string>
+  <string name="library_hint_add">Lisää kotinäkymään painamalla · Pidä pohjassa: valinnat</string>
+  <string name="library_hint_open">Avaa painamalla · Pidä pohjassa: valinnat</string>
+  <plurals name="library_app_count">
+    <item quantity="one">%1$d sovellus</item>
+    <item quantity="other">%1$d sovellusta</item>
+  </plurals>
+</resources>

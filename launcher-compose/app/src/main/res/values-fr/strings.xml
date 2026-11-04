@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Accueil</string>
+    <string name="dream_name">Horloge</string>
+    <string name="cant_open">Impossible d\'ouvrir %1$s</string>
+    <string name="not_available">Indisponible sur cette TV</string>
+    <string name="no_inputs">Aucune source trouvée</string>
+    <string name="order_not_saved">Impossible d\'enregistrer le nouvel ordre</string>
+    <string name="date_format">EEEE d MMMM</string>
+</resources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Bosh ekran</string>
+    <string name="dream_name">Soat</string>
+    <string name="cant_open">%1$s ochilmadi</string>
+    <string name="not_available">Bu televizorda mavjud emas</string>
+    <string name="no_inputs">Manbalar topilmadi</string>
+    <string name="order_not_saved">Yangi tartib saqlanmadi</string>
+    <string name="date_format">EEEE  d-MMMM</string>
+</resources>

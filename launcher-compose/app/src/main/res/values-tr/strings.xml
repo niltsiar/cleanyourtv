@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ana Ekran</string>
+    <string name="dream_name">Saat</string>
+    <string name="cant_open">%1$s açılamıyor</string>
+    <string name="not_available">Bu TV’de kullanılamıyor</string>
+    <string name="no_inputs">Giriş Bulunamadı</string>
+    <string name="order_not_saved">Yeni sıra kaydedilemedi</string>
+    <string name="date_format">d MMMM EEEE</string>
+</resources>

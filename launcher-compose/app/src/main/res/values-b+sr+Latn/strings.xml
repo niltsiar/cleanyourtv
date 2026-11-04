@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Početni ekran</string>
+    <string name="dream_name">Sat</string>
+    <string name="cant_open">Nije moguće otvoriti %1$s</string>
+    <string name="not_available">Nije dostupno na ovom televizoru</string>
+    <string name="no_inputs">Nema pronađenih ulaza</string>
+    <string name="order_not_saved">Novi redosled nije sačuvan</string>
+    <string name="date_format">EEEE, d. MMMM</string>
+</resources>

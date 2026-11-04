@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="inputs">ইনপুট</string>
+  <string name="live_tv">লাইভ টিভি</string>
+  <string name="more_inputs">আরও ইনপুট</string>
+  <string name="input_connected">কানেক্টেড</string>
+  <string name="input_not_connected">কোনো ডিভাইস নেই</string>
+  <string name="wifi">ওয়াই-ফাই</string>
+  <string name="settings">সেটিংস</string>
+  <string name="library_entry">অ্যাপ লাইব্রেরি</string>
+  <string name="ethernet">ইথারনেট</string>
+  <string name="offline">অফলাইন</string>
+  <string name="vpn">VPN</string>
+  <string name="vpn_off">VPN বন্ধ</string>
+  <string name="good_morning">সুপ্রভাত</string>
+  <string name="good_afternoon">শুভ অপরাহ্ন</string>
+  <string name="good_evening">শুভ সন্ধ্যা</string>
+  <string name="good_night">শুভ রাত্রি</string>
+  <string name="greeting_with_name">%1$s, %2$s</string>
+  <string name="app_info">অ্যাপের তথ্য</string>
+  <string name="native_settings">নেটিভ সেটিংস</string>
+  <string name="tile_add_to_dock">ডকে যোগ করুন</string>
+  <string name="tile_replace_in_dock">অন্য অ্যাপ দিয়ে বদলান</string>
+  <string name="tile_move">সরান</string>
+  <string name="tile_remove_from_home">হোম থেকে সরান</string>
+  <string name="library_save_failed">শর্টকাটটি সেভ করা যায়নি</string>
+  <string name="dock_edit">এডিট ডক</string>
+  <string name="reorder">অ্যাপ সাজান</string>
+  <string name="reorder_hint">OK দিয়ে অ্যাপ তুলুন, তীর দিয়ে সরান, Back দিয়ে বসান। শেষ করতে আবার Back চাপুন।</string>
+  <string name="dock_edit_hint">ডকের যে জায়গাটি বদলাতে চান সেটি বেছে OK চাপুন। শেষ হলে Back চাপুন।</string>
+  <string name="dock_edit_pick_app">ওই জায়গায় যে অ্যাপ রাখতে চান সেটি বেছে OK চাপুন। অন্য জায়গা বাছতে Back চাপুন।</string>
+  <string name="dock_edit_pick_place">এই অ্যাপের জন্য ডকের একটি জায়গা বেছে OK চাপুন। বাতিল করতে Back চাপুন।</string>
+</resources>

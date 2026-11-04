@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="inputs">Lähteet</string>
+  <string name="live_tv">TV-kanavat</string>
+  <string name="more_inputs">Lisää lähteitä</string>
+  <string name="input_connected">Yhdistetty</string>
+  <string name="input_not_connected">Ei laitetta</string>
+  <string name="wifi">Wi-Fi</string>
+  <string name="settings">Asetukset</string>
+  <string name="library_entry">Sovelluskirjasto</string>
+  <string name="ethernet">Ethernet</string>
+  <string name="offline">Ei yhteyttä</string>
+  <string name="vpn">VPN</string>
+  <string name="vpn_off">VPN pois päältä</string>
+  <string name="good_morning">Hyvää huomenta</string>
+  <string name="good_afternoon">Hyvää päivää</string>
+  <string name="good_evening">Hyvää iltaa</string>
+  <string name="good_night">Hyvää yötä</string>
+  <string name="greeting_with_name">%1$s, %2$s</string>
+  <string name="last_opened">Viimeksi avattu %1$s</string>
+  <string name="app_info">Sovelluksen tiedot</string>
+  <string name="native_settings">Valmistajan asetukset</string>
+  <string name="tile_add_to_dock">Lisää telakkaan</string>
+  <string name="tile_replace_in_dock">Korvaa toisella sovelluksella</string>
+  <string name="tile_move">Siirrä</string>
+  <string name="tile_remove_from_home">Poista kotinäkymästä</string>
+  <string name="library_save_failed">Pikakuvaketta ei voitu tallentaa</string>
+  <string name="dock_edit">Muokkaa telakkaa</string>
+  <string name="reorder">Järjestä sovellukset</string>
+  <string name="reorder_hint">OK nostaa sovelluksen, nuolet siirtävät sitä ja Takaisin laskee sen paikalleen. Lopeta painamalla Takaisin uudelleen.</string>
+  <string name="dock_edit_hint">Valitse muutettava telakan paikka ja paina OK. Takaisin lopettaa.</string>
+  <string name="dock_edit_pick_app">Valitse nyt sinne tuleva sovellus ja paina OK. Takaisin valitsee toisen paikan.</string>
+  <string name="dock_edit_pick_place">Valitse telakan paikka tälle sovellukselle ja paina OK. Takaisin peruuttaa.</string>
+</resources>

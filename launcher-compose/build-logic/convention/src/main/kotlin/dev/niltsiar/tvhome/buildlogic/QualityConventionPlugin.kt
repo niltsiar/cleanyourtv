@@ -51,6 +51,8 @@ private fun Lint.configureLint() {
     abortOnError = true
     warningsAsErrors = false
     checkDependencies = false
+    // A language ported from the reference launcher can lack strings; they fall back to English.
+    informational += "MissingTranslation"
     textReport = true
     htmlReport = false
     xmlReport = false

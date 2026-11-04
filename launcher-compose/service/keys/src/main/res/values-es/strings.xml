@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="not_available">No disponible en este TV</string>
+    <string name="key_service_name">Botones del mando</string>
+    <string name="key_service_description">Hace que los botones Inicio, Entrada, Ajustes y de aplicaciones del mando abran este lanzador y las apps que has elegido.</string>
+</resources>

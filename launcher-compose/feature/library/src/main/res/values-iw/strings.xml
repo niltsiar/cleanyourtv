@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="app_library">ספריית אפליקציות</string>
+  <string name="library_empty">לא נמצאו אפליקציות שניתן לפתוח</string>
+  <string name="library_on_home">במסך הבית</string>
+  <string name="library_add_home">הוספה למסך הבית</string>
+  <string name="library_remove_shortcut">הסרה ממסך הבית</string>
+  <string name="library_open">פתיחה</string>
+  <string name="library_app_info">פרטי האפליקציה</string>
+  <string name="library_recent">חדשה · הוספה למסך הבית</string>
+  <string name="library_hint_add">לחיצה להוספה למסך הבית · לחיצה ממושכת לאפשרויות</string>
+  <string name="library_hint_open">לחיצה לפתיחה · לחיצה ממושכת לאפשרויות</string>
+  <plurals name="library_app_count">
+    <item quantity="one">אפליקציה אחת</item>
+    <item quantity="two">שתי אפליקציות</item>
+    <item quantity="other">%1$d אפליקציות</item>
+  </plurals>
+</resources>

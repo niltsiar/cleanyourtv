@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="inputs">Ingressi</string>
+  <string name="live_tv">TV in diretta</string>
+  <string name="more_inputs">Altri ingressi</string>
+  <string name="input_connected">Collegato</string>
+  <string name="input_not_connected">Nessun dispositivo</string>
+  <string name="wifi">Wi-Fi</string>
+  <string name="settings">Impostazioni</string>
+  <string name="library_entry">Libreria app</string>
+  <string name="ethernet">Ethernet</string>
+  <string name="offline">Offline</string>
+  <string name="vpn">VPN</string>
+  <string name="vpn_off">VPN disattivata</string>
+  <string name="good_morning">Buongiorno</string>
+  <string name="good_afternoon">Buon pomeriggio</string>
+  <string name="good_evening">Buonasera</string>
+  <string name="good_forenoon">Buona tarda mattinata</string>
+  <string name="good_night">Buonanotte</string>
+  <string name="greeting_with_name">%1$s, %2$s</string>
+  <string name="last_opened">Ultima apertura: %1$s</string>
+  <string name="app_info">Info app</string>
+  <string name="native_settings">Impostazioni del produttore</string>
+  <string name="tile_add_to_dock">Aggiungi al dock</string>
+  <string name="tile_replace_in_dock">Sostituisci con un\'altra app</string>
+  <string name="tile_move">Sposta</string>
+  <string name="tile_remove_from_home">Rimuovi da Home</string>
+  <string name="library_save_failed">Impossibile salvare il collegamento</string>
+  <string name="dock_edit">Modifica dock</string>
+  <string name="reorder">Riordina le app</string>
+  <string name="reorder_hint">OK prende un\'app, le frecce la spostano, Indietro la posiziona. Ancora Indietro per finire.</string>
+  <string name="dock_edit_hint">Scegli il posto del dock da cambiare e premi OK. Indietro per finire.</string>
+  <string name="dock_edit_pick_app">Ora scegli l\'app da mettere lì e premi OK. Indietro per scegliere un altro posto.</string>
+  <string name="dock_edit_pick_place">Scegli il posto del dock per questa app e premi OK. Indietro per annullare.</string>
+</resources>

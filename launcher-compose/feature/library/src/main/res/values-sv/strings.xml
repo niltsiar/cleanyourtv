@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="app_library">Appbibliotek</string>
+  <string name="library_empty">Inga appar som kan öppnas hittades</string>
+  <string name="library_on_home">På startskärmen</string>
+  <string name="library_add_home">Lägg till på startskärmen</string>
+  <string name="library_remove_shortcut">Ta bort från startskärmen</string>
+  <string name="library_open">Öppna</string>
+  <string name="library_app_info">Appinfo</string>
+  <string name="library_recent">Ny · Lägg till på startskärmen</string>
+  <string name="library_hint_add">Tryck för att lägga till på startskärmen · Håll in för fler val</string>
+  <string name="library_hint_open">Tryck för att öppna · Håll in för fler val</string>
+  <plurals name="library_app_count">
+    <item quantity="one">%1$d app</item>
+    <item quantity="other">%1$d appar</item>
+  </plurals>
+</resources>

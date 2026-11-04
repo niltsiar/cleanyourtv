@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Koti</string>
+    <string name="dream_name">Kello</string>
+    <string name="cant_open">Ei voitu avata: %1$s</string>
+    <string name="not_available">Ei käytettävissä tässä televisiossa</string>
+    <string name="no_inputs">Lähteitä ei löytynyt</string>
+    <string name="order_not_saved">Uutta järjestystä ei voitu tallentaa</string>
+    <string name="date_format">EEEE d. MMMM</string>
+</resources>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="inputs">แหล่งสัญญาณ</string>
+  <string name="live_tv">ทีวีสด</string>
+  <string name="more_inputs">แหล่งสัญญาณเพิ่มเติม</string>
+  <string name="input_connected">เชื่อมต่อแล้ว</string>
+  <string name="input_not_connected">ไม่มีอุปกรณ์</string>
+  <string name="wifi">Wi-Fi</string>
+  <string name="settings">ตั้งค่า</string>
+  <string name="library_entry">คลังแอป</string>
+  <string name="ethernet">อีเทอร์เน็ต</string>
+  <string name="offline">ออฟไลน์</string>
+  <string name="good_morning">สวัสดีตอนเช้า</string>
+  <string name="good_afternoon">สวัสดีตอนบ่าย</string>
+  <string name="good_evening">สวัสดีตอนเย็น</string>
+  <string name="good_night">สวัสดียามค่ำคืน</string>
+  <string name="greeting_with_name">%1$s %2$s</string>
+  <string name="app_info">ข้อมูลแอป</string>
+  <string name="native_settings">การตั้งค่าของผู้ผลิต</string>
+  <string name="tile_add_to_dock">เพิ่มในแถบแอป</string>
+  <string name="tile_replace_in_dock">แทนที่ด้วยแอปอื่น</string>
+  <string name="tile_move">ย้าย</string>
+  <string name="tile_remove_from_home">นำออกจากหน้าหลัก</string>
+  <string name="library_save_failed">บันทึกทางลัดไม่สำเร็จ</string>
+  <string name="dock_edit">แก้ไขแถบแอป</string>
+  <string name="reorder">จัดเรียงแอป</string>
+  <string name="reorder_hint">กด OK เพื่อเลือกแอป ใช้ลูกศรเพื่อย้าย กดย้อนกลับเพื่อวาง กดย้อนกลับอีกครั้งเพื่อเสร็จสิ้น</string>
+  <string name="dock_edit_hint">เลือกตำแหน่งในแถบแอปที่ต้องการเปลี่ยน แล้วกด OK กดย้อนกลับเพื่อเสร็จสิ้น</string>
+  <string name="dock_edit_pick_app">จากนั้นเลือกแอปที่จะวางตรงนั้น แล้วกด OK กดย้อนกลับเพื่อเลือกตำแหน่งอื่น</string>
+  <string name="dock_edit_pick_place">เลือกตำแหน่งในแถบแอปสำหรับแอปนี้ แล้วกด OK กดย้อนกลับเพื่อยกเลิก</string>
+</resources>

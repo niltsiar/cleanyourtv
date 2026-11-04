@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="inputs">Nguồn vào</string>
+  <string name="live_tv">Truyền hình</string>
+  <string name="more_inputs">Nguồn vào khác</string>
+  <string name="input_connected">Đã kết nối</string>
+  <string name="input_not_connected">Không có thiết bị</string>
+  <string name="wifi">Wi-Fi</string>
+  <string name="settings">Cài đặt</string>
+  <string name="library_entry">Thư viện ứng dụng</string>
+  <string name="ethernet">Ethernet</string>
+  <string name="offline">Mất mạng</string>
+  <string name="vpn">VPN</string>
+  <string name="vpn_off">VPN tắt</string>
+  <string name="good_morning">Xin chào</string>
+  <string name="good_afternoon">Xin chào</string>
+  <string name="good_evening">Xin chào</string>
+  <string name="good_night">Xin chào</string>
+  <string name="greeting_with_name">%1$s, %2$s</string>
+  <string name="last_opened">Mở lần cuối %1$s</string>
+  <string name="app_info">Thông tin ứng dụng</string>
+  <string name="native_settings">Cài đặt nhà sản xuất</string>
+  <string name="tile_add_to_dock">Thêm vào dock</string>
+  <string name="tile_replace_in_dock">Thay bằng ứng dụng khác</string>
+  <string name="tile_move">Di chuyển</string>
+  <string name="tile_remove_from_home">Bỏ khỏi màn hình chính</string>
+  <string name="library_save_failed">Không lưu được lối tắt</string>
+  <string name="dock_edit">Chỉnh sửa dock</string>
+  <string name="reorder">Sắp xếp ứng dụng</string>
+  <string name="reorder_hint">Bấm OK để nhấc ứng dụng, phím mũi tên để di chuyển, Back để đặt xuống. Bấm Back lần nữa để xong.</string>
+  <string name="dock_edit_hint">Chọn vị trí trên dock cần đổi rồi nhấn OK. Nhấn Quay lại để kết thúc.</string>
+  <string name="dock_edit_pick_app">Giờ chọn ứng dụng để đặt vào đó rồi nhấn OK. Nhấn Quay lại để chọn vị trí khác.</string>
+  <string name="dock_edit_pick_place">Chọn vị trí trên dock cho ứng dụng này rồi nhấn OK. Nhấn Quay lại để hủy.</string>
+</resources>

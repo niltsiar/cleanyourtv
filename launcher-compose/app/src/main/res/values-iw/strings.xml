@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">בית</string>
+    <string name="dream_name">שעון</string>
+    <string name="cant_open">לא ניתן לפתוח את %1$s</string>
+    <string name="not_available">לא זמין בטלוויזיה זו</string>
+    <string name="no_inputs">לא נמצאו כניסות</string>
+    <string name="order_not_saved">לא ניתן לשמור את הסדר החדש</string>
+    <string name="date_format">EEEE  d בMMMM</string>
+</resources>

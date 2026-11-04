@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Hjem</string>
+    <string name="dream_name">Ur</string>
+    <string name="cant_open">Kan ikke åbne %1$s</string>
+    <string name="not_available">Ikke tilgængelig på dette TV</string>
+    <string name="no_inputs">Ingen indgange fundet</string>
+    <string name="date_format">EEEE d. MMMM</string>
+</resources>

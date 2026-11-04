@@ -62,9 +62,13 @@ class ShelfStateTest {
 
     @Test
     fun the_last_opened_line_is_the_relative_time_of_that_tile_only() {
-        val fiveMinutesAgo = Evening.toEpochSecond(ZoneOffset.UTC) * 1000L - 5 * 60_000L
+        val now = Evening.toEpochSecond(ZoneOffset.UTC) * 1000L
+        val fiveMinutesAgo = now - 5 * 60_000L
 
-        assertEquals("5 minutes ago", shelf("pkg.2", lastOpened = mapOf("pkg.2" to fiveMinutesAgo))!!.lastOpened)
+        assertEquals(
+            OpenedAt(fiveMinutesAgo, now, hour24 = true),
+            shelf("pkg.2", lastOpened = mapOf("pkg.2" to fiveMinutesAgo))!!.lastOpened,
+        )
         assertNull(shelf("pkg.3", lastOpened = mapOf("pkg.2" to fiveMinutesAgo))!!.lastOpened)
     }
 

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">홈</string>
+    <string name="dream_name">시계</string>
+    <string name="cant_open">%1$s 열 수 없음</string>
+    <string name="not_available">이 TV에서 사용할 수 없음</string>
+    <string name="no_inputs">입력 없음</string>
+    <string name="order_not_saved">새 순서를 저장할 수 없음</string>
+    <string name="date_format">M월 d일 EEEE</string>
+</resources>

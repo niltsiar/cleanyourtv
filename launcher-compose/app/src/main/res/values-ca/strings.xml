@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Inici</string>
+    <string name="dream_name">Rellotge</string>
+    <string name="cant_open">No s\'ha pogut obrir %1$s</string>
+    <string name="not_available">No disponible en aquest televisor</string>
+    <string name="no_inputs">No s\'ha trobat cap entrada</string>
+    <string name="order_not_saved">No s\'ha pogut desar el nou ordre</string>
+</resources>

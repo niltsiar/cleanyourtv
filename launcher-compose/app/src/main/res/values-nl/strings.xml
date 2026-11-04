@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Home</string>
+    <string name="dream_name">Klok</string>
+    <string name="cant_open">Kan %1$s niet openen</string>
+    <string name="not_available">Niet beschikbaar op deze tv</string>
+    <string name="no_inputs">Geen ingangen gevonden</string>
+    <string name="order_not_saved">Kon de nieuwe volgorde niet opslaan</string>
+    <string name="date_format">EEEE d MMMM</string>
+</resources>

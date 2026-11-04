@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="inputs">Manbalar</string>
+  <string name="live_tv">TV kanallar</string>
+  <string name="more_inputs">Boshqa manbalar</string>
+  <string name="input_connected">Ulangan</string>
+  <string name="input_not_connected">Qurilma yoʻq</string>
+  <string name="wifi">Wi-Fi</string>
+  <string name="settings">Sozlamalar</string>
+  <string name="library_entry">Ilovalar kutubxonasi</string>
+  <string name="ethernet">Ethernet</string>
+  <string name="offline">Internet yoʻq</string>
+  <string name="vpn">VPN</string>
+  <string name="vpn_off">VPN oʻchiq</string>
+  <string name="good_morning">Xayrli tong</string>
+  <string name="good_afternoon">Xayrli kun</string>
+  <string name="good_evening">Xayrli kech</string>
+  <string name="good_night">Xayrli tun</string>
+  <string name="greeting_with_name">%1$s, %2$s</string>
+  <string name="last_opened">Oxirgi marta ochilgan: %1$s</string>
+  <string name="app_info">Ilova haqida</string>
+  <string name="native_settings">Ishlab chiqaruvchi sozlamalari</string>
+  <string name="tile_add_to_dock">Dockga qoʻshish</string>
+  <string name="tile_replace_in_dock">Boshqa ilova bilan almashtirish</string>
+  <string name="tile_move">Koʻchirish</string>
+  <string name="tile_remove_from_home">Bosh ekrandan olib tashlash</string>
+  <string name="library_save_failed">Yorliq saqlanmadi</string>
+  <string name="dock_edit">Dockni tahrirlash</string>
+  <string name="reorder">Ilovalar tartibini oʻzgartirish</string>
+  <string name="reorder_hint">OK ilovani ushlaydi, strelkalar suradi, Back joyiga qoʻyadi. Tugatish uchun yana Back.</string>
+  <string name="dock_edit_hint">Oʻzgartiriladigan joyni tanlab, OK ni bosing. Tugatish uchun Back.</string>
+  <string name="dock_edit_pick_app">Endi u yerga qoʻyiladigan ilovani tanlab, OK ni bosing. Boshqa joy tanlash uchun Back.</string>
+  <string name="dock_edit_pick_place">Bu ilova uchun dockdagi joyni tanlab, OK ni bosing. Bekor qilish uchun Back.</string>
+</resources>

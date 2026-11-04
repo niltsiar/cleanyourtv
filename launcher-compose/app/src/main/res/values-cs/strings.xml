@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Domů</string>
+    <string name="dream_name">Hodiny</string>
+    <string name="cant_open">Nelze otevřít: %1$s</string>
+    <string name="not_available">Na této televizi není k dispozici</string>
+    <string name="no_inputs">Nenašly se žádné vstupy</string>
+    <string name="order_not_saved">Nové pořadí se nepodařilo uložit</string>
+    <string name="date_format">EEEE d. MMMM</string>
+</resources>

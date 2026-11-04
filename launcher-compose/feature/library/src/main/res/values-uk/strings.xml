@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="app_library">Бібліотека застосунків</string>
+  <string name="library_empty">Не знайдено застосунків, які можна запустити</string>
+  <string name="library_on_home">На головному екрані</string>
+  <string name="library_add_home">Додати на головний екран</string>
+  <string name="library_remove_shortcut">Прибрати з головного екрана</string>
+  <string name="library_open">Відкрити</string>
+  <string name="library_app_info">Про застосунок</string>
+  <string name="library_recent">Новий · Додати на головний екран</string>
+  <string name="library_hint_add">Натиснути: додати на головний екран · Утримати: опції</string>
+  <string name="library_hint_open">Натиснути: відкрити · Утримати: опції</string>
+  <plurals name="library_app_count">
+    <item quantity="one">%1$d застосунок</item>
+    <item quantity="few">%1$d застосунки</item>
+    <item quantity="many">%1$d застосунків</item>
+    <item quantity="other">%1$d застосунка</item>
+  </plurals>
+</resources>

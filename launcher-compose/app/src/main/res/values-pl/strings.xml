@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ekran główny</string>
+    <string name="dream_name">Zegar</string>
+    <string name="cant_open">Nie można otworzyć: %1$s</string>
+    <string name="not_available">Niedostępne na tym telewizorze</string>
+    <string name="no_inputs">Nie znaleziono wejść</string>
+    <string name="order_not_saved">Nie udało się zapisać nowej kolejności</string>
+    <string name="date_format">EEEE  d MMMM</string>
+</resources>

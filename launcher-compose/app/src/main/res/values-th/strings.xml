@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">หน้าแรก</string>
+    <string name="dream_name">นาฬิกา</string>
+    <string name="cant_open">เปิด %1$s ไม่ได้</string>
+    <string name="not_available">ทีวีเครื่องนี้ไม่รองรับ</string>
+    <string name="no_inputs">ไม่พบแหล่งสัญญาณ</string>
+    <string name="order_not_saved">บันทึกลำดับใหม่ไม่ได้</string>
+    <string name="date_format">EEEE  d MMMM</string>
+</resources>
