@@ -32,6 +32,9 @@ internal class HomeInput(
     /** Where the open menu hangs from, in the root's coordinates. */
     val anchor = mutableStateOf(Rect.Zero)
 
+    /** Where the Inputs button is, in the root's coordinates; zero until it is laid out or while it is hidden. */
+    var inputsBounds = Rect.Zero
+
     /** Whether focus is on a tile, set by the grid. A reorder mode takes OK only there. */
     var gridFocused = false
 
@@ -43,6 +46,12 @@ internal class HomeInput(
 
     /** The key of the tile that had focus last, for the column the pill's Up returns to. */
     var focusedKey: String? = null
+
+    /** OK on the Inputs button: its list hangs from the button. */
+    fun openInputs() {
+        anchor.value = inputsBounds
+        actions.onInputs()
+    }
 
     fun requester(target: String): FocusRequester = requesters.getOrPut(target) { FocusRequester() }
 

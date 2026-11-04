@@ -22,6 +22,9 @@
     <uses-permission
         android:name="android.permission.ACCESS_FINE_LOCATION"
         tools:ignore="CoarseFineLocation" />
+    <!-- YaOS (Yandex TV OS): HDMI, AV and the tuner all play in com.yandex.tv.live, whose activities require
+         this permission (protection level normal, so it is granted at install). Ignored on other TVs. -->
+    <uses-permission android:name="yandex.tv.permission.ACCESS_TV_SOURCE" />
 
     <queries>
         <!-- The standard settings handlers, so package visibility doesn't hide them and send the pills to a vendor fallback by mistake. -->
@@ -93,6 +96,23 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- The system input switcher (com.android.tv.action.VIEW_INPUTS), which is what the remote's Input button
+             becomes through the TV's Live TV app or a key service. Disabled here and switched on by MainActivity only
+             while handle_view_inputs is true, so a TV with its own input picker never sees a second candidate and a
+             chooser. -->
+        <activity
+            android:name=".InputsRequestActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="com.android.tv.action.VIEW_INPUTS" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
     </application>

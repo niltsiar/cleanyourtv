@@ -16,6 +16,9 @@ public class AppLauncher(
     private val context: Context,
     private val launchActions: Map<String, String>,
 ) {
+    /** The TV input a tile's launch_actions "input:<id>" switches to instead of opening the app; null for any other tile. */
+    public fun inputId(app: AppEntry): String? = inputIdOf(launchActions[app.packageName])
+
     /** True when the system accepted the launch. The library passes false for [useLaunchAction]: it opens the app itself. */
     public fun launch(
         app: AppEntry,
@@ -39,10 +42,21 @@ public class AppLauncher(
 }
 
 /**
+ * The TV input id of a launch_actions value "input:<id>", or null when the value is not one. An empty id ("input:"
+ * alone) is none: the tile launches normally rather than switching to nothing.
+ */
+internal fun inputIdOf(action: String?): String? =
+    action
+        ?.takeIf { it.startsWith(INPUT_PREFIX) }
+        ?.removePrefix(INPUT_PREFIX)
+        ?.trim()
+        ?.ifEmpty { null }
+
+/**
  * The tile's own activity by explicit component, started in a new task (with the leanback category for a TV app, so a
  * running app resumes). A launch_actions value replaces it when it resolves: `view:<uri>` sends ACTION_VIEW on the
  * uri, any other value is an intent action, both limited to the app's package and in a new task without
- * RESET_TASK_IF_NEEDED, which would only bring a running task of the app forward. `input:` values belong to Inputs.
+ * RESET_TASK_IF_NEEDED, which would only bring a running task of the app forward. `input:` values belong to [inputIdOf].
  */
 internal fun launchIntent(
     app: AppEntry,

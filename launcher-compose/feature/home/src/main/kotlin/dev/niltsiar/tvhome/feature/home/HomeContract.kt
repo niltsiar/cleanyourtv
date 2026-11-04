@@ -5,9 +5,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
+import dev.niltsiar.tvhome.core.model.InputTarget
+import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import java.time.Instant
 import java.time.LocalDateTime
@@ -20,7 +23,8 @@ import java.util.Locale
  * [topBarApps] are the top_bar_apps that can be opened. [wallpaper] is the picture behind Home and its caption.
  * [shelf] is the cinematic shelf's app while focus is on a dock tile, null otherwise and without cinematic_home.
  * [menu] is the open tile or Settings menu, [reorder] a reorder or edit-dock session, and [focusRequest] asks the
- * screen to move focus to a tile or the Settings button.
+ * screen to move focus to a tile or the Settings button. [inputs] is what the Inputs button and its list show, which
+ * is [inputsOpen] while the list hangs under the button; the button shows until the TV says it has nothing to list.
  */
 @Immutable
 public data class HomeUiState(
@@ -38,6 +42,8 @@ public data class HomeUiState(
     val menu: HomeMenu? = null,
     val reorder: ReorderView? = null,
     val focusRequest: FocusRequest? = null,
+    val inputs: InputsMenu = InputsMenu(available = true),
+    val inputsOpen: Boolean = false,
 )
 
 /** Focus goes to the tile with this key, or to the Settings button for [SETTINGS_FOCUS]. A new [token] asks again. */
@@ -49,6 +55,9 @@ public data class FocusRequest(
 
 /** The [FocusRequest.target] of the Settings button: a tile key always has a slash. */
 public const val SETTINGS_FOCUS: String = "settings"
+
+/** The [FocusRequest.target] of the Inputs button. */
+public const val INPUTS_FOCUS: String = "inputs"
 
 /** The [FocusRequest.target] of the library pill after the last row. */
 public const val LIBRARY_FOCUS: String = "library"
@@ -90,6 +99,14 @@ public sealed interface HomeEffect {
     /** Open the vendor settings app the Settings menu offers. */
     public data object OpenNativeSettings : HomeEffect
 
+    /** Switch to what an Inputs row stands for: a TV input, a Coocaa source, the source panel or Live TV. */
+    public data class OpenInput(
+        val target: InputTarget,
+    ) : HomeEffect
+
+    /** The Inputs button was pressed and the TV has nothing to list. */
+    public data object NoInputs : HomeEffect
+
     /** The new tile order could not be written. */
     public data object OrderNotSaved : HomeEffect
 
@@ -121,6 +138,8 @@ public class HomeSources(
     public val saveOrder: suspend (List<String>, Int) -> Boolean = { _, _ -> true },
     /** Takes a package off Home, where the library keeps that choice. False when it was not written. */
     public val removeFromHome: suspend (String) -> Boolean = { true },
+    /** The Inputs button and its list; never emits for a TV that cannot say, which leaves the button showing. */
+    public val inputs: Flow<InputsMenu> = emptyFlow(),
 )
 
 internal sealed interface HomeEvent {
@@ -143,6 +162,13 @@ internal sealed interface HomeEvent {
     ) : HomeEvent
 
     data object SettingsMenu : HomeEvent
+
+    /** OK on the Inputs button, or the system asked for the input list. */
+    data object OpenInputs : HomeEvent
+
+    data class PickInput(
+        val target: InputTarget,
+    ) : HomeEvent
 
     data class MenuPick(
         val row: MenuRow,
@@ -223,6 +249,8 @@ internal fun homeUiState(
     menu: HomeMenu? = null,
     reorder: ReorderView? = null,
     focusRequest: FocusRequest? = null,
+    inputs: InputsMenu = InputsMenu(available = true),
+    inputsOpen: Boolean = false,
 ): HomeUiState =
     HomeUiState(
         clock = now?.let { clockText(it, header.hour24, locale) }.orEmpty(),
@@ -239,6 +267,8 @@ internal fun homeUiState(
         menu = menu,
         reorder = reorder,
         focusRequest = focusRequest,
+        inputs = inputs,
+        inputsOpen = inputsOpen,
     )
 
 /**

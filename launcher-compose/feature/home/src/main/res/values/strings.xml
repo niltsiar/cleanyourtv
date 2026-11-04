@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   <string name="inputs">Inputs</string>
+  <string name="live_tv">Live TV</string>
+  <string name="more_inputs">More inputs</string>
+  <string name="input_connected">Connected</string>
+  <string name="input_not_connected">No device</string>
   <string name="wifi">Wi-Fi</string>
   <string name="settings">Settings</string>
   <string name="library_entry">App library</string>

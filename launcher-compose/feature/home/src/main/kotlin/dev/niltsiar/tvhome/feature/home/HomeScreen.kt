@@ -95,6 +95,11 @@ import dev.niltsiar.tvhome.core.designsystem.holdOk
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
+import dev.niltsiar.tvhome.core.model.InputConnection
+import dev.niltsiar.tvhome.core.model.InputIcon
+import dev.niltsiar.tvhome.core.model.InputRow
+import dev.niltsiar.tvhome.core.model.InputTarget
+import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.Wallpaper
@@ -142,6 +147,8 @@ private const val GRID_ITEMS_BEFORE = 2
  * [glass] is what glass surfaces draw from; the host shares it with the screens it shows over Home. The library pill
  * after the last row ([HomeLayout.libraryPill]) and the top bar's library button call [onOpenLibrary]; when
  * [libraryOpen] goes false again, focus returns to the one that opened it (the pill for any other way in).
+ * OK on the Inputs button hangs the TV's input list under it; Back closes the list and returns focus to the button.
+ * Each rise of [inputsRequests] (the system asked for the input list) opens the list once the button is laid out.
  */
 @Composable
 public fun HomeScreen(
@@ -162,6 +169,7 @@ public fun HomeScreen(
     glass: GlassState = rememberGlassState(),
     libraryOpen: () -> Boolean = { false },
     onOpenLibrary: () -> Unit = {},
+    inputsRequests: () -> Int = { 0 },
 ) {
     val dockFocus = remember { FocusRequester() }
     val currentState = rememberUpdatedState(state)
@@ -179,8 +187,22 @@ public fun HomeScreen(
         }
     val menu by remember { derivedStateOf { currentState.value().menu } }
     val hint by remember { derivedStateOf { currentState.value().reorder?.hint } }
-    val backOpen by remember { derivedStateOf { currentState.value().let { it.menu != null || it.reorder != null } } }
+    val inputsOpen by remember { derivedStateOf { currentState.value().inputsOpen } }
+    val backOpen by remember {
+        derivedStateOf { currentState.value().let { it.menu != null || it.reorder != null || it.inputsOpen } }
+    }
     BackHandler(enabled = backOpen) { currentActions.value.onBack() }
+    LaunchedEffect(Unit) {
+        var handled = 0
+        snapshotFlow(inputsRequests).collect { requests ->
+            if (requests <= handled) return@collect
+            handled = requests
+            // The button is placed by the second frame; a hidden button never is.
+            withFrameNanos { }
+            withFrameNanos { }
+            if (input.inputsBounds != Rect.Zero) input.openInputs()
+        }
+    }
     val gridState = rememberLazyGridState()
     val backdrop = rememberCinematicBackdrop(shelfLayout, shelf = { state().shelf }, heroArt = heroArt)
     val shelfHeight = if (shelfLayout.cinematic) CinematicShelfHeight else ShelfHeight
@@ -236,6 +258,15 @@ public fun HomeScreen(
         hint?.let { ReorderHintPill(glass, it, Modifier.align(Alignment.BottomCenter).padding(bottom = HintBottom)) }
         menu?.let { open ->
             key(open) { MenuOverlay(glass, open.rows, input.anchor, alignEnd = open.tileKey == null, onPick = input.actions.onMenuPick) }
+        }
+        if (inputsOpen) {
+            InputsMenu(
+                glass,
+                rows = { state().inputs.rows },
+                anchor = input.anchor,
+                animated = topBar.animated,
+                onPick = input.actions.onInputPick,
+            )
         }
     }
 }
@@ -726,6 +757,17 @@ private fun HomeScreenTileMenuPreview() {
     )
 }
 
+@Preview(name = "Home 1080p inputs", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
+@Composable
+private fun HomeScreenInputsPreview() {
+    HomePreview(
+        GlassKind.Refractive,
+        inputs = PreviewInputs,
+        inputsOpen = true,
+        menuAnchor = Rect(left = 1358f, top = 56f, right = 1438f, bottom = 136f),
+    )
+}
+
 @Preview(name = "Home 1080p reorder", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
 @Composable
 private fun HomeScreenReorderPreview() {
@@ -753,6 +795,21 @@ private val PreviewNames =
     listOf("Movies", "Music", "Games", "Photos", "Weather", "Browser", "Files", "Radio", "Clock", "Maps", "Notes", "Podcasts")
 private val PreviewAccents = listOf(0xFFE53935, 0xFFE91E63, 0xFF8E24AA, 0xFF3949AB, 0xFF1E88E5, 0xFF00ACC1)
 
+/** Four HDMI ports, the second with a CEC device on it, one of them empty, and Live TV. */
+private val PreviewInputs =
+    InputsMenu(
+        available = true,
+        rows =
+            listOf(
+                InputRow.Port("HDMI 1", InputIcon.Hdmi, InputConnection.Connected, InputTarget.TvInput("tv/.Hdmi/HW1")),
+                InputRow.Port("Apple TV \u00B7 HDMI 2", InputIcon.Hdmi, InputConnection.Connected, InputTarget.TvInput("tv/.Cec/HDMI2")),
+                InputRow.Port("HDMI 3", InputIcon.Hdmi, InputConnection.Disconnected, InputTarget.TvInput("tv/.Hdmi/HW3")),
+                InputRow.Port("HDMI 4", InputIcon.Hdmi, InputConnection.Connected, InputTarget.TvInput("tv/.Hdmi/HW4")),
+                InputRow.Separator(),
+                InputRow.LiveTv,
+            ),
+    )
+
 /** The softened art of a colourful app: a diagonal blend, as the 48 by 27 picture the shelf stretches over the screen. */
 private fun previewArt(accent: Color): ImageBitmap {
     val image = ImageBitmap(48, 27)
@@ -772,6 +829,8 @@ private fun HomePreview(
     focused: String = "example.movies",
     appCount: Int = PreviewNames.size,
     libraryPill: Boolean = false,
+    inputs: InputsMenu = InputsMenu(available = true),
+    inputsOpen: Boolean = false,
 ) {
     TvTheme(glassKind = glassKind) {
         val apps =
@@ -804,6 +863,8 @@ private fun HomePreview(
                 menu = menu,
                 reorder = reorder,
                 focusRequest = FocusRequest(focused, 1),
+                inputs = inputs,
+                inputsOpen = inputsOpen,
             )
         val art = remember { previewArt(Color(PreviewAccents[0])) }
         HomeScreen(

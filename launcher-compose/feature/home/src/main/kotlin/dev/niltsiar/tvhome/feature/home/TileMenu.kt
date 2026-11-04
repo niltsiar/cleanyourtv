@@ -1,6 +1,7 @@
 package dev.niltsiar.tvhome.feature.home
 
 import androidx.compose.runtime.Immutable
+import dev.niltsiar.tvhome.core.model.InputTarget
 
 /** One row of the tile menu or the Settings menu. */
 public enum class MenuRow {
@@ -30,6 +31,9 @@ public class HomeActions(
     /** A tile asks for its menu: [held] is true for a held OK, false for the MENU key. */
     public val onTileMenu: (key: String, held: Boolean) -> Unit = { _, _ -> },
     public val onSettingsMenu: () -> Unit = {},
+    /** OK on the Inputs button. */
+    public val onInputs: () -> Unit = {},
+    public val onInputPick: (InputTarget) -> Unit = {},
     public val onMenuPick: (MenuRow) -> Unit = {},
     /** Back, while a menu or a mode is open. */
     public val onBack: () -> Unit = {},

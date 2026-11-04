@@ -8,6 +8,9 @@ import dev.niltsiar.tvhome.data.apps.AppLauncher
 import dev.niltsiar.tvhome.data.apps.LastOpened
 import dev.niltsiar.tvhome.data.apps.LibraryCatalog
 import dev.niltsiar.tvhome.data.apps.PackageManagerAppsProvider
+import dev.niltsiar.tvhome.data.inputs.InputLauncher
+import dev.niltsiar.tvhome.data.inputs.InputsProvider
+import dev.niltsiar.tvhome.data.inputs.OpenOnStart
 import dev.niltsiar.tvhome.data.system.NetworkMonitor
 import dev.niltsiar.tvhome.data.system.SystemSettings
 import dev.niltsiar.tvhome.data.system.TimeChanges
@@ -19,6 +22,7 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
+import kotlinx.coroutines.flow.map
 
 @DependencyGraph(AppScope::class)
 interface AppGraph {
@@ -32,6 +36,9 @@ interface AppGraph {
     val wallpaperProvider: WallpaperProvider
     val homeSources: HomeSources
     val librarySources: LibrarySources
+    val inputsProvider: InputsProvider
+    val inputLauncher: InputLauncher
+    val openOnStart: OpenOnStart
 
     /** Read once per process: a pushed theme restarts Home, as in the reference launcher. */
     @Provides
@@ -74,6 +81,28 @@ interface AppGraph {
 
     @Provides
     @SingleIn(AppScope::class)
+    fun provideInputsProvider(
+        application: Application,
+        config: TvConfig,
+    ): InputsProvider = InputsProvider(application, config)
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideInputLauncher(
+        application: Application,
+        config: TvConfig,
+    ): InputLauncher = InputLauncher(application, config)
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideOpenOnStart(
+        application: Application,
+        config: TvConfig,
+        networkMonitor: NetworkMonitor,
+    ): OpenOnStart = OpenOnStart(application, config, networkMonitor.state.map { it.validated })
+
+    @Provides
+    @SingleIn(AppScope::class)
     fun provideSystemSettings(
         application: Application,
         config: TvConfig,
@@ -102,6 +131,7 @@ interface AppGraph {
         wallpaperProvider: WallpaperProvider,
         systemSettings: SystemSettings,
         libraryCatalog: LibraryCatalog,
+        inputsProvider: InputsProvider,
     ): HomeSources {
         val clock = minuteClock(timeChanges.changes)
         return HomeSources(
@@ -118,6 +148,7 @@ interface AppGraph {
             hasNativeSettings = systemSettings::hasNativeSettings,
             saveOrder = appsProvider::saveOrder,
             removeFromHome = { libraryCatalog.setOnHome(it, false) },
+            inputs = inputsProvider.menu,
         )
     }
 

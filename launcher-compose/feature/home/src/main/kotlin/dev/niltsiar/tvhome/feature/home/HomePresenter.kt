@@ -9,6 +9,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
+import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.flow.Flow
@@ -19,6 +20,9 @@ private val NoTopBarApps = emptyList<AppEntry>()
 private val NoNetwork = NetworkState()
 private val NoWallpaper = Wallpaper()
 private val NoOpened = emptyMap<String, Long>()
+
+/** The Inputs button before the TV has said what it lists: it shows, with nothing to open yet. */
+private val UnknownInputs = InputsMenu(available = true)
 
 /** Home's state logic for any host that runs a composable: Molecule today. It uses the Compose runtime only. */
 @Composable
@@ -62,6 +66,9 @@ internal fun homePresenter(
         }
     interaction.list = appList
     interaction.shown = homeApps
+    val inputs by sources.inputs.collectAsState(null)
+    interaction.inputs = inputs
+    LaunchedEffect(inputs) { interaction.inputsChanged() }
     LaunchedEffect(appList) { interaction.listChanged() }
     LaunchedEffect(events) {
         events.collect { event ->
@@ -115,5 +122,7 @@ internal fun homePresenter(
         menu = interaction.menu,
         reorder = remember(session) { session?.view() },
         focusRequest = interaction.focusRequest,
+        inputs = inputs ?: UnknownInputs,
+        inputsOpen = interaction.inputsOpen,
     )
 }

@@ -5,6 +5,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppList
+import dev.niltsiar.tvhome.core.model.InputRow
+import dev.niltsiar.tvhome.core.model.InputTarget
+import dev.niltsiar.tvhome.core.model.InputsMenu
 
 /** A saved order, applied over the list [base] it was made from until the app list changes (the next load reads the file). */
 internal class SavedOrder(
@@ -25,6 +28,14 @@ internal class HomeInteraction(
     var list = AppList()
     var shown = HomeApps(list, config.homeLayout())
 
+    /** What the TV lists as inputs, null until it has said. Set by the presenter on each change. */
+    var inputs: InputsMenu? = null
+
+    /** The list is open, or was asked for before the TV said what it lists. */
+    var inputsOpen by mutableStateOf(false)
+        private set
+    private var inputsAsked = false
+
     var focusedKey by mutableStateOf<String?>(null)
     var menu by mutableStateOf<HomeMenu?>(null)
         private set
@@ -44,6 +55,15 @@ internal class HomeInteraction(
 
             HomeEvent.SettingsMenu -> {
                 openSettingsMenu()
+            }
+
+            HomeEvent.OpenInputs -> {
+                inputsAsked = true
+                inputsChanged()
+            }
+
+            is HomeEvent.PickInput -> {
+                pickInput(event.target)
             }
 
             is HomeEvent.MenuPick -> {
@@ -68,6 +88,8 @@ internal class HomeInteraction(
 
             HomeEvent.Stopped -> {
                 menu = null
+                inputsOpen = false
+                inputsAsked = false
                 end()
             }
 
@@ -79,6 +101,29 @@ internal class HomeInteraction(
 
     /** An app came or went under a session: keep the order so far. */
     suspend fun listChanged() = end()
+
+    /**
+     * The Inputs button was pressed. With a source panel and no Live TV row the button opens the panel; with nothing to
+     * list it says so; else the list opens. A press before the TV has said what it lists waits for it.
+     */
+    fun inputsChanged() {
+        val listed = inputs ?: return
+        if (!inputsAsked) return
+        inputsAsked = false
+        if (menu != null || inputsOpen) return
+        when {
+            listed.panelOnly -> effect(HomeEffect.OpenInput(InputTarget.SourcePanel))
+            listed.rows.none { it is InputRow.Port || it == InputRow.Panel || it == InputRow.LiveTv } -> effect(HomeEffect.NoInputs)
+            else -> inputsOpen = true
+        }
+    }
+
+    private fun pickInput(target: InputTarget) {
+        if (!inputsOpen) return
+        inputsOpen = false
+        effect(HomeEffect.OpenInput(target))
+        focus(INPUTS_FOCUS)
+    }
 
     private fun openTileMenu(event: HomeEvent.TileMenu) {
         if (session != null || menu != null) return
@@ -155,6 +200,11 @@ internal class HomeInteraction(
         val current = session
         val edit = current?.dockEdit
         when {
+            inputsOpen -> {
+                inputsOpen = false
+                focus(INPUTS_FOCUS)
+            }
+
             open != null -> {
                 menu = null
                 focus(open.tileKey ?: SETTINGS_FOCUS)

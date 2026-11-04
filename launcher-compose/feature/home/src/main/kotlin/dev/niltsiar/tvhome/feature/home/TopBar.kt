@@ -44,6 +44,8 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -84,6 +86,7 @@ private val OfflineRed = Color(0xFFFF453A)
  * that many dp and keeps the name. [wifiStatusColor] tints the icon by the connection ([wifiStatusWarnings] adds orange
  * and red). [vpnApp] says a VPN app is set, so a VPN that is down is worth a badge. [dateBelowClock] stacks the date under the clock.
  * [reorderButton] adds a button that turns reorder mode on and off, [libraryButton] one that opens the App library.
+ * [animated] is false with animations off or reduced_motion.
  */
 @Immutable
 public data class TopBarLayout(
@@ -97,6 +100,8 @@ public data class TopBarLayout(
     val dateBelowClock: Boolean = false,
     val reorderButton: Boolean = false,
     val libraryButton: Boolean = false,
+    /** The Inputs list's moving parts run; off with animations off or reduced_motion. */
+    val animated: Boolean = true,
 )
 
 public fun TvConfig.topBarLayout(): TopBarLayout =
@@ -111,6 +116,7 @@ public fun TvConfig.topBarLayout(): TopBarLayout =
         dateBelowClock = dateBelowClock,
         reorderButton = reorderButton,
         libraryButton = appLibrary && libraryButton,
+        animated = animations && !reducedMotion,
     )
 
 /**
@@ -143,6 +149,7 @@ internal fun TopBar(
     modifier: Modifier = Modifier,
 ) {
     val ink = rememberUpdatedState(TvTheme.colors.onSurface)
+    val inputsAvailable by remember(state) { derivedStateOf { state().inputs.available } }
     Row(
         modifier =
             modifier
@@ -156,9 +163,16 @@ internal fun TopBar(
     ) {
         ClockPill(glass, state, layout.dateBelowClock)
         Spacer(Modifier.weight(1f))
-        if (layout.showInputsPill) {
-            // TODO(M6): Inputs opens the source list; its visibility rule and action come with Inputs and Live TV.
-            GlassIconButton(glass, stringResource(R.string.inputs), onClick = {}) { focus ->
+        if (layout.showInputsPill && inputsAvailable) {
+            GlassIconButton(
+                glass,
+                stringResource(R.string.inputs),
+                onClick = input::openInputs,
+                modifier =
+                    Modifier
+                        .focusRequester(input.requester(INPUTS_FOCUS))
+                        .onGloballyPositioned { input.inputsBounds = it.boundsInRoot() },
+            ) { focus ->
                 IconPart(R.drawable.ic_inputs_frame, ink)
                 IconPart(R.drawable.ic_inputs_arrow, ink) {
                     translationX = focus() * INPUTS_ARROW_SLIDE * size.width / ICON_VIEWPORT

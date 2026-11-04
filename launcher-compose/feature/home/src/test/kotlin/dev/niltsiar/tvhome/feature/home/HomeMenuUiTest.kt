@@ -200,6 +200,8 @@ internal fun actionsTo(events: Channel<HomeEvent>) =
     HomeActions(
         onTileMenu = { key, held -> events.trySend(HomeEvent.TileMenu(key, held)) },
         onSettingsMenu = { events.trySend(HomeEvent.SettingsMenu) },
+        onInputs = { events.trySend(HomeEvent.OpenInputs) },
+        onInputPick = { events.trySend(HomeEvent.PickInput(it)) },
         onMenuPick = { events.trySend(HomeEvent.MenuPick(it)) },
         onBack = { events.trySend(HomeEvent.Back) },
         onToggleReorder = { events.trySend(HomeEvent.ToggleReorder) },

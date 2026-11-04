@@ -7,6 +7,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,11 +32,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 private val MenuGap = 10.dp
 private val MenuRise = 14.dp
-private val MenuMinWidth = 220.dp
 private val RowShape = RoundedCornerShape(14.dp)
 private const val ROW_FOCUS_SCALE = 1.04f
 private const val MENU_START_SCALE = 0.94f
@@ -46,7 +47,6 @@ private const val MENU_START_SCALE = 0.94f
  * test tag [rowTag]; the panel's own tag is `menu`. It rises and fades in with a spring and takes focus on its first
  * row; focus cannot leave it.
  */
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 public fun <T> GlassMenu(
     glass: GlassState,
@@ -58,11 +58,37 @@ public fun <T> GlassMenu(
     onPick: (T) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val reveal = remember { Animatable(0f) }
     val first = remember { FocusRequester() }
+    GlassDropdown(glass, anchor, alignEnd, first, modifier) {
+        rows.forEachIndexed { index, row ->
+            MenuItem(label(row), rowTag(row), { onPick(row) }, if (index == 0) Modifier.focusRequester(first) else Modifier)
+        }
+    }
+}
+
+/**
+ * The glass panel behind [GlassMenu] and the Inputs list: [content] in a column hanging from [anchor] as [GlassMenu]
+ * does. The panel is as wide as its widest row, from [minWidth] to [maxWidth], and stays [edgeMargin] inside the sides of
+ * the screen. It rises and fades in with a spring,
+ * then focus goes to [firstFocus], which the caller puts on one of the rows; focus cannot leave the panel.
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+public fun GlassDropdown(
+    glass: GlassState,
+    anchor: State<Rect>,
+    alignEnd: Boolean,
+    firstFocus: FocusRequester,
+    modifier: Modifier = Modifier,
+    minWidth: Dp = 0.dp,
+    maxWidth: Dp = Dp.Unspecified,
+    edgeMargin: Dp = 0.dp,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val reveal = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
         withFrameNanos { }
-        first.requestFocus()
+        firstFocus.requestFocus()
     }
     LaunchedEffect(Unit) { reveal.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)) }
     Layout(
@@ -83,17 +109,14 @@ public fun <T> GlassMenu(
                 Column(
                     modifier =
                         Modifier
+                            .widthIn(min = minWidth, max = maxWidth)
                             .width(IntrinsicSize.Max)
-                            .widthIn(min = MenuMinWidth)
                             .padding(10.dp)
                             .focusProperties { exit = { FocusRequester.Cancel } }
                             .focusGroup(),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    rows.forEachIndexed { index, row ->
-                        MenuItem(label(row), rowTag(row), { onPick(row) }, if (index == 0) Modifier.focusRequester(first) else Modifier)
-                    }
-                }
+                    content = content,
+                )
             }
         },
         modifier = modifier.fillMaxSize(),
@@ -102,13 +125,11 @@ public fun <T> GlassMenu(
         layout(constraints.maxWidth, constraints.maxHeight) {
             val at = anchor.value
             val gap = MenuGap.roundToPx()
+            val margin = edgeMargin.roundToPx()
             val x =
                 (if (alignEnd) at.right.toInt() - panel.width else at.left.toInt()).coerceIn(
-                    0,
-                    maxOf(
-                        0,
-                        constraints.maxWidth - panel.width,
-                    ),
+                    margin,
+                    maxOf(margin, constraints.maxWidth - panel.width - margin),
                 )
             val below = at.bottom.toInt() + gap
             val y = if (below + panel.height <= constraints.maxHeight) below else maxOf(0, at.top.toInt() - gap - panel.height)

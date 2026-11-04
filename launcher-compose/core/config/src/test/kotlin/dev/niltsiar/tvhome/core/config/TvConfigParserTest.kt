@@ -47,6 +47,27 @@ class TvConfigParserTest {
         assertFalse(config.appLibrarySelection || config.libraryButton || config.libraryOkOpens)
         assertTrue(config.showLibraryPill)
         assertEquals(emptyList<String>(), config.libraryApps + config.libraryExcludedApps)
+        assertEquals(
+            listOf(null, null, null, null, null, null),
+            listOf(
+                config.sourcePanelService,
+                config.sourcePanelAction,
+                config.sourcePanelExtra,
+                config.inputAction,
+                config.inputUriScheme,
+                config.liveTvAction,
+            ),
+        )
+        assertFalse(
+            config.coocaaSources ||
+                config.inputsConnectedOnly ||
+                config.inputsCecStateOnly ||
+                config.handleViewInputs ||
+                config.bootToLiveTv ||
+                config.openOnStartChoice ||
+                config.openOnStartOnWake,
+        )
+        assertEquals(0, config.openOnStartNetworkWait)
     }
 
     @Test
@@ -91,6 +112,7 @@ class TvConfigParserTest {
             Triple("dock_opacity", 30..100, { it.dockOpacity }),
             Triple("home_idle_clock_minutes", 0..1440, { it.homeIdleClockMinutes }),
             Triple("clock_wallpaper_dim", 0..90, { it.clockWallpaperDim }),
+            Triple("open_on_start_network_wait", 0..600, { it.openOnStartNetworkWait }),
         )
 
     @Test
@@ -304,5 +326,30 @@ class TvConfigParserTest {
         val wrong = parseTvConfig("""{"app_library_selection": "yes", "library_button": 1}""")
         assertFalse(wrong.config.appLibrarySelection || wrong.config.libraryButton)
         assertEquals(listOf("app_library_selection", "library_button"), wrong.rejectedKeys)
+    }
+
+    @Test
+    fun the_inputs_and_open_on_start_keys_are_read() {
+        val parsed =
+            parseTvConfig(
+                """{"source_panel_service": " com.tcl/.Panel ", "source_panel_action": "com.tcl.SHOW", "source_panel_extra": "cmd=100",
+                    "coocaa_sources": true, "inputs_connected_only": true, "inputs_cec_state_only": true, "handle_view_inputs": true,
+                    "open_on_start_choice": true, "open_on_start_on_wake": true, "open_on_start_network_wait": 180}""",
+            )
+        val config = parsed.config
+        assertEquals(
+            Triple("com.tcl/.Panel", "com.tcl.SHOW", "cmd=100"),
+            Triple(config.sourcePanelService, config.sourcePanelAction, config.sourcePanelExtra),
+        )
+        assertTrue(config.coocaaSources && config.inputsConnectedOnly && config.inputsCecStateOnly && config.handleViewInputs)
+        assertTrue(config.openOnStartChoice && config.openOnStartOnWake)
+        assertEquals(180, config.openOnStartNetworkWait)
+        assertEquals(emptyList<String>(), parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys)
+
+        val wrong = parseTvConfig("""{"coocaa_sources": "yes", "source_panel_service": 5, "open_on_start_network_wait": 601}""")
+        assertFalse(wrong.config.coocaaSources)
+        assertEquals(null, wrong.config.sourcePanelService)
+        assertEquals(0, wrong.config.openOnStartNetworkWait)
+        assertEquals(listOf("coocaa_sources", "source_panel_service", "open_on_start_network_wait"), wrong.rejectedKeys)
     }
 }

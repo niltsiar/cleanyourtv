@@ -9,6 +9,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
+import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.feature.home.HomeEffect
 import dev.niltsiar.tvhome.feature.home.HomeScreen
 import dev.niltsiar.tvhome.feature.home.MoleculeHomeViewModel
@@ -28,10 +29,13 @@ internal fun HomeHost(
     onOpenNativeSettings: () -> Unit,
     onOrderNotSaved: () -> Unit,
     onLibrarySaveFailed: () -> Unit,
+    onOpenInput: (InputTarget) -> Unit,
+    onNoInputs: () -> Unit,
     glass: GlassState,
     libraryOpen: () -> Boolean,
     onOpenLibrary: () -> Unit,
     homePresses: () -> Int,
+    inputsRequests: () -> Int,
     viewModel: MoleculeHomeViewModel = viewModel { MoleculeHomeViewModel(graph.homeSources, graph.config) },
 ) {
     LaunchedEffect(viewModel) {
@@ -44,6 +48,8 @@ internal fun HomeHost(
                 HomeEffect.OpenNativeSettings -> onOpenNativeSettings()
                 HomeEffect.OrderNotSaved -> onOrderNotSaved()
                 HomeEffect.LibrarySaveFailed -> onLibrarySaveFailed()
+                is HomeEffect.OpenInput -> onOpenInput(effect.target)
+                HomeEffect.NoInputs -> onNoInputs()
             }
         }
     }
@@ -69,5 +75,6 @@ internal fun HomeHost(
         glass = glass,
         libraryOpen = libraryOpen,
         onOpenLibrary = onOpenLibrary,
+        inputsRequests = inputsRequests,
     )
 }

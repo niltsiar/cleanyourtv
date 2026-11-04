@@ -125,6 +125,25 @@ public data class TvConfig(
     val liveTvAction: String? = null,
     val liveTvInputId: String? = null,
     val bootToLiveTv: Boolean = false,
+    /** The service or activity ("package/class") of the TV's own source panel, for TVs with no TvInputManager list. */
+    val sourcePanelService: String? = null,
+    val sourcePanelAction: String? = null,
+    /** One int extra for the source panel, "name=value". */
+    val sourcePanelExtra: String? = null,
+    /** List Coocaa OS (Skyworth) sources in the Inputs menu when TvInputManager lists nothing. */
+    val coocaaSources: Boolean = false,
+    /** Ports with nothing connected, and the AV jacks, fold behind "More inputs". */
+    val inputsConnectedOnly: Boolean = false,
+    /** The TV puts port states on the wrong port: ports show none, CEC device rows show their own. */
+    val inputsCecStateOnly: Boolean = false,
+    /** Answer the system's VIEW_INPUTS request by opening the Inputs menu. */
+    val handleViewInputs: Boolean = false,
+    /** The app picked in Launcher settings may open on the first Home of each boot. */
+    val openOnStartChoice: Boolean = false,
+    /** With [openOnStartChoice]: the picked app also opens when the screen comes back on. */
+    val openOnStartOnWake: Boolean = false,
+    /** Seconds the boot's app waits for a validated network, 0 to 600; 0 opens it at once. */
+    val openOnStartNetworkWait: Int = 0,
     /** "keycode:package" or "KEYCODE_NAME:package" entries, parsed where the key service reads them. */
     val appKeys: List<String> = emptyList(),
     val settingsKeyKeycodes: List<Int> = emptyList(),

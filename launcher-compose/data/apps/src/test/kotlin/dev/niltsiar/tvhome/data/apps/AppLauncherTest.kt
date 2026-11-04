@@ -9,6 +9,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 
 @RunWith(RobolectricTestRunner::class)
 class AppLauncherTest {
@@ -69,5 +70,36 @@ class AppLauncherTest {
     @Test
     fun a_key_that_is_not_a_component_makes_no_intent() {
         assertNull(launchIntent(tile.copy(key = "not a component"), null) { true })
+    }
+
+    @Test
+    fun an_input_action_gives_the_input_id_without_the_prefix_and_trimmed() {
+        assertEquals(
+            "com.mediatek.tvinput/.hdmi.HDMIInputService/HW5",
+            inputIdOf("input:com.mediatek.tvinput/.hdmi.HDMIInputService/HW5"),
+        )
+        assertEquals("HW5", inputIdOf("input: HW5 "))
+    }
+
+    @Test
+    fun every_other_action_is_no_input() {
+        assertNull(inputIdOf(null))
+        assertNull(inputIdOf("FEATURED_LAUNCH"))
+        assertNull(inputIdOf("INPUT:HW5"))
+        assertNull(inputIdOf("not-input:HW5"))
+    }
+
+    @Test
+    fun an_empty_input_id_launches_the_tile_instead_of_switching_to_nothing() {
+        assertNull(inputIdOf("input:"))
+        assertNull(inputIdOf("input:   "))
+    }
+
+    @Test
+    fun a_tile_with_an_input_action_reports_its_input() {
+        val launcher = AppLauncher(RuntimeEnvironment.getApplication(), mapOf("com.shop" to "input:HW5"))
+
+        assertEquals("HW5", launcher.inputId(tile))
+        assertNull(launcher.inputId(tile.copy(packageName = "com.other")))
     }
 }

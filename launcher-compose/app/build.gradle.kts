@@ -46,6 +46,7 @@ dependencies {
     implementation(project(":feature:home"))
     implementation(project(":feature:library"))
     implementation(project(":data:apps"))
+    implementation(project(":data:inputs"))
     implementation(project(":data:system"))
     implementation(project(":data:wallpaper"))
     implementation(libs.androidx.activity.compose)
