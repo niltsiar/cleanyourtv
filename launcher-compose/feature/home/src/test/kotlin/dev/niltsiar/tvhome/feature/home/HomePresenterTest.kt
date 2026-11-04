@@ -17,7 +17,7 @@ import org.junit.Test
 import java.time.LocalDateTime
 import java.util.Locale
 
-class MoleculeHomePresenterTest {
+class HomePresenterTest {
     private val events = Channel<HomeEvent>(Channel.UNLIMITED)
     private val eventFlow = events.receiveAsFlow()
     private val effects = Channel<HomeEffect>(Channel.UNLIMITED)
