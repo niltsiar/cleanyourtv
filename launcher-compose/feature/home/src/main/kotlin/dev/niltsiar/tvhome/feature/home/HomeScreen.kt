@@ -259,10 +259,10 @@ private fun TopBar(
     }
 }
 
-@Preview(name = "Home 1080p", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
+@Preview(name = "Home 1080p glass", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
 @Composable
-private fun HomeScreenPreview() {
-    HomePreview(GlassKind.HazeGlass)
+private fun HomeScreenGlassPreview() {
+    HomePreview(GlassKind.Refractive)
 }
 
 @Preview(name = "Home 1080p flat", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)

@@ -51,7 +51,7 @@ private val LocalTvColors = staticCompositionLocalOf { DarkColors }
 private val LocalTvTypography = staticCompositionLocalOf { typographyFor(DarkColors) }
 
 @Suppress("CompositionLocalAllowlist")
-internal val LocalGlassKind = staticCompositionLocalOf { GlassKind.HazeGlass }
+internal val LocalGlassKind = staticCompositionLocalOf { GlassKind.Refractive }
 
 public object TvTheme {
     public val colors: TvColors
@@ -68,7 +68,7 @@ public object TvTheme {
 /** Dark-only TV theme. [glassKind] picks how glass surfaces draw. */
 @Composable
 public fun TvTheme(
-    glassKind: GlassKind = GlassKind.HazeGlass,
+    glassKind: GlassKind = GlassKind.Refractive,
     content: @Composable () -> Unit,
 ) {
     CompositionLocalProvider(

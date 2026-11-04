@@ -25,8 +25,8 @@ import dev.chrisbanes.haze.rememberHazeState
 
 /** How glass surfaces draw. */
 public enum class GlassKind {
-    /** Haze glass with refraction on API 33+, and Haze's own fallback below. */
-    HazeGlass,
+    /** Glass that refracts what is behind it on API 33+; below API 33 the content behind shows through, tinted. */
+    Refractive,
 
     /** A translucent scrim, with no capture of the content behind. */
     Flat,
@@ -54,7 +54,7 @@ public fun Modifier.glassSource(
     zIndex: Float = 0f,
 ): Modifier =
     when (glass.kind) {
-        GlassKind.HazeGlass -> hazeSource(glass.haze, zIndex)
+        GlassKind.Refractive -> hazeSource(glass.haze, zIndex)
         GlassKind.Flat -> this
     }
 
@@ -64,7 +64,7 @@ public fun Modifier.glassSource(
  */
 public fun Modifier.glassContainer(glass: GlassState): Modifier =
     when (glass.kind) {
-        GlassKind.HazeGlass -> hazeGlassContainer()
+        GlassKind.Refractive -> hazeGlassContainer()
         GlassKind.Flat -> this
     }
 
@@ -88,7 +88,7 @@ private val GlassPanelShape = RoundedCornerShape(20.dp)
 
 /** Haze reads the shape from the style, and only rounded corners. */
 @Composable
-private fun rememberHazeGlassStyle(shape: RoundedCornerShape): GlassStyle {
+private fun rememberRefractiveGlassStyle(shape: RoundedCornerShape): GlassStyle {
     val colors = TvTheme.colors
     val base = GlassStyle.regular.material3(containerColor = colors.surface, tint = colors.background.copy(alpha = GLASS_TINT_ALPHA))
     return remember(base, shape) { base.then(GlassInteractions).then { shape(shape) } }
@@ -108,10 +108,10 @@ public fun GlassSurface(
 ) {
     val surface =
         when (glass.kind) {
-            GlassKind.HazeGlass -> {
+            GlassKind.Refractive -> {
                 modifier
                     .clip(shape)
-                    .hazeGlass(input = glass.input, style = rememberHazeGlassStyle(shape), interactionSource = interactionSource)
+                    .hazeGlass(input = glass.input, style = rememberRefractiveGlassStyle(shape), interactionSource = interactionSource)
             }
 
             GlassKind.Flat -> {
