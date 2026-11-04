@@ -40,10 +40,9 @@ internal fun MacrobenchmarkScope.launchHome() {
 internal fun awaitTileImages() = Thread.sleep(IMAGES_SETTLE_MS)
 
 /**
- * The scripted journey: right across the dock, down into the grid several rows, right and left, back to the
- * first dock tile, then one burst down with no wait between presses, as a held key sends, and back again.
- * Focus must start on the first dock tile and the descent must reach a grid tile. The grid can have fewer
- * than GRID_ROWS rows, so each return presses Up and Left only until focus arrives.
+ * The scripted journey: right across the dock, down into the grid, right and left, back up and left, then one
+ * burst down with no wait between presses, as a held key sends, and back up. The key sequence is fixed, so both
+ * hosts do the same work; the two checks prove that focus started on the first dock tile and reached the grid.
  */
 internal fun MacrobenchmarkScope.dpadSweep() {
     val dockTiles = checkNotNull(device.findObject(By.res("dock"))) { "Dock not on screen" }.findObjects(anyTile())
@@ -57,32 +56,11 @@ internal fun MacrobenchmarkScope.dpadSweep() {
     awaitFocusedTile("a grid tile after the descent") { it !in dockTags }
     repeat(GRID_COLUMNS_SWEPT) { device.pressDPadRight() }
     repeat(GRID_COLUMNS_SWEPT) { device.pressDPadLeft() }
-    returnToFirstDockTile(dockTags, firstDockTile)
+    repeat(GRID_ROWS) { device.pressDPadUp() }
+    repeat(DOCK_STEPS) { device.pressDPadLeft() }
 
     pressWithoutWaiting(KeyEvent.KEYCODE_DPAD_DOWN, GRID_ROWS)
-    returnToFirstDockTile(dockTags, firstDockTile)
-}
-
-private fun MacrobenchmarkScope.returnToFirstDockTile(
-    dockTags: Set<String>,
-    firstDockTile: String,
-) {
-    pressUntilFocused(GRID_ROWS + 1, "a dock tile", { device.pressDPadUp() }) { it in dockTags }
-    pressUntilFocused(DOCK_STEPS + 1, "the first dock tile", { device.pressDPadLeft() }) { it == firstDockTile }
-}
-
-private fun MacrobenchmarkScope.pressUntilFocused(
-    maxPresses: Int,
-    description: String,
-    press: () -> Unit,
-    accept: (String) -> Boolean,
-) {
-    repeat(maxPresses) {
-        device.waitForIdle()
-        if (device.findObject(focusedTile())?.resourceName?.let(accept) == true) return
-        press()
-    }
-    awaitFocusedTile("$description after $maxPresses presses", accept)
+    repeat(GRID_ROWS) { device.pressDPadUp() }
 }
 
 private fun MacrobenchmarkScope.awaitFocusedTile(
