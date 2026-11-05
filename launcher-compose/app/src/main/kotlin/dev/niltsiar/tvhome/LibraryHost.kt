@@ -2,7 +2,9 @@ package dev.niltsiar.tvhome
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -23,6 +25,8 @@ internal fun LibraryHost(
     onOpenAppInfo: (String) -> Unit,
     onSaveFailed: () -> Unit,
 ) {
+    val locale = LocalConfiguration.current.locales[0]
+    SideEffect { viewModel.onLocaleChanged(locale) }
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
             when (effect) {

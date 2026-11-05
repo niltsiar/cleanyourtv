@@ -53,7 +53,6 @@ internal fun sources(
     network,
     topBarApps,
     wallpaper,
-    datePattern = "EEEE d MMMM",
     systemHour24 = systemHour24,
     lastOpened = lastOpened,
     hasAppInfo = hasAppInfo,
@@ -93,7 +92,9 @@ internal fun rememberHomeViewModel(
 ): MoleculeHomeViewModel {
     val scope = rememberCoroutineScope()
     val viewModel =
-        remember { MoleculeHomeViewModel(sources, config, Locale.ENGLISH, scope, RecompositionMode.Immediate, EmptyCoroutineContext) }
+        remember {
+            MoleculeHomeViewModel(sources, config, Locale.ENGLISH, "EEEE d MMMM", scope, RecompositionMode.Immediate, EmptyCoroutineContext)
+        }
     LaunchedEffect(viewModel) { viewModel.effects.collect { effects += it } }
     return viewModel
 }

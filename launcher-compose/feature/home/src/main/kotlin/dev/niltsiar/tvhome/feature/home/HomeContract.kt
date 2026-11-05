@@ -114,7 +114,7 @@ public sealed interface HomeEffect {
     public data object LibrarySaveFailed : HomeEffect
 }
 
-/** What the host feeds Home besides the theme: its data sources and two system formats. */
+/** What the host feeds Home besides the theme: its data sources and the TV's 12/24-hour setting. */
 public class HomeSources(
     public val apps: Flow<AppList>,
     /** The local time, again each minute; null while the TV's time is not valid. */
@@ -122,8 +122,6 @@ public class HomeSources(
     public val network: Flow<NetworkState>,
     public val topBarApps: Flow<List<AppEntry>>,
     public val wallpaper: Flow<Wallpaper>,
-    /** The date_format pattern for [DateTimeFormatter]. */
-    public val datePattern: String,
     /** Whether the TV is set to the 24-hour clock; read when the clock_format is system. */
     public val systemHour24: () -> Boolean,
     /** Keeps the tile order: keys first to last, and with fill_dock off how many lead the dock (else -1). False when it was not written. */

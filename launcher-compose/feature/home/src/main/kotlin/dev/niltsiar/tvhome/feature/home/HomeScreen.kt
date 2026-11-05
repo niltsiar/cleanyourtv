@@ -164,7 +164,7 @@ public fun HomeScreen(
     heroArt: suspend (String) -> ImageBitmap? = { null },
     onOpenSettings: () -> Unit = {},
     onOpenNetwork: () -> Unit = {},
-    actions: HomeActions = HomeActions(),
+    actions: HomeMenuActions = HomeMenuActions(),
     menuAnchor: Rect = Rect.Zero,
     glass: GlassState = rememberGlassState(),
     libraryOpen: () -> Boolean = { false },

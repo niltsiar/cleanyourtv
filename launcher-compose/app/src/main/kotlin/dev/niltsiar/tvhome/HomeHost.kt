@@ -2,7 +2,10 @@ package dev.niltsiar.tvhome
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -17,6 +20,7 @@ import dev.niltsiar.tvhome.feature.home.homeLayout
 import dev.niltsiar.tvhome.feature.home.shelfLayout
 import dev.niltsiar.tvhome.feature.home.topBarLayout
 import dev.niltsiar.tvhome.feature.home.wallpaperLayout
+import java.util.Locale
 
 /** Home state comes from the Molecule-hosted presenter. */
 @Composable
@@ -36,8 +40,11 @@ internal fun HomeHost(
     onOpenLibrary: () -> Unit,
     homePresses: () -> Int,
     inputsRequests: () -> Int,
-    viewModel: MoleculeHomeViewModel = viewModel { MoleculeHomeViewModel(graph.homeSources, graph.config) },
+    locale: Locale = LocalConfiguration.current.locales[0],
+    datePattern: String = stringResource(R.string.date_format),
+    viewModel: MoleculeHomeViewModel = viewModel { MoleculeHomeViewModel(graph.homeSources, graph.config, locale, datePattern) },
 ) {
+    SideEffect { viewModel.onLocaleChanged(locale, datePattern) }
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
             when (effect) {

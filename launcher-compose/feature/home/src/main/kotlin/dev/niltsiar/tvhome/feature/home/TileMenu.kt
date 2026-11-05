@@ -27,7 +27,7 @@ public data class HomeMenu(
 
 /** What the menus and the reorder and edit-dock modes ask of Home. */
 @Immutable
-public class HomeActions(
+public class HomeMenuActions(
     /** A tile asks for its menu: [held] is true for a held OK, false for the MENU key. */
     public val onTileMenu: (key: String, held: Boolean) -> Unit = { _, _ -> },
     public val onSettingsMenu: () -> Unit = {},

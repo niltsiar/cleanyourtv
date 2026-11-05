@@ -8,7 +8,7 @@ import android.media.AudioManager
 import android.media.tv.TvContract
 import android.os.Build
 import android.util.Log
-import dev.niltsiar.tvhome.core.model.HomeActions
+import dev.niltsiar.tvhome.core.model.LauncherIntents
 import dev.niltsiar.tvhome.core.model.tvLaunchIntent
 import dev.niltsiar.tvhome.data.system.SystemSettings
 
@@ -32,7 +32,7 @@ internal class TargetLauncher(
             }
 
             KeyTarget.Inputs -> {
-                context.homeIntent(HomeActions.VIEW_INPUTS)?.let(::start)
+                context.homeIntent(LauncherIntents.VIEW_INPUTS)?.let(::start)
             }
 
             is KeyTarget.Guide -> {
@@ -92,7 +92,7 @@ internal class TargetLauncher(
             }
 
             ActionWord.Library -> {
-                context.homeIntent(HomeActions.APP_LIBRARY)?.let(::start)
+                context.homeIntent(LauncherIntents.APP_LIBRARY)?.let(::start)
             }
 
             // "ignore", or "sleep" below Android 9: consumed, nothing to do
@@ -108,7 +108,7 @@ internal class TargetLauncher(
         if (context.packageManager.resolveActivity(dream, 0) != null) {
             start(dream)
         } else {
-            start(Intent(HomeActions.CLOCK).setPackage(context.packageName))
+            start(Intent(LauncherIntents.CLOCK).setPackage(context.packageName))
         }
     }
 

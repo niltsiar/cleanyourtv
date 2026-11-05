@@ -6,18 +6,44 @@ import android.content.Intent
 import android.util.Log
 import androidx.core.net.toUri
 import dev.niltsiar.tvhome.core.model.AppEntry
+import dev.niltsiar.tvhome.core.model.InputTarget
 
 private const val TAG = "TvHome.Launch"
 private const val VIEW_PREFIX = "view:"
 private const val INPUT_PREFIX = "input:"
 
-/** Opens an app's tile the way the reference launcher does, honouring launch_actions. */
+/** What Home's own launch of a tile came to; the caller turns it into a screen change or a toast. */
+public sealed interface LaunchResult {
+    /** The tile's launch_actions value is "input:<id>": nothing was started, the caller switches to [target]. */
+    public data class SwitchInput(
+        val target: InputTarget.TvInput,
+    ) : LaunchResult
+
+    public data object Opened : LaunchResult
+
+    public data object CantOpen : LaunchResult
+}
+
+/**
+ * Opens an app's tile the way the reference launcher does, honouring launch_actions. With [recordOpened] (the cinematic
+ * Home) a tile that opened is noted in [lastOpened].
+ */
 public class AppLauncher(
     private val context: Context,
     private val launchActions: Map<String, String>,
+    private val lastOpened: LastOpened,
+    private val recordOpened: Boolean,
 ) {
     /** The TV input a tile's launch_actions "input:<id>" switches to instead of opening the app; null for any other tile. */
-    public fun inputId(app: AppEntry): String? = inputIdOf(launchActions[app.packageName])
+    internal fun inputId(app: AppEntry): String? = inputIdOf(launchActions[app.packageName])
+
+    /** Opens a tile that Home itself shows: an "input:<id>" tile switches input, any other starts the app. */
+    public fun open(app: AppEntry): LaunchResult {
+        inputId(app)?.let { return LaunchResult.SwitchInput(InputTarget.TvInput(it)) }
+        if (!launch(app)) return LaunchResult.CantOpen
+        if (recordOpened) lastOpened.record(app.key)
+        return LaunchResult.Opened
+    }
 
     /** True when the system accepted the launch. The library passes false for [useLaunchAction]: it opens the app itself. */
     public fun launch(

@@ -49,7 +49,7 @@ class HomeInteractionTest {
                 appInfo
             }, hasNativeSettings = { nativeSettings }, saveOrder = ::saveOrder, removeFromHome = ::removeFromHome)
         return moleculeFlow(RecompositionMode.Immediate) {
-            homePresenter(eventFlow, sources, config, effects::trySend, Locale.ENGLISH)
+            homePresenter(eventFlow, sources, config, effects::trySend, Locale.ENGLISH, "EEEE d MMMM")
         }
     }
 

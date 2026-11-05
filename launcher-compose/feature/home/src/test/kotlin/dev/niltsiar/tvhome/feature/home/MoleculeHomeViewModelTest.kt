@@ -16,6 +16,7 @@ class MoleculeHomeViewModelTest {
             sources(),
             SixColumns,
             Locale.ENGLISH,
+            "EEEE d MMMM",
             this,
             RecompositionMode.Immediate,
             EmptyCoroutineContext,
@@ -53,6 +54,20 @@ class MoleculeHomeViewModelTest {
                 assertEquals(HomeEffect.OpenSettings, awaitItem())
                 viewModel.onOpenNetwork()
                 assertEquals(HomeEffect.OpenNetwork, awaitItem())
+            }
+        }
+
+    @Test
+    fun a_language_change_formats_the_date_in_the_new_language_and_pattern() =
+        runTest {
+            val viewModel = backgroundScope.viewModel()
+            viewModel.uiState.test {
+                assertEquals("Tuesday 3 November", awaitMatching { it.date.isNotEmpty() }.date)
+
+                viewModel.onLocaleChanged(Locale.forLanguageTag("es-ES"), "EEEE d 'de' MMMM")
+
+                assertEquals("martes 3 de noviembre", awaitMatching { it.date.startsWith("martes") }.date)
+                cancelAndIgnoreRemainingEvents()
             }
         }
 }

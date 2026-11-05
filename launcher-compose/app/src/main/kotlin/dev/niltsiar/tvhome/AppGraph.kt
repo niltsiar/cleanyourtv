@@ -11,18 +11,21 @@ import dev.niltsiar.tvhome.data.apps.PackageManagerAppsProvider
 import dev.niltsiar.tvhome.data.inputs.InputLauncher
 import dev.niltsiar.tvhome.data.inputs.InputsProvider
 import dev.niltsiar.tvhome.data.inputs.OpenOnStart
+import dev.niltsiar.tvhome.data.system.MinuteClock
 import dev.niltsiar.tvhome.data.system.NetworkMonitor
 import dev.niltsiar.tvhome.data.system.SystemSettings
 import dev.niltsiar.tvhome.data.system.TimeChanges
 import dev.niltsiar.tvhome.data.wallpaper.ScreensaverWallpaper
 import dev.niltsiar.tvhome.data.wallpaper.WallpaperProvider
 import dev.niltsiar.tvhome.feature.home.HomeSources
-import dev.niltsiar.tvhome.feature.home.minuteClock
 import dev.niltsiar.tvhome.feature.library.LibrarySources
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.map
 
 @DependencyGraph(AppScope::class)
@@ -30,9 +33,9 @@ interface AppGraph {
     val config: TvConfig
     val appsProvider: PackageManagerAppsProvider
     val appLauncher: AppLauncher
-    val lastOpened: LastOpened
     val networkMonitor: NetworkMonitor
     val timeChanges: TimeChanges
+    val minuteClock: MinuteClock
     val systemSettings: SystemSettings
     val wallpaperProvider: WallpaperProvider
     val screensaverWallpaper: ScreensaverWallpaper
@@ -67,7 +70,8 @@ interface AppGraph {
     fun provideAppLauncher(
         application: Application,
         config: TvConfig,
-    ): AppLauncher = AppLauncher(application, config.launchActions)
+        lastOpened: LastOpened,
+    ): AppLauncher = AppLauncher(application, config.launchActions, lastOpened, config.cinematicHome)
 
     @Provides
     @SingleIn(AppScope::class)
@@ -80,6 +84,11 @@ interface AppGraph {
     @Provides
     @SingleIn(AppScope::class)
     fun provideTimeChanges(application: Application): TimeChanges = TimeChanges(application)
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideMinuteClock(timeChanges: TimeChanges): MinuteClock =
+        MinuteClock(timeChanges.changes, CoroutineScope(SupervisorJob() + Dispatchers.Default))
 
     @Provides
     @SingleIn(AppScope::class)
@@ -131,20 +140,18 @@ interface AppGraph {
         appsProvider: PackageManagerAppsProvider,
         lastOpened: LastOpened,
         networkMonitor: NetworkMonitor,
-        timeChanges: TimeChanges,
+        minuteClock: MinuteClock,
         wallpaperProvider: WallpaperProvider,
         systemSettings: SystemSettings,
         libraryCatalog: LibraryCatalog,
         inputsProvider: InputsProvider,
-    ): HomeSources {
-        val clock = minuteClock(timeChanges.changes)
-        return HomeSources(
+    ): HomeSources =
+        HomeSources(
             apps = appsProvider.apps,
-            clock = clock,
+            clock = minuteClock.now,
             network = networkMonitor.state,
             topBarApps = appsProvider.topBarApps,
-            wallpaper = wallpaperProvider.wallpaper(clock),
-            datePattern = application.getString(R.string.date_format),
+            wallpaper = wallpaperProvider.wallpaper(minuteClock.now),
             systemHour24 = { DateFormat.is24HourFormat(application) },
             lastOpened = lastOpened.times,
             heroArt = appsProvider::heroArt,
@@ -154,7 +161,6 @@ interface AppGraph {
             removeFromHome = { libraryCatalog.setOnHome(it, false) },
             inputs = inputsProvider.menu,
         )
-    }
 
     @Provides
     @SingleIn(AppScope::class)

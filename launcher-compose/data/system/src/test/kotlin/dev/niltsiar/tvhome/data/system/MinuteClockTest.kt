@@ -1,10 +1,13 @@
-package dev.niltsiar.tvhome.feature.home
+package dev.niltsiar.tvhome.data.system
 
 import app.cash.turbine.test
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -27,7 +30,7 @@ class MinuteClockTest {
     fun a_time_before_2025_is_hidden_and_looked_at_again_each_second_until_it_is_set() =
         runTest {
             var now = 0L
-            minuteClock(currentMillis = { now }, zone = zone).test {
+            minuteClock(emptyFlow(), { now }, zone).test {
                 assertNull(awaitItem())
                 advanceTimeBy(1_001)
                 assertNull(awaitItem())
@@ -42,7 +45,7 @@ class MinuteClockTest {
     @Test
     fun a_valid_time_is_emitted_now_and_again_at_the_next_minute_start() =
         runTest {
-            minuteClock(currentMillis = wallClock(valid), zone = zone).test {
+            minuteClock(emptyFlow(), wallClock(valid), zone).test {
                 assertEquals(at(valid), awaitItem())
                 advanceTimeBy(30_001)
                 assertEquals(at(valid + 30_000), awaitItem())
@@ -64,5 +67,37 @@ class MinuteClockTest {
                 assertEquals(at(valid + 3_600_000L), awaitItem())
                 cancelAndIgnoreRemainingEvents()
             }
+        }
+
+    @Test
+    fun a_time_change_updates_the_shared_time_at_once_without_waiting_for_the_next_minute() =
+        runTest {
+            var now = valid
+            val changes = MutableSharedFlow<Unit>()
+            val clock = MinuteClock(changes, backgroundScope, { now }, zone)
+            backgroundScope.launch { clock.now.collect {} }
+            runCurrent()
+            assertEquals(at(valid), clock.now.value)
+
+            now = valid + 3_600_000L
+            changes.emit(Unit)
+            runCurrent()
+
+            assertEquals(at(valid + 3_600_000L), clock.now.value)
+        }
+
+    @Test
+    fun every_collector_shares_one_timer() =
+        runTest {
+            var reads = 0
+            val clock =
+                MinuteClock(emptyFlow(), backgroundScope, {
+                    reads++
+                    valid
+                }, zone)
+            repeat(3) { backgroundScope.launch { clock.now.collect {} } }
+            runCurrent()
+
+            assertEquals(1, reads)
         }
 }

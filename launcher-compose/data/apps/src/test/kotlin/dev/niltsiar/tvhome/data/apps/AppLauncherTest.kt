@@ -2,6 +2,8 @@ package dev.niltsiar.tvhome.data.apps
 
 import android.content.Intent
 import dev.niltsiar.tvhome.core.model.AppEntry
+import dev.niltsiar.tvhome.core.model.InputTarget
+import kotlinx.coroutines.Dispatchers
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -10,10 +12,19 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 
 @RunWith(RobolectricTestRunner::class)
 class AppLauncherTest {
     private val tile = AppEntry(key = "com.shop/.Main", packageName = "com.shop", label = "Shop", leanback = true)
+
+    private val context = RuntimeEnvironment.getApplication()
+    private val lastOpened = LastOpened(context, Dispatchers.Unconfined)
+
+    private fun launcher(
+        launchActions: Map<String, String> = emptyMap(),
+        recordOpened: Boolean = true,
+    ) = AppLauncher(context, launchActions, lastOpened, recordOpened)
 
     private fun intent(
         app: AppEntry = tile,
@@ -97,9 +108,35 @@ class AppLauncherTest {
 
     @Test
     fun a_tile_with_an_input_action_reports_its_input() {
-        val launcher = AppLauncher(RuntimeEnvironment.getApplication(), mapOf("com.shop" to "input:HW5"))
+        val launcher = launcher(mapOf("com.shop" to "input:HW5"))
 
         assertEquals("HW5", launcher.inputId(tile))
         assertNull(launcher.inputId(tile.copy(packageName = "com.other")))
+    }
+
+    @Test
+    fun a_tile_with_an_input_action_switches_input_without_starting_anything_or_noting_a_launch() {
+        val result = launcher(mapOf("com.shop" to "input:HW5")).open(tile)
+
+        assertEquals(LaunchResult.SwitchInput(InputTarget.TvInput("HW5")), result)
+        assertNull(shadowOf(context).nextStartedActivity)
+        assertEquals(emptyMap<String, Long>(), lastOpened.times.value)
+    }
+
+    @Test
+    fun an_opened_tile_is_noted_as_last_opened_only_when_the_theme_shows_it() {
+        assertEquals(LaunchResult.Opened, launcher(recordOpened = false).open(tile))
+        assertEquals(emptyMap<String, Long>(), lastOpened.times.value)
+
+        assertEquals(LaunchResult.Opened, launcher(recordOpened = true).open(tile))
+        assertEquals(setOf(tile.key), lastOpened.times.value.keys)
+    }
+
+    @Test
+    fun a_tile_that_cannot_start_reports_it_and_is_not_noted() {
+        val result = launcher().open(tile.copy(key = "not a component"))
+
+        assertEquals(LaunchResult.CantOpen, result)
+        assertEquals(emptyMap<String, Long>(), lastOpened.times.value)
     }
 }

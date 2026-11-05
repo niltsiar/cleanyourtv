@@ -1,5 +1,7 @@
 package dev.niltsiar.tvhome.feature.library
 
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -11,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import java.util.Locale
@@ -30,7 +33,7 @@ public class LibraryActions(
 public class MoleculeLibraryViewModel(
     sources: LibrarySources,
     config: TvConfig,
-    locale: Locale = Locale.getDefault(),
+    locale: Locale,
     coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
     recompositionMode: RecompositionMode = RecompositionMode.ContextClock,
     context: CoroutineContext = AndroidUiDispatcher.Main,
@@ -41,10 +44,18 @@ public class MoleculeLibraryViewModel(
 
     public val effects: Flow<LibraryEffect> = effectChannel.receiveAsFlow()
 
+    private val currentLocale = MutableStateFlow(locale)
+
     public val uiState: StateFlow<LibraryUiState> =
         viewModelScope.launchMolecule(recompositionMode, context) {
+            val locale by currentLocale.collectAsState()
             libraryPresenter(eventFlow, sources, config, effectChannel::trySend, locale)
         }
+
+    /** The TV's language changed: the view model outlives the activity that is recreated for it. */
+    public fun onLocaleChanged(locale: Locale) {
+        currentLocale.value = locale
+    }
 
     public val actions: LibraryActions =
         LibraryActions(

@@ -3,7 +3,7 @@ package dev.niltsiar.tvhome
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import dev.niltsiar.tvhome.core.model.HomeActions
+import dev.niltsiar.tvhome.core.model.LauncherIntents
 
 /**
  * Answers com.android.tv.action.VIEW_INPUTS, the system input switcher that the remote's Input button turns into
@@ -16,7 +16,7 @@ class InputsRequestActivity : Activity() {
         super.onCreate(savedInstanceState)
         startActivity(
             Intent(this, MainActivity::class.java)
-                .setAction(HomeActions.VIEW_INPUTS)
+                .setAction(LauncherIntents.VIEW_INPUTS)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
         finish()

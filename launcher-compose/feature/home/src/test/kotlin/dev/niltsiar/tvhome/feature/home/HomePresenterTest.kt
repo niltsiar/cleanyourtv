@@ -32,7 +32,7 @@ class HomePresenterTest {
         sources: HomeSources = sources(),
         config: TvConfig = SixColumns,
     ) = moleculeFlow(RecompositionMode.Immediate) {
-        homePresenter(eventFlow, sources, config, effects::trySend, Locale.ENGLISH)
+        homePresenter(eventFlow, sources, config, effects::trySend, Locale.ENGLISH, "EEEE d MMMM")
     }
 
     @Test

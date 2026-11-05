@@ -20,7 +20,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
 import dev.niltsiar.tvhome.core.config.ThemeDirectory
 import dev.niltsiar.tvhome.core.config.TvConfig
-import dev.niltsiar.tvhome.core.model.HomeActions
+import dev.niltsiar.tvhome.core.model.LauncherIntents
 import dev.niltsiar.tvhome.data.system.SystemSettings
 
 private const val TAG = "TvHome.Keys"
@@ -216,7 +216,7 @@ public class KeyService : AccessibilityService() {
     /** The system's input switcher, which the TV's Live TV app or Home answers; on its own it does nothing once the stock launcher is disabled. */
     private fun openInputSwitcher() {
         try {
-            startActivity(Intent(HomeActions.VIEW_INPUTS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            startActivity(Intent(LauncherIntents.VIEW_INPUTS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         } catch (e: ActivityNotFoundException) {
             Log.w(TAG, "no input switcher: $e")
             launcher?.launch("inputs")

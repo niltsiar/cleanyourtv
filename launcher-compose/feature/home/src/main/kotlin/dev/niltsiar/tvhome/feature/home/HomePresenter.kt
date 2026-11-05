@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.config.is24Hour
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.Wallpaper
@@ -28,6 +29,7 @@ internal fun homePresenter(
     config: TvConfig,
     onEffect: (HomeEffect) -> Unit,
     locale: Locale,
+    datePattern: String,
 ): HomeUiState {
     val currentOnEffect by rememberUpdatedState(onEffect)
     val interaction = remember(sources, config) { HomeInteraction(sources, config) { currentOnEffect(it) } }
@@ -42,8 +44,8 @@ internal fun homePresenter(
     // Read again with each new time, which also follows the TV's 12/24-hour setting after a stop and start of Home.
     val hour24 = remember(now, config.clockFormat) { config.clockFormat.is24Hour(sources.systemHour24) }
     val header =
-        remember(hour24, config, sources.datePattern) {
-            HeaderStyle(hour24, sources.datePattern, config.showGreeting, config.greetingName)
+        remember(hour24, config, datePattern) {
+            HeaderStyle(hour24, datePattern, config.showGreeting, config.greetingName)
         }
     val session = interaction.session
     return homeUiState(

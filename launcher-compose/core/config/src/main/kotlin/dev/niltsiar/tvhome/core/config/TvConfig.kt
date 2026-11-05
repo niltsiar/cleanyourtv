@@ -9,6 +9,14 @@ public enum class ClockFormat(
     Hour24("24"),
 }
 
+/** A chosen 12 or 24 wins without asking the TV; [ClockFormat.System] asks [system] (the TV's own setting). */
+public fun ClockFormat.is24Hour(system: () -> Boolean): Boolean =
+    when (this) {
+        ClockFormat.Hour24 -> true
+        ClockFormat.Hour12 -> false
+        ClockFormat.System -> system()
+    }
+
 /** wallpaper_order: how a wallpaper collection rotates. */
 public enum class WallpaperOrder(
     internal val jsonValue: String,

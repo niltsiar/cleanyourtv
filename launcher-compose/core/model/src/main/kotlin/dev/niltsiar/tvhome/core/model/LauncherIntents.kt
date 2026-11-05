@@ -1,7 +1,7 @@
 package dev.niltsiar.tvhome.core.model
 
 /** Intent actions that reach Home and the clock screensaver from other parts of the app, such as the remote key service. */
-public object HomeActions {
+public object LauncherIntents {
     /** Open the App library over Home. Sent by the "library" action word of app_keys. */
     public const val APP_LIBRARY: String = "dev.niltsiar.tvhome.action.APP_LIBRARY"
 

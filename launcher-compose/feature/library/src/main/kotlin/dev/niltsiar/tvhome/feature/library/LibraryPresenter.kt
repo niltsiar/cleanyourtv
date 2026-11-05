@@ -26,7 +26,7 @@ internal fun libraryPresenter(
         remember(sources, config, locale) {
             LibraryInteraction(sources, config.libraryLayout(), Collator.getInstance(locale), scope) { currentOnEffect(it) }
         }
-    LaunchedEffect(events) { events.collect(interaction::handle) }
+    LaunchedEffect(events, interaction) { events.collect(interaction::handle) }
     LaunchedEffect(interaction.open) {
         if (interaction.open) sources.changes.collect { interaction.reload() }
     }

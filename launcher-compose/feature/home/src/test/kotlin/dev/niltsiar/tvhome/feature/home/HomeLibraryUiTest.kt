@@ -47,7 +47,7 @@ class HomeLibraryUiTest {
                     onFocus = { focusedKey = it },
                     onClick = {},
                     topBar = config.topBarLayout(),
-                    actions = HomeActions(onToggleReorder = { toggles += "toggle" }),
+                    actions = HomeMenuActions(onToggleReorder = { toggles += "toggle" }),
                     onOpenLibrary = { opened++ },
                 )
             }

@@ -13,8 +13,9 @@ import kotlinx.coroutines.flow.update
 
 /**
  * Says when the wall clock or the time zone was set, so the clock can read the time again. The receiver is
- * registered only while Home is started ([onStart], [onStop]). Starting also counts as a change: the time may
- * have been set while Home was stopped, and so may the 12/24-hour setting.
+ * registered only while a screen that shows the time is started ([onStart], [onStop]): Home, or the clock
+ * screensaver, which starts before Home stops. Starting also counts as a change: the time may have been set while
+ * nothing showed it, and so may the 12/24-hour setting.
  */
 public class TimeChanges(
     private val context: Context,
@@ -34,25 +35,21 @@ public class TimeChanges(
                 count.update { it + 1 }
             }
         }
-    private var receiving = false
+    private var started = 0
 
     /** One item for each change since the collector started; none for the ones before it. */
     public val changes: Flow<Unit> = count.drop(1).map { }
 
-    /** Home is on screen. Main thread. */
+    /** A screen that shows the time is on screen. Main thread. */
     public fun onStart() {
-        if (!receiving) {
+        if (started++ == 0) {
             ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
-            receiving = true
         }
         count.update { it + 1 }
     }
 
-    /** Home left the screen. Main thread. */
+    /** That screen left. The receiver goes when no such screen is left. Main thread. */
     public fun onStop() {
-        if (receiving) {
-            context.unregisterReceiver(receiver)
-            receiving = false
-        }
+        if (started > 0 && --started == 0) context.unregisterReceiver(receiver)
     }
 }

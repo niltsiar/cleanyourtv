@@ -1,11 +1,10 @@
-package dev.niltsiar.tvhome.feature.home
+package dev.niltsiar.tvhome.core.config
 
-import dev.niltsiar.tvhome.core.config.ClockFormat
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class ClockTest {
+class ClockFormatTest {
     @Test
     fun a_chosen_format_wins_without_asking_the_tv() {
         val neverAsked = { error("the TV is not asked") }

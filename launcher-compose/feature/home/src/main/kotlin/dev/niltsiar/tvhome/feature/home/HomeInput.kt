@@ -17,7 +17,7 @@ import dev.niltsiar.tvhome.core.designsystem.isOk
 /** The things the tiles and the top bar share for menus and reorder mode. None of them changes how often anything recomposes. */
 @Stable
 internal class HomeInput(
-    private val currentActions: State<HomeActions>,
+    private val currentActions: State<HomeMenuActions>,
     /** The carried tile's key, the keys drawn dimmed and whether a session runs. Read them in layer lambdas only. */
     val carried: State<String?>,
     val dimmed: State<Set<String>>,
@@ -27,7 +27,7 @@ internal class HomeInput(
 ) {
     private val requesters = HashMap<String, FocusRequester>()
 
-    val actions: HomeActions get() = currentActions.value
+    val actions: HomeMenuActions get() = currentActions.value
 
     /** Where the open menu hangs from, in the root's coordinates. */
     val anchor = mutableStateOf(Rect.Zero)

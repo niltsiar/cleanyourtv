@@ -27,7 +27,7 @@ class HomeInputsTest {
     private fun presenter(inputs: Flow<InputsMenu>): Flow<HomeUiState> {
         val sources = sources(inputs = inputs)
         return moleculeFlow(RecompositionMode.Immediate) {
-            homePresenter(events.receiveAsFlow(), sources, SixColumns, effects::trySend, Locale.ENGLISH)
+            homePresenter(events.receiveAsFlow(), sources, SixColumns, effects::trySend, Locale.ENGLISH, "EEEE d MMMM")
         }
     }
 

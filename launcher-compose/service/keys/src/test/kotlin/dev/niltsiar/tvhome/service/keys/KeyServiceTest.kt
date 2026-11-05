@@ -15,7 +15,7 @@ import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import dev.niltsiar.tvhome.core.config.ThemeDirectory
 import dev.niltsiar.tvhome.core.config.TvConfig
-import dev.niltsiar.tvhome.core.model.HomeActions
+import dev.niltsiar.tvhome.core.model.LauncherIntents
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -139,13 +139,13 @@ class KeyServiceTest {
 
         tap(365)
         val inputs = started()
-        assertEquals(HomeActions.VIEW_INPUTS, inputs?.action)
+        assertEquals(LauncherIntents.VIEW_INPUTS, inputs?.action)
         assertEquals(home, inputs?.component)
 
         device += 1
         tap(366)
         val library = started()
-        assertEquals(HomeActions.APP_LIBRARY, library?.action)
+        assertEquals(LauncherIntents.APP_LIBRARY, library?.action)
         assertEquals(home, library?.component)
     }
 
@@ -215,7 +215,7 @@ class KeyServiceTest {
             assertTrue(service.onKeyEvent(key(KeyEvent.ACTION_DOWN, code)))
             assertNull(started())
             assertTrue(service.onKeyEvent(key(KeyEvent.ACTION_UP, code, at = 1_100)))
-            assertEquals(HomeActions.VIEW_INPUTS, started()?.action)
+            assertEquals(LauncherIntents.VIEW_INPUTS, started()?.action)
         }
     }
 
@@ -224,7 +224,7 @@ class KeyServiceTest {
         service.start(TvConfig(inputKeyKeycodes = listOf(4100)))
 
         assertEquals(true to true, pressInputButton(4100))
-        assertEquals(HomeActions.VIEW_INPUTS, started()?.action)
+        assertEquals(LauncherIntents.VIEW_INPUTS, started()?.action)
     }
 
     @Test
@@ -235,7 +235,7 @@ class KeyServiceTest {
         pressInputButton(KeyEvent.KEYCODE_TV_INPUT)
 
         val inputs = started()
-        assertEquals(HomeActions.VIEW_INPUTS, inputs?.action)
+        assertEquals(LauncherIntents.VIEW_INPUTS, inputs?.action)
         assertEquals(home, inputs?.component)
     }
 

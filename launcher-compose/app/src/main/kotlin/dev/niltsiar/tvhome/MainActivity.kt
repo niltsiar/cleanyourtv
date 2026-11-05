@@ -26,8 +26,8 @@ import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
-import dev.niltsiar.tvhome.core.model.HomeActions
 import dev.niltsiar.tvhome.core.model.InputTarget
+import dev.niltsiar.tvhome.data.apps.LaunchResult
 import dev.niltsiar.tvhome.feature.library.MoleculeLibraryViewModel
 import dev.niltsiar.tvhome.service.keys.VendorKeys
 import kotlinx.coroutines.Dispatchers
@@ -52,7 +52,15 @@ class MainActivity : ComponentActivity() {
         IdleClock(graph.config.homeIdleClockMinutes * MILLIS_PER_MINUTE, { resumed }, ::showClock)
     }
     private val library: MoleculeLibraryViewModel by viewModels {
-        viewModelFactory { initializer { MoleculeLibraryViewModel(graph.librarySources, graph.config) } }
+        viewModelFactory {
+            initializer {
+                MoleculeLibraryViewModel(
+                    graph.librarySources,
+                    graph.config,
+                    resources.configuration.locales[0],
+                )
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,7 +68,7 @@ class MainActivity : ComponentActivity() {
         // This is Home: Back has nowhere to go, unless back_opens_clock.
         onBackPressedDispatcher.addCallback(this) { if (graph.config.backOpensClock) showClock() }
         // Not after a recreate: the launch intent survives it and would open the library or the list again.
-        if (savedInstanceState == null && !openLibraryIfAsked(intent)) openInputsIfAsked(intent)
+        if (savedInstanceState == null) homeRequestOf(intent).takeIf { it != HomeRequest.HomeKey }?.let(::handle)
         applyViewInputsHandler(graph.config.handleViewInputs)
         setContent {
             TvTheme(glassKind = GlassKind.valueOf(BuildConfig.GLASS_KIND), motion = graph.config.motion()) {
@@ -150,23 +158,35 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (openLibraryIfAsked(intent) || openInputsIfAsked(intent)) return
-        if (intent.hasCategory(Intent.CATEGORY_HOME)) {
-            if (graph.config.appLibrary) library.onClose()
-            homePresses++
-        }
+        handle(homeRequestOf(intent))
     }
 
     /**
-     * [HomeActions.APP_LIBRARY], sent by the "library" action word of app_keys: open the App library over Home. The intent is
-     * replaced so a later recreate does not open it again. With app_library off there is no library, so the press only
-     * brings Home forward.
+     * The intent of an open request is replaced so a later recreate does not act on it again. With app_library off there
+     * is no library, so OpenLibrary only brings Home forward; ShowInputs closes the library first, as the Home key does.
      */
-    private fun openLibraryIfAsked(intent: Intent?): Boolean {
-        if (intent?.action != HomeActions.APP_LIBRARY) return false
-        setIntent(Intent(Intent.ACTION_MAIN))
-        if (graph.config.appLibrary) library.onOpen()
-        return true
+    private fun handle(request: HomeRequest) {
+        when (request) {
+            HomeRequest.OpenLibrary -> {
+                setIntent(Intent(Intent.ACTION_MAIN))
+                if (graph.config.appLibrary) library.onOpen()
+            }
+
+            HomeRequest.ShowInputs -> {
+                setIntent(Intent(Intent.ACTION_MAIN))
+                if (graph.config.appLibrary) library.onClose()
+                inputsRequests++
+            }
+
+            HomeRequest.HomeKey -> {
+                if (graph.config.appLibrary) library.onClose()
+                homePresses++
+            }
+
+            HomeRequest.None -> {
+                Unit
+            }
+        }
     }
 
     private fun showClock() {
@@ -174,27 +194,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun launchApp(app: AppEntry) {
-        val input = graph.appLauncher.inputId(app)
-        if (input != null) {
-            openInput(InputTarget.TvInput(input))
-        } else if (!graph.appLauncher.launch(app)) {
-            cantOpen(app.label)
-        } else if (graph.config.cinematicHome) {
-            graph.lastOpened.record(app.key)
+        when (val result = graph.appLauncher.open(app)) {
+            is LaunchResult.SwitchInput -> openInput(result.target)
+            LaunchResult.CantOpen -> cantOpen(app.label)
+            LaunchResult.Opened -> Unit
         }
-    }
-
-    /**
-     * VIEW_INPUTS, forwarded by InputsRequestActivity while handle_view_inputs is on: Home opens its Inputs list once
-     * the button is laid out. The intent is replaced so a later recreate does not open it again. The library closes
-     * first, as for the Home key.
-     */
-    private fun openInputsIfAsked(intent: Intent?): Boolean {
-        if (intent?.action != HomeActions.VIEW_INPUTS) return false
-        setIntent(Intent(Intent.ACTION_MAIN))
-        if (graph.config.appLibrary) library.onClose()
-        inputsRequests++
-        return true
     }
 
     /**
@@ -205,9 +209,8 @@ class MainActivity : ComponentActivity() {
     private fun applyViewInputsHandler(on: Boolean) {
         lifecycleScope.launch(Dispatchers.IO) {
             val handler = ComponentName(this@MainActivity, InputsRequestActivity::class.java)
-            val want = if (on) PackageManager.COMPONENT_ENABLED_STATE_ENABLED else PackageManager.COMPONENT_ENABLED_STATE_DEFAULT
-            if (packageManager.getComponentEnabledSetting(handler) != want) {
-                packageManager.setComponentEnabledSetting(handler, want, PackageManager.DONT_KILL_APP)
+            viewInputsHandlerChange(on, packageManager.getComponentEnabledSetting(handler))?.let {
+                packageManager.setComponentEnabledSetting(handler, it, PackageManager.DONT_KILL_APP)
             }
         }
     }
