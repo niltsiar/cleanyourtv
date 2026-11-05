@@ -69,7 +69,7 @@ class TvConfigParserTest {
         )
         assertEquals(0, config.openOnStartNetworkWait)
         assertTrue(config.keyFilter)
-        assertFalse(config.gamepadPassthrough || config.consumeVolumeKeys || config.homeLongPressHome)
+        assertFalse(config.gamepadPassthrough || config.consumeVolumeKeys || config.homeLongPressHome || config.captureInputKeys)
         assertFalse(config.backOpensClock || config.powerOnHome)
         assertEquals(emptyList<Int>(), config.settingsKeyKeycodes + config.settingsKeyScancodes + config.inputKeyKeycodes)
         assertEquals(null, config.stockHomeRedirect)
@@ -164,6 +164,14 @@ class TvConfigParserTest {
 
         val good = parseTvConfig("""{"settings_key_keycodes": [172, 1001]}""")
         assertEquals(listOf(172, 1001), good.config.settingsKeyKeycodes)
+    }
+
+    @Test
+    fun capture_input_keys_true_is_read() {
+        val parsed = parseTvConfig("""{"capture_input_keys": true}""")
+
+        assertTrue(parsed.config.captureInputKeys)
+        assertEquals(emptyList<String>(), parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys)
     }
 
     @Test

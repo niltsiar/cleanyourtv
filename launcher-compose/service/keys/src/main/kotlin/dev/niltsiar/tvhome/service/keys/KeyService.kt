@@ -30,10 +30,10 @@ private const val PROBE_BOOT_KEY = "probe_boot"
 
 /**
  * The remote's buttons that only the stock launcher answered, from any app. One accessibility service does it all:
- * app_keys (keycodes, scancodes, "hold:" and "front:" entries), the Settings key, the Input button (KEYCODE_TV,
- * KEYCODE_TV_INPUT, input_key_keycodes), KEYCODE_ALL_APPS and, with home_long_press_home, the Home key itself, which
- * opens Home. Every other key passes through untouched. Also the redirects that bring Home back: stock_home_redirect,
- * power_on_home and power_on_home_always.
+ * app_keys (keycodes, scancodes, "hold:" and "front:" entries), the Settings key, the Input button (input_key_keycodes,
+ * and with capture_input_keys KEYCODE_TV and KEYCODE_TV_INPUT), KEYCODE_ALL_APPS and, with home_long_press_home, the
+ * Home key itself, which opens Home. Every other key passes through untouched. Also the redirects that bring Home back:
+ * stock_home_redirect, power_on_home and power_on_home_always.
  *
  * Enable over adb with scripts/switch-home.sh, or in the TV's accessibility settings.
  */
@@ -166,7 +166,7 @@ public class KeyService : AccessibilityService() {
         gamepads = null
     }
 
-    override fun onKeyEvent(event: KeyEvent): Boolean = handleKey(event)
+    public override fun onKeyEvent(event: KeyEvent): Boolean = handleKey(event)
 
     /** The order matters: a volume key, then a scancode entry (more specific than any keycode), the Settings key, keycode entries, the Home keys, the Input button. */
     internal fun handleKey(event: KeyEvent): Boolean {
@@ -207,7 +207,8 @@ public class KeyService : AccessibilityService() {
             event.keyCode in config.settingsKeyKeycodes
 
     private fun isInputKey(keyCode: Int): Boolean =
-        keyCode == KeyEvent.KEYCODE_TV || keyCode == KeyEvent.KEYCODE_TV_INPUT || keyCode in config.inputKeyKeycodes
+        keyCode in config.inputKeyKeycodes ||
+            (config.captureInputKeys && (keyCode == KeyEvent.KEYCODE_TV || keyCode == KeyEvent.KEYCODE_TV_INPUT))
 
     private fun openSettings() {
         if (settings?.openSettings() != true) Toast.makeText(this, R.string.not_available, Toast.LENGTH_SHORT).show()
@@ -219,6 +220,9 @@ public class KeyService : AccessibilityService() {
             startActivity(Intent(HomeActions.VIEW_INPUTS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         } catch (e: ActivityNotFoundException) {
             Log.w(TAG, "no input switcher: $e")
+            launcher?.launch("inputs")
+        } catch (e: SecurityException) {
+            Log.w(TAG, "cannot open the input switcher: $e")
         }
     }
 

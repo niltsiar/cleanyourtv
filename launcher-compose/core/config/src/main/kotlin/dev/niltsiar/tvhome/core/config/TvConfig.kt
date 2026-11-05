@@ -149,7 +149,10 @@ public data class TvConfig(
     val settingsKeyKeycodes: List<Int> = emptyList(),
     /** Raw scancodes of remote buttons that open Settings, for remotes that send no usable keycode. */
     val settingsKeyScancodes: List<Int> = emptyList(),
+    /** More remote buttons that open the input switcher, taken by the key service whatever [captureInputKeys] says. */
     val inputKeyKeycodes: List<Int> = emptyList(),
+    /** The key service takes KEYCODE_TV and KEYCODE_TV_INPUT to open the input switcher; off leaves them to the TV. */
+    val captureInputKeys: Boolean = false,
     /** False keeps the key service from filtering key events, for firmware that loses key repeat once any service filters. */
     val keyFilter: Boolean = true,
     /** With [keyFilter]: the key service stops filtering while a game controller is connected. */

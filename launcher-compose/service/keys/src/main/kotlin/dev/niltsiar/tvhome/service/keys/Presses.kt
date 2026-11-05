@@ -98,6 +98,11 @@ internal object SharedPresses {
 
     val presses: Presses get() = instance ?: Presses(HandlerTimer()).also { instance = it }
 
+    /** Drops every press; tests start each case from none. */
+    fun reset() {
+        instance = null
+    }
+
     /** For an owner that stops receiving keys: no UP will reach it to cancel a hold it saw go down. */
     fun release(owner: Any) {
         instance?.release(owner)

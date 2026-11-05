@@ -45,8 +45,7 @@ class KeyServiceTest {
 
     @Before
     fun setUp() {
-        // Each test presses on a device of its own: the presses of a process outlive a test.
-        device += 1
+        SharedPresses.reset()
         packages.addActivityIfNotPresent(home)
         packages.addIntentFilterForActivity(
             home,
@@ -192,23 +191,58 @@ class KeyServiceTest {
         assertEquals(Settings.ACTION_SETTINGS, started()?.action)
     }
 
-    @Test
-    fun the_input_buttons_ask_for_the_input_switcher_on_the_up() {
-        service.start(TvConfig(inputKeyKeycodes = listOf(4100)))
+    private fun pressInputButton(code: Int): Pair<Boolean, Boolean> {
+        val down = service.onKeyEvent(key(KeyEvent.ACTION_DOWN, code))
+        val up = service.onKeyEvent(key(KeyEvent.ACTION_UP, code, at = 1_100))
+        return down to up
+    }
 
-        for (code in listOf(KeyEvent.KEYCODE_TV, KeyEvent.KEYCODE_TV_INPUT, 4100)) {
-            device += 1
-            assertTrue(service.handleKey(key(KeyEvent.ACTION_DOWN, code)))
+    @Test
+    fun the_tv_and_input_buttons_pass_through_with_the_default_config() {
+        service.start(TvConfig())
+
+        for (code in listOf(KeyEvent.KEYCODE_TV, KeyEvent.KEYCODE_TV_INPUT)) {
+            assertEquals(false to false, pressInputButton(code))
+        }
+        assertNull(started())
+    }
+
+    @Test
+    fun the_tv_and_input_buttons_are_consumed_and_open_the_switcher_on_the_up_with_capture_input_keys() {
+        service.start(TvConfig(captureInputKeys = true))
+
+        for (code in listOf(KeyEvent.KEYCODE_TV, KeyEvent.KEYCODE_TV_INPUT)) {
+            assertTrue(service.onKeyEvent(key(KeyEvent.ACTION_DOWN, code)))
             assertNull(started())
-            assertTrue(service.handleKey(key(KeyEvent.ACTION_UP, code, at = 1_100)))
+            assertTrue(service.onKeyEvent(key(KeyEvent.ACTION_UP, code, at = 1_100)))
             assertEquals(HomeActions.VIEW_INPUTS, started()?.action)
         }
     }
 
     @Test
+    fun a_keycode_a_theme_lists_in_input_key_keycodes_is_consumed_with_the_default_config() {
+        service.start(TvConfig(inputKeyKeycodes = listOf(4100)))
+
+        assertEquals(true to true, pressInputButton(4100))
+        assertEquals(HomeActions.VIEW_INPUTS, started()?.action)
+    }
+
+    @Test
+    fun the_switcher_request_goes_to_homes_own_activity_when_no_app_answers_it() {
+        shadowOf(app).checkActivities(true)
+        service.start(TvConfig(captureInputKeys = true))
+
+        pressInputButton(KeyEvent.KEYCODE_TV_INPUT)
+
+        val inputs = started()
+        assertEquals(HomeActions.VIEW_INPUTS, inputs?.action)
+        assertEquals(home, inputs?.component)
+    }
+
+    @Test
     fun a_listed_app_key_beats_the_input_button_it_shares() {
         installLeanbackApp("com.netflix.ninja")
-        service.start(TvConfig(appKeys = listOf("${KeyEvent.KEYCODE_TV_INPUT}:com.netflix.ninja")))
+        service.start(TvConfig(appKeys = listOf("${KeyEvent.KEYCODE_TV_INPUT}:com.netflix.ninja"), captureInputKeys = true))
 
         tap(KeyEvent.KEYCODE_TV_INPUT)
 

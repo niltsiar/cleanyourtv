@@ -157,6 +157,7 @@ public fun parseTvConfig(json: String): ParsedConfig {
             settingsKeyKeycodes = o.keycodes("settings_key_keycodes", d.settingsKeyKeycodes),
             settingsKeyScancodes = o.keycodes("settings_key_scancodes", d.settingsKeyScancodes),
             inputKeyKeycodes = o.keycodes("input_key_keycodes", d.inputKeyKeycodes),
+            captureInputKeys = o.bool("capture_input_keys", d.captureInputKeys),
             keyFilter = o.bool("key_filter", d.keyFilter),
             gamepadPassthrough = o.bool("gamepad_passthrough", d.gamepadPassthrough),
             consumeVolumeKeys = o.bool("consume_volume_keys", d.consumeVolumeKeys),
