@@ -94,9 +94,8 @@ import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.node.LayoutModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.platform.LocalConfiguration
@@ -138,12 +137,14 @@ import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.Wallpaper
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -370,11 +371,8 @@ public fun HomeScreen(
         OverlayHost(
             open = { currentState.value().let { it.menu != null || it.inputsOpen } || libraryOpen() },
             strength = { if (libraryOpen()) LIBRARY_SCRIM else MENU_SCRIM },
-            spotlight = {
-                input.anchor.value
-                    .takeIf { currentState.value().menu?.tileKey != null }
-                    ?.translate(0f, dim.lowPx())
-            },
+            spotlight = { input.anchor.value.takeIf { currentState.value().menu?.tileKey != null } },
+            spotlightOffset = dim::lowPx,
             spotlightShape = TileShape,
             spotlightRing = {
                 val shown = currentState.value()
@@ -477,6 +475,7 @@ private fun HomeContent(
             if (state().dock.isNotEmpty()) {
                 // The dock attaches during the layout that follows the scroll.
                 withFrameNanos { }
+                input.travel.reset()
                 firstDockTile.requestFocus()
             }
         }
@@ -687,6 +686,9 @@ private class FocusDim(
 private const val GROUP_MS = 320
 private const val GROUP_OVERSHOOT_DAMPING = 0.7f
 
+/** The frames a new group target must last before the group follows it. */
+private const val SETTLE_FRAMES = 2
+
 @Composable
 private fun rememberFocusDim(
     state: State<() -> HomeUiState>,
@@ -706,15 +708,19 @@ private fun rememberFocusDim(
             val tileHeight = tileWidth / TILE_ASPECT
             val gridRows = if (layout.singleRow) 0 else (gridCount + layout.columns - 1) / layout.columns
             val lowered =
-                dockLowering(
-                    windowHeight = height.value,
-                    shelfBottom = shelfBottom.value,
-                    tileHeight = tileHeight.value,
-                    gap = TileGap.value,
-                    gridRows = gridRows,
-                    rowsBelowDock = layout.rowsBelowDock,
-                    bottomMargin = GridBottom.value,
-                ).dp
+                if (layout.singleRow) {
+                    0.dp
+                } else {
+                    dockLowering(
+                        windowHeight = height.value,
+                        shelfBottom = shelfBottom.value,
+                        tileHeight = tileHeight.value,
+                        gap = TileGap.value,
+                        gridRows = gridRows,
+                        rowsBelowDock = layout.rowsBelowDock,
+                        bottomMargin = GridBottom.value,
+                    ).dp
+                }
             val edge = (ScreenMargin + gridWidth * ((1f - share) / 2f) - TileGap) / width
             val top = shelfBottom + lowered
             lowered.toPx() to Rect(edge, top / height, 1f - edge, (top + tileHeight + TileGap * 2) / height)
@@ -759,10 +765,28 @@ private fun focusRowOf(
 }
 
 /**
- * Runs [dim]: its row and floor follow focus in [ROW_DIM_MS], and its group goes low with focus in the dock or on the top
- * bar and up with focus in the grid or a tile menu, in [GROUP_MS], at once without motion. It stays where it is while the
- * App library is open.
+ * Whether [dim]'s group goes low for the focus now: with focus on a dock tile or a top-bar button, and up with focus on a
+ * grid tile, the library pill or a tile's menu. Null while focus is in the Inputs list or the Settings menu, or nowhere
+ * for a moment, so the group stays where it is.
  */
+private fun groupLowFor(
+    state: HomeUiState,
+    input: HomeInput,
+    layout: HomeLayout,
+): Boolean? =
+    when {
+        state.menu?.tileKey != null -> false
+        input.topBarFocused -> true
+        input.pillFocused -> false
+        input.gridFocused -> focusRowOf(state, input, layout) == DOCK_ROW
+        else -> null
+    }
+
+/**
+ * Runs [dim]: its row and floor follow focus in [ROW_DIM_MS], and its group goes low or up as [groupLowFor] says, in
+ * [GROUP_MS], at once without motion. It stays where it is while the App library is open.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 private fun FocusDimEffects(
     dim: FocusDim,
@@ -785,8 +809,12 @@ private fun FocusDimEffects(
         var low = true
         snapshotFlow {
             val shown = state.value()
-            if (!currentLibraryOpen.value()) low = focusRowOf(shown, input, layout) == DOCK_ROW && shown.menu?.tileKey == null
+            if (!currentLibraryOpen.value()) groupLowFor(shown, input, layout)?.let { low = it }
             low
+        }.mapLatest { toLow ->
+            // Closing a menu or the library hands focus to the first dock tile for a frame or two on its way back.
+            repeat(SETTLE_FRAMES) { withFrameNanos { } }
+            toLow
         }.collectLatest { toLow ->
             val target = if (toLow) 1f else 0f
             when {
@@ -1361,10 +1389,13 @@ private fun Modifier.towardLibrary(
     }
 }
 
-/** Where a dock tile was laid out, for the edge light that follows focus to it. */
+/** Where a dock tile was laid out and whether it has focus, for the edge light that follows focus to it. */
 private class Placed {
     var tile: LayoutCoordinates? = null
+    var focused = false
 }
+
+private fun LayoutCoordinates.centreX(): Float = localToRoot(Offset(size.width / 2f, size.height / 2f)).x
 
 @Composable
 private fun AppTile(
@@ -1385,6 +1416,7 @@ private fun AppTile(
     val motion = TvTheme.motion
     val scope = rememberCoroutineScope()
     val placed = remember { Placed() }
+    val currentRing by rememberUpdatedState(ring)
     val ringColour =
         remember(input, key, ring) {
             ColorProducer { if (input.carried.value == key) ReorderRing else travel.colourFor(key, ring) }
@@ -1396,7 +1428,7 @@ private fun AppTile(
             travel.arrive(key, ring, motion, scope)
             val laidOut = placed.tile?.takeIf { it.isAttached }
             if (edge != null && laidOut != null) {
-                edge.focus(laidOut.positionInRoot().x + laidOut.size.width / 2f) { travel.colourFor(key, ring) }
+                edge.focus(laidOut.centreX()) { travel.colourFor(key, currentRing) }
             }
         },
         shape = TileShape,
@@ -1406,8 +1438,17 @@ private fun AppTile(
             modifier
                 .then(if (reordering) Modifier.reorderLook(key, input, TileShape) else Modifier)
                 .aspectRatio(TILE_ASPECT)
-                .then(if (edge != null) Modifier.onPlaced { placed.tile = it } else Modifier)
-                .testTag("tile:$key")
+                .then(
+                    if (edge != null) {
+                        Modifier
+                            .onGloballyPositioned {
+                                placed.tile = it
+                                if (placed.focused) edge.follow(it.centreX())
+                            }.onFocusChanged { placed.focused = it.isFocused }
+                    } else {
+                        Modifier
+                    },
+                ).testTag("tile:$key")
                 .then(if (app.image != null) Modifier.semantics { contentDescription = app.label } else Modifier)
                 .focusRequester(requester)
                 .holdOk(

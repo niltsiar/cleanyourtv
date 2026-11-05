@@ -2,10 +2,15 @@ package dev.niltsiar.tvhome.feature.home
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getBoundsInRoot
@@ -21,6 +26,8 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -46,8 +53,13 @@ class FocusColourUiTest {
     private val apps = accents.mapIndexed { i, accent -> AppEntry("pkg.${i + 1}", "pkg.${i + 1}", "App ${i + 1}", accent = accent) }
     private val cinematic = SixColumns.copy(cinematicHome = true, appLibrary = true)
 
-    private fun showHome(config: TvConfig = cinematic) {
-        val sources = sources(apps = flowOf(AppList(apps)))
+    private var homePresses by mutableIntStateOf(0)
+
+    private fun showHome(
+        config: TvConfig = cinematic,
+        appList: Flow<AppList> = flowOf(AppList(apps)),
+    ) {
+        val sources = sources(apps = appList)
         compose.setContent {
             TvTheme {
                 val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
@@ -61,6 +73,7 @@ class FocusColourUiTest {
                     shelfLayout = config.shelfLayout().copy(scrimAlpha = 0f),
                     dockLook = config.dockLook(),
                     actions = viewModel.actions,
+                    homePresses = { homePresses },
                 )
             }
         }
@@ -183,10 +196,7 @@ class FocusColourUiTest {
     }
 
     /** How coloured the dock's top rim is at tile [n]'s centre: the white rim is grey, the light over it is not. */
-    private fun rimColour(n: Int): Float {
-        val rim = at(centreX(n), panel().top.value + 0.75f)
-        return maxOf(rim.red, rim.green, rim.blue) - minOf(rim.red, rim.green, rim.blue)
-    }
+    private fun rimColour(n: Int): Float = rimStrength(centreX(n))
 
     /** The rim's colour at tile [n] after [key] is pressed. */
     private fun rimColourAfter(
@@ -244,4 +254,76 @@ class FocusColourUiTest {
 
     @Test
     fun with_dock_band_off_there_is_no_rim_to_light() = assertRimStaysGrey(cinematic.copy(dockBand = false))
+
+    private fun focused(n: Int): Boolean =
+        compose
+            .onNodeWithTag("tile:pkg.$n")
+            .fetchSemanticsNode()
+            .config
+            .getOrNull(SemanticsProperties.Focused) == true
+
+    private fun rimStrength(x: Float): Float {
+        val rim = at(x, panel().top.value + 0.75f)
+        return maxOf(rim.red, rim.green, rim.blue) - minOf(rim.red, rim.green, rim.blue)
+    }
+
+    /** The x, in dp, where the dock's top rim is most coloured, away from the panel's rounded ends. */
+    private fun lightCentre(): Float {
+        val box = panel()
+        return (box.left.value.toInt() + 40 until box.right.value.toInt() - 40).maxBy { rimStrength(it.toFloat()) }.toFloat()
+    }
+
+    @Test
+    fun a_home_press_from_the_grid_gives_the_first_dock_tile_its_own_ring_colour_at_once() {
+        showHome()
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+        compose.mainClock.autoAdvance = false
+
+        homePresses++
+        var frames = 0
+        while (!focused(1) && frames++ < 60) compose.mainClock.advanceTimeBy(16)
+        compose.mainClock.advanceTimeBy(80)
+
+        // The grid tile's ring was green and the dock tile's is red: a ring still on its way from green is not red yet.
+        val ring = ringAtTop(1)
+        assertTrue("red ring expected, got $ring", ring.red > ring.green + 0.04f)
+    }
+
+    @Test
+    fun the_light_on_the_rim_takes_the_colour_of_art_that_lands_after_focus() {
+        val list = MutableStateFlow(AppList(apps.map { it.copy(accent = Color.Unspecified) }))
+        showHome(appList = list)
+        assertTrue("white before the art", rimColour(1) < 0.12f)
+
+        list.value = AppList(apps)
+        settle()
+
+        val lit = at(centreX(1), panel().top.value + 0.75f)
+        assertTrue("red expected, got $lit", lit.red > lit.green + 0.12f && lit.red > lit.blue + 0.08f)
+    }
+
+    @Test
+    fun with_a_single_row_the_light_follows_the_focused_tile_when_the_row_scrolls() {
+        showHome(cinematic.copy(singleRow = true))
+        repeat(8) { press(Key.DirectionRight) }
+        compose.onNodeWithTag("tile:pkg.9").assertIsFocused()
+
+        assertTrue("light at ${lightCentre()}, tile at ${centreX(9)}", abs(lightCentre() - centreX(9)) <= 6f)
+    }
+
+    @Test
+    fun the_light_follows_a_tile_carried_along_the_dock_or_is_not_shown() {
+        showHome()
+        holdOk()
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+
+        press(Key.DirectionRight)
+        press(Key.DirectionRight)
+
+        val centre = lightCentre()
+        assertTrue("light at $centre, tile at ${centreX(1)}", rimStrength(centre) < 0.12f || abs(centre - centreX(1)) <= 6f)
+    }
 }

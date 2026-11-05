@@ -139,4 +139,65 @@ class RingTravelTest {
 
             assertEquals(blue, travel.colourFor("b", blue))
         }
+
+    @Test
+    fun a_ring_that_is_fading_out_mid_travel_keeps_the_colour_it_had_reached() =
+        runTest {
+            val travel = RingTravel()
+            val scope = frames()
+            travel.arrive("a", red, Motion(), scope)
+            travel.arrive("b", blue, Motion(), scope)
+            advanceTimeBy(80)
+            runCurrent()
+            val reached = travel.colourFor("b", blue)
+
+            travel.arrive("c", green, Motion(), scope)
+
+            assertNear(reached, travel.colourFor("b", blue))
+            assertNotEquals(blue, travel.colourFor("b", blue))
+        }
+
+    @Test
+    fun a_ring_that_loses_focus_to_the_top_bar_mid_travel_keeps_the_colour_it_had_reached() =
+        runTest {
+            val travel = RingTravel()
+            val scope = frames()
+            travel.arrive("a", red, Motion(), scope)
+            travel.arrive("b", blue, Motion(), scope)
+            advanceTimeBy(80)
+            runCurrent()
+            val reached = travel.colourFor("b", blue)
+
+            travel.reset()
+
+            assertNear(reached, travel.colourFor("b", blue))
+        }
+
+    @Test
+    fun a_ring_whose_travel_was_over_shows_its_own_colour_after_it_loses_focus() =
+        runTest {
+            val travel = RingTravel()
+            val scope = frames()
+            travel.arrive("a", red, Motion(), scope)
+            travel.arrive("b", blue, Motion(), scope)
+            advanceTimeBy(300)
+            runCurrent()
+
+            travel.arrive("c", green, Motion(), scope)
+
+            assertEquals(blue, travel.colourFor("b", blue))
+        }
+
+    @Test
+    fun with_animations_off_the_new_ring_shows_its_colour_in_the_frame_it_gets_focus() =
+        runTest {
+            val travel = RingTravel()
+            val scope = frames()
+            val still = Motion(animations = false)
+            travel.arrive("a", red, still, scope)
+
+            travel.arrive("b", blue, still, scope)
+
+            assertEquals(blue, travel.colourFor("b", blue))
+        }
 }

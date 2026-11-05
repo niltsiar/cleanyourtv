@@ -2,6 +2,9 @@ package dev.niltsiar.tvhome.feature.home
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -35,6 +38,7 @@ class TopBarHeaderUiTest {
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     private val cinematic = SixColumns.copy(cinematicHome = true, appLibrary = true, libraryButton = true)
+    private var inputsRequests by mutableIntStateOf(0)
 
     private fun showHome(
         inputs: InputsMenu = FourPorts,
@@ -53,6 +57,7 @@ class TopBarHeaderUiTest {
                     topBar = cinematic.topBarLayout(),
                     shelfLayout = cinematic.shelfLayout().copy(scrimAlpha = 0f),
                     actions = viewModel.actions,
+                    inputsRequests = { inputsRequests },
                 )
             }
         }
@@ -166,5 +171,20 @@ class TopBarHeaderUiTest {
         press(Key.DirectionDown)
         compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
         assertEquals("App 1", textOf("shelf:name"))
+    }
+
+    @Test
+    fun the_inputs_list_the_remote_opens_is_named_in_the_band_whatever_button_had_focus_last() {
+        showHome()
+        press(Key.DirectionUp)
+        press(Key.DirectionRight)
+        assertEquals("Wi-Fi", textOf("shelf:title"))
+
+        inputsRequests++
+        compose.waitForIdle()
+
+        compose.onNodeWithTag("menu").assertExists()
+        assertEquals("Inputs", textOf("shelf:title"))
+        assertEquals("2 inputs connected", textOf("shelf:title-meta"))
     }
 }

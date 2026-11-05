@@ -37,7 +37,9 @@ private const val SPOT_RING_ALPHA = 0.7f
  * Where a screen's overlays go: it draws over every other child of its parent, whatever their order, and under the
  * overlays it draws a scrim that fades in while [open] is true, darkening by [strength]. A [spotlight] (in the root's
  * coordinates, of [spotlightShape]) stays undimmed inside a thin ring of [spotlightRing], so the thing an overlay acts on
- * stays in view. All of them are read while [open] and kept while the scrim fades out. Put it in the screen's outermost box.
+ * stays in view. All of them are read while [open] and kept while the scrim fades out, except [spotlightOffset], the
+ * distance in pixels the spotlight sits below its rectangle, which is read in every frame so that a spotlight on a moving
+ * thing keeps up with it. Put it in the screen's outermost box.
  */
 @Composable
 public fun OverlayHost(
@@ -45,6 +47,7 @@ public fun OverlayHost(
     modifier: Modifier = Modifier,
     strength: () -> Float = { SCRIM_ALPHA },
     spotlight: () -> Rect? = { null },
+    spotlightOffset: () -> Float = { 0f },
     spotlightShape: Shape = RectangleShape,
     spotlightRing: () -> Color = { Color.White },
     content: @Composable BoxScope.() -> Unit,
@@ -70,7 +73,7 @@ public fun OverlayHost(
                         look.spot = spotlight()
                         look.ring = spotlightRing()
                     }
-                    val spot = look.spot
+                    val spot = look.spot?.translate(0f, spotlightOffset())
                     if (spot == null) {
                         drawRect(ScrimColor, alpha = look.strength * shown)
                     } else {

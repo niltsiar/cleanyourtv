@@ -28,7 +28,10 @@ import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
 import dev.niltsiar.tvhome.core.model.Wallpaper
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -79,8 +82,9 @@ class DockGlassUiTest {
         thumbnail: ImageBitmap,
         config: TvConfig = cinematic,
         darkTheme: Boolean = true,
+        wallpaper: Flow<Wallpaper> = flowOf(Wallpaper(thumbnail = thumbnail)),
     ) {
-        val sources = sources(apps = flowOf(AppList(apps)), wallpaper = flowOf(Wallpaper(thumbnail = thumbnail)))
+        val sources = sources(apps = flowOf(AppList(apps)), wallpaper = wallpaper)
         compose.setContent {
             TvTheme(darkTheme = darkTheme) {
                 glass = rememberGlassState()
@@ -194,6 +198,18 @@ class DockGlassUiTest {
 
         assertTrue("L* ${glass.dockLightness}", glass.dockLightness >= 75f)
         assertSame(over(dark, 0.42f, frostAt(white, at)), screenAt(at))
+    }
+
+    @Test
+    fun a_wallpaper_with_no_thumbnail_goes_back_to_the_base_tint_after_a_bright_one() {
+        val wallpaper = MutableStateFlow(Wallpaper(thumbnail = white))
+        showHome(white, wallpaper = wallpaper)
+        assertTrue("L* ${glass.dockLightness}", glass.dockLightness >= 75f)
+
+        wallpaper.value = Wallpaper()
+        settle()
+
+        assertEquals(0.32f, DockLook().tint(darkSurfaces = true, lightness = glass.dockLightness).alpha, 0.005f)
     }
 
     @Test

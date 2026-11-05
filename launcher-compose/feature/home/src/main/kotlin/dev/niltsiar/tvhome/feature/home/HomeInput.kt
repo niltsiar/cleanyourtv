@@ -65,9 +65,14 @@ internal class HomeInput(
     /** The top-bar button that had focus last, which the band names. */
     var topBarControl by mutableStateOf<BarControl?>(null)
 
-    /** The control the band names: while focus is on the top bar or in a menu or list it opened, the one that had focus last. */
+    /** The control the band names: the Inputs list's, the Settings menu's, or the button that has focus on the top bar. */
     fun headerControl(state: HomeUiState): BarControl? =
-        topBarControl.takeIf { topBarFocused || state.inputsOpen || (state.menu != null && state.menu.tileKey == null) }
+        when {
+            state.inputsOpen -> BarControl.Inputs
+            state.menu != null && state.menu.tileKey == null -> BarControl.Settings
+            topBarFocused -> topBarControl
+            else -> null
+        }
 
     /** The library was opened from the top bar button, so closing it returns there. */
     var fromTopBar = false

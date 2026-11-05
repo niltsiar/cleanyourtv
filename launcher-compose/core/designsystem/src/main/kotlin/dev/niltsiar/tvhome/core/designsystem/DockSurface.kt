@@ -9,6 +9,9 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -139,14 +142,15 @@ private const val FOLLOW_STIFFNESS = 500f
 
 /**
  * The light the focused dock tile casts on its panel: a [LightWidth] highlight on the top rim and a [GlintWidth] glint on
- * the floor, centred on the tile. They follow [focus] with a spring, take [show] to fade in and out, and draw in the
- * colour [focus] was given. Everything is read in the draw phase.
+ * the floor, centred on the tile. It comes to a newly focused tile with a spring, stays on that tile as [follow] reports
+ * it moving, takes [show] to fade in and out, and draws in the colour [focus] was given. Everything is read in the draw phase.
  */
 @Stable
 public class DockEdgeLight(
     private val scope: CoroutineScope,
 ) {
-    private val centre = Animatable(0f)
+    private var tile by mutableFloatStateOf(0f)
+    private val lag = Animatable(0f)
     private val shown = Animatable(0f)
     private var colour: () -> Color = { Color.White }
 
@@ -159,10 +163,24 @@ public class DockEdgeLight(
         colour: () -> Color,
     ) {
         this.colour = colour
+        val drawn = centre()
+        tile = centreX
         scope.launch(start = CoroutineStart.UNDISPATCHED) {
-            if (shown.value < SEEN) centre.snapTo(centreX) else centre.animateTo(centreX, spring(FOLLOW_DAMPING, FOLLOW_STIFFNESS))
+            if (shown.value < SEEN) {
+                lag.snapTo(0f)
+            } else {
+                lag.snapTo(drawn - centreX)
+                lag.animateTo(0f, spring(FOLLOW_DAMPING, FOLLOW_STIFFNESS))
+            }
         }
     }
+
+    /** The focused tile is now centred at [centreX] (in the root), because the row scrolled or its tiles moved. */
+    public fun follow(centreX: Float) {
+        tile = centreX
+    }
+
+    private fun centre(): Float = tile + lag.value
 
     /** Fades the light in or out. */
     public suspend fun show(visible: Boolean) {
@@ -172,7 +190,7 @@ public class DockEdgeLight(
     internal fun DrawScope.drawRim() {
         val seen = shown.value
         if (seen < SEEN) return
-        val x = centre.value - panelLeft
+        val x = centre() - panelLeft
         val half = LightWidth.toPx() / 2f
         val light = colour()
         val brush =
@@ -191,7 +209,7 @@ public class DockEdgeLight(
         if (seen < SEEN) return
         val radius = GlintWidth.toPx() / 2f
         val flatten = GlintHeight.toPx() / 2f / radius
-        val middle = Offset(centre.value - panelLeft, size.height - GlintHeight.toPx() / 2f)
+        val middle = Offset(centre() - panelLeft, size.height - GlintHeight.toPx() / 2f)
         val light = colour()
         val brush =
             Brush.radialGradient(

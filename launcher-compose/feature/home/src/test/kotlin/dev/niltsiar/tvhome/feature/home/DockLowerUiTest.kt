@@ -2,7 +2,10 @@ package dev.niltsiar.tvhome.feature.home
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
@@ -14,6 +17,7 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
@@ -25,6 +29,9 @@ import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
+import dev.niltsiar.tvhome.core.model.InputsMenu
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -50,12 +57,14 @@ class DockLowerUiTest {
         }
     private val apps = (1..18).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it", image = white) }
     private val cinematic = SixColumns.copy(cinematicHome = true, appLibrary = true)
+    private var inputsRequests by mutableIntStateOf(0)
 
     private fun showHome(
         motion: Motion = Motion(),
         config: TvConfig = cinematic,
+        inputs: Flow<InputsMenu> = emptyFlow(),
     ) {
-        val sources = sources(apps = flowOf(AppList(apps)))
+        val sources = sources(apps = flowOf(AppList(apps)), inputs = inputs)
         compose.setContent {
             TvTheme(motion = motion) {
                 val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
@@ -68,6 +77,7 @@ class DockLowerUiTest {
                     topBar = config.topBarLayout(),
                     shelfLayout = config.shelfLayout().copy(scrimAlpha = 0f),
                     actions = viewModel.actions,
+                    inputsRequests = { inputsRequests },
                 )
             }
         }
@@ -267,5 +277,96 @@ class DockLowerUiTest {
         input.anchorTile(Rect(80f, 776f, 334f, 919f))
 
         assertEquals(Rect(80f, 536f, 334f, 679f), input.anchor.value)
+    }
+
+    private fun back() {
+        compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.mainClock.advanceTimeBy(16)
+    }
+
+    /**
+     * Runs [action] with the clock stopped, then steps 960 ms in frames; how far [tag] strays from the place it ends up at
+     * (so that a scroll that settles somewhere else does not count), in dp. A frame in which [tag] is not there counts as 0.
+     */
+    private fun strayOf(
+        tag: String,
+        action: () -> Unit,
+    ): Float {
+        compose.mainClock.autoAdvance = false
+        action()
+        val tops =
+            List(60) {
+                compose.mainClock.advanceTimeBy(16)
+                if (compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isEmpty()) null else top(tag).value
+            }
+        val end = tops.last() ?: return 0f
+        return tops.filterNotNull().maxOf { abs(it - end) }
+    }
+
+    private fun focusGridTile() {
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+    }
+
+    @Test
+    fun the_spotlight_stays_on_the_tile_while_the_group_drops_back_after_its_menu_closes() {
+        showHome()
+        val tile = compose.onNodeWithTag("tile:pkg.1")
+        holdOk()
+        val risen = tile.getBoundsInRoot().top
+        compose.mainClock.autoAdvance = false
+
+        back()
+        var moved = 0f
+        repeat(40) {
+            if (moved < 3f) {
+                compose.mainClock.advanceTimeBy(16)
+                moved = (tile.getBoundsInRoot().top - risen).value
+            }
+        }
+
+        assertTrue("the tile dropped $moved dp", moved >= 3f)
+        val bounds = tile.getBoundsInRoot()
+        val density = compose.activity.resources.displayMetrics.density
+        val inside =
+            compose.onRoot().captureToImage().toPixelMap()[
+                (bounds.left.value * density).toInt() + 60, ((bounds.bottom - 1.5.dp).value * density).toInt(),
+            ]
+        assertTrue("tile bottom ${inside.red}", inside.red >= 0.95f)
+    }
+
+    @Test
+    fun the_inputs_list_a_remote_key_opens_over_a_grid_row_leaves_the_group_up() {
+        showHome(inputs = flowOf(FourPorts))
+        focusGridTile()
+
+        val stray = strayOf("tile:pkg.7") { inputsRequests++ }
+
+        compose.onNodeWithTag("menu").assertExists()
+        assertTrue("the group strayed $stray dp", stray <= 1f)
+    }
+
+    @Test
+    fun closing_the_menu_of_a_grid_tile_leaves_the_group_up() {
+        showHome()
+        focusGridTile()
+        holdOk()
+        compose.onNodeWithTag("menu").assertExists()
+
+        val stray = strayOf("shelf:name") { back() }
+
+        compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+        assertTrue("the group strayed $stray dp", stray <= 1f)
+    }
+
+    @Test
+    fun with_single_row_the_dock_does_not_lower_and_a_tile_menu_moves_nothing() {
+        showHome(config = cinematic.copy(singleRow = true))
+        val dock = top("dock")
+
+        holdOk()
+
+        compose.onNodeWithTag("menu").assertExists()
+        assertNear(dock, top("dock"))
     }
 }

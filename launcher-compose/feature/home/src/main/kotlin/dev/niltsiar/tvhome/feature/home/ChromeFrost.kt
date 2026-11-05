@@ -32,7 +32,7 @@ private const val CHANNEL = 0xFF
 /**
  * Keeps [glass]'s frost on the wallpaper's [Wallpaper.thumbnail] and sky, baked off the main thread each time either
  * changes, and [GlassState.dockLightness] on the part of it under the [dock] (as fractions of the screen). No
- * thumbnail, no frost.
+ * thumbnail, no frost and a lightness of 0, which gives the base tint.
  */
 @Composable
 internal fun ChromeFrostEffect(
@@ -52,7 +52,7 @@ internal fun ChromeFrostEffect(
                     }
                 }
             glass.frost = baked?.first
-            baked?.second?.let { glass.dockLightness = it }
+            glass.dockLightness = baked?.second ?: 0f
         }
     }
 }
