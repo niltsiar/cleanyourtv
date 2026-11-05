@@ -46,4 +46,12 @@
     <item quantity="two">שתי אפליקציות</item>
     <item quantity="other">%1$d אפליקציות</item>
   </plurals>
+  <string name="network_connected">מחובר</string>
+  <string name="settings_summary">מסך הבית והמערכת</string>
+  <string name="inputs_none">אין כניסות מחוברות</string>
+  <plurals name="inputs_connected">
+    <item quantity="one">%1$d כניסה מחוברת</item>
+    <item quantity="two">%1$d כניסות מחוברות</item>
+    <item quantity="other">%1$d כניסות מחוברות</item>
+  </plurals>
 </resources>

@@ -315,6 +315,7 @@ private fun Cards(
                         hold = hold,
                         anchor = anchor,
                         requester = focus.requester(card.app.key),
+                        visible = { listState.visibleShareOf(index) },
                         modifier =
                             Modifier.animateItem(
                                 fadeInSpec = null,
@@ -356,6 +357,13 @@ private class PeekBringIntoViewSpec(
             else -> 0f
         }
     }
+}
+
+/** The share of the card at [index] that shows in the row; 1 while the card is not laid out. */
+private fun LazyListState.visibleShareOf(index: Int): Float {
+    val info = layoutInfo
+    val item = info.visibleItemsInfo.firstOrNull { it.index == index } ?: return 1f
+    return visibleShare(item.offset, item.size, info.viewportStartOffset, info.viewportEndOffset)
 }
 
 /** How far the row can still scroll back, in pixels: infinite while its first card is not laid out. */

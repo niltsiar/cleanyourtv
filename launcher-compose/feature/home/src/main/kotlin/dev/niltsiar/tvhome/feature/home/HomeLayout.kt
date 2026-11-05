@@ -54,6 +54,29 @@ internal fun tileWidthShare(
     return (fitting / gridWidth).coerceIn(MIN_TILE_SHARE, 1f)
 }
 
+/** How far the band and the dock sit lower in dock focus than in the grid layout, in dp. */
+internal const val DOCK_LOWERING = 120f
+
+/**
+ * How much of [DOCK_LOWERING] dock focus uses, in dp: all of it for the peek of the first row ([rowsBelowDock] 0), and
+ * with [rowsBelowDock] full rows to show (at most the [gridRows] there are) only what is left of the screen under the
+ * last of them and [bottomMargin]. [shelfBottom] is where the dock panel starts; the dock panel is a tile and a [gap]
+ * above and below it, and a row is a [gap] and a tile.
+ */
+internal fun dockLowering(
+    windowHeight: Float,
+    shelfBottom: Float,
+    tileHeight: Float,
+    gap: Float,
+    gridRows: Int,
+    rowsBelowDock: Int,
+    bottomMargin: Float = 48f,
+): Float {
+    val rows = minOf(rowsBelowDock, gridRows).coerceAtLeast(0)
+    val lastBottom = shelfBottom + tileHeight + 2 * gap + rows * (gap + tileHeight)
+    return (windowHeight - bottomMargin - lastBottom).coerceIn(0f, DOCK_LOWERING)
+}
+
 /**
  * The grid tile that Down must reach from the tile at [row] and [column] (row -1 is the dock) when the cell straight
  * below does not exist, so the library pill under the last row does not capture the key; null when a tile is below or

@@ -44,4 +44,12 @@
     <item quantity="many">%1$d d\'aplicacions</item>
     <item quantity="other">%1$d aplicacions</item>
   </plurals>
+  <string name="network_connected">Connectada</string>
+  <string name="settings_summary">Inici i sistema</string>
+  <string name="inputs_none">Cap entrada connectada</string>
+  <plurals name="inputs_connected">
+    <item quantity="one">%1$d entrada connectada</item>
+    <item quantity="many">%1$d d’entrades connectades</item>
+    <item quantity="other">%1$d entrades connectades</item>
+  </plurals>
 </resources>

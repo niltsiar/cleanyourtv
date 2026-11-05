@@ -45,4 +45,12 @@
     <item quantity="many">%1$d apps</item>
     <item quantity="other">%1$d apps</item>
   </plurals>
+  <string name="network_connected">Conectada</string>
+  <string name="settings_summary">Tela inicial e sistema</string>
+  <string name="inputs_none">Nenhuma entrada conectada</string>
+  <plurals name="inputs_connected">
+    <item quantity="one">%1$d entrada conectada</item>
+    <item quantity="many">%1$d de entradas conectadas</item>
+    <item quantity="other">%1$d entradas conectadas</item>
+  </plurals>
 </resources>

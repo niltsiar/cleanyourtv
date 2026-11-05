@@ -72,7 +72,8 @@ private val RecentGreen = Color(0xFF70D9A0)
  * One card of the row, [width] wide: the app's art on a small tile, its name in a box of two lines and, on one line at
  * the bottom, where it stands. An idle card is opaque, so nothing of Home shows through it; a focused one lets the
  * highlight behind it show. It rises in once per opening, with the delay [CardEntrance] gives it, and pops a little
- * when its Home shortcut changes. Both run in the layer lambda.
+ * when its Home shortcut changes. Both run in the layer lambda. Its name and status draw at [labelAlpha] of [visible],
+ * the share of the card that shows in the row, so a card that peeks at an edge shows no clipped word.
  */
 @Composable
 internal fun LibraryCardView(
@@ -86,6 +87,7 @@ internal fun LibraryCardView(
     hold: OkHold,
     anchor: (Rect) -> Unit,
     requester: FocusRequester,
+    visible: () -> Float,
     modifier: Modifier = Modifier,
 ) {
     val key = card.app.key
@@ -167,7 +169,7 @@ internal fun LibraryCardView(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Art(card, artwork)
-                    Name(card.app.label)
+                    Name(card.app.label, Modifier.labelAt(visible))
                 }
                 Status(
                     card,
@@ -175,7 +177,8 @@ internal fun LibraryCardView(
                     Modifier
                         .align(
                             Alignment.BottomCenter,
-                        ).padding(start = CardSidePadding, end = CardSidePadding, bottom = CardTopBottomPadding),
+                        ).padding(start = CardSidePadding, end = CardSidePadding, bottom = CardTopBottomPadding)
+                        .labelAt(visible),
                 )
                 if (card.recent && !card.onHome) RecentDot(Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp))
             }
@@ -213,11 +216,34 @@ private fun Art(
     }
 }
 
+/** The alpha of a card's name and status: 0 while under half of the card shows, 1 from three quarters, linear between. */
+internal fun labelAlpha(visible: Float): Float = ((visible - LABEL_HIDDEN_BELOW) / (LABEL_SHOWN_FROM - LABEL_HIDDEN_BELOW)).coerceIn(0f, 1f)
+
+private const val LABEL_HIDDEN_BELOW = 0.5f
+private const val LABEL_SHOWN_FROM = 0.75f
+
+/** The share of a card of [size] pixels at [offset] that lies between [start] and [end]. */
+internal fun visibleShare(
+    offset: Int,
+    size: Int,
+    start: Int,
+    end: Int,
+): Float = (minOf(offset + size, end) - maxOf(offset, start)).coerceAtLeast(0).toFloat() / size
+
+private fun Modifier.labelAt(visible: () -> Float): Modifier =
+    graphicsLayer {
+        compositingStrategy = CompositingStrategy.ModulateAlpha
+        alpha = labelAlpha(visible())
+    }
+
 /** The first character, whole: a letter outside the Basic Multilingual Plane is two chars. */
 internal fun String.firstCodePoint(): String = if (isEmpty()) this else take(Character.charCount(codePointAt(0)))
 
 @Composable
-private fun Name(label: String) {
+private fun Name(
+    label: String,
+    modifier: Modifier = Modifier,
+) {
     val typography = TvTheme.typography
     val style = remember(typography) { typography.pillLabel.copy(fontSize = 14.sp, textAlign = TextAlign.Center) }
     BasicText(
@@ -226,7 +252,7 @@ private fun Name(label: String) {
         minLines = 2,
         maxLines = 2,
         overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.padding(top = 10.dp).fillMaxWidth(),
+        modifier = modifier.padding(top = 10.dp).fillMaxWidth(),
     )
 }
 

@@ -44,4 +44,12 @@
     <item quantity="few">%1$d aplikacije</item>
     <item quantity="other">%1$d aplikacija</item>
   </plurals>
+  <string name="network_connected">Povezana</string>
+  <string name="settings_summary">Početni ekran i sistem</string>
+  <string name="inputs_none">Nijedan ulaz nije povezan</string>
+  <plurals name="inputs_connected">
+    <item quantity="one">%1$d povezan ulaz</item>
+    <item quantity="few">%1$d povezana ulaza</item>
+    <item quantity="other">%1$d povezanih ulaza</item>
+  </plurals>
 </resources>

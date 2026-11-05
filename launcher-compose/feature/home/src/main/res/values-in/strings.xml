@@ -43,4 +43,10 @@
   <plurals name="library_app_count">
     <item quantity="other">%1$d aplikasi</item>
   </plurals>
+  <string name="network_connected">Terhubung</string>
+  <string name="settings_summary">Beranda dan sistem</string>
+  <string name="inputs_none">Tidak ada input terhubung</string>
+  <plurals name="inputs_connected">
+    <item quantity="other">%1$d input terhubung</item>
+  </plurals>
 </resources>

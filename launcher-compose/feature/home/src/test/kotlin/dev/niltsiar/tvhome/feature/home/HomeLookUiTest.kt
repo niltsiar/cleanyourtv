@@ -16,7 +16,6 @@ import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
-import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
@@ -157,32 +156,49 @@ class HomeLookUiTest {
     @Test
     fun rows_above_the_focused_row_draw_at_forty_percent() {
         showHome(apps = whiteAppsAndOneClear())
-        val white = centreOf(dockTile(6))
-        val clear = centreOf(dockTile(5))
-        assertNear(255, redAt(white), 2)
+        assertNear(255, redAt(centreOf(dockTile(6))), 2)
 
         press(Key.DirectionDown)
         compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
 
-        assertDrawnAt(0.40f, white, clear)
+        assertDrawnAt(0.40f, centreOf(dockTile(6)), centreOf(dockTile(5)))
     }
 
     @Test
-    fun the_grid_fades_out_over_the_bottom_56_dp_of_the_screen() {
+    fun the_first_grid_row_peeking_under_the_dock_fades_out_over_the_bottom_56_dp_of_the_screen() {
         showHome(apps = whiteApps(30))
-        val screen = screen()
-        val column = bounds("tile:pkg.8")
-        val x = (column.left.value + column.right.value) / 2
-        val y = screen.bottom.value - 40f
-        val lowest =
-            listOf(14, 20, 26)
-                .flatMap { compose.onAllNodesWithTag("tile:pkg.$it").fetchSemanticsNodes() }
-                .map { with(compose.density) { it.boundsInRoot.top.toDp() to it.boundsInRoot.bottom.toDp() } }
-                .first { (top, bottom) -> top.value < y && bottom.value > y }
+        val bottom = screen().bottom.value
+        val peek = bounds("tile:pkg.8")
 
-        assertTrue(lowest.first.value < y)
-        assertNear(Math.round(255 * 40f / 56f), redAt(Offset(x, y)), 4)
-        assertTrue(redAt(Offset(x, screen.bottom.value - 3f)) < 40)
+        assertTrue("the row starts at ${peek.top}, above the fade", peek.top.value < bottom - 56f)
+        assertNear(Math.round(255 * 20f / 56f), redOverColumnTwo(20f), 4)
+        assertTrue(redOverColumnTwo(3f) < 40)
+    }
+
+    /** The red channel over the second column of tiles, [fromBottom] dp above the screen's bottom. */
+    private fun redOverColumnTwo(fromBottom: Float): Int {
+        val column = bounds("tile:pkg.8")
+        return redAt(Offset((column.left.value + column.right.value) / 2, screen().bottom.value - fromBottom))
+    }
+
+    @Test
+    fun the_bottom_fade_grows_to_80_dp_while_the_grid_is_scrolled_and_goes_on_below_the_screen() {
+        showHome(apps = whiteApps(30))
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+
+        assertNear(Math.round(255 * 70f / 80f), redOverColumnTwo(70f), 4)
+        assertNear(Math.round(255 * 40f / 80f), redOverColumnTwo(40f), 4)
+    }
+
+    @Test
+    fun the_bottom_fade_is_56_dp_at_the_end_of_the_grid() {
+        showHome(apps = whiteApps(30))
+        repeat(4) { press(Key.DirectionDown) }
+        compose.onNodeWithTag("tile:pkg.25").assertIsFocused()
+
+        assertNear(255, redOverColumnTwo(70f), 4)
+        assertNear(Math.round(255 * 52f / 56f), redOverColumnTwo(52f), 4)
     }
 
     @Test

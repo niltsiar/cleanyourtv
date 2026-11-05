@@ -43,4 +43,10 @@
   <plurals name="library_app_count">
     <item quantity="other">%1$d 个应用</item>
   </plurals>
+  <string name="network_connected">已连接</string>
+  <string name="settings_summary">主屏幕和系统</string>
+  <string name="inputs_none">没有已连接的输入源</string>
+  <plurals name="inputs_connected">
+    <item quantity="other">%1$d 个输入源已连接</item>
+  </plurals>
 </resources>

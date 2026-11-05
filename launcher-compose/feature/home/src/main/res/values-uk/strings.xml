@@ -46,4 +46,13 @@
     <item quantity="many">%1$d застосунків</item>
     <item quantity="other">%1$d застосунка</item>
   </plurals>
+  <string name="network_connected">Під’єднано</string>
+  <string name="settings_summary">Головний екран і система</string>
+  <string name="inputs_none">Немає під’єднаних джерел</string>
+  <plurals name="inputs_connected">
+    <item quantity="one">%1$d під’єднане джерело</item>
+    <item quantity="few">%1$d під’єднані джерела</item>
+    <item quantity="many">%1$d під’єднаних джерел</item>
+    <item quantity="other">%1$d під’єднаного джерела</item>
+  </plurals>
 </resources>

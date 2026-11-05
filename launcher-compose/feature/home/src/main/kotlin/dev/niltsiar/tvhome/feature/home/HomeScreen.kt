@@ -6,6 +6,10 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -151,9 +155,13 @@ private val DockShape = RoundedCornerShape(32.dp)
 private val GridBottom = 48.dp
 private val LibraryRowHeight = 84.dp
 
-/** The grid fades in over this much under the band, and out over [BottomFade] at the bottom of the screen. */
+/**
+ * The grid fades in over this much under the band, and out over [BottomFade] at the bottom of the screen, over
+ * [BottomFadeGrown] while the grid is scrolled and more of it lies below the screen.
+ */
 private val TopFade = 28.dp
 private val BottomFade = 56.dp
+private val BottomFadeGrown = 80.dp
 
 /** A focused tile's ring (its growth, gap, ring and hairline) reaches about 10 dp past its edge; the top fade ends this far above it. */
 private val RingClearance = 12.dp
@@ -179,8 +187,7 @@ private const val ROW_ABOVE_PILL_ALPHA = 0.55f
 /** A dock scrolled up for the grid fades out over the last of this before it reaches the shelf's bottom edge. */
 private val DockFadeOut = 28.dp
 private const val MENU_SCRIM = 0.5f
-private const val LIBRARY_SCRIM = 0.6f
-private const val BAND_TOP_BAR_ALPHA = 0.55f
+private const val LIBRARY_SCRIM = 0.78f
 private const val BAND_IN_MS = 160
 private const val BAND_OUT_MS = 120
 private const val LIBRARY_SWAP_MS = 150
@@ -243,10 +250,14 @@ public fun HomeScreen(
     val currentState = rememberUpdatedState(state)
     val currentActions = rememberUpdatedState(actions)
     val currentOpenLibrary = rememberUpdatedState(onOpenLibrary)
+    val shelfHeight = if (shelfLayout.cinematic) CinematicShelfHeight else ShelfHeight
+    val shelfBottom = ContentTop + shelfHeight
+    val dim = rememberFocusDim(currentState, shelfBottom, layout)
     val input =
         remember {
             HomeInput(
                 currentActions,
+                groupShift = dim::lowPx,
                 carried = derivedStateOf { currentState.value().reorder?.carried },
                 dimmed = derivedStateOf { currentState.value().reorder?.dimmed ?: emptySet() },
                 reordering = derivedStateOf { currentState.value().reorder != null },
@@ -269,10 +280,13 @@ public fun HomeScreen(
     }
     val gridState = rememberLazyGridState()
     val backdrop = rememberCinematicBackdrop(shelfLayout, shelf = { state().shelf }, heroArt = heroArt)
-    val shelfHeight = if (shelfLayout.cinematic) CinematicShelfHeight else ShelfHeight
-    val shelfBottom = ContentTop + shelfHeight
-    val shelfModifier = Modifier.padding(top = ContentTop, start = ScreenMargin).height(shelfHeight - TitleToShelfBottom)
-    val band = rememberBandFade(currentState, input, libraryOpen)
+    val shelfModifier =
+        Modifier
+            .padding(top = ContentTop, start = ScreenMargin)
+            .height(shelfHeight - TitleToShelfBottom)
+            .graphicsLayer { translationY = dim.lowPx() }
+    val band = rememberBandFade(libraryOpen)
+    FocusDimEffects(dim, currentState, input, layout, libraryOpen)
     Box(
         modifier =
             modifier
@@ -300,6 +314,7 @@ public fun HomeScreen(
             dockFocus,
             gridState,
             input,
+            dim,
             state,
             layout,
             shelfLayout,
@@ -312,7 +327,7 @@ public fun HomeScreen(
         )
         if (shelfLayout.cinematic) {
             CinematicShelf(
-                shelf = { state().takeIf { it.reorder == null && !input.pillFocused }?.shelf },
+                shelf = { state().takeIf { it.reorder == null && !input.pillFocused && input.headerControl(it) == null }?.shelf },
                 layout = shelfLayout,
                 modifier = shelfModifier,
                 titleAlpha = { band.title.value },
@@ -344,7 +359,11 @@ public fun HomeScreen(
         OverlayHost(
             open = { currentState.value().let { it.menu != null || it.inputsOpen } || libraryOpen() },
             strength = { if (libraryOpen()) LIBRARY_SCRIM else MENU_SCRIM },
-            spotlight = { input.anchor.value.takeIf { currentState.value().menu?.tileKey != null } },
+            spotlight = {
+                input.anchor.value
+                    .takeIf { currentState.value().menu?.tileKey != null }
+                    ?.translate(0f, dim.lowPx())
+            },
             spotlightShape = TileShape,
         ) {
             menu?.let { open ->
@@ -378,6 +397,7 @@ private fun HomeContent(
     dockFocus: FocusRequester,
     gridState: LazyGridState,
     input: HomeInput,
+    dim: FocusDim,
     state: () -> HomeUiState,
     layout: HomeLayout,
     shelfLayout: ShelfLayout,
@@ -391,17 +411,11 @@ private fun HomeContent(
     val density = LocalDensity.current
     // The focused tile rests one gap inside the dock panel, so at rest the dock panel's top edge is the shelf's bottom edge.
     val pivotPx = with(density) { (shelfBottom + TileGap).toPx() }
-    val pivotSpec = remember(pivotPx) { PivotBringIntoViewSpec(pivotPx) }
+    val pivotSpec = remember(pivotPx, dim) { PivotBringIntoViewSpec(pivotPx, dim::lowPx) }
     val shelfBottomPx = with(density) { shelfBottom.toPx() }
     val window = LocalWindowInfo.current.containerSize
     val gridWidth = with(density) { window.width.toDp() } - ScreenMargin * 2
-    val belowShelf = with(density) { window.height.toDp() } - shelfBottom - GridBottom
-    val share =
-        if (layout.singleRow) {
-            1f
-        } else {
-            tileWidthShare(gridWidth.value, belowShelf.value, layout.columns, layout.rowsBelowDock, TileGap.value)
-        }
+    val share = gridShare(layout, gridWidth, with(density) { window.height.toDp() }, shelfBottom)
     val sideMargin = ScreenMargin + gridWidth * ((1f - share) / 2f)
     val rowTileWidth = (gridWidth - TileGap * (layout.columns - 1)) / layout.columns
     val firstDockTile = remember { FocusRequester() }
@@ -411,7 +425,6 @@ private fun HomeContent(
     val dock = remember(state) { derivedStateOf(structuralEqualityPolicy()) { state().dock } }.value
     val grid = remember(state) { derivedStateOf(structuralEqualityPolicy()) { state().grid } }.value
     val reordering = input.reordering.value
-    val focusRow = rememberFocusRow(state, input, layout)
     LaunchedEffect(gridState) {
         snapshotFlow { state().focusRequest }.filterNotNull().collect { request ->
             focusOn(request.target, gridState, dockRow, layout.singleRow, state, input)
@@ -482,14 +495,14 @@ private fun HomeContent(
                     onFocus = onFocus,
                     onClick = onClick,
                     onOpenLibrary = onOpenLibrary,
-                    modifier = remember(focusRow, gridState, shelfBottomPx) { Modifier.dockLayer(focusRow, gridState, shelfBottomPx) },
+                    modifier = remember(dim, gridState, shelfBottomPx) { Modifier.dockLayer(dim, gridState, shelfBottomPx) },
                 )
             }
             itemsIndexed(grid, key = { _, app -> app.key }, contentType = { _, _ -> "tile" }) { index, app ->
                 val toward =
-                    remember(input, layout, grid, index, focusRow) {
+                    remember(input, layout, grid, index, dim) {
                         Modifier
-                            .dimAboveFocus(index / layout.columns, focusRow)
+                            .dimAboveFocus(index / layout.columns, dim)
                             .towardLibrary(
                                 input,
                                 layout,
@@ -519,7 +532,7 @@ private fun HomeContent(
                         glass,
                         input,
                         onOpenLibrary,
-                        Modifier.fillMaxWidth().height(LibraryRowHeight),
+                        Modifier.fillMaxWidth().height(LibraryRowHeight).graphicsLayer { translationY = dim.lowPx() },
                         up = { pillUp(input, state(), layout) },
                     )
                 }
@@ -620,47 +633,135 @@ private fun pillUp(
 /**
  * The row focus is on, animated: [DOCK_ROW] for the dock, the grid row of a grid tile, the row after the last for the
  * library pill, and [DOCK_ROW] while focus is outside the grid. [floor] is the alpha of the rows above it, animated with
- * it. Read both in layer lambdas only.
+ * it. [low] is 1 while the band and the dock sit [lowering] pixels lower (focus in the dock or on the top bar) and 0 in
+ * the grid layout; the grid's items, the band and the pill draw that far down. Read them in layer lambdas only.
  */
 @Stable
-private class FocusDim {
+private class FocusDim(
+    private val lowering: State<Float>,
+) {
     val row = Animatable(DOCK_ROW.toFloat())
     val floor = Animatable(ROW_ABOVE_ALPHA)
+    val low = Animatable(1f)
 
     /** The alpha of [row]: [floor] while focus is a row or more below it, 1 from the focused row down. */
     fun alphaOf(row: Int): Float = 1f - (1f - floor.value) * (this.row.value - row).coerceIn(0f, 1f)
+
+    /** How far down the group is drawn now, in pixels. */
+    fun lowPx(): Float = low.value * lowering.value
 }
 
+/** How long the group takes to move, and the damping of its spring when focus_overshoot is on. */
+private const val GROUP_MS = 320
+private const val GROUP_OVERSHOOT_DAMPING = 0.7f
+
 @Composable
-private fun rememberFocusRow(
-    state: () -> HomeUiState,
-    input: HomeInput,
+private fun rememberFocusDim(
+    state: State<() -> HomeUiState>,
+    shelfBottom: Dp,
     layout: HomeLayout,
 ): FocusDim {
+    val density = LocalDensity.current
+    val window = LocalWindowInfo.current.containerSize
+    val gridCount by remember(state) { derivedStateOf { state.value().grid.size } }
+    val lowering =
+        with(density) {
+            val gridWidth = window.width.toDp() - ScreenMargin * 2
+            val height = window.height.toDp()
+            val share = gridShare(layout, gridWidth, height, shelfBottom)
+            val tileWidth = (gridWidth * share - TileGap * (layout.columns - 1)) / layout.columns
+            val gridRows = if (layout.singleRow) 0 else (gridCount + layout.columns - 1) / layout.columns
+            dockLowering(
+                windowHeight = height.value,
+                shelfBottom = shelfBottom.value,
+                tileHeight = tileWidth.value / TILE_ASPECT,
+                gap = TileGap.value,
+                gridRows = gridRows,
+                rowsBelowDock = layout.rowsBelowDock,
+                bottomMargin = GridBottom.value,
+            ).dp.toPx()
+        }
+    val current = rememberUpdatedState(lowering)
+    return remember { FocusDim(current) }
+}
+
+/** The share of the grid's width its tiles use, so that [HomeLayout.rowsBelowDock] rows fit under a dock whose panel starts at [shelfBottom]. */
+private fun gridShare(
+    layout: HomeLayout,
+    gridWidth: Dp,
+    windowHeight: Dp,
+    shelfBottom: Dp,
+): Float =
+    if (layout.singleRow) {
+        1f
+    } else {
+        tileWidthShare(
+            gridWidth.value,
+            (windowHeight - shelfBottom - GridBottom).value,
+            layout.columns,
+            layout.rowsBelowDock,
+            TileGap.value,
+        )
+    }
+
+/** The row focus is on, as [FocusDim.row] counts it. */
+private fun focusRowOf(
+    state: HomeUiState,
+    input: HomeInput,
+    layout: HomeLayout,
+): Int {
+    val inGrid = state.grid.indexOfFirst { it.key == state.focusedKey }
+    return when {
+        !input.gridFocused || layout.singleRow -> DOCK_ROW
+        input.pillFocused -> (state.grid.size + layout.columns - 1) / layout.columns
+        inGrid >= 0 -> inGrid / layout.columns
+        else -> DOCK_ROW
+    }
+}
+
+/**
+ * Runs [dim]: its row and floor follow focus in [ROW_DIM_MS], and its group goes low with focus in the dock or on the top
+ * bar and up with focus in the grid or a tile menu, in [GROUP_MS], at once without motion. It stays where it is while the
+ * App library is open.
+ */
+@Composable
+private fun FocusDimEffects(
+    dim: FocusDim,
+    state: State<() -> HomeUiState>,
+    input: HomeInput,
+    layout: HomeLayout,
+    libraryOpen: () -> Boolean,
+) {
     val motion = TvTheme.motion
-    val dim = remember { FocusDim() }
+    val currentLibraryOpen = rememberUpdatedState(libraryOpen)
     LaunchedEffect(state, input, layout, motion) {
-        snapshotFlow {
-            val shown = state()
-            val inGrid = shown.grid.indexOfFirst { it.key == shown.focusedKey }
-            when {
-                !input.gridFocused || layout.singleRow -> DOCK_ROW
-                input.pillFocused -> (shown.grid.size + layout.columns - 1) / layout.columns
-                inGrid >= 0 -> inGrid / layout.columns
-                else -> DOCK_ROW
-            }
-        }.collectLatest { dim.row.animateTo(it.toFloat(), motion.tweenSpec(ROW_DIM_MS)) }
+        snapshotFlow { focusRowOf(state.value(), input, layout) }
+            .collectLatest { dim.row.animateTo(it.toFloat(), motion.tweenSpec(ROW_DIM_MS)) }
     }
     LaunchedEffect(input, motion) {
         snapshotFlow { if (input.pillFocused) ROW_ABOVE_PILL_ALPHA else ROW_ABOVE_ALPHA }
             .collectLatest { dim.floor.animateTo(it, motion.tweenSpec(ROW_DIM_MS)) }
     }
-    return dim
+    LaunchedEffect(state, input, layout, motion) {
+        var low = true
+        snapshotFlow {
+            val shown = state.value()
+            if (!currentLibraryOpen.value()) low = focusRowOf(shown, input, layout) == DOCK_ROW && shown.menu?.tileKey == null
+            low
+        }.collectLatest { toLow ->
+            val target = if (toLow) 1f else 0f
+            when {
+                !motion.animated -> dim.low.snapTo(target)
+                motion.focusOvershoot -> dim.low.animateTo(target, spring(GROUP_OVERSHOOT_DAMPING, Spring.StiffnessMediumLow))
+                else -> dim.low.animateTo(target, tween(GROUP_MS, easing = FastOutSlowInEasing))
+            }
+        }
+    }
 }
 
 private const val ROW_DIM_MS = 160
 
-/** Draws the item of grid [row] at the alpha [dim] gives it. */
+/** Draws the item of grid [row] at the alpha [dim] gives it, as far down as [dim]'s group is. */
 private fun Modifier.dimAboveFocus(
     row: Int,
     dim: FocusDim,
@@ -668,11 +769,13 @@ private fun Modifier.dimAboveFocus(
     graphicsLayer {
         compositingStrategy = CompositingStrategy.ModulateAlpha
         alpha = dim.alphaOf(row)
+        translationY = dim.lowPx()
     }
 
 /**
- * The dock's layer: dimmed as [dimAboveFocus] dims a row, and faded out over the [DockFadeOut] before its bottom edge
- * scrolls up to [shelfBottomPx], so a dock scrolled up for the grid leaves nothing in the grid's top fade.
+ * The dock's layer: dimmed as [dimAboveFocus] dims a row, drawn as far down as [dim]'s group is, and faded out over the
+ * [DockFadeOut] before its bottom edge scrolls up to [shelfBottomPx], so a dock scrolled up for the grid leaves nothing in
+ * the grid's top fade.
  */
 private fun Modifier.dockLayer(
     dim: FocusDim,
@@ -687,16 +790,18 @@ private fun Modifier.dockLayer(
             if (dock == null) {
                 0f
             } else {
-                val bottom = dock.offset.y - info.viewportStartOffset + dock.size.height
+                val bottom = dock.offset.y - info.viewportStartOffset + dock.size.height + dim.lowPx()
                 ((bottom - shelfBottomPx) / DockFadeOut.toPx()).coerceIn(0f, 1f)
             }
         alpha = dim.alphaOf(DOCK_ROW) * shown
+        translationY = dim.lowPx()
     }
 
 /**
  * The grid's edges, drawn as a mask in the draw phase: nothing above [fadeStart], a [TopFade] under it, and a
  * [BottomFade] at the bottom of the screen. At rest the top fade is off, so the resting dock is whole; it comes in over
- * the first [gate] of scrolling, before anything reaches [fadeStart]. Each fade is a layer the size of its strip.
+ * the first [gate] of scrolling, before anything reaches [fadeStart]. The bottom fade grows to [BottomFadeGrown] with that
+ * scrolling, while the grid can scroll on, and is back to [BottomFade] at its end. Each fade is a layer the size of its strip.
  */
 private fun Modifier.gridEdges(
     grid: LazyGridState,
@@ -706,14 +811,27 @@ private fun Modifier.gridEdges(
     drawWithCache {
         val top = fadeStart.toPx()
         val fadeEnd = top + TopFade.toPx()
-        val bottomStart = size.height - BottomFade.toPx()
+        val fadeRest = BottomFade.toPx()
+        val fadeGrowth = BottomFadeGrown.toPx() - fadeRest
         val gatePx = gate.toPx()
         val fadeIn = Brush.verticalGradient(0f to Color.Transparent, 1f to Color.Black, startY = top, endY = fadeEnd)
-        val fadeOut = Brush.verticalGradient(0f to Color.Black, 1f to Color.Transparent, startY = bottomStart, endY = size.height)
+        var bottomFade = -1f
+        var fadeOut: Brush? = null
         val layerPaint = Paint()
         onDrawWithContent {
             val scrolled = if (grid.firstVisibleItemIndex > 0) gatePx else grid.firstVisibleItemScrollOffset.toFloat()
             val shown = (scrolled / gatePx).coerceIn(0f, 1f)
+            val fade = fadeRest + fadeGrowth * minOf(shown, (grid.aheadRoom() / fadeGrowth).coerceIn(0f, 1f))
+            val bottomStart = size.height - fade
+            if (fade != bottomFade) {
+                bottomFade = fade
+                fadeOut = null
+            }
+            val bottomMask =
+                fadeOut
+                    ?: Brush.verticalGradient(0f to Color.Black, 1f to Color.Transparent, startY = bottomStart, endY = size.height).also {
+                        fadeOut = it
+                    }
             val bodyTop =
                 if (shown > 0f) {
                     val mask =
@@ -733,9 +851,17 @@ private fun Modifier.gridEdges(
                     top
                 }
             clipRect(top = bodyTop, bottom = bottomStart) { this@onDrawWithContent.drawContent() }
-            drawMasked(bottomStart, size.height, fadeOut, layerPaint)
+            drawMasked(bottomStart, size.height, bottomMask, layerPaint)
         }
     }
+
+/** How far the grid can still scroll, in pixels: infinite while its last item is not laid out, 0 at its end. */
+private fun LazyGridState.aheadRoom(): Float {
+    val info = layoutInfo
+    val last = info.visibleItemsInfo.lastOrNull() ?: return 0f
+    if (last.index != info.totalItemsCount - 1) return Float.POSITIVE_INFINITY
+    return (last.offset.y + last.size.height - (info.viewportEndOffset - info.afterContentPadding)).toFloat().coerceAtLeast(0f)
+}
 
 /** The content between [top] and [bottom], its alpha multiplied by [mask]'s in a layer of that strip only. */
 private fun ContentDrawScope.drawMasked(
@@ -752,16 +878,12 @@ private fun ContentDrawScope.drawMasked(
     canvas.restore()
 }
 
-/**
- * How the band over the grid shows: whole; on the top bar (or a menu or list it opened) its title dimmed and the rest
- * gone, so it does not claim a dock app is selected; and gone under the App library, whose panel would cut through it.
- */
+/** How the band over the grid shows: whole, or gone under the App library, whose panel would cut through it. */
 private enum class BandLook(
     val title: Float,
     val detail: Float,
 ) {
     Whole(1f, 1f),
-    TopBar(BAND_TOP_BAR_ALPHA, 0f),
     Gone(0f, 0f),
 }
 
@@ -772,26 +894,15 @@ private class BandFade {
     val detail = Animatable(1f)
 }
 
-/** The band's fades, following focus and what is open: in with the library's scrim in [BAND_IN_MS], back in [BAND_OUT_MS]. */
+/** The band's fades, following the App library: out with its scrim in [BAND_IN_MS], back in [BAND_OUT_MS]. */
 @Composable
-private fun rememberBandFade(
-    state: State<() -> HomeUiState>,
-    input: HomeInput,
-    libraryOpen: () -> Boolean,
-): BandFade {
+private fun rememberBandFade(libraryOpen: () -> Boolean): BandFade {
     val motion = TvTheme.motion
     val band = remember { BandFade() }
     val currentLibraryOpen = rememberUpdatedState(libraryOpen)
-    LaunchedEffect(input, motion) {
+    LaunchedEffect(motion) {
         var shown = BandLook.Whole
-        snapshotFlow {
-            val home = state.value()
-            when {
-                currentLibraryOpen.value() -> BandLook.Gone
-                input.topBarFocused || home.inputsOpen || (home.menu != null && home.menu.tileKey == null) -> BandLook.TopBar
-                else -> BandLook.Whole
-            }
-        }.collectLatest { look ->
+        snapshotFlow { if (currentLibraryOpen.value()) BandLook.Gone else BandLook.Whole }.collectLatest { look ->
             val spec = motion.tweenSpec<Float>(if (shown == BandLook.Gone && look != BandLook.Gone) BAND_OUT_MS else BAND_IN_MS)
             shown = look
             coroutineScope {
@@ -832,6 +943,9 @@ private fun HeroTitle(
 ) {
     val hint by remember(state) { derivedStateOf { state().reorder?.hint } }
     val count by remember(state) { derivedStateOf { state().libraryCount } }
+    val control by remember(state, input) { derivedStateOf { input.headerControl(state()) } }
+    val inputs by remember(state) { derivedStateOf { state().inputs.rows.connectedSummary() } }
+    val link by remember(state) { derivedStateOf { state().network.link } }
     val tile by remember(state) {
         derivedStateOf {
             val home = state()
@@ -839,10 +953,12 @@ private fun HeroTitle(
         }
     }
     val mode = hint
+    val bar = control
     val line =
         when {
             mode != null -> HeroLine(stringResource(if (mode == ReorderHint.Reorder) R.string.reorder else R.string.dock_edit), hint = mode)
             input.pillFocused -> HeroLine(stringResource(R.string.library_entry), libraryCountText(count), quick = true)
+            bar != null -> barLine(bar, inputs, link)
             else -> tile
         }
     val animated = TvTheme.motion.animated
@@ -905,6 +1021,41 @@ private fun HeroTitle(
         }
     }
 }
+
+/** What the band says on the top bar: the name of the focused [control] and one line on its state; a button that has none shows its name. */
+@Composable
+private fun barLine(
+    control: BarControl,
+    inputs: InputsSummary,
+    link: NetworkLink,
+): HeroLine =
+    when (control) {
+        BarControl.Inputs -> {
+            val meta =
+                when (inputs) {
+                    InputsSummary.None -> stringResource(R.string.inputs_none)
+                    is InputsSummary.One -> "${inputs.label} \u00B7 ${stringResource(R.string.input_connected)}"
+                    is InputsSummary.Many -> pluralStringResource(R.plurals.inputs_connected, inputs.count, inputs.count)
+                }
+            HeroLine(stringResource(R.string.inputs), meta, quick = true)
+        }
+
+        BarControl.Network -> {
+            HeroLine(
+                stringResource(if (link == NetworkLink.Ethernet) R.string.ethernet else R.string.wifi),
+                stringResource(if (link == NetworkLink.Offline) R.string.offline else R.string.network_connected),
+                quick = true,
+            )
+        }
+
+        BarControl.Settings -> {
+            HeroLine(stringResource(R.string.settings), stringResource(R.string.settings_summary), quick = true)
+        }
+
+        is BarControl.Named -> {
+            HeroLine(control.label, quick = true)
+        }
+    }
 
 @Composable
 private fun libraryCountText(count: Int?): String = count?.let { pluralStringResource(R.plurals.library_app_count, it, it) } ?: " "
@@ -1159,13 +1310,13 @@ private fun AppTile(
                 .holdOk(
                     input.hold,
                     onHold = { bounds ->
-                        input.anchor.value = bounds
+                        input.anchorTile(bounds)
                         input.actions.onTileMenu(key, true)
                     },
                     onMenuKey =
                         if (tileMenu) {
                             { bounds ->
-                                input.anchor.value = bounds
+                                input.anchorTile(bounds)
                                 input.actions.onTileMenu(key, false)
                             }
                         } else {

@@ -341,6 +341,29 @@ class LibraryOverlayLookUiTest {
         assertTrue("expected $expected, got $actual", abs(actual - expected) <= 8)
     }
 
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_name_of_the_peeking_card_is_not_drawn_while_under_half_of_the_card_shows() {
+        val long = "App 6 Recorded Title List For The Peek"
+        showLibrary(nineApps.take(5) + libraryApp(long) + nineApps.drop(6))
+        val row = bounds("library:cards")
+        val peek = card(long)
+        val name =
+            compose
+                .onNode(
+                    hasText(long) and hasAnyAncestor(hasTestTag("card:${key(long)}")),
+                    useUnmergedTree = true,
+                ).getBoundsInRoot()
+
+        var brightest = 0
+        var x = peek.left + 2.dp
+        while (x < row.right - 2.dp) {
+            brightest = maxOf(brightest, redAt(x, name.top + 8.dp), redAt(x, name.bottom - 8.dp))
+            x += 2.dp
+        }
+        assertTrue("brightest $brightest over the peeking card's name", brightest <= FADED)
+    }
+
     private companion object {
         const val PANEL_X = 960
         const val PANEL_HEADER_Y = 304

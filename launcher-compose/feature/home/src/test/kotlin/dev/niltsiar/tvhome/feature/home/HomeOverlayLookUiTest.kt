@@ -97,6 +97,14 @@ class HomeOverlayLookUiTest {
 
     private fun bounds(tag: String): DpRect = compose.onNodeWithTag(tag).getBoundsInRoot()
 
+    private fun centreOf(tag: String): Offset =
+        bounds(tag).let {
+            Offset(
+                (it.left.value + it.right.value) / 2,
+                (it.top.value + it.bottom.value) / 2,
+            )
+        }
+
     /** The red channel, 0 to 255, of the screen at [point] (in dp). */
     private fun redAt(point: Offset): Int {
         val pixels = compose.onRoot().captureToImage().toPixelMap()
@@ -136,39 +144,36 @@ class HomeOverlayLookUiTest {
     @Config(qualifiers = "+night")
     fun an_open_menu_dims_home_behind_it_by_half_and_back_lifts_the_dim() {
         showHome()
-        val farTile = bounds("tile:pkg.6")
-        val far = Offset((farTile.left.value + farTile.right.value) / 2, (farTile.top.value + farTile.bottom.value) / 2)
-        assertNear(255, redAt(far), 2)
+        assertNear(255, redAt(centreOf("tile:pkg.6")), 2)
 
         openTileMenu()
-        assertNear((255 + 0x07) / 2, redAt(far), 4)
+        assertNear((255 + 0x07) / 2, redAt(centreOf("tile:pkg.6")), 4)
 
         compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
         settle()
         compose.onNodeWithTag("menu").assertDoesNotExist()
-        assertNear(255, redAt(far), 2)
+        assertNear(255, redAt(centreOf("tile:pkg.6")), 2)
     }
 
     @Test
     @Config(qualifiers = "+night")
-    fun the_app_library_dims_home_behind_it_to_forty_percent() {
+    fun the_app_library_dims_home_behind_it_to_22_percent() {
         showHome()
-        val farTile = bounds("tile:pkg.6")
-        val far = Offset((farTile.left.value + farTile.right.value) / 2, (farTile.top.value + farTile.bottom.value) / 2)
+        val far = centreOf("tile:pkg.6")
 
         libraryOpen = true
         settle()
 
-        assertNear(Math.round(255 * 0.4f + 0x07 * 0.6f), redAt(far), 3)
+        assertNear(Math.round(255 * 0.22f + 0x07 * 0.78f), redAt(far), 3)
     }
 
     @Test
     @Config(qualifiers = "+night")
     fun the_tile_a_menu_acts_on_stays_undimmed_inside_a_thin_white_ring() {
         showHome()
-        val tile = bounds("tile:pkg.1")
         openTileMenu()
 
+        val tile = bounds("tile:pkg.1")
         val middle = (tile.top.value + tile.bottom.value) / 2
         assertNear(255, redAt(Offset(tile.left.value + 8f, middle)), 2)
         // The dimmed dock, in the gap after the tile, and past the ring on its other side.

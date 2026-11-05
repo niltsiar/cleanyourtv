@@ -43,4 +43,11 @@
     <item quantity="one">%1$dটি অ্যাপ</item>
     <item quantity="other">%1$dটি অ্যাপ</item>
   </plurals>
+  <string name="network_connected">কানেক্টেড</string>
+  <string name="settings_summary">হোম ও সিস্টেম</string>
+  <string name="inputs_none">কোনো ইনপুট কানেক্টেড নেই</string>
+  <plurals name="inputs_connected">
+    <item quantity="one">%1$dটি ইনপুট কানেক্টেড</item>
+    <item quantity="other">%1$dটি ইনপুট কানেক্টেড</item>
+  </plurals>
 </resources>

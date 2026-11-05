@@ -47,4 +47,15 @@
     <item quantity="many">%1$d تطبيقًا</item>
     <item quantity="other">%1$d تطبيق</item>
   </plurals>
+  <string name="network_connected">متصلة</string>
+  <string name="settings_summary">الرئيسية والنظام</string>
+  <string name="inputs_none">لا يوجد مدخل متصل</string>
+  <plurals name="inputs_connected">
+    <item quantity="zero">%1$d مدخلات متصلة</item>
+    <item quantity="one">%1$d مدخل متصل</item>
+    <item quantity="two">%1$d مدخلان متصلان</item>
+    <item quantity="few">%1$d مدخلات متصلة</item>
+    <item quantity="many">%1$d مدخلًا متصلًا</item>
+    <item quantity="other">%1$d مدخل متصل</item>
+  </plurals>
 </resources>

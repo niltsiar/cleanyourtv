@@ -43,4 +43,10 @@
   <plurals name="library_app_count">
     <item quantity="other">%1$d 個應用程式</item>
   </plurals>
+  <string name="network_connected">已連線</string>
+  <string name="settings_summary">主畫面與系統</string>
+  <string name="inputs_none">沒有已連線的輸入來源</string>
+  <plurals name="inputs_connected">
+    <item quantity="other">%1$d 個輸入來源已連線</item>
+  </plurals>
 </resources>

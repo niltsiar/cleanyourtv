@@ -40,4 +40,11 @@
     <item quantity="one">%1$d app</item>
     <item quantity="other">%1$d apps</item>
   </plurals>
+  <string name="network_connected">Tilsluttet</string>
+  <string name="settings_summary">Startskærm og system</string>
+  <string name="inputs_none">Ingen indgang tilsluttet</string>
+  <plurals name="inputs_connected">
+    <item quantity="one">%1$d indgang tilsluttet</item>
+    <item quantity="other">%1$d indgange tilsluttet</item>
+  </plurals>
 </resources>

@@ -44,4 +44,11 @@
     <item quantity="one">%1$d app</item>
     <item quantity="other">%1$d apper</item>
   </plurals>
+  <string name="network_connected">Tilkoblet</string>
+  <string name="settings_summary">Startskjerm og system</string>
+  <string name="inputs_none">Ingen innganger tilkoblet</string>
+  <plurals name="inputs_connected">
+    <item quantity="one">%1$d inngang tilkoblet</item>
+    <item quantity="other">%1$d innganger tilkoblet</item>
+  </plurals>
 </resources>

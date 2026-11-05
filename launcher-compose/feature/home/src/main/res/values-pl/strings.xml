@@ -45,4 +45,13 @@
     <item quantity="many">%1$d aplikacji</item>
     <item quantity="other">%1$d aplikacji</item>
   </plurals>
+  <string name="network_connected">Połączono</string>
+  <string name="settings_summary">Ekran główny i system</string>
+  <string name="inputs_none">Brak podłączonych wejść</string>
+  <plurals name="inputs_connected">
+    <item quantity="one">%1$d podłączone wejście</item>
+    <item quantity="few">%1$d podłączone wejścia</item>
+    <item quantity="many">%1$d podłączonych wejść</item>
+    <item quantity="other">%1$d podłączonych wejść</item>
+  </plurals>
 </resources>

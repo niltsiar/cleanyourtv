@@ -44,4 +44,11 @@
     <item quantity="one">%1$d sovellus</item>
     <item quantity="other">%1$d sovellusta</item>
   </plurals>
+  <string name="network_connected">Yhdistetty</string>
+  <string name="settings_summary">Kotinäkymä ja järjestelmä</string>
+  <string name="inputs_none">Ei yhdistettyjä lähteitä</string>
+  <plurals name="inputs_connected">
+    <item quantity="one">%1$d lähde yhdistetty</item>
+    <item quantity="other">%1$d lähdettä yhdistetty</item>
+  </plurals>
 </resources>

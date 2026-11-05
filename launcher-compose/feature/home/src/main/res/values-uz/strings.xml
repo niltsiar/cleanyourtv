@@ -44,4 +44,11 @@
     <item quantity="one">%1$d ta ilova</item>
     <item quantity="other">%1$d ta ilova</item>
   </plurals>
+  <string name="network_connected">Ulangan</string>
+  <string name="settings_summary">Bosh ekran va tizim</string>
+  <string name="inputs_none">Ulangan manba yoʻq</string>
+  <plurals name="inputs_connected">
+    <item quantity="one">%1$d ta manba ulangan</item>
+    <item quantity="other">%1$d ta manba ulangan</item>
+  </plurals>
 </resources>

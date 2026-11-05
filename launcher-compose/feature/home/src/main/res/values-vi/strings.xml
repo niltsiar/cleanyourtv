@@ -43,4 +43,10 @@
   <plurals name="library_app_count">
     <item quantity="other">%1$d ứng dụng</item>
   </plurals>
+  <string name="network_connected">Đã kết nối</string>
+  <string name="settings_summary">Màn hình chính và hệ thống</string>
+  <string name="inputs_none">Không có nguồn vào nào được kết nối</string>
+  <plurals name="inputs_connected">
+    <item quantity="other">%1$d nguồn vào đã kết nối</item>
+  </plurals>
 </resources>

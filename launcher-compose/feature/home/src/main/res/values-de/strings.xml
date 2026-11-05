@@ -41,4 +41,11 @@
     <item quantity="one">%1$d App</item>
     <item quantity="other">%1$d Apps</item>
   </plurals>
+  <string name="network_connected">Verbunden</string>
+  <string name="settings_summary">Startbildschirm und System</string>
+  <string name="inputs_none">Keine Quelle verbunden</string>
+  <plurals name="inputs_connected">
+    <item quantity="one">%1$d Quelle verbunden</item>
+    <item quantity="other">%1$d Quellen verbunden</item>
+  </plurals>
 </resources>

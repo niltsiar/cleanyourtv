@@ -46,4 +46,13 @@
     <item quantity="many">%1$d aplikace</item>
     <item quantity="other">%1$d aplikací</item>
   </plurals>
+  <string name="network_connected">Připojeno</string>
+  <string name="settings_summary">Domovská obrazovka a systém</string>
+  <string name="inputs_none">Žádný vstup není připojen</string>
+  <plurals name="inputs_connected">
+    <item quantity="one">%1$d připojený vstup</item>
+    <item quantity="few">%1$d připojené vstupy</item>
+    <item quantity="many">%1$d připojeného vstupu</item>
+    <item quantity="other">%1$d připojených vstupů</item>
+  </plurals>
 </resources>

@@ -46,4 +46,13 @@
     <item quantity="many">%1$d приложений</item>
     <item quantity="other">%1$d приложения</item>
   </plurals>
+  <string name="network_connected">Подключено</string>
+  <string name="settings_summary">Главный экран и система</string>
+  <string name="inputs_none">Нет подключённых источников</string>
+  <plurals name="inputs_connected">
+    <item quantity="one">%1$d подключённый источник</item>
+    <item quantity="few">%1$d подключённых источника</item>
+    <item quantity="many">%1$d подключённых источников</item>
+    <item quantity="other">%1$d подключённого источника</item>
+  </plurals>
 </resources>

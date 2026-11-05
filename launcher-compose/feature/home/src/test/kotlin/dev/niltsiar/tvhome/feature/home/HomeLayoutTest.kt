@@ -49,6 +49,26 @@ class HomeLayoutTest {
         assertEquals(1f, tileWidthShare(gridWidth, 0f, columns = 6, rowsBelowDock = 3, gap = gap), 0f)
     }
 
+    @Test
+    fun dock_focus_lowers_the_dock_by_120_dp_for_the_peek_and_by_what_is_left_under_the_rows_that_must_fit() {
+        fun lowering(
+            gridRows: Int,
+            rowsBelowDock: Int,
+        ) = dockLowering(
+            windowHeight = 540f,
+            shelfBottom = 245f,
+            tileHeight = 70f,
+            gap = 24f,
+            gridRows = gridRows,
+            rowsBelowDock = rowsBelowDock,
+        )
+
+        assertEquals(120f, lowering(gridRows = 3, rowsBelowDock = 0), 0f)
+        assertEquals(540f - 48f - (245f + 70f + 48f + 94f), lowering(gridRows = 3, rowsBelowDock = 1), 0.01f)
+        assertEquals(0f, lowering(gridRows = 3, rowsBelowDock = 3), 0f)
+        assertEquals(lowering(gridRows = 3, rowsBelowDock = 1), lowering(gridRows = 1, rowsBelowDock = 3), 0.01f)
+    }
+
     private fun tiles(n: Int) = (1..n).map { AppEntry(key = "t$it", packageName = "t$it", label = "T$it") }
 
     @Test

@@ -42,4 +42,11 @@
     <item quantity="one">%1$d aplicación</item>
     <item quantity="other">%1$d aplicaciones</item>
   </plurals>
+  <string name="network_connected">Coneutada</string>
+  <string name="settings_summary">Aniciu y sistema</string>
+  <string name="inputs_none">Nenguna entrada coneutada</string>
+  <plurals name="inputs_connected">
+    <item quantity="one">%1$d entrada coneutada</item>
+    <item quantity="other">%1$d entraes coneutaes</item>
+  </plurals>
 </resources>

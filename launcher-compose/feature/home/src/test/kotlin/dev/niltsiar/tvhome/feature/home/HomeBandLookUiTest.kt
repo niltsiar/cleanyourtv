@@ -151,7 +151,7 @@ class HomeBandLookUiTest {
         settle()
 
         // Black under the library's scrim.
-        val dimmed = Math.round(0x07 * 0.6f)
+        val dimmed = Math.round(0x07 * 0.78f)
         assertNear(dimmed, brightest(titleArea("shelf:name")), 2)
         assertNear(dimmed, brightest(detailArea("shelf:meta")), 2)
 
@@ -170,20 +170,22 @@ class HomeBandLookUiTest {
         libraryOpen = true
         settle()
 
-        val dimmed = Math.round(0x07 * 0.6f)
+        val dimmed = Math.round(0x07 * 0.78f)
         assertNear(dimmed, brightest(titleArea("shelf:title")), 2)
         assertNear(dimmed, brightest(detailArea("shelf:title-meta")), 2)
     }
 
     @Test
-    fun on_the_top_bar_the_dock_apps_name_dims_and_its_time_and_dots_go() {
+    fun on_the_top_bar_the_band_names_the_button_at_full_brightness_and_the_page_dots_are_gone() {
         showHome()
 
         press(Key.DirectionUp)
 
-        // The title's ink is #F2F4F8.
-        assertNear(Math.round(0xF2 * 0.55f), brightest(titleArea("shelf:name")), 6)
-        assertNear(0, brightest(detailArea("shelf:meta")), 2)
+        assertTrue(brightest(titleArea("shelf:title")) >= 230)
+        // The meta ink is the title's at 0.85.
+        assertNear(Math.round(0xF2 * 0.85f), brightest(detailArea("shelf:title-meta")), 8)
+        val dots = bounds("shelf:title-meta").let { DpRect(it.left, it.bottom + 16.dp, it.left + 300.dp, it.bottom + 22.dp) }
+        assertNear(0, brightest(dots), 2)
 
         press(Key.DirectionDown)
         compose.onNodeWithTag("tile:pkg.1").assertIsFocused()

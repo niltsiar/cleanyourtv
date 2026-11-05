@@ -45,4 +45,11 @@
     <item quantity="one">%1$d app</item>
     <item quantity="other">%1$d appar</item>
   </plurals>
+  <string name="network_connected">Ansluten</string>
+  <string name="settings_summary">Startskärm och system</string>
+  <string name="inputs_none">Ingen ingång ansluten</string>
+  <plurals name="inputs_connected">
+    <item quantity="one">%1$d ingång ansluten</item>
+    <item quantity="other">%1$d ingångar anslutna</item>
+  </plurals>
 </resources>

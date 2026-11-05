@@ -68,9 +68,10 @@ import dev.niltsiar.tvhome.core.designsystem.GlassIconButton
 import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.designsystem.GlassSurface
 import dev.niltsiar.tvhome.core.designsystem.Motion
-import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.holdOk
+import dev.niltsiar.tvhome.core.model.InputConnection
+import dev.niltsiar.tvhome.core.model.InputRow
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
 import kotlinx.coroutines.flow.collectLatest
@@ -153,6 +154,47 @@ internal fun networkTint(
         else -> OnlineGreen
     }
 
+/** What a top-bar button is, so the band can name it while it has focus. */
+internal sealed interface BarControl {
+    data object Inputs : BarControl
+
+    data object Network : BarControl
+
+    data object Settings : BarControl
+
+    /** Any other button, named by its [label] alone. */
+    data class Named(
+        val label: String,
+    ) : BarControl
+}
+
+/** How many of the TV's ports have a device on them, as the band says it: none, the one (by its label), or a count. */
+internal sealed interface InputsSummary {
+    data object None : InputsSummary
+
+    data class One(
+        val label: String,
+    ) : InputsSummary
+
+    data class Many(
+        val count: Int,
+    ) : InputsSummary
+}
+
+internal fun List<InputRow>.connectedSummary(): InputsSummary {
+    val connected = filterIsInstance<InputRow.Port>().filter { it.connection == InputConnection.Connected }
+    return when (connected.size) {
+        0 -> InputsSummary.None
+        1 -> InputsSummary.One(connected.single().label)
+        else -> InputsSummary.Many(connected.size)
+    }
+}
+
+private fun Modifier.nameInBand(
+    input: HomeInput,
+    control: BarControl,
+): Modifier = onFocusChanged { if (it.isFocused) input.topBarControl = control }
+
 @Composable
 internal fun TopBar(
     glass: GlassState,
@@ -192,6 +234,7 @@ internal fun TopBar(
                 modifier =
                     Modifier
                         .focusRequester(input.requester(INPUTS_FOCUS))
+                        .nameInBand(input, BarControl.Inputs)
                         .onGloballyPositioned { input.inputsBounds.value = it.boundsInRoot() },
                 interactionSource = inputsSource,
                 focusLabel = inputs,
@@ -202,8 +245,8 @@ internal fun TopBar(
                 }
             }
         }
-        TopBarApps(glass, state, onAppClick)
-        if (layout.showNetworkPill) NetworkButton(glass, state, layout, input.hold, onOpenNetwork, onOpenWifiSettings)
+        TopBarApps(glass, state, input, onAppClick)
+        if (layout.showNetworkPill) NetworkButton(glass, state, layout, input, onOpenNetwork, onOpenWifiSettings)
         if (layout.reorderButton) ReorderButton(glass, input)
         if (layout.libraryButton) {
             val library = stringResource(R.string.library_entry)
@@ -211,7 +254,7 @@ internal fun TopBar(
                 glass,
                 library,
                 onClick = onOpenLibrary,
-                modifier = Modifier.focusRequester(input.requester(LIBRARY_BUTTON_FOCUS)),
+                modifier = Modifier.focusRequester(input.requester(LIBRARY_BUTTON_FOCUS)).nameInBand(input, BarControl.Named(library)),
                 focusLabel = library,
             ) { focus, ink -> AppsIcon(ink, focus) }
         }
@@ -221,10 +264,14 @@ internal fun TopBar(
             settings,
             onClick = onOpenSettings,
             modifier =
-                Modifier.focusRequester(input.requester(SETTINGS_FOCUS)).holdOk(input.hold, onHold = { bounds ->
-                    input.anchor.value = bounds
-                    input.actions.onSettingsMenu()
-                }),
+                Modifier
+                    .focusRequester(
+                        input.requester(SETTINGS_FOCUS),
+                    ).nameInBand(input, BarControl.Settings)
+                    .holdOk(input.hold, onHold = { bounds ->
+                        input.anchor.value = bounds
+                        input.actions.onSettingsMenu()
+                    }),
             focusLabel = settings,
         ) { focus, ink ->
             IconPart(R.drawable.ic_settings, ink) { rotationZ = SETTINGS_TURN * focus() }
@@ -255,7 +302,13 @@ private fun ReorderButton(
     val reordering by input.reordering
     val on = animateFloatAsState(if (reordering) 1f else 0f, tween(NETWORK_FADE_MS), label = "reorderTint")
     val reorder = stringResource(R.string.reorder)
-    GlassIconButton(glass, reorder, onClick = input.actions.onToggleReorder, focusLabel = reorder) { _, ink ->
+    GlassIconButton(
+        glass,
+        reorder,
+        onClick = input.actions.onToggleReorder,
+        modifier = Modifier.nameInBand(input, BarControl.Named(reorder)),
+        focusLabel = reorder,
+    ) { _, ink ->
         IconPart(R.drawable.ic_reorder, { lerp(ink(), accent, on.value) })
     }
 }
@@ -392,12 +445,19 @@ private fun DayPart.label(): Int =
 private fun TopBarApps(
     glass: GlassState,
     state: () -> HomeUiState,
+    input: HomeInput,
     onClick: (String) -> Unit,
 ) {
     val apps by remember(state) { derivedStateOf { state().topBarApps } }
     for (app in apps) {
         key(app.key) {
-            GlassIconButton(glass, app.label, onClick = { onClick(app.key) }, focusLabel = app.label) { focus, _ ->
+            GlassIconButton(
+                glass,
+                app.label,
+                onClick = { onClick(app.key) },
+                modifier = Modifier.nameInBand(input, BarControl.Named(app.label)),
+                focusLabel = app.label,
+            ) { focus, _ ->
                 val icon = app.image ?: return@GlassIconButton
                 Image(
                     bitmap = icon,
@@ -425,7 +485,7 @@ private fun NetworkButton(
     glass: GlassState,
     state: () -> HomeUiState,
     layout: TopBarLayout,
-    hold: OkHold,
+    input: HomeInput,
     onClick: () -> Unit,
     onHold: () -> Unit,
 ) {
@@ -445,7 +505,10 @@ private fun NetworkButton(
         glass = glass,
         contentDescription = listOfNotNull(name, badge?.first).joinToString(" "),
         onClick = onClick,
-        modifier = (if (showLabel) Modifier.widthIn(max = maxWidth.dp) else Modifier).holdOk(hold, onHold = { onHold() }),
+        modifier =
+            (if (showLabel) Modifier.widthIn(max = maxWidth.dp) else Modifier)
+                .nameInBand(input, BarControl.Network)
+                .holdOk(input.hold, onHold = { onHold() }),
         interactionSource = interactionSource,
         focusLabel = linkName(network.link),
         label =

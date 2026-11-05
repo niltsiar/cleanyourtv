@@ -43,4 +43,11 @@
     <item quantity="one">%1$d uygulama</item>
     <item quantity="other">%1$d uygulama</item>
   </plurals>
+  <string name="network_connected">Bağlı</string>
+  <string name="settings_summary">Ana ekran ve sistem</string>
+  <string name="inputs_none">Bağlı giriş yok</string>
+  <plurals name="inputs_connected">
+    <item quantity="one">%1$d giriş bağlı</item>
+    <item quantity="other">%1$d giriş bağlı</item>
+  </plurals>
 </resources>

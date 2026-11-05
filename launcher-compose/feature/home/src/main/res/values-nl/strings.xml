@@ -44,4 +44,11 @@
     <item quantity="one">%1$d app</item>
     <item quantity="other">%1$d apps</item>
   </plurals>
+  <string name="network_connected">Verbonden</string>
+  <string name="settings_summary">Home en systeem</string>
+  <string name="inputs_none">Geen ingang verbonden</string>
+  <plurals name="inputs_connected">
+    <item quantity="one">%1$d ingang verbonden</item>
+    <item quantity="other">%1$d ingangen verbonden</item>
+  </plurals>
 </resources>

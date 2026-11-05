@@ -18,11 +18,13 @@ import dev.niltsiar.tvhome.core.designsystem.isOk
 
 /**
  * The things the tiles and the top bar share for menus and reorder mode. Only [reordering] is read in composition, by the
- * grid outside its items and by the reorder button, and [pillFocused] by the band over the grid.
+ * grid outside its items and by the reorder button, and [pillFocused] and [headerControl] by the band over the grid.
  */
 @Stable
 internal class HomeInput(
     private val currentActions: State<HomeMenuActions>,
+    /** How far down the band and the dock are drawn now, in pixels. */
+    private val groupShift: () -> Float = { 0f },
     /** The carried tile's key, the keys drawn dimmed and whether a session runs. Read them in layer lambdas only. */
     val carried: State<String?>,
     val dimmed: State<Set<String>>,
@@ -37,6 +39,14 @@ internal class HomeInput(
     /** Where the open menu hangs from, in the root's coordinates. */
     val anchor = mutableStateOf(Rect.Zero)
 
+    /**
+     * Hangs the open menu from the tile at [bounds] (in the root's coordinates), where that tile will be once the group
+     * has risen to the grid layout, which a tile menu does.
+     */
+    fun anchorTile(bounds: Rect) {
+        anchor.value = bounds.translate(0f, -groupShift())
+    }
+
     /** Where the Inputs button is, in the root's coordinates; zero until it is laid out. The Inputs list hangs from it. */
     val inputsBounds = mutableStateOf(Rect.Zero)
 
@@ -48,6 +58,13 @@ internal class HomeInput(
 
     /** Whether focus is on a top-bar button. */
     var topBarFocused by mutableStateOf(false)
+
+    /** The top-bar button that had focus last, which the band names. */
+    var topBarControl by mutableStateOf<BarControl?>(null)
+
+    /** The control the band names: while focus is on the top bar or in a menu or list it opened, the one that had focus last. */
+    fun headerControl(state: HomeUiState): BarControl? =
+        topBarControl.takeIf { topBarFocused || state.inputsOpen || (state.menu != null && state.menu.tileKey == null) }
 
     /** The library was opened from the top bar button, so closing it returns there. */
     var fromTopBar = false
