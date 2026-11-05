@@ -237,17 +237,34 @@ class HeroBandUiTest {
     }
 
     @Test
-    fun the_four_row_tile_menu_opens_beside_its_tile_under_the_band_and_60_dp_above_the_bottom() {
+    fun the_four_row_grid_tile_menu_opens_beside_its_tile_under_the_band_and_60_dp_above_the_bottom() {
         showHome()
-        val tile = dockTile(2).getBoundsInRoot()
+        press(Key.DirectionDown)
         press(Key.DirectionRight)
+        compose.onNodeWithTag("tile:pkg.8").assertIsFocused()
+        val tile = bounds("tile:pkg.8")
+        holdOk()
+        for (row in listOf("AddToDock", "Move", "RemoveFromHome", "AppInfo")) compose.onNodeWithTag("menu:$row").assertExists()
+
+        val menu = bounds("menu")
+        assertNear(tile.right + 24.dp, menu.left)
+        assertTrue("menu top ${menu.top} under the band", menu.top >= bounds("dock").top - 0.5.dp)
+        assertTrue(menu.bottom <= compose.onRoot().getBoundsInRoot().bottom - 60.dp + 0.5.dp)
+    }
+
+    @Test
+    fun the_four_row_dock_tile_menu_with_its_header_fits_above_its_tile_under_the_top_bar() {
+        showHome()
+        press(Key.DirectionRight)
+        val tile = dockTile(2).getBoundsInRoot()
         holdOk()
         for (row in listOf("ReplaceInDock", "Move", "RemoveFromHome", "AppInfo")) compose.onNodeWithTag("menu:$row").assertExists()
 
         val menu = bounds("menu")
-        assertNear(tile.right + 16.dp, menu.left)
-        assertTrue("menu top ${menu.top} under the band", menu.top >= bounds("dock").top - 0.5.dp)
-        assertTrue(menu.bottom <= compose.onRoot().getBoundsInRoot().bottom - 60.dp + 0.5.dp)
+        assertNear(tile.left, menu.left)
+        assertTrue("menu bottom ${menu.bottom} above the tile ${tile.top}", menu.bottom <= tile.top)
+        assertTrue("menu top ${menu.top} under the top bar", menu.top >= TopBarTop + TopBarHeight)
+        assertTrue(bounds("menu:title").bottom <= bounds("menu:ReplaceInDock").top)
     }
 
     @Test

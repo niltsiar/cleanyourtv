@@ -85,6 +85,7 @@ private const val SEPARATOR_ALPHA = 0.12f
  * The TV's input list hanging under the Inputs button at [anchor]: as wide as the button, or 150 dp, and wider for a
  * long name up to 360 dp. Each [InputRow.Port] row shows a green capsule while its port is connected, its dot ringed
  * by a pulse unless [animated] is off. "More inputs" shows the rows [rows] folds. The Live TV row comes last.
+ * Focus opens on the first connected port, as the TV does not say which input is active, else on the first row.
  * Rows are tagged `input:<n>` by position, the list `menu`.
  */
 @Composable
@@ -109,7 +110,11 @@ internal fun InputsMenu(
     val pulse = rememberPulse(animated)
     val buttonWidth = with(LocalDensity.current) { anchor.value.width.toDp() }
     val minWidth = maxOf(buttonWidth, MinListWidth)
-    val firstRow = shown.indexOfFirst { it !is InputRow.Separator }
+    val openRow =
+        remember(shown) {
+            val connected = shown.indexOfFirst { it is InputRow.Port && it.connection == InputConnection.Connected }
+            if (connected >= 0) connected else shown.indexOfFirst { it !is InputRow.Separator }
+        }
     val firstFolded = remember(shown) { shown.indexOfFirst { it is InputRow.Port && it.folded } }
     GlassDropdown(
         anchor = anchor,
@@ -124,7 +129,7 @@ internal fun InputsMenu(
             val focus =
                 when {
                     expanded && index == firstFolded -> Modifier.focusRequester(afterMore)
-                    index == firstRow -> Modifier.focusRequester(first)
+                    index == openRow -> Modifier.focusRequester(first)
                     else -> Modifier
                 }
             when (row) {

@@ -100,6 +100,50 @@ class HomeInputsUiTest {
     }
 
     @Test
+    fun the_list_opens_on_the_first_connected_input_as_the_tv_names_no_active_one() {
+        showHome(
+            InputsMenu(
+                available = true,
+                rows =
+                    listOf(
+                        port(1, InputConnection.Disconnected),
+                        port(2, InputConnection.Disconnected),
+                        port(3, InputConnection.Connected),
+                        port(4, InputConnection.Connected),
+                        InputRow.LiveTv,
+                    ),
+            ),
+        )
+
+        openList()
+
+        compose.onNodeWithTag("input:2").assertIsFocused()
+    }
+
+    @Test
+    fun the_list_opens_on_its_first_row_when_no_input_is_connected() {
+        showHome(InputsMenu(available = true, rows = listOf(port(1, InputConnection.Disconnected), port(2), InputRow.LiveTv)))
+
+        openList()
+
+        compose.onNodeWithTag("input:0").assertIsFocused()
+    }
+
+    @Test
+    fun a_connected_input_behind_more_inputs_does_not_stop_the_list_opening_on_its_first_row() {
+        showHome(
+            InputsMenu(
+                available = true,
+                rows = listOf(port(1, InputConnection.Disconnected), port(2, InputConnection.Connected, folded = true), InputRow.More),
+            ),
+        )
+
+        openList()
+
+        compose.onNodeWithTag("input:0").assertIsFocused()
+    }
+
+    @Test
     fun the_rows_show_the_cec_device_the_connection_and_live_tv_last() {
         showHome()
 

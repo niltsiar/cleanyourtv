@@ -87,7 +87,7 @@ private val OnLightColors =
 private val DarkSurfaces =
     TvSurfaces(
         dark = true,
-        overlay = Color(0xFF141721).copy(alpha = 0.98f),
+        overlay = Color(0xFF141721),
         card = Color(0xFF1C2030),
         chromeTint = Color(0xFF0B0D12).copy(alpha = 0.55f),
         pillFill = Color(0xFFF2F4F8),
@@ -98,7 +98,7 @@ private val DarkSurfaces =
 private val LightSurfaces =
     TvSurfaces(
         dark = false,
-        overlay = Color(0xFFF4F6FA).copy(alpha = 0.98f),
+        overlay = Color(0xFFF4F6FA),
         card = Color(0xFFE9EBEF),
         chromeTint = Color(0xFFF4F6FA).copy(alpha = 0.55f),
         pillFill = Color(0xFF11141B),

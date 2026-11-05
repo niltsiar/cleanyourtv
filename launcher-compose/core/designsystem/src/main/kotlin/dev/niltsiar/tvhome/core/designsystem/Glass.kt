@@ -104,8 +104,8 @@ public fun GlassSurface(
 }
 
 /**
- * The surface of an overlay: a menu, the Inputs list, the App library. Nearly opaque, so what is behind
- * never competes with it; a sheen over its top and the rim keep the glass look. Its text turns dark on the light one.
+ * The surface of an overlay: a menu, the Inputs list, the App library. Opaque, so nothing behind it shows through; a
+ * sheen over its top and the rim keep the glass look. Its text turns dark on the light one.
  */
 @Composable
 public fun OverlaySurface(

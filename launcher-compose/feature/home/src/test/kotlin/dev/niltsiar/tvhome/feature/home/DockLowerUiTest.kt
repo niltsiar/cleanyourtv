@@ -19,11 +19,9 @@ import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -123,6 +121,12 @@ class DockLowerUiTest {
         compose.waitForIdle()
     }
 
+    private fun holdOkClockStopped() {
+        compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
+        compose.mainClock.advanceTimeBy(600)
+        compose.onRoot().performKeyInput { keyUp(Key.DirectionCenter) }
+    }
+
     private fun top(tag: String): Dp = compose.onNodeWithTag(tag).getBoundsInRoot().top
 
     private fun bottom(tag: String): Dp = compose.onNodeWithTag(tag).getBoundsInRoot().bottom
@@ -187,43 +191,33 @@ class DockLowerUiTest {
     }
 
     @Test
-    fun a_tile_menu_on_a_dock_tile_returns_the_band_and_the_dock_to_the_grid_layout() {
+    fun a_tile_menu_on_a_dock_tile_leaves_the_band_and_the_dock_low() {
         showHome()
         val dock = top("dock")
+        val title = bottom("shelf:name")
 
-        holdOk()
+        val stray = strayOf("dock") { holdOkClockStopped() }
 
         compose.onNodeWithTag("menu").assertExists()
-        assertNear(dock - 120.dp, top("dock"))
-        compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
-        compose.waitForIdle()
+        assertTrue("the dock strayed $stray dp", stray <= 1f)
+        assertNear(dock, top("dock"))
+        assertNear(title, bottom("shelf:name"))
+        back()
+        compose.mainClock.advanceTimeBy(1_000)
         compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
         assertNear(dock, top("dock"))
     }
 
     @Test
-    fun the_tile_a_menu_acts_on_stays_undimmed_while_the_group_rises_to_the_grid_layout() {
+    fun a_tile_menu_on_a_grid_tile_keeps_the_group_up() {
         showHome()
-        val tile = compose.onNodeWithTag("tile:pkg.1")
-        val resting = tile.getBoundsInRoot().top
-        compose.mainClock.autoAdvance = false
+        focusGridTile()
+        val title = bottom("shelf:name")
 
-        compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
-        compose.mainClock.advanceTimeBy(600)
-        compose.onRoot().performKeyInput { keyUp(Key.DirectionCenter) }
-        compose.mainClock.advanceTimeBy(140)
+        holdOk()
 
-        val bounds = tile.getBoundsInRoot()
-        assertTrue("risen ${(resting - bounds.top).value} dp", (resting - bounds.top).value in 20f..110f)
-        val density = compose.activity.resources.displayMetrics.density
-        val centre =
-            compose.onRoot().captureToImage().toPixelMap()[
-                (bounds.left.value * density).toInt() + 60, (
-                    (bounds.bottom - 4.dp).value *
-                        density
-                ).toInt(),
-            ]
-        assertTrue("tile bottom ${centre.red}", centre.red >= 0.95f)
+        compose.onNodeWithTag("menu").assertExists()
+        assertNear(title, bottom("shelf:name"))
     }
 
     @Test
@@ -327,33 +321,6 @@ class DockLowerUiTest {
     private fun focusGridTile() {
         press(Key.DirectionDown)
         compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
-    }
-
-    @Test
-    fun the_spotlight_stays_on_the_tile_while_the_group_drops_back_after_its_menu_closes() {
-        showHome()
-        val tile = compose.onNodeWithTag("tile:pkg.1")
-        holdOk()
-        val risen = tile.getBoundsInRoot().top
-        compose.mainClock.autoAdvance = false
-
-        back()
-        var moved = 0f
-        repeat(40) {
-            if (moved < 3f) {
-                compose.mainClock.advanceTimeBy(16)
-                moved = (tile.getBoundsInRoot().top - risen).value
-            }
-        }
-
-        assertTrue("the tile dropped $moved dp", moved >= 3f)
-        val bounds = tile.getBoundsInRoot()
-        val density = compose.activity.resources.displayMetrics.density
-        val inside =
-            compose.onRoot().captureToImage().toPixelMap()[
-                (bounds.left.value * density).toInt() + 60, ((bounds.bottom - 1.5.dp).value * density).toInt(),
-            ]
-        assertTrue("tile bottom ${inside.red}", inside.red >= 0.95f)
     }
 
     @Test

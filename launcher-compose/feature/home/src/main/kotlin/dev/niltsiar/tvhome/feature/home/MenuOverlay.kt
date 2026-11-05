@@ -31,9 +31,11 @@ private val SettingsRowHeight = 42.dp
 private val SettingsPadding = 8.dp
 
 /**
- * The tile menu or the Settings menu: [rows], each tagged `menu:<row name>`, never over the top bar. A [tileMenu] sits
- * beside its tile ([anchor]) and under [bandBottom], the bottom of the band over the grid, when it fits there. The
- * Settings menu hangs from the Settings button with shorter rows, so it ends clear of the dock.
+ * The tile menu or the Settings menu: [rows], each tagged `menu:<row name>`, never over the top bar. A [tileMenu] is a
+ * whole number of tiles wide and lines up with its tile's column ([anchor] is the tile). A dock tile's menu ([dockTile] is
+ * the app's name, which heads it) opens above the tile; a grid tile's sits beside it and under [bandBottom], the bottom
+ * of the band over the grid, when it fits there. The Settings menu hangs from the Settings button with shorter rows, so
+ * it ends clear of the dock.
  */
 @Composable
 internal fun MenuOverlay(
@@ -43,6 +45,7 @@ internal fun MenuOverlay(
     bandBottom: Dp,
     onPick: (MenuRow) -> Unit,
     modifier: Modifier = Modifier,
+    dockTile: String? = null,
 ) {
     if (tileMenu) {
         GlassMenu(
@@ -55,11 +58,20 @@ internal fun MenuOverlay(
             modifier = modifier,
             topLimit = MenuTopLimit,
             beside =
-                BesideAnchor(
-                    top = bandBottom + MenuClearance,
-                    fallbackTop = TopBarTop + TopBarHeight + MenuClearance,
-                    bottomMargin = TileMenuBottom,
-                ),
+                if (dockTile != null) {
+                    null
+                } else {
+                    BesideAnchor(
+                        top = bandBottom + MenuClearance,
+                        fallbackTop = TopBarTop + TopBarHeight + MenuClearance,
+                        gap = TileGap,
+                        bottomMargin = TileMenuBottom,
+                    )
+                },
+            title = dockTile,
+            above = dockTile != null,
+            columnGap = TileGap,
+            edgeMargin = ScreenMargin,
         )
     } else {
         GlassMenu(

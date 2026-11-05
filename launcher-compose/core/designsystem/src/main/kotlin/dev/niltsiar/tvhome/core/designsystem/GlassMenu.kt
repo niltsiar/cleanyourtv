@@ -20,6 +20,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -35,11 +37,15 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.roundToIntRect
+import androidx.compose.ui.unit.sp
+import kotlin.math.ceil
+import kotlin.math.roundToInt
 
 private val MenuGap = 10.dp
 private val MenuRise = 14.dp
@@ -47,6 +53,11 @@ private const val MENU_START_SCALE = 0.94f
 private val PanelPadding = 14.dp
 private val RowSpacing = 8.dp
 private val RowHeight = 46.dp
+private const val TITLE_ALPHA = 0.7f
+private val TitlePadding = 8.dp
+
+/** Rounding a tile's width to whole pixels can leave a panel a pixel or two past the column edge it should end on. */
+private const val EDGE_SLACK_PX = 2
 
 /**
  * A panel beside its anchor rather than under it: [gap] right of the anchor, else [gap] left of it, centred on it
@@ -66,7 +77,8 @@ public class BesideAnchor(
  * from its left edge, or from its right edge when [alignEnd]; or [beside] it. Each row is [rowHeight] tall, shows the
  * string [label] gives and carries the test tag [rowTag]; the panel's own tag is `menu`, [padding] inside its edge, and
  * the rows' corners are concentric with the panel's. It rises and fades in with a spring and takes focus on its first
- * row, and never goes above [topLimit]; focus cannot leave it.
+ * row, and never goes above [topLimit]; focus cannot leave it. A [title] is a header row over the rows, tagged
+ * `menu:title`. [above], [columnGap] and [edgeMargin] are [GlassDropdown]'s.
  */
 @Composable
 public fun <T> GlassMenu(
@@ -81,10 +93,26 @@ public fun <T> GlassMenu(
     beside: BesideAnchor? = null,
     rowHeight: Dp = RowHeight,
     padding: Dp = PanelPadding,
+    title: String? = null,
+    above: Boolean = false,
+    columnGap: Dp? = null,
+    edgeMargin: Dp = 0.dp,
 ) {
     val first = remember { FocusRequester() }
     val rowShape = remember(padding) { RoundedCornerShape(OverlayCorner - padding) }
-    GlassDropdown(anchor, alignEnd, first, modifier, topLimit = topLimit, beside = beside, padding = padding) {
+    GlassDropdown(
+        anchor,
+        alignEnd,
+        first,
+        modifier,
+        edgeMargin = edgeMargin,
+        topLimit = topLimit,
+        beside = beside,
+        padding = padding,
+        above = above,
+        columnGap = columnGap,
+    ) {
+        if (title != null) MenuTitle(title)
         rows.forEachIndexed { index, row ->
             val focus = if (index == 0) Modifier.focusRequester(first) else Modifier
             MenuItem(label(row), rowTag(row), { onPick(row) }, rowHeight, rowShape, focus)
@@ -97,7 +125,11 @@ public fun <T> GlassMenu(
  * does. The panel is as wide as its widest row, from [minWidth] to [maxWidth], and stays [edgeMargin] inside the sides of
  * the screen and never above [topLimit] (a top bar to keep clear), or goes [beside] the anchor. [padding] is the space
  * inside the panel's edge. It rises and fades in with a spring, then focus goes to [firstFocus], which the caller puts on
- * one of the rows; focus cannot leave the panel.
+ * one of the rows; focus cannot leave the panel. With [above] the panel sits 10 dp above the anchor when it fits
+ * there, before it tries below. With [columnGap] the anchor is one column of a grid whose columns are [columnGap]
+ * apart: the panel is a whole number of columns wide, plus the gaps between them, and starts at the anchor's left edge
+ * (or ends at its right edge when it would pass [edgeMargin] from the screen's side); [beside] it, [BesideAnchor.gap]
+ * should be [columnGap] so that the panel starts on the next column and ends on the one before.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -112,9 +144,12 @@ public fun GlassDropdown(
     topLimit: Dp = 0.dp,
     beside: BesideAnchor? = null,
     padding: Dp = PanelPadding,
+    above: Boolean = false,
+    columnGap: Dp? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val motion = TvTheme.motion
+    val columnWidth by remember(anchor) { derivedStateOf { anchor.value.width } }
     val reveal = remember { Animatable(if (motion.animations) 0f else 1f) }
     LaunchedEffect(Unit) {
         withFrameNanos { }
@@ -137,6 +172,7 @@ public fun GlassDropdown(
                 Column(
                     modifier =
                         Modifier
+                            .then(if (columnGap != null) Modifier.fillMaxWidth() else Modifier)
                             .widthIn(min = minWidth, max = maxWidth)
                             .width(IntrinsicSize.Max)
                             .padding(padding)
@@ -149,7 +185,17 @@ public fun GlassDropdown(
         },
         modifier = modifier.fillMaxSize(),
     ) { measurables, constraints ->
-        val panel = measurables.single().measure(constraints.copy(minWidth = 0, minHeight = 0))
+        val measurable = measurables.single()
+        val columns = columnGap?.roundToPx()
+        val limits =
+            if (columns == null) {
+                constraints.copy(minWidth = 0, minHeight = 0)
+            } else {
+                val content = measurable.maxIntrinsicWidth(constraints.maxHeight)
+                val width = if (columnWidth > 0f) columnsWidth(content, columnWidth, columns) else content
+                width.coerceAtMost(constraints.maxWidth).let { constraints.copy(minWidth = it, maxWidth = it, minHeight = 0) }
+            }
+        val panel = measurable.measure(limits)
         layout(constraints.maxWidth, constraints.maxHeight) {
             val at = anchor.value
             if (beside != null) {
@@ -171,20 +217,23 @@ public fun GlassDropdown(
             }
             val gap = MenuGap.roundToPx()
             val margin = edgeMargin.roundToPx()
+            val end = alignEnd || (columns != null && at.left.toInt() + panel.width > constraints.maxWidth - margin + EDGE_SLACK_PX)
             val x =
-                (if (alignEnd) at.right.toInt() - panel.width else at.left.toInt()).coerceIn(
+                (if (end) at.right.toInt() - panel.width else at.left.toInt()).coerceIn(
                     margin,
                     maxOf(margin, constraints.maxWidth - panel.width - margin),
                 )
-            panel.place(x, dropdownTop(at.top.toInt(), at.bottom.toInt(), panel.height, constraints.maxHeight, gap, topLimit.roundToPx()))
+            val y = dropdownTop(at.top.toInt(), at.bottom.toInt(), panel.height, constraints.maxHeight, gap, topLimit.roundToPx(), above)
+            panel.place(x, y)
         }
     }
 }
 
 /**
  * Where a panel [panelHeight] tall goes vertically for an anchor spanning [anchorTop] to [anchorBottom]: below it, else
- * above it, each [gap] away. When neither side has room the panel overlaps the anchor, but stays between [topLimit] and
- * the bottom of the [containerHeight] (the top first, when the panel is taller than that).
+ * above it, each [gap] away; with [preferAbove], above it first. When neither side has room the panel overlaps the
+ * anchor, but stays between [topLimit] and the bottom of the [containerHeight] (the top first, when the panel is taller
+ * than that).
  */
 internal fun dropdownTop(
     anchorTop: Int,
@@ -193,12 +242,27 @@ internal fun dropdownTop(
     containerHeight: Int,
     gap: Int,
     topLimit: Int,
+    preferAbove: Boolean = false,
 ): Int {
+    val above = anchorTop - gap - panelHeight
+    if (preferAbove && above >= topLimit) return above
     val below = anchorBottom + gap
     if (below + panelHeight <= containerHeight) return below
-    val above = anchorTop - gap - panelHeight
     if (above >= topLimit) return above
     return above.coerceIn(topLimit, maxOf(topLimit, containerHeight - panelHeight))
+}
+
+/**
+ * The width of the fewest columns, each [column] wide with [gap] between them, that hold [content]: at least one column,
+ * and a whole number of them plus the gaps between.
+ */
+internal fun columnsWidth(
+    content: Int,
+    column: Float,
+    gap: Int,
+): Int {
+    val count = ceil((content + gap) / (column + gap)).toInt().coerceAtLeast(1)
+    return (count * column + (count - 1) * gap).roundToInt()
 }
 
 /**
@@ -221,6 +285,20 @@ internal fun besideAnchor(
     val upper = if (panelHeight <= bottom - top) top else fallbackTop
     val y = (anchor.center.y - panelHeight / 2).coerceAtMost(bottom - panelHeight).coerceAtLeast(upper)
     return IntOffset(x, y)
+}
+
+@Composable
+private fun MenuTitle(text: String) {
+    val typography = TvTheme.typography
+    val style =
+        remember(typography) { typography.pillLabel.copy(fontSize = 14.sp, color = typography.pillLabel.color.copy(alpha = TITLE_ALPHA)) }
+    BasicText(
+        text,
+        style = style,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.testTag("menu:title").fillMaxWidth().padding(horizontal = 16.dp, vertical = TitlePadding),
+    )
 }
 
 @Composable

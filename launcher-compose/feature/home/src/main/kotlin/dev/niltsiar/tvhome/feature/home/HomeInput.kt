@@ -43,8 +43,8 @@ internal class HomeInput(
     val anchor = mutableStateOf(Rect.Zero)
 
     /**
-     * Hangs the open menu from the tile at [bounds] (in the root's coordinates), where that tile will be once the group
-     * has risen to the grid layout, which a tile menu does.
+     * Hangs the open menu from the tile at [bounds] (in the root's coordinates), where that tile sits with the group up in
+     * the grid layout; the group's drop from there is [groupShift].
      */
     fun anchorTile(bounds: Rect) {
         anchor.value = bounds.translate(0f, -groupShift())

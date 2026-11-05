@@ -11,6 +11,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isFocused
@@ -35,6 +36,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /** Home on the real presenter: keys go in at the screen, the menus and modes come out of the state. */
 @RunWith(RobolectricTestRunner::class)
@@ -221,15 +224,114 @@ class HomeMenuUiTest {
     private fun boundsOf(tag: String): Rect = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
 
     @Test
-    fun a_tile_menu_opens_beside_its_tile_without_covering_the_top_bar() {
+    fun a_dock_tiles_menu_opens_above_its_tile_without_covering_the_top_bar() {
         showHome()
         val tile = boundsOf("tile:pkg.1")
 
         holdOk()
 
         val menu = boundsOf("menu")
-        assertTrue(menu.left >= tile.right)
+        assertTrue("menu $menu, tile $tile", menu.bottom <= tile.top)
         assertTrue(menu.top >= topBarBottom())
+    }
+
+    @Test
+    fun a_grid_tiles_menu_opens_beside_its_tile_without_covering_the_top_bar() {
+        showHome()
+        press(Key.DirectionDown)
+        val tile = boundsOf("tile:pkg.7")
+
+        holdOk()
+
+        val menu = boundsOf("menu")
+        assertTrue("menu $menu, tile $tile", menu.left >= tile.right)
+        assertTrue(menu.top >= topBarBottom())
+    }
+
+    @Test
+    fun a_dock_tiles_menu_names_its_app_in_a_header_row_and_a_grid_tiles_menu_does_not() {
+        showHome()
+
+        holdOk()
+        releaseOk()
+        compose.onNodeWithTag("menu:title").assertTextEquals("App 1")
+        back()
+        press(Key.DirectionDown)
+        holdOk()
+        releaseOk()
+
+        compose.onNodeWithTag("menu").assertExists()
+        compose.onNodeWithTag("menu:title").assertDoesNotExist()
+    }
+
+    private fun gap() = with(compose.density) { TileGap.toPx() }
+
+    /** How many tiles and gaps wide [menu] is, as a count of tiles ([tile] wide, [gap] apart); whole for a menu that spans tiles. */
+    private fun tilesAcross(
+        menu: Rect,
+        tile: Rect,
+    ): Float = (menu.width + gap()) / (tile.width + gap())
+
+    private fun assertWholeTiles(
+        menu: Rect,
+        tile: Rect,
+    ) {
+        val across = tilesAcross(menu, tile)
+        assertTrue("$across tiles across", abs(across - across.roundToInt()) < 0.01f && across.roundToInt() >= 1)
+    }
+
+    @Test
+    fun a_dock_tiles_menu_is_a_whole_number_of_tiles_wide_and_starts_at_its_tiles_left_edge() {
+        showHome()
+        val tile = boundsOf("tile:pkg.1")
+
+        holdOk()
+
+        val menu = boundsOf("menu")
+        assertWholeTiles(menu, tile)
+        assertEquals(tile.left, menu.left, 1f)
+    }
+
+    @Test
+    fun the_menu_of_the_last_tile_of_the_dock_ends_at_its_tiles_right_edge() {
+        showHome()
+        repeat(5) { press(Key.DirectionRight) }
+        compose.onNodeWithTag("tile:pkg.6").assertIsFocused()
+        val tile = boundsOf("tile:pkg.6")
+
+        holdOk()
+
+        val menu = boundsOf("menu")
+        assertWholeTiles(menu, tile)
+        assertEquals(tile.right, menu.right, 1f)
+    }
+
+    @Test
+    fun a_grid_tiles_menu_starts_where_the_next_tile_does() {
+        showHome(apps = (1..20).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") })
+        press(Key.DirectionDown)
+        val tile = boundsOf("tile:pkg.7")
+
+        holdOk()
+
+        val menu = boundsOf("menu")
+        assertWholeTiles(menu, tile)
+        assertEquals(boundsOf("tile:pkg.8").left, menu.left, 1f)
+    }
+
+    @Test
+    fun the_menu_of_a_tile_in_the_last_column_ends_where_the_tile_before_it_does() {
+        showHome(apps = (1..20).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") })
+        press(Key.DirectionDown)
+        repeat(5) { press(Key.DirectionRight) }
+        compose.onNodeWithTag("tile:pkg.12").assertIsFocused()
+        val tile = boundsOf("tile:pkg.12")
+
+        holdOk()
+
+        val menu = boundsOf("menu")
+        assertWholeTiles(menu, tile)
+        assertEquals(boundsOf("tile:pkg.11").right, menu.right, 1f)
     }
 
     @Test

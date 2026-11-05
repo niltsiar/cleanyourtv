@@ -314,14 +314,14 @@ class DockGlassUiTest {
     private fun gradientTint() = dark.copy(alpha = DockLook().tint(darkSurfaces = true, lightness = glass.dockLightness).alpha)
 
     @Test
-    fun the_frost_stays_with_the_wallpaper_when_a_tile_menu_lifts_the_dock_without_scrolling_the_grid() {
+    fun the_frost_stays_with_the_wallpaper_under_the_scrim_of_a_dock_tiles_menu_with_the_dock_where_it_was() {
         showHome(gradient)
         val before = compose.onNodeWithTag("dock").getBoundsInRoot().top
 
         holdOk()
 
         val after = compose.onNodeWithTag("dock").getBoundsInRoot().top
-        assertTrue("the dock rose from $before to $after", (before - after).value > 100f)
+        assertTrue("the dock moved from $before to $after", abs((before - after).value) < 1f)
         val at = gap()
         // The menu's scrim darkens everything but the tile it acts on by 0.5 of #07080C.
         val scrim = Color(0xFF07080C)

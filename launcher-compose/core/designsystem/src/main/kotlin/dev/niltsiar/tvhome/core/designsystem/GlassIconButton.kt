@@ -24,7 +24,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorProducer
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -46,6 +52,8 @@ private const val BRIGHT_BAR_FROM_LIGHTNESS = 70f
 private const val BRIGHT_BAR_FULL_LIGHTNESS = 90f
 private const val BRIGHT_BAR_FILL = 0.75f
 private val GrownMargin = 1.dp
+private val ActiveStroke = 1.dp
+private const val ACTIVE_FILL = 0.25f
 
 /**
  * A round glass button, a chrome surface that fills as a [FocusPill] while focused. [icon] fills a 22dp box; it gets
@@ -55,7 +63,8 @@ private val GrownMargin = 1.dp
  * as wide as both, or as the incoming width limit allows. With a [focusLabel] instead it grows from a circle into such
  * a pill while focused, and lays out on the width it draws at, its focus growth included, plus [GrownMargin] a side.
  * A button with a [label] has no rim. Over a wallpaper brighter than L* 70 under the top bar
- * ([GlassState.topBarLightness]) its tint thickens, up to a total alpha of 0.75 from L* 90.
+ * ([GlassState.topBarLightness]) its tint thickens, up to a total alpha of 0.75 from L* 90. While [active] (a panel it
+ * opened is open) it has a white fill of 0.25 and a white edge, so the panel reads as hanging from it.
  */
 @Composable
 public fun GlassIconButton(
@@ -66,6 +75,7 @@ public fun GlassIconButton(
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     label: (@Composable RowScope.(ink: FocusInk) -> Unit)? = null,
     focusLabel: String? = null,
+    active: Boolean = false,
     icon: @Composable BoxScope.(focus: () -> Float, ink: ColorProducer) -> Unit,
 ) {
     val motion = TvTheme.motion
@@ -112,6 +122,7 @@ public fun GlassIconButton(
                         },
                     )
                 }
+                if (active) Spacer(Modifier.matchParentSize().drawBehind { drawActive() })
             },
         ) { ink ->
             val focus = { progress.value }
@@ -154,6 +165,19 @@ public fun GlassIconButton(
             }
         }
     }
+}
+
+/** The white fill and the white edge of an [active] button, which follow the pill's outline. */
+private fun DrawScope.drawActive() {
+    val edge = ActiveStroke.toPx()
+    drawRoundRect(Color.White, alpha = ACTIVE_FILL, cornerRadius = CornerRadius(size.height / 2f))
+    drawRoundRect(
+        Color.White,
+        topLeft = Offset(edge / 2f, edge / 2f),
+        size = Size(size.width - edge, size.height - edge),
+        cornerRadius = CornerRadius((size.height - edge) / 2f),
+        style = Stroke(edge),
+    )
 }
 
 /** The alpha of a second layer of a tint of [base] alpha that brings the pair to [BRIGHT_BAR_FILL] at L* 90, and to nothing at L* 70. */

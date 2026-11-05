@@ -210,6 +210,8 @@ internal fun TopBar(
     modifier: Modifier = Modifier,
 ) {
     val inputsAvailable by remember(state) { derivedStateOf { state().inputs.available } }
+    val inputsOpen by remember(state) { derivedStateOf { state().inputsOpen } }
+    val settingsOpen by remember(state) { derivedStateOf { state().menu.let { it != null && it.tileKey == null } } }
     Row(
         modifier =
             modifier
@@ -238,6 +240,7 @@ internal fun TopBar(
                         .onGloballyPositioned { input.inputsBounds.value = it.boundsInRoot() },
                 interactionSource = inputsSource,
                 focusLabel = inputs,
+                active = inputsOpen,
             ) { _, ink ->
                 IconPart(R.drawable.ic_inputs_frame, ink)
                 IconPart(R.drawable.ic_inputs_arrow, ink) {
@@ -273,6 +276,7 @@ internal fun TopBar(
                         input.actions.onSettingsMenu()
                     }),
             focusLabel = settings,
+            active = settingsOpen,
         ) { focus, ink ->
             IconPart(R.drawable.ic_settings, ink) { rotationZ = SETTINGS_TURN * focus() }
         }

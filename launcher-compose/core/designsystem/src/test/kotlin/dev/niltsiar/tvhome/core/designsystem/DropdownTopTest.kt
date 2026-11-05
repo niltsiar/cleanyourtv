@@ -12,7 +12,8 @@ class DropdownTopTest {
         anchorTop: Int,
         anchorBottom: Int,
         panel: Int = 400,
-    ) = dropdownTop(anchorTop, anchorBottom, panel, screen, gap, topLimit)
+        preferAbove: Boolean = false,
+    ) = dropdownTop(anchorTop, anchorBottom, panel, screen, gap, topLimit, preferAbove)
 
     @Test
     fun the_panel_hangs_below_an_anchor_with_room_under_it() {
@@ -32,5 +33,16 @@ class DropdownTopTest {
     @Test
     fun a_panel_taller_than_the_room_under_the_top_limit_starts_at_the_limit() {
         assertEquals(topLimit, top(anchorTop = 500, anchorBottom = 600, panel = 1000))
+    }
+
+    @Test
+    fun a_panel_that_prefers_above_goes_above_an_anchor_even_with_room_under_it() {
+        assertEquals(180, top(anchorTop = 600, anchorBottom = 650, preferAbove = true))
+        assertEquals(670, top(anchorTop = 600, anchorBottom = 650, preferAbove = false))
+    }
+
+    @Test
+    fun a_panel_that_prefers_above_but_has_no_room_over_the_anchor_hangs_below_it() {
+        assertEquals(320, top(anchorTop = 200, anchorBottom = 300, preferAbove = true))
     }
 }

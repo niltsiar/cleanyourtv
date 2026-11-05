@@ -154,7 +154,7 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 internal val ScreenMargin = 40.dp
-private val TileGap = 24.dp
+internal val TileGap = 24.dp
 internal val TopBarTop = 20.dp
 internal val TopBarHeight = 56.dp
 private val ContentTop = TopBarTop + TopBarHeight + 20.dp
@@ -272,6 +272,18 @@ public fun HomeScreen(
         }
     val menu by remember { derivedStateOf { currentState.value().menu } }
     val inputsOpen by remember { derivedStateOf { currentState.value().inputsOpen } }
+    val menuDockTile by remember {
+        derivedStateOf {
+            currentState.value().let { shown -> shown.menu?.tileKey?.let { key -> shown.dock.firstOrNull { it.key == key }?.label } }
+        }
+    }
+    val menuPlace =
+        remember {
+            derivedStateOf {
+                val at = input.anchor.value
+                if (currentState.value().menu?.tileKey != null) at.translate(0f, dim.lowPx()) else at
+            }
+        }
     val backOpen by remember {
         derivedStateOf { currentState.value().let { it.menu != null || it.reorder != null || it.inputsOpen } }
     }
@@ -398,10 +410,11 @@ public fun HomeScreen(
                 key(open) {
                     MenuOverlay(
                         open.rows,
-                        input.anchor,
+                        menuPlace,
                         tileMenu = open.tileKey != null,
                         bandBottom = shelfBottom - ShelfToFade,
                         onPick = input.actions.onMenuPick,
+                        dockTile = menuDockTile,
                     )
                 }
             }
@@ -800,9 +813,9 @@ private fun focusRowOf(
 }
 
 /**
- * Whether [dim]'s group goes low for the focus now: with focus on a dock tile or a top-bar button, and up with focus on a
- * grid tile, the library pill or a tile's menu. Null while focus is in the Inputs list or the Settings menu, or nowhere
- * for a moment, so the group stays where it is.
+ * Whether [dim]'s group goes low for the focus now: with focus on a dock tile or a top-bar button or while a dock tile's
+ * menu is open, and up with focus on a grid tile, the library pill or a grid tile's menu. Null while focus is in the
+ * Inputs list or the Settings menu, or nowhere for a moment, so the group stays where it is.
  */
 private fun groupLowFor(
     state: HomeUiState,
@@ -810,7 +823,7 @@ private fun groupLowFor(
     layout: HomeLayout,
 ): Boolean? =
     when {
-        state.menu?.tileKey != null -> false
+        state.menu?.tileKey != null -> state.dock.any { it.key == state.menu.tileKey }
         input.topBarFocused -> true
         input.pillFocused -> false
         input.gridFocused -> focusRowOf(state, input, layout) == DOCK_ROW
