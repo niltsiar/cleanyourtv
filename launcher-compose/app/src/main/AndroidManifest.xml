@@ -40,7 +40,7 @@
         <intent>
             <action android:name="android.settings.MANAGE_APPLICATIONS_SETTINGS" />
         </intent>
-        <!-- The tile menu and the app library offer App info only where this resolves (SystemSettings.appInfo). -->
+        <!-- The tile menu and the app library offer App info only where this resolves (SystemSettings.hasAppInfo). -->
         <intent>
             <action android:name="android.settings.APPLICATION_DETAILS_SETTINGS" />
             <data android:scheme="package" />
@@ -52,10 +52,6 @@
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-        </intent>
-        <intent>
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="com.gathin.tvhome.category.DOCK_CARD" />
         </intent>
         <!-- stock_home_redirect: KeyService looks up the stock launcher's HOME activity. -->
         <intent>

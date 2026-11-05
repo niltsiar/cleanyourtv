@@ -10,7 +10,10 @@
 #          TV_HOST     the TV's address for that push (default: TV_SERIAL without its port)
 #
 # It refuses to run (exit 2) while dev.niltsiar.tvhome is the TV's Home: switch-home.sh old first, new after.
-# It installs dev.niltsiar.tvhome only. It never changes the TV's Home setting or any other package.
+# It installs dev.niltsiar.tvhome only. It never changes the TV's Home setting or any other package. Below API 34 its exit
+# trap runs tools/theme.sh, and that restarts the launcher: it force-stops dev.niltsiar.tvhome, starts it again and, when
+# the launcher's key helpers were enabled, switches the TV's accessibility service list off and on again (other apps'
+# entries in it too, restored as they were).
 #
 # The app's data: below API 34 the Macrobenchmark library resets the app's compilation by uninstalling and installing it
 # again, which deletes the pushed theme (in the app's external files directory), the Home order, the library choices and

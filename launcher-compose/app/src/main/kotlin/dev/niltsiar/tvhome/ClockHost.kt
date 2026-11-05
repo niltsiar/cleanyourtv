@@ -30,8 +30,9 @@ internal fun ClockHost(graph: AppGraph) {
     val time by graph.minuteClock.now.collectAsState()
     val hour24 = remember(graph) { graph.config.clockFormat.is24Hour { DateFormat.is24HourFormat(context) } }
     val face = remember(time, hour24, datePattern, locale) { time?.let { clockFace(it, hour24, datePattern, locale) } }
-    // Home's current picture, read once: it decodes off the main thread, and the glow shows until it is ready.
-    val picture by produceState<ImageBitmap?>(initialValue = null) {
+    // Home's current picture, read again each minute so a collection's rotation goes on while the clock is up. It decodes
+    // off the main thread, and the glow shows until the first one is ready.
+    val picture by produceState<ImageBitmap?>(initialValue = null, time) {
         if (graph.config.clockWallpaper) value = graph.screensaverWallpaper.current()
     }
     TvTheme(motion = graph.config.motion()) {

@@ -11,8 +11,8 @@ import java.time.LocalDateTime
 
 /**
  * The picture Home is showing, for clock_wallpaper: read through the same playback state as Home's wallpaper, darkened by
- * clock_wallpaper_dim instead of wallpaper_dim. Home only plays while it is on screen, so the screensaver takes the
- * picture that stands and does not rotate on.
+ * clock_wallpaper_dim instead of wallpaper_dim. Home only plays while it is on screen, so the screensaver starts on the
+ * picture that stands and, asked again, carries the rotation on: [current] moves to the next picture when its time is up.
  */
 public class ScreensaverWallpaper internal constructor(
     private val provider: WallpaperProvider,
@@ -24,6 +24,9 @@ public class ScreensaverWallpaper internal constructor(
         theme: ThemeDirectory,
     ) : this(WallpaperProvider(context, config, theme, dim = config.clockWallpaperDim))
 
-    /** The picture decoded for the screen, or null when the theme has none or it cannot be read. Decodes off the main thread. */
+    /**
+     * The picture for now, decoded for the screen, or null when the theme has none or it cannot be read. It moves to the
+     * next picture when the interval is up, and records that as Home does. Decodes off the main thread.
+     */
     public suspend fun current(): ImageBitmap? = withContext(io) { provider.advance(LocalDateTime.now()).picture }
 }

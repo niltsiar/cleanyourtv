@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.map
 import java.io.File
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.util.concurrent.TimeUnit
 import kotlin.random.Random
 
 private const val TAG = "TvHome.Wallpaper"
@@ -28,7 +29,6 @@ private const val PREFERENCES_NAME = "wallpaper_rotation"
 private const val KEY_COLLECTION = "collection"
 private const val KEY_IMAGE = "image"
 private const val KEY_CHANGED = "changed"
-private const val MILLIS_PER_MINUTE = 60_000L
 
 /**
  * The picture behind Home, read the way the reference launcher plays it: the theme's `wallpapers/` collection when
@@ -112,7 +112,7 @@ public class WallpaperProvider internal constructor(
     ) {
         val files = pictures.files
         val millis = now.atZone(zone).toInstant().toEpochMilli()
-        val interval = config.wallpaperRotationMinutes * MILLIS_PER_MINUTE
+        val interval = TimeUnit.MINUTES.toMillis(config.wallpaperRotationMinutes.toLong())
         while (files.isNotEmpty()) {
             val previous = preferences.getString(KEY_IMAGE, "").orEmpty()
             val changed = preferences.getLong(KEY_CHANGED, 0)

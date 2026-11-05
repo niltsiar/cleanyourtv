@@ -12,8 +12,9 @@ import androidx.core.view.WindowInsetsControllerCompat
 
 /**
  * The clock screensaver that Home starts itself after home_idle_clock_minutes without input, or on Back with
- * back_opens_clock. Some TVs' own screens (CVTE's live TV) do not keep the screen on, so the system screensaver would cut
- * into programmes; this one only ever starts from Home. Any key returns to Home.
+ * back_opens_clock; the key service starts it too, over any app, for the "screensaver" word of app_keys where the firmware
+ * has no screensaver of its own. Some TVs' own screens (CVTE's live TV) do not keep the screen on, so the system
+ * screensaver would cut into programmes; this one starts only on those triggers. Any key closes it.
  */
 class ClockActivity : ComponentActivity() {
     private val graph get() = (application as TvHomeApplication).graph

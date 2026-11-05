@@ -59,6 +59,16 @@ class ScreensaverWallpaperTest {
     }
 
     @Test
+    fun asked_again_after_the_interval_the_screensaver_carries_the_rotation_on() {
+        provider(rotating).advance(LocalDateTime.now().minusMinutes(8))
+        val screensaver = ScreensaverWallpaper(provider(rotating), Dispatchers.Unconfined)
+
+        val picture = runBlocking { screensaver.current() }
+
+        assertSame(pictures.getValue("b.jpg"), picture)
+    }
+
+    @Test
     fun a_theme_without_a_wallpaper_gives_none() {
         val picture = runBlocking { ScreensaverWallpaper(provider(rotating.copy(wallpaper = false)), Dispatchers.Unconfined).current() }
 
