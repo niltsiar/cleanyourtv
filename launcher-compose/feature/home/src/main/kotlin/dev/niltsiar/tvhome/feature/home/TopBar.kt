@@ -187,7 +187,7 @@ internal fun TopBar(
                 modifier =
                     Modifier
                         .focusRequester(input.requester(INPUTS_FOCUS))
-                        .onGloballyPositioned { input.inputsBounds = it.boundsInRoot() },
+                        .onGloballyPositioned { input.inputsBounds.value = it.boundsInRoot() },
                 interactionSource = inputsSource,
             ) {
                 IconPart(R.drawable.ic_inputs_frame, ink)

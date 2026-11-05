@@ -197,10 +197,7 @@ public fun HomeScreen(
         snapshotFlow(inputsRequests).collect { requests ->
             if (requests <= handled) return@collect
             handled = requests
-            // The button is placed by the second frame; a hidden button never is.
-            withFrameNanos { }
-            withFrameNanos { }
-            if (input.inputsBounds != Rect.Zero) input.openInputs()
+            input.openInputs()
         }
     }
     val gridState = rememberLazyGridState()
@@ -263,7 +260,7 @@ public fun HomeScreen(
             InputsMenu(
                 glass,
                 rows = { state().inputs.rows },
-                anchor = input.anchor,
+                anchor = input.inputsBounds,
                 animated = topBar.animated,
                 onPick = input.actions.onInputPick,
             )

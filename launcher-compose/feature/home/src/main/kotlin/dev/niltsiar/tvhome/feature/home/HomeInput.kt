@@ -32,8 +32,8 @@ internal class HomeInput(
     /** Where the open menu hangs from, in the root's coordinates. */
     val anchor = mutableStateOf(Rect.Zero)
 
-    /** Where the Inputs button is, in the root's coordinates; zero until it is laid out or while it is hidden. */
-    var inputsBounds = Rect.Zero
+    /** Where the Inputs button is, in the root's coordinates; zero until it is laid out. The Inputs list hangs from it. */
+    val inputsBounds = mutableStateOf(Rect.Zero)
 
     /** Whether focus is on a tile, set by the grid. A reorder mode takes OK only there. */
     var gridFocused = false
@@ -44,9 +44,8 @@ internal class HomeInput(
     /** The library was opened from the top bar button, so closing it returns there. */
     var fromTopBar = false
 
-    /** OK on the Inputs button: its list hangs from the button. */
+    /** OK on the Inputs button, or the system asking for the list. */
     fun openInputs() {
-        anchor.value = inputsBounds
         actions.onInputs()
     }
 

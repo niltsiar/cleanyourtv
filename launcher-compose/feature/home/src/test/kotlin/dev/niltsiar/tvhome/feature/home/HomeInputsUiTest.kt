@@ -25,6 +25,8 @@ import dev.niltsiar.tvhome.core.model.InputIcon
 import dev.niltsiar.tvhome.core.model.InputRow
 import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.core.model.InputsMenu
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -44,8 +46,10 @@ class HomeInputsUiTest {
     private val effects = mutableListOf<HomeEffect>()
     private var inputsRequests by mutableIntStateOf(0)
 
-    private fun showHome(inputs: InputsMenu = FourPorts) {
-        val sources = sources(inputs = flowOf(inputs))
+    private fun showHome(inputs: InputsMenu = FourPorts) = showHome(flowOf(inputs))
+
+    private fun showHome(inputs: Flow<InputsMenu>) {
+        val sources = sources(inputs = inputs)
         compose.setContent {
             TvTheme(glassKind = GlassKind.Flat) {
                 val viewModel = rememberHomeViewModel(sources, SixColumns, effects)
@@ -177,5 +181,23 @@ class HomeInputsUiTest {
 
         compose.onNodeWithTag("menu").assertExists()
         compose.onNodeWithTag("input:0").assertIsFocused()
+    }
+
+    @Test
+    fun a_system_request_before_the_tv_has_said_what_it_lists_opens_the_list_under_the_button_once_it_has() {
+        val inputs = MutableSharedFlow<InputsMenu>(replay = 1)
+        showHome(inputs)
+
+        inputsRequests++
+        compose.waitForIdle()
+        compose.onNodeWithTag("menu").assertDoesNotExist()
+        inputs.tryEmit(FourPorts)
+        compose.waitForIdle()
+
+        compose.onNodeWithTag("menu").assertExists()
+        compose.onNodeWithTag("input:0").assertIsFocused()
+        val button = compose.onNodeWithContentDescription("Inputs").getBoundsInRoot()
+        val list = compose.onNodeWithTag("menu").getBoundsInRoot()
+        assertTrue("list $list, button $button", list.top >= button.bottom && list.left >= button.left)
     }
 }
