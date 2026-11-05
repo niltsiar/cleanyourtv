@@ -2,11 +2,8 @@ package dev.niltsiar.tvhome
 
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
-import android.content.BroadcastReceiver
 import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.KeyEvent
@@ -21,7 +18,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.initializer
@@ -55,15 +51,6 @@ class MainActivity : ComponentActivity() {
     private val idleClock by lazy {
         IdleClock(graph.config.homeIdleClockMinutes * MILLIS_PER_MINUTE, { resumed }, ::showClock)
     }
-    private val wakeReceiver =
-        object : BroadcastReceiver() {
-            override fun onReceive(
-                context: Context,
-                intent: Intent,
-            ) {
-                lifecycleScope.launch { graph.openOnStart.openOnWake(::openIntent) }
-            }
-        }
     private val library: MoleculeLibraryViewModel by viewModels {
         viewModelFactory { initializer { MoleculeLibraryViewModel(graph.librarySources, graph.config) } }
     }
@@ -75,9 +62,6 @@ class MainActivity : ComponentActivity() {
         // Not after a recreate: the launch intent survives it and would open the library or the list again.
         if (savedInstanceState == null && !openLibraryIfAsked(intent)) openInputsIfAsked(intent)
         applyViewInputsHandler(graph.config.handleViewInputs)
-        if (graph.config.openOnStartChoice && graph.config.openOnStartOnWake) {
-            ContextCompat.registerReceiver(this, wakeReceiver, IntentFilter(Intent.ACTION_SCREEN_ON), ContextCompat.RECEIVER_NOT_EXPORTED)
-        }
         setContent {
             TvTheme(glassKind = GlassKind.valueOf(BuildConfig.GLASS_KIND)) {
                 // Home and the library both draw glass from what Home shows, so they share one state.
@@ -162,11 +146,6 @@ class MainActivity : ComponentActivity() {
         bootOpening?.cancel()
         vendorKeys.release()
         idleClock.cancel()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        if (graph.config.openOnStartChoice && graph.config.openOnStartOnWake) unregisterReceiver(wakeReceiver)
     }
 
     override fun onNewIntent(intent: Intent) {

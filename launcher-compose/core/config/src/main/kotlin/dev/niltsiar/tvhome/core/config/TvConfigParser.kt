@@ -25,6 +25,8 @@ private val unsupportedKeys: Set<String> =
         "dock_band",
         "dock_band_all",
         "dock_even_padding",
+        "dock_glass",
+        "dock_opacity",
         "dock_title",
         "fade_rows",
         "festival",
@@ -37,9 +39,12 @@ private val unsupportedKeys: Set<String> =
         "icon_only_inputs",
         "icon_only_vpn",
         "launcher_settings_button",
+        "locale",
         "lunar_date",
         "lunar_utc_offset",
         "module_cards",
+        "open_on_start_choice",
+        "open_on_start_on_wake",
         "race_calendar",
         "restore_key_services",
         "seasonal_skin",
@@ -67,7 +72,7 @@ private val lenientJson =
  * type or outside its range keeps the default (and is listed in [ParsedConfig.rejectedKeys]).
  */
 public fun parseTvConfig(json: String): ParsedConfig {
-    val text = json.removePrefix("")
+    val text = json.removePrefix("\uFEFF")
     val root =
         if (json.encodeToByteArray().size > MAX_CONFIG_BYTES) {
             null
@@ -121,8 +126,6 @@ public fun parseTvConfig(json: String): ParsedConfig {
             wallpaperTrueColor = o.bool("wallpaper_true_color", d.wallpaperTrueColor),
             skyIntensity = o.int("sky_intensity", d.skyIntensity, 0..100),
             place = o.place(d.place),
-            dockOpacity = o.int("dock_opacity", d.dockOpacity, 30..100),
-            dockGlass = o.bool("dock_glass", d.dockGlass),
             dockRow = o.bool("dock_row", d.dockRow),
             animations = o.bool("animations", d.animations),
             reducedMotion = o.bool("reduced_motion", d.reducedMotion),
@@ -150,8 +153,6 @@ public fun parseTvConfig(json: String): ParsedConfig {
             inputsConnectedOnly = o.bool("inputs_connected_only", d.inputsConnectedOnly),
             inputsCecStateOnly = o.bool("inputs_cec_state_only", d.inputsCecStateOnly),
             handleViewInputs = o.bool("handle_view_inputs", d.handleViewInputs),
-            openOnStartChoice = o.bool("open_on_start_choice", d.openOnStartChoice),
-            openOnStartOnWake = o.bool("open_on_start_on_wake", d.openOnStartOnWake),
             openOnStartNetworkWait = o.int("open_on_start_network_wait", d.openOnStartNetworkWait, 0..600),
             appKeys = o.stringList("app_keys", d.appKeys),
             settingsKeyKeycodes = o.keycodes("settings_key_keycodes", d.settingsKeyKeycodes),
@@ -170,7 +171,6 @@ public fun parseTvConfig(json: String): ParsedConfig {
             clockWallpaper = o.bool("clock_wallpaper", d.clockWallpaper),
             clockWallpaperDim = o.int("clock_wallpaper_dim", d.clockWallpaperDim, 0..90),
             clockGlow = o.bool("clock_glow", d.clockGlow),
-            locale = o.optionalString("locale", d.locale),
         )
     return ParsedConfig(
         config = config,

@@ -21,7 +21,6 @@ import android.widget.Toast
 import dev.niltsiar.tvhome.core.config.ThemeDirectory
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.HomeActions
-import dev.niltsiar.tvhome.data.inputs.openOnStartPackage
 import dev.niltsiar.tvhome.data.system.SystemSettings
 
 private const val TAG = "TvHome.Keys"
@@ -106,7 +105,7 @@ public class KeyService : AccessibilityService() {
         }
         stockHome = stockHomeActivities(this, config.stockHomeRedirect)
         homeOpener = HomeOpener(this, config.stockHomeRedirect, stockHome)
-        val plan = powerOnPlan(config, openOnStartPackage(this, config))
+        val plan = powerOnPlan(config, openOnStart = "")
         if (plan.enabled) armPowerOnHome(plan)
         // The service XML subscribes to no events, so the redirects ask for window changes only when one is on.
         val windowEvents = stockHome.isNotEmpty() || plan.liveTv.isNotEmpty() || keys.watchesFront

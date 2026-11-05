@@ -24,7 +24,7 @@ class TvConfigParserTest {
         assertEquals(listOf("com.mediatek.wwtv.tvcenter", "com.mitv.gallery"), config.hiddenApps)
         assertEquals("com.mediatek.wwtv.tvcenter", config.liveTvPackage)
         assertEquals(
-            listOf(4, 0, 0, 50, 100, 50, 100),
+            listOf(4, 0, 0, 50, 100, 50),
             listOf(
                 config.columns,
                 config.rowsBelowDock,
@@ -32,7 +32,6 @@ class TvConfigParserTest {
                 config.cinematicArt,
                 config.cinematicScrim,
                 config.clockWallpaperDim,
-                config.dockOpacity,
             ),
         )
         assertEquals(ClockFormat.System, config.clockFormat)
@@ -63,9 +62,7 @@ class TvConfigParserTest {
                 config.inputsConnectedOnly ||
                 config.inputsCecStateOnly ||
                 config.handleViewInputs ||
-                config.bootToLiveTv ||
-                config.openOnStartChoice ||
-                config.openOnStartOnWake,
+                config.bootToLiveTv,
         )
         assertEquals(0, config.openOnStartNetworkWait)
         assertTrue(config.keyFilter)
@@ -77,7 +74,7 @@ class TvConfigParserTest {
 
     @Test
     fun a_byte_order_mark_is_dropped() {
-        val parsed = parseTvConfig("{\"columns\": 6}")
+        val parsed = parseTvConfig("\uFEFF{\"columns\": 6}")
         assertEquals(6, parsed.config.columns)
         assertTrue(parsed.overlayApplied)
     }
@@ -114,7 +111,6 @@ class TvConfigParserTest {
             Triple("wallpaper_rotation_minutes", 0..1440, { it.wallpaperRotationMinutes }),
             Triple("wallpaper_dim", 0..90, { it.wallpaperDim }),
             Triple("sky_intensity", 0..100, { it.skyIntensity }),
-            Triple("dock_opacity", 30..100, { it.dockOpacity }),
             Triple("home_idle_clock_minutes", 0..1440, { it.homeIdleClockMinutes }),
             Triple("clock_wallpaper_dim", 0..90, { it.clockWallpaperDim }),
             Triple("open_on_start_network_wait", 0..600, { it.openOnStartNetworkWait }),
@@ -142,11 +138,11 @@ class TvConfigParserTest {
         val parsed =
             parseTvConfig(
                 """{"columns": "6", "fill_dock": "false", "dock_apps": "com.a", "greeting_name": 7,
-                   "wifi_label_width": null, "animations": 0, "dock_opacity": 2147483648}""",
+                   "wifi_label_width": null, "animations": 0, "sky_intensity": 2147483648}""",
             )
         assertEquals(TvConfig(), parsed.config)
         assertEquals(
-            listOf("columns", "fill_dock", "dock_apps", "greeting_name", "wifi_label_width", "animations", "dock_opacity"),
+            listOf("columns", "fill_dock", "dock_apps", "greeting_name", "wifi_label_width", "animations", "sky_intensity"),
             parsed.rejectedKeys,
         )
     }
@@ -225,9 +221,8 @@ class TvConfigParserTest {
 
     @Test
     fun a_blank_optional_string_clears_the_default_without_a_rejection() {
-        val parsed = parseTvConfig("""{"live_tv_package": "  ", "locale": " es-ES "}""")
+        val parsed = parseTvConfig("""{"live_tv_package": "  "}""")
         assertEquals(null, parsed.config.liveTvPackage)
-        assertEquals("es-ES", parsed.config.locale)
         assertEquals(emptyList<String>(), parsed.rejectedKeys)
     }
 
@@ -376,7 +371,7 @@ class TvConfigParserTest {
             parseTvConfig(
                 """{"source_panel_service": " com.tcl/.Panel ", "source_panel_action": "com.tcl.SHOW", "source_panel_extra": "cmd=100",
                     "coocaa_sources": true, "inputs_connected_only": true, "inputs_cec_state_only": true, "handle_view_inputs": true,
-                    "open_on_start_choice": true, "open_on_start_on_wake": true, "open_on_start_network_wait": 180}""",
+                    "open_on_start_network_wait": 180}""",
             )
         val config = parsed.config
         assertEquals(
@@ -384,7 +379,6 @@ class TvConfigParserTest {
             Triple(config.sourcePanelService, config.sourcePanelAction, config.sourcePanelExtra),
         )
         assertTrue(config.coocaaSources && config.inputsConnectedOnly && config.inputsCecStateOnly && config.handleViewInputs)
-        assertTrue(config.openOnStartChoice && config.openOnStartOnWake)
         assertEquals(180, config.openOnStartNetworkWait)
         assertEquals(emptyList<String>(), parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys)
 
@@ -393,5 +387,125 @@ class TvConfigParserTest {
         assertEquals(null, wrong.config.sourcePanelService)
         assertEquals(0, wrong.config.openOnStartNetworkWait)
         assertEquals(listOf("coocaa_sources", "source_panel_service", "open_on_start_network_wait"), wrong.rejectedKeys)
+    }
+
+    @Test
+    fun keys_with_no_reader_in_this_launcher_are_unsupported_and_change_nothing() {
+        val keys = listOf("dock_opacity", "dock_glass", "locale", "open_on_start_choice", "open_on_start_on_wake")
+        val parsed = parseTvConfig(keys.joinToString(prefix = "{", postfix = "}") { "\"$it\": true" })
+
+        assertEquals(keys, parsed.unsupportedKeys)
+        assertEquals(emptyList<String>(), parsed.unknownKeys + parsed.rejectedKeys)
+        assertEquals(TvConfig(), parsed.config)
+    }
+
+    private val defaults = TvConfig()
+
+    /** key to (JSON value, the config that value alone produces); latitude and longitude set one field, so they share a row. */
+    private val nonDefaults: Map<String, Pair<String, TvConfig>> =
+        mapOf(
+            "dock_apps" to ("""["com.a"]""" to defaults.copy(dockApps = listOf("com.a"))),
+            "fill_dock" to ("false" to defaults.copy(fillDock = false)),
+            "hidden_apps" to ("""["com.a"]""" to defaults.copy(hiddenApps = listOf("com.a"))),
+            "columns" to ("6" to defaults.copy(columns = 6)),
+            "rows_below_dock" to ("2" to defaults.copy(rowsBelowDock = 2)),
+            "single_row" to ("true" to defaults.copy(singleRow = true)),
+            "launch_actions" to ("""["com.a=ACT"]""" to defaults.copy(launchActions = mapOf("com.a" to "ACT"))),
+            "app_labels" to ("""["com.a=Alpha"]""" to defaults.copy(appLabels = mapOf("com.a" to "Alpha"))),
+            "app_banners" to ("""["com.a=banner"]""" to defaults.copy(appBanners = mapOf("com.a" to "banner"))),
+            "top_bar_apps" to
+                ("""["com.t"]""" to defaults.copy(topBarApps = listOf("com.t"), hiddenApps = defaults.hiddenApps + "com.t")),
+            "greeting_name" to (""""Ann"""" to defaults.copy(greetingName = "Ann")),
+            "show_greeting" to ("false" to defaults.copy(showGreeting = false)),
+            "clock_format" to (""""24"""" to defaults.copy(clockFormat = ClockFormat.Hour24)),
+            "date_below_clock" to ("true" to defaults.copy(dateBelowClock = true)),
+            "show_network_pill" to ("false" to defaults.copy(showNetworkPill = false)),
+            "show_inputs_pill" to ("false" to defaults.copy(showInputsPill = false)),
+            "icon_only_buttons" to ("true" to defaults.copy(iconOnlyButtons = true)),
+            "wifi_label_width" to ("120" to defaults.copy(wifiLabelWidth = 120)),
+            "wifi_status_color" to ("true" to defaults.copy(wifiStatusColor = true)),
+            "wifi_status_warnings" to ("true" to defaults.copy(wifiStatusWarnings = true)),
+            "vpn_app" to (""""com.vpn"""" to defaults.copy(vpnApp = "com.vpn")),
+            "cinematic_home" to ("true" to defaults.copy(cinematicHome = true)),
+            "cinematic_art" to ("80" to defaults.copy(cinematicArt = 80)),
+            "cinematic_scrim" to ("40" to defaults.copy(cinematicScrim = 40)),
+            "cinematic_dots" to ("false" to defaults.copy(cinematicDots = false)),
+            "cinematic_white_focus" to ("true" to defaults.copy(cinematicWhiteFocus = true)),
+            "ambient_glow" to ("false" to defaults.copy(ambientGlow = false)),
+            "glow_snap" to ("true" to defaults.copy(glowSnap = true)),
+            "app_glow" to ("true" to defaults.copy(appGlow = true)),
+            "background_color" to (""""#112233"""" to defaults.copy(backgroundColor = 0xFF112233.toInt())),
+            "wallpaper" to ("false" to defaults.copy(wallpaper = false)),
+            "wallpaper_rotation_minutes" to ("30" to defaults.copy(wallpaperRotationMinutes = 30)),
+            "wallpaper_dim" to ("40" to defaults.copy(wallpaperDim = 40)),
+            "wallpaper_order" to (""""sequential"""" to defaults.copy(wallpaperOrder = WallpaperOrder.Sequential)),
+            "wallpaper_moods" to
+                ("""{"night": ["a.jpg"]}""" to defaults.copy(wallpaperMoods = mapOf(WallpaperMood.Night to setOf("a.jpg")))),
+            "wallpaper_captions" to ("true" to defaults.copy(wallpaperCaptions = true)),
+            "wallpaper_true_color" to ("true" to defaults.copy(wallpaperTrueColor = true)),
+            "sky_intensity" to ("60" to defaults.copy(skyIntensity = 60)),
+            "latitude" to ("40.4" to defaults.copy(place = Place(40.4, -3.7))),
+            "dock_row" to ("false" to defaults.copy(dockRow = false)),
+            "animations" to ("false" to defaults.copy(animations = false)),
+            "reduced_motion" to ("true" to defaults.copy(reducedMotion = true)),
+            "focus_overshoot" to ("false" to defaults.copy(focusOvershoot = false)),
+            "tile_menu" to ("false" to defaults.copy(tileMenu = false)),
+            "reorder_button" to ("true" to defaults.copy(reorderButton = true)),
+            "app_library" to ("true" to defaults.copy(appLibrary = true)),
+            "app_library_selection" to ("true" to defaults.copy(appLibrarySelection = true)),
+            "library_button" to ("true" to defaults.copy(libraryButton = true)),
+            "library_apps" to ("""["a.b"]""" to defaults.copy(libraryApps = listOf("a.b"))),
+            "library_excluded_apps" to ("""["a.b"]""" to defaults.copy(libraryExcludedApps = listOf("a.b"))),
+            "show_library_pill" to ("false" to defaults.copy(showLibraryPill = false)),
+            "library_ok_opens" to ("true" to defaults.copy(libraryOkOpens = true)),
+            "input_sources" to ("""["HDMI1"]""" to defaults.copy(inputSources = listOf("HDMI1"))),
+            "input_action" to (""""a.INPUT"""" to defaults.copy(inputAction = "a.INPUT")),
+            "input_uri_scheme" to (""""tv"""" to defaults.copy(inputUriScheme = "tv")),
+            "live_tv_package" to (""""com.live"""" to defaults.copy(liveTvPackage = "com.live")),
+            "live_tv_action" to (""""a.LIVE"""" to defaults.copy(liveTvAction = "a.LIVE")),
+            "live_tv_input_id" to (""""input/1"""" to defaults.copy(liveTvInputId = "input/1")),
+            "boot_to_live_tv" to ("true" to defaults.copy(bootToLiveTv = true)),
+            "source_panel_service" to (""""com.tcl/.Panel"""" to defaults.copy(sourcePanelService = "com.tcl/.Panel")),
+            "source_panel_action" to (""""a.SHOW"""" to defaults.copy(sourcePanelAction = "a.SHOW")),
+            "source_panel_extra" to (""""cmd=100"""" to defaults.copy(sourcePanelExtra = "cmd=100")),
+            "coocaa_sources" to ("true" to defaults.copy(coocaaSources = true)),
+            "inputs_connected_only" to ("true" to defaults.copy(inputsConnectedOnly = true)),
+            "inputs_cec_state_only" to ("true" to defaults.copy(inputsCecStateOnly = true)),
+            "handle_view_inputs" to ("true" to defaults.copy(handleViewInputs = true)),
+            "open_on_start_network_wait" to ("30" to defaults.copy(openOnStartNetworkWait = 30)),
+            "app_keys" to ("""["172:com.a"]""" to defaults.copy(appKeys = listOf("172:com.a"))),
+            "settings_key_keycodes" to ("[172]" to defaults.copy(settingsKeyKeycodes = listOf(172))),
+            "settings_key_scancodes" to ("[159]" to defaults.copy(settingsKeyScancodes = listOf(159))),
+            "input_key_keycodes" to ("[1001]" to defaults.copy(inputKeyKeycodes = listOf(1001))),
+            "capture_input_keys" to ("true" to defaults.copy(captureInputKeys = true)),
+            "key_filter" to ("false" to defaults.copy(keyFilter = false)),
+            "gamepad_passthrough" to ("true" to defaults.copy(gamepadPassthrough = true)),
+            "consume_volume_keys" to ("true" to defaults.copy(consumeVolumeKeys = true)),
+            "stock_home_redirect" to (""""com.stock"""" to defaults.copy(stockHomeRedirect = "com.stock")),
+            "home_long_press_home" to ("true" to defaults.copy(homeLongPressHome = true)),
+            "power_on_home" to ("true" to defaults.copy(powerOnHome = true)),
+            "power_on_home_always" to ("true" to defaults.copy(powerOnHomeAlways = true)),
+            "home_idle_clock_minutes" to ("10" to defaults.copy(homeIdleClockMinutes = 10)),
+            "back_opens_clock" to ("true" to defaults.copy(backOpensClock = true)),
+            "clock_wallpaper" to ("true" to defaults.copy(clockWallpaper = true)),
+            "clock_wallpaper_dim" to ("20" to defaults.copy(clockWallpaperDim = 20)),
+            "clock_glow" to ("false" to defaults.copy(clockGlow = false)),
+        )
+
+    @Test
+    fun every_supported_key_at_a_non_default_value_changes_exactly_its_own_field() {
+        for ((key, row) in nonDefaults) {
+            val (value, expected) = row
+            val json = if (key == "latitude") """{"latitude": 40.4, "longitude": -3.7}""" else """{"$key": $value}"""
+            val parsed = parseTvConfig(json)
+            assertEquals(key, expected, parsed.config)
+            assertEquals(key, emptyList<String>(), parsed.unknownKeys + parsed.unsupportedKeys + parsed.rejectedKeys)
+        }
+        val fields =
+            TvConfig::class.java.declaredFields.count {
+                !java.lang.reflect.Modifier
+                    .isStatic(it.modifiers)
+            }
+        assertEquals("a TvConfig field has no row", fields, nonDefaults.size)
     }
 }

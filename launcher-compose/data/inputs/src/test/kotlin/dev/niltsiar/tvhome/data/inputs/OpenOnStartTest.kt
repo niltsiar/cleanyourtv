@@ -53,13 +53,6 @@ class OpenOnStartRulesTest {
     fun the_launcher_itself_is_never_opened() {
         assertFalse(openOnStartDue(12, 11, self, self))
     }
-
-    @Test
-    fun wake_needs_both_the_row_and_the_switch() {
-        assertTrue(openOnStartOnWake(choice = true, onWake = true))
-        assertFalse(openOnStartOnWake(choice = true, onWake = false))
-        assertFalse(openOnStartOnWake(choice = false, onWake = true))
-    }
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -135,6 +128,18 @@ class OpenOnStartTest {
             bootCount(7)
             val withoutApp = OpenOnStart(context, TvConfig(bootToLiveTv = true, liveTvPackage = "com.missing"), MutableStateFlow(true))
             withoutApp.openAfterBoot { opened += it }
+            assertEquals(emptyList<Intent>(), opened)
+        }
+
+    @Test
+    fun without_boot_to_live_tv_nothing_opens() =
+        runTest {
+            liveTvApp()
+            bootCount(7)
+
+            OpenOnStart(context, TvConfig(bootToLiveTv = false, liveTvPackage = "com.tv.live"), MutableStateFlow(true))
+                .openAfterBoot { opened += it }
+
             assertEquals(emptyList<Intent>(), opened)
         }
 

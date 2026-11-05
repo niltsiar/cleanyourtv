@@ -22,11 +22,17 @@ public class ThemeDirectory(
 
     /**
      * config.json parsed over the defaults. Home can start before external storage is mounted, so then the
-     * copy kept in filesDir at the last read stands in; a missing file on mounted storage deletes the copy.
+     * copy kept in filesDir at the last read stands in; on mounted storage a file that is missing, too large or
+     * not a JSON object deletes the copy, as the reference launcher does.
      */
     public fun loadConfig(): ParsedConfig {
         val mounted = Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED
-        return readConfig(dir?.resolve(ThemeFiles.CONFIG_JSON), context.filesDir.resolve(ThemeFiles.CONFIG_JSON), mounted)
+        val copy = context.filesDir.resolve(ThemeFiles.CONFIG_JSON)
+        val parsed = readConfig(dir?.resolve(ThemeFiles.CONFIG_JSON), copy, mounted)
+        if (parsed.unknownKeys.isNotEmpty()) Log.w(TAG, "unknown keys in config.json, ignored: ${parsed.unknownKeys.joinToString()}")
+        if (parsed.unsupportedKeys.isNotEmpty()) Log.i(TAG, "unused keys in config.json: ${parsed.unsupportedKeys.joinToString()}")
+        if (parsed.rejectedKeys.isNotEmpty()) Log.w(TAG, "bad values in config.json, defaults kept: ${parsed.rejectedKeys.joinToString()}")
+        return parsed
     }
 }
 

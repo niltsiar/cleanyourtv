@@ -98,9 +98,6 @@ public data class TvConfig(
     val skyIntensity: Int = 0,
     /** Where the TV is, for the sun's times; null uses fixed times. */
     val place: Place? = null,
-    /** Percent, 30 to 100. */
-    val dockOpacity: Int = 100,
-    val dockGlass: Boolean = false,
     /** The first row is a dock: its tiles can be replaced from the tile menu and the Settings menu. */
     val dockRow: Boolean = true,
     val animations: Boolean = true,
@@ -138,10 +135,6 @@ public data class TvConfig(
     val inputsCecStateOnly: Boolean = false,
     /** Answer the system's VIEW_INPUTS request by opening the Inputs menu. */
     val handleViewInputs: Boolean = false,
-    /** The app picked in Launcher settings may open on the first Home of each boot. */
-    val openOnStartChoice: Boolean = false,
-    /** With [openOnStartChoice]: the picked app also opens when the screen comes back on. */
-    val openOnStartOnWake: Boolean = false,
     /** Seconds the boot's app waits for a validated network, 0 to 600; 0 opens it at once. */
     val openOnStartNetworkWait: Int = 0,
     /** "keycode:package" or "KEYCODE_NAME:package" entries, parsed where the key service reads them. */
@@ -173,8 +166,6 @@ public data class TvConfig(
     /** Percent, 0 to 90. */
     val clockWallpaperDim: Int = 50,
     val clockGlow: Boolean = true,
-    /** Language tag the launcher shows itself in instead of the TV's; null for the TV's. */
-    val locale: String? = null,
 )
 
 /** A point on Earth: [latitude] -90 to 90 and [longitude] -180 to 180, in degrees. */

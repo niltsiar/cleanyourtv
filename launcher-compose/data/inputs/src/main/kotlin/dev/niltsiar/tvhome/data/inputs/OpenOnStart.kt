@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import dev.niltsiar.tvhome.core.config.TvConfig
-import dev.niltsiar.tvhome.core.model.tvLaunchIntent
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -12,11 +11,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
-/** The package Launcher settings' Open on start row saves, in the launcher_settings preferences; absent or empty means off. */
-internal const val OPEN_ON_START_KEY = "open_on_start"
-internal const val SETTINGS_PREFS = "launcher_settings"
-
-/** The boot whose first Home has been handled, shared by boot_to_live_tv and the Open on start app. */
+/** The boot whose first Home has been handled. */
 internal const val BOOT_PREFS = "boot"
 internal const val BOOT_KEY = "live_tv_boot"
 
@@ -31,25 +26,8 @@ internal fun openOnStartDue(
     self: String,
 ): Boolean = boot >= 0 && boot != handledBoot && !pkg.isNullOrEmpty() && pkg != self
 
-/** The package picked as the Open on start app in Launcher settings, or empty when the row is off or nothing was picked. */
-public fun openOnStartPackage(
-    context: Context,
-    config: TvConfig,
-): String =
-    if (config.openOnStartChoice) {
-        context.getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE).getString(OPEN_ON_START_KEY, "").orEmpty()
-    } else {
-        ""
-    }
-
-/** open_on_start_on_wake needs the Open on start row, which is where the app is picked. */
-internal fun openOnStartOnWake(
-    choice: Boolean,
-    onWake: Boolean,
-): Boolean = choice && onWake
-
 /**
- * boot_to_live_tv, or the Open on start app: the first time Home comes up after the TV starts, open that instead.
+ * boot_to_live_tv: the first time Home comes up after the TV starts, open the Live TV app instead.
  * Once per boot, keyed on Settings.Global.BOOT_COUNT and committed to disk before the app starts: on a low-memory TV
  * the app can push the launcher out of memory, and a write still in flight is lost then, so every Home press would
  * open the app again. [validated] says whether the TV reaches the internet, for open_on_start_network_wait.
@@ -63,34 +41,19 @@ public class OpenOnStart(
     private val context = context.applicationContext
     private val liveTv = LiveTv(this.context, config)
 
-    /** The first Home of a boot: [open] gets the intent of the Live TV app or the picked app, once per boot. */
+    /** The first Home of a boot: [open] gets the intent of the Live TV app, once per boot. */
     public suspend fun openAfterBoot(open: (Intent) -> Unit) {
-        val app = pickedApp()
-        if (!config.bootToLiveTv && app.isEmpty()) return
+        if (!config.bootToLiveTv) return
         val intent =
             withContext(io) {
                 val boot = Settings.Global.getInt(context.contentResolver, Settings.Global.BOOT_COUNT, -1)
                 val prefs = context.getSharedPreferences(BOOT_PREFS, Context.MODE_PRIVATE)
-                val target = if (config.bootToLiveTv) config.liveTvPackage else app
-                if (!openOnStartDue(boot, prefs.getInt(BOOT_KEY, -1), target, context.packageName)) return@withContext null
+                if (!openOnStartDue(boot, prefs.getInt(BOOT_KEY, -1), config.liveTvPackage, context.packageName)) return@withContext null
                 if (!prefs.edit().putInt(BOOT_KEY, boot).commit()) return@withContext null
-                if (config.bootToLiveTv) liveTv.appIntent() else context.packageManager.tvLaunchIntent(app)
+                liveTv.appIntent()
             } ?: return
         openWhenReady(intent, open)
     }
-
-    /**
-     * open_on_start_on_wake: the screen came back on. The remote's power button is a light sleep on some sets, with
-     * no boot for [openAfterBoot] to catch.
-     */
-    public suspend fun openOnWake(open: (Intent) -> Unit) {
-        if (!openOnStartOnWake(config.openOnStartChoice, config.openOnStartOnWake)) return
-        val app = pickedApp()
-        if (app.isEmpty() || app == context.packageName) return
-        context.packageManager.tvLaunchIntent(app)?.let { openWhenReady(it, open) }
-    }
-
-    private suspend fun pickedApp(): String = withContext(io) { openOnStartPackage(context, config) }
 
     /** Home stays on screen until the network is validated or open_on_start_network_wait is over. Leaving Home cancels the wait. */
     private suspend fun openWhenReady(
