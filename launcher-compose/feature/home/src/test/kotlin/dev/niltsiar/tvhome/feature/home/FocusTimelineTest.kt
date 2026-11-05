@@ -5,6 +5,7 @@ import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import dev.niltsiar.tvhome.core.designsystem.Motion
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -71,7 +72,7 @@ class FocusTimelineTest {
     private fun show(animated: Boolean = true) {
         compose.mainClock.autoAdvance = false
         compose.setContent {
-            val timeline = rememberFocusTimeline(source, durationMs = 1_000, animated = animated)
+            val timeline = rememberFocusTimeline(source, animated = animated)
             SideEffect { value = { timeline.value } }
         }
         compose.mainClock.advanceTimeBy(50)
@@ -83,15 +84,15 @@ class FocusTimelineTest {
     }
 
     @Test
-    fun it_rests_at_one_and_runs_from_zero_to_one_when_focus_arrives() {
+    fun it_rests_at_one_and_runs_from_zero_to_one_in_the_shared_icon_time_when_focus_arrives() {
         show()
         assertEquals(1f, value(), 0f)
 
         emit(focus)
-        compose.mainClock.advanceTimeBy(480)
-        assertEquals(0.5f, value(), 0.1f)
+        compose.mainClock.advanceTimeBy(160)
+        assertTrue(value() in 0.2f..0.95f)
 
-        compose.mainClock.advanceTimeBy(600)
+        compose.mainClock.advanceTimeBy(Motion.ICON_MS - 160L + 20)
         assertEquals(1f, value(), 0f)
     }
 
@@ -99,7 +100,7 @@ class FocusTimelineTest {
     fun losing_focus_mid_run_settles_to_one_without_going_back() {
         show()
         emit(focus)
-        compose.mainClock.advanceTimeBy(300)
+        compose.mainClock.advanceTimeBy(150)
         val before = value()
 
         emit(FocusInteraction.Unfocus(focus))
@@ -118,7 +119,7 @@ class FocusTimelineTest {
     fun losing_focus_after_the_run_replays_nothing() {
         show()
         emit(focus)
-        compose.mainClock.advanceTimeBy(1_100)
+        compose.mainClock.advanceTimeBy(Motion.ICON_MS + 50L)
 
         emit(FocusInteraction.Unfocus(focus))
         compose.mainClock.advanceTimeBy(300)

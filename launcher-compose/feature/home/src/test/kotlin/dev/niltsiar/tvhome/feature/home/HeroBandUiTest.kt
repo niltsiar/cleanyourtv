@@ -34,6 +34,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.time.ZoneId
 import kotlin.math.abs
 
 /** The band over the grid (title, meta line, key chips), the dock under it and the menus that open over both. */
@@ -50,8 +51,15 @@ class HeroBandUiTest {
         apps: List<AppEntry> = NineApps,
         libraryCount: Flow<Int> = emptyFlow(),
         powerMenu: Boolean = false,
+        lastOpened: Map<String, Long> = emptyMap(),
     ) {
-        val sources = sources(apps = flowOf(AppList(apps)), libraryCount = libraryCount, powerMenuAvailable = { powerMenu })
+        val sources =
+            sources(
+                apps = flowOf(AppList(apps)),
+                libraryCount = libraryCount,
+                powerMenuAvailable = { powerMenu },
+                lastOpened = flowOf(lastOpened),
+            )
         compose.setContent {
             TvTheme(glassKind = GlassKind.Flat) {
                 val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
@@ -114,6 +122,34 @@ class HeroBandUiTest {
 
         assertNear(dockTitle.bottom, bounds("shelf:title").bottom)
         assertNear(dockMeta.top, bounds("shelf:title-meta").top)
+    }
+
+    @Test
+    fun a_focused_grid_tile_says_when_home_last_opened_it_where_the_dock_does() {
+        val opened =
+            Evening
+                .minusHours(2)
+                .atZone(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli()
+        showHome(lastOpened = mapOf("pkg.7" to opened))
+        val dockMeta = bounds("shelf:meta")
+
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+        compose.mainClock.advanceTimeBy(1_000)
+
+        assertTrue(textOf("shelf:title-meta"), textOf("shelf:title-meta").startsWith("Last opened "))
+        assertNear(dockMeta.top, bounds("shelf:title-meta").top)
+    }
+
+    @Test
+    fun the_band_text_ends_28_dp_above_the_dock() {
+        showHome()
+        // The page dots: 16 dp under the meta slot, 6 dp tall.
+        val dotsBottom = bounds("shelf:meta").bottom + 22.dp
+
+        assertNear(dotsBottom + 28.dp, bounds("dock").top)
     }
 
     @Test
@@ -202,20 +238,21 @@ class HeroBandUiTest {
     }
 
     @Test
-    fun the_tile_menu_opens_beside_its_tile_and_clear_of_the_band() {
+    fun the_four_row_tile_menu_opens_beside_its_tile_under_the_band_and_60_dp_above_the_bottom() {
         showHome()
         val tile = dockTile(2).getBoundsInRoot()
         press(Key.DirectionRight)
         holdOk()
+        for (row in listOf("ReplaceInDock", "Move", "RemoveFromHome", "AppInfo")) compose.onNodeWithTag("menu:$row").assertExists()
 
         val menu = bounds("menu")
         assertNear(tile.right + 16.dp, menu.left)
         assertTrue("menu top ${menu.top} under the band", menu.top >= bounds("dock").top - 0.5.dp)
-        assertTrue(menu.bottom <= compose.onRoot().getBoundsInRoot().bottom - 48.dp + 0.5.dp)
+        assertTrue(menu.bottom <= compose.onRoot().getBoundsInRoot().bottom - 60.dp + 0.5.dp)
     }
 
     @Test
-    fun the_settings_menu_ends_16_dp_above_the_dock() {
+    fun the_settings_menu_ends_at_least_8_dp_above_the_dock() {
         showHome(powerMenu = true)
         press(Key.DirectionUp)
         repeat(2) { press(Key.DirectionRight) }
@@ -224,7 +261,7 @@ class HeroBandUiTest {
 
         assertTrue(
             "menu bottom ${bounds("menu").bottom}, dock top ${bounds("dock").top}",
-            bounds("menu").bottom + 16.dp <= bounds("dock").top,
+            bounds("menu").bottom + 8.dp <= bounds("dock").top,
         )
     }
 }

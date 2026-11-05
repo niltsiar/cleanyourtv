@@ -301,6 +301,53 @@ class LibraryOverlayLookUiTest {
         assertTrue("card $inside, panel $panel", inside <= panel - 4)
     }
 
+    /** The colour, 0 to 255 a channel, of the screen at ([x], [y]). */
+    private fun rgbAt(
+        x: Dp,
+        y: Dp,
+    ): List<Int> {
+        val density = compose.activity.resources.displayMetrics.density
+        val pixel = compose.onRoot().captureToImage().toPixelMap()[(x.value * density).toInt(), (y.value * density).toInt()]
+        return listOf(pixel.red, pixel.green, pixel.blue).map { Math.round(it * 255) }
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun an_idle_card_is_opaque_so_a_bright_home_does_not_show_through_it() {
+        showLibrary(nineApps)
+        home = Color.White
+        compose.waitForIdle()
+
+        val idle = card("App 3")
+        val inside = rgbAt(idle.left + 4.dp, (idle.top + idle.bottom) / 2)
+        val expected = listOf(0x1C, 0x20, 0x30)
+        assertTrue("card $inside", inside.zip(expected).all { (actual, wanted) -> abs(actual - wanted) <= 2 })
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun a_card_on_home_has_no_green_check_badge() {
+        showLibrary(listOf(libraryApp("Aaa"), libraryApp("Beta", onHome = true)))
+
+        val onHome = card("Beta")
+        val (red, green) = rgbAt(onHome.right - 15.dp, onHome.top + 15.dp)
+        assertTrue("red $red, green $green", green - red < 20)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_right_fade_starts_at_the_peeking_card_and_leaves_more_of_it_showing() {
+        showLibrary(nineApps, art = LibraryArt(white, Color.White))
+        val row = bounds("library:cards")
+        val peek = card("App 6")
+        val panel = redAt(peek.left - 8.dp, peek.top - 4.dp)
+
+        val x = peek.left + 12.dp
+        val expected = panel + Math.round((255 - panel) * ((row.right - x) / 40.dp))
+        val actual = redAt(x, peek.top + 42.dp)
+        assertTrue("expected $expected, got $actual", abs(actual - expected) <= 8)
+    }
+
     private companion object {
         const val PANEL_X = 960
         const val PANEL_HEADER_Y = 304

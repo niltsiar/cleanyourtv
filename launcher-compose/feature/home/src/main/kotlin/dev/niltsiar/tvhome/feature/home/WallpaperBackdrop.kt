@@ -50,8 +50,8 @@ private val TopScrim = Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.5
 private val LeftScrim = Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.40f), 0.55f to Color.Transparent)
 
 /**
- * What is behind Home, drawn in the draw phase only: the picture, the scrim that keeps the white text readable on any
- * picture ([drawHomeScrim], which the chrome's frost bakes too), then the time-of-day sky. A new picture cross-fades
+ * What is behind Home, drawn in the draw phase only: the picture, the time-of-day sky, then the scrim that keeps the
+ * white text readable on any picture ([drawHomeScrim], which the chrome's frost bakes too). A new picture cross-fades
  * in over the old one with no recomposition per frame. These parts sit in one offscreen layer that the GPU redraws only
  * when they change, so a frame costs one full-screen fill for them instead of one per part. The [cinematic] shelf's art,
  * glow and scrim come last, outside that layer, as they animate on each dock move. It is a glass source, so the panels
@@ -87,12 +87,16 @@ internal fun WallpaperBackdrop(
                 .drawBehind {
                     fade.draw(this)
                     if (skyAlpha > 0f) sky?.let { drawSky(it, skyAlpha) }
+                    fade.drawScrim(this)
                 },
         )
     }
 }
 
-/** The picture on screen and the one it replaces. Both draw in the draw phase; only [progress] moves while fading. */
+/**
+ * The picture on screen and the one it replaces, and the scrim over them, which fades in with a first picture. They
+ * draw in the draw phase; only [progress] moves while fading.
+ */
 private class PictureFade(
     initial: ImageBitmap?,
 ) {
@@ -117,11 +121,14 @@ private class PictureFade(
             val next = to
             val previous = from.takeIf { t < 1f }
             previous?.let { drawCover(it, 1f) }
-            if (next != null) {
-                drawCover(next, t)
-                drawHomeScrim(alpha = if (previous == null) t else 1f)
-            }
+            if (next != null) drawCover(next, t)
         }
+
+    fun drawScrim(scope: DrawScope) {
+        if (to == null) return
+        val t = progress.value
+        scope.drawHomeScrim(alpha = if (from == null || t >= 1f) t else 1f)
+    }
 }
 
 /** The picture scaled to cover the draw area and centred, as ContentScale.Crop would. */

@@ -41,6 +41,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorProducer
@@ -66,6 +67,7 @@ import dev.niltsiar.tvhome.core.designsystem.ChromeShadow
 import dev.niltsiar.tvhome.core.designsystem.GlassIconButton
 import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.designsystem.GlassSurface
+import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.glassContainer
@@ -78,9 +80,7 @@ import kotlin.math.sin
 
 private const val ICON_VIEWPORT = 24f
 private const val INPUTS_ARROW_SLIDE = 2.5f
-private const val INPUTS_ARROW_MS = 700
 private const val SETTINGS_TURN = 90f
-private const val WIFI_LIGHT_MS = 1400
 private const val TIMELINE_SETTLE_MS = 250
 private const val ARC_DIM = 0.2f
 private const val ARC_DIM_END = 0.2f
@@ -176,6 +176,7 @@ internal fun TopBar(
                 .fillMaxWidth()
                 .height(TopBarHeight)
                 .focusProperties { down = dockFocus }
+                .onFocusChanged { input.topBarFocused = it.hasFocus }
                 .glassContainer(glass),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -184,7 +185,7 @@ internal fun TopBar(
         Spacer(Modifier.weight(1f))
         if (layout.showInputsPill && inputsAvailable) {
             val inputsSource = remember { MutableInteractionSource() }
-            val slide = rememberFocusTimeline(inputsSource, INPUTS_ARROW_MS, layout.animated)
+            val slide = rememberFocusTimeline(inputsSource, layout.animated)
             val inputs = stringResource(R.string.inputs)
             GlassIconButton(
                 glass,
@@ -441,7 +442,7 @@ private fun NetworkButton(
     val showLabel = !layout.iconOnlyButtons || layout.wifiLabelWidth > 0
     val maxWidth = if (layout.iconOnlyButtons) layout.wifiLabelWidth else DEFAULT_NETWORK_WIDTH_DP
     val interactionSource = remember { MutableInteractionSource() }
-    val light = rememberFocusTimeline(interactionSource, WIFI_LIGHT_MS, layout.animated)
+    val light = rememberFocusTimeline(interactionSource, layout.animated)
     GlassIconButton(
         glass = glass,
         contentDescription = listOfNotNull(name, badge?.first).joinToString(" "),
@@ -566,14 +567,14 @@ internal fun wifiLight(
 internal fun inputsArrowSlide(timeline: Float): Float = sin(PI.toFloat() * timeline.coerceIn(0f, 1f))
 
 /**
- * A value that sits at 1 and runs from 0 to 1 over [durationMs] each time the button behind [interactionSource] gains
- * focus. Losing focus mid-run settles it to 1, so nothing replays on blur. It stays at 1 while [animated] is false.
- * Read the value in a layer or draw lambda.
+ * A value that sits at 1 and runs from 0 to 1 over [Motion.ICON_MS] each time the button behind [interactionSource]
+ * gains focus, as long as the button's own icon motion, so every top-bar button settles together. Losing focus mid-run
+ * settles it to 1, so nothing replays on blur. It stays at 1 while [animated] is false. Read the value in a layer or
+ * draw lambda.
  */
 @Composable
 internal fun rememberFocusTimeline(
     interactionSource: MutableInteractionSource,
-    durationMs: Int,
     animated: Boolean,
 ): Animatable<Float, AnimationVector1D> {
     val timeline = remember { Animatable(1f) }
@@ -586,7 +587,7 @@ internal fun rememberFocusTimeline(
             when (it) {
                 is FocusInteraction.Focus -> {
                     timeline.snapTo(0f)
-                    timeline.animateTo(1f, tween(durationMs, easing = LinearEasing))
+                    timeline.animateTo(1f, tween(Motion.ICON_MS))
                 }
 
                 is FocusInteraction.Unfocus -> {

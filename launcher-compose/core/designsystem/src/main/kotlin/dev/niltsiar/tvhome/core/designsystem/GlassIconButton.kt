@@ -1,9 +1,8 @@
 package dev.niltsiar.tvhome.core.designsystem
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Row
@@ -19,10 +18,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
@@ -31,6 +31,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 private val ButtonSize = 40.dp
 private val IconSize = 22.dp
@@ -38,14 +41,15 @@ private val IconInset = (ButtonSize - IconSize) / 2
 private val LabelGap = 8.dp
 private val LabelPadding = 16.dp
 private const val FOCUSED_SCALE = 1.08f
+private val GrownMargin = 1.dp
 
 /**
  * A round glass button, a chrome surface that fills as a [FocusPill] while focused. [icon] fills a 22dp box; it gets
- * the focus progress, a spring from 0 (idle) to 1 (focused) that can overshoot, and the colour to draw in. Read both in
- * graphicsLayer or draw lambdas, never in composition. An icon with a motion of its own watches [interactionSource]
- * instead. With a [label] the button is a pill: the label follows the icon and the pill is as wide as both, or as the
- * incoming width limit allows. With a [focusLabel] instead it grows from a circle into such a pill while focused,
- * keeping its left edge, so a parent that holds it at its right edge sees it grow leftward.
+ * the focus progress, from 0 (idle) to 1 (focused) in [Motion.ICON_MS] from the frame the fill starts, and the colour
+ * to draw in. Read both in graphicsLayer or draw lambdas, never in composition. An icon with a motion of its own
+ * watches [interactionSource] instead. With a [label] the button is a pill: the label follows the icon and the pill is
+ * as wide as both, or as the incoming width limit allows. With a [focusLabel] instead it grows from a circle into such
+ * a pill while focused, and lays out on the width it draws at, its focus growth included, plus [GrownMargin] a side.
  */
 @Composable
 public fun GlassIconButton(
@@ -58,25 +62,27 @@ public fun GlassIconButton(
     focusLabel: String? = null,
     icon: @Composable BoxScope.(focus: () -> Float, ink: ColorProducer) -> Unit,
 ) {
-    val focused by interactionSource.collectIsFocusedAsState()
     val motion = TvTheme.motion
-    val progress =
-        animateFloatAsState(
-            if (focused) 1f else 0f,
-            motion.springSpec(dampingRatio = 0.55f, stiffness = Spring.StiffnessLow),
-            label = "iconFocus",
-        )
-    val grow =
-        animateFloatAsState(
-            if (focused) 1f else 0f,
-            motion.springSpec(dampingRatio = 0.8f, stiffness = Spring.StiffnessMedium),
-            label = "labelGrow",
-        )
+    val progress = remember { Animatable(0f) }
+    val grow = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    val grownScale = motion.focusScale(FOCUSED_SCALE)
+    val follow =
+        modifier.onFocusChanged {
+            val target = if (it.isFocused) 1f else 0f
+            if (progress.targetValue != target) {
+                // Undispatched, as the fill's, so all three start on one frame.
+                scope.launch(start = CoroutineStart.UNDISPATCHED) { progress.animateTo(target, motion.tweenSpec(Motion.ICON_MS)) }
+                scope.launch(start = CoroutineStart.UNDISPATCHED) {
+                    grow.animateTo(target, motion.springSpec(dampingRatio = 0.8f, stiffness = Spring.StiffnessMedium))
+                }
+            }
+        }
     val size =
         when {
-            label != null -> modifier.height(ButtonSize).widthIn(min = ButtonSize)
-            focusLabel != null -> modifier.growToLabel(grow).height(ButtonSize)
-            else -> modifier.size(ButtonSize)
+            label != null -> follow.height(ButtonSize).widthIn(min = ButtonSize)
+            focusLabel != null -> follow.growToLabel(grow.asState(), grownScale).height(ButtonSize)
+            else -> follow.size(ButtonSize)
         }
     SurfaceContent(light = glass.kind == GlassKind.Flat) {
         FocusPill(
@@ -137,14 +143,21 @@ public fun GlassIconButton(
 }
 
 /**
- * As wide as a round button at [grow] 0 and as wide as the content with the label's padding at 1. The width is read
- * while measuring, so the growth relays out the button and its row but recomposes nothing.
+ * As wide as a round button at [grow] 0 and as wide as the content with the label's padding at 1. At 1 it also takes
+ * the room its [grownScale] focus growth draws into, and [GrownMargin] more, on each side, so its neighbours move
+ * aside instead of being drawn over. The width is read while measuring, so the growth relays out the button and its
+ * row but recomposes nothing.
  */
-private fun Modifier.growToLabel(grow: State<Float>): Modifier =
+private fun Modifier.growToLabel(
+    grow: State<Float>,
+    grownScale: Float,
+): Modifier =
     layout { measurable, constraints ->
         val round = ButtonSize.roundToPx()
         val full = measurable.maxIntrinsicWidth(round) + ((LabelPadding - IconInset) * 2).roundToPx()
-        val width = lerp(round, maxOf(round, full), grow.value).coerceIn(constraints.minWidth, constraints.maxWidth)
+        val shown = grow.value
+        val width = lerp(round, maxOf(round, full), shown).coerceIn(constraints.minWidth, constraints.maxWidth)
         val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
-        layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+        val side = ((width * (grownScale - 1f) / 2f + GrownMargin.toPx()) * shown).roundToInt()
+        layout(placeable.width + side * 2, placeable.height) { placeable.place(side, 0) }
     }

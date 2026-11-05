@@ -26,6 +26,7 @@ private fun MenuRow.label(): Int =
 
 private val MenuTopLimit = TopBarTop + TopBarHeight + 8.dp
 private val MenuClearance = 16.dp
+private val TileMenuBottom = 60.dp
 private val SettingsRowHeight = 42.dp
 private val SettingsPadding = 8.dp
 
@@ -53,7 +54,12 @@ internal fun MenuOverlay(
             onPick = onPick,
             modifier = modifier,
             topLimit = MenuTopLimit,
-            beside = BesideAnchor(top = bandBottom + MenuClearance, fallbackTop = TopBarTop + TopBarHeight + MenuClearance),
+            beside =
+                BesideAnchor(
+                    top = bandBottom + MenuClearance,
+                    fallbackTop = TopBarTop + TopBarHeight + MenuClearance,
+                    bottomMargin = TileMenuBottom,
+                ),
         )
     } else {
         GlassMenu(

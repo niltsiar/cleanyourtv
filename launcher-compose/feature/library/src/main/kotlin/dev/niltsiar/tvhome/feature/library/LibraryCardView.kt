@@ -23,19 +23,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
@@ -48,11 +46,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.designsystem.FocusSurface
+import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.holdOk
 import dev.niltsiar.tvhome.core.model.LibraryArt
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 internal val CardHeight = 170.dp
 private val CardShape = RoundedCornerShape(18.dp)
@@ -64,14 +65,13 @@ private val EnterRise = 28.dp
 private const val POP_SCALE = 0.12f
 private const val FOCUSED_SCALE = 1.08f
 private val OnHomeTint = Color(0x1475BBA4)
-private const val IDLE_TINT_ALPHA = 0.05f
 private const val RIM_ALPHA = 0.09f
-private val OnHomeGreen = Color(0xFF246E58)
 private val RecentGreen = Color(0xFF70D9A0)
 
 /**
  * One card of the row, [width] wide: the app's art on a small tile, its name in a box of two lines and, on one line at
- * the bottom, where it stands. It rises in once per opening, with the delay [CardEntrance] gives it, and pops a little
+ * the bottom, where it stands. An idle card is opaque, so nothing of Home shows through it; a focused one lets the
+ * highlight behind it show. It rises in once per opening, with the delay [CardEntrance] gives it, and pops a little
  * when its Home shortcut changes. Both run in the layer lambda.
  */
 @Composable
@@ -110,8 +110,11 @@ internal fun LibraryCardView(
     }
     val artwork by produceState<LibraryArt?>(null, key) { value = art(key) }
     val ink = TvTheme.colors.onSurface
-    val tint =
-        animateColorAsState(if (card.onHome) OnHomeTint else ink.copy(alpha = IDLE_TINT_ALPHA), tween(CARD_TINT_MS), label = "cardTint")
+    val fill = TvTheme.surfaces.card
+    val tint = animateColorAsState(if (card.onHome) OnHomeTint else Color.Transparent, tween(CARD_TINT_MS), label = "cardTint")
+    val motion = TvTheme.motion
+    val idle = remember { Animatable(1f) }
+    val scope = rememberCoroutineScope()
     Box(
         modifier =
             modifier.size(width, CardHeight).graphicsLayer {
@@ -134,7 +137,12 @@ internal fun LibraryCardView(
                     .fillMaxSize()
                     .testTag("card:$key")
                     .focusRequester(requester)
-                    .then(
+                    .onFocusChanged {
+                        val target = if (it.isFocused) 0f else 1f
+                        if (idle.targetValue != target) {
+                            scope.launch(start = CoroutineStart.UNDISPATCHED) { idle.animateTo(target, motion.tweenSpec(Motion.FOCUS_MS)) }
+                        }
+                    }.then(
                         if (layout.selection) {
                             Modifier
                         } else {
@@ -148,8 +156,10 @@ internal fun LibraryCardView(
             Box(
                 Modifier
                     .fillMaxSize()
-                    .drawBehind { drawRect(tint.value) }
-                    .border(1.dp, ink.copy(alpha = RIM_ALPHA), CardShape)
+                    .drawBehind {
+                        drawRect(fill, alpha = idle.value)
+                        drawRect(tint.value)
+                    }.border(1.dp, ink.copy(alpha = RIM_ALPHA), CardShape)
                     .semantics { contentDescription = card.app.label },
             ) {
                 Column(
@@ -167,7 +177,7 @@ internal fun LibraryCardView(
                             Alignment.BottomCenter,
                         ).padding(start = CardSidePadding, end = CardSidePadding, bottom = CardTopBottomPadding),
                 )
-                Badge(card, Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp))
+                if (card.recent && !card.onHome) RecentDot(Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp))
             }
         }
     }
@@ -238,32 +248,8 @@ private fun Status(
     BasicText(text, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = modifier.fillMaxWidth())
 }
 
-/** A check in a green disc for an app on Home, a small green dot for a recent install that is not. */
+/** A small green dot for a recent install that is not on Home. */
 @Composable
-private fun Badge(
-    card: LibraryCard,
-    modifier: Modifier = Modifier,
-) {
-    if (!card.onHome && !card.recent) return
-    val onHome = card.onHome
-    Box(
-        modifier =
-            modifier.size(if (onHome) 18.dp else 8.dp).drawBehind {
-                if (onHome) {
-                    drawCircle(OnHomeGreen)
-                    val unit = size.width / BADGE_VIEWPORT
-                    val check =
-                        Path().apply {
-                            moveTo(6.5f * unit, 12f * unit)
-                            lineTo(10.2f * unit, 15.7f * unit)
-                            lineTo(17.5f * unit, 8.5f * unit)
-                        }
-                    drawPath(check, Color.White, style = Stroke(width = 2f * unit, cap = StrokeCap.Round, join = StrokeJoin.Round))
-                } else {
-                    drawCircle(RecentGreen)
-                }
-            },
-    )
+private fun RecentDot(modifier: Modifier = Modifier) {
+    Box(modifier = modifier.size(8.dp).drawBehind { drawCircle(RecentGreen) })
 }
-
-private const val BADGE_VIEWPORT = 24f

@@ -94,6 +94,9 @@ private const val WHOLE_CARDS = 5
 /** How much of the next card shows at an edge of the row, under that edge's fade. */
 private val Peek = 40.dp
 private val EdgeFade = 48.dp
+
+/** The right edge's fade is narrower, so it fades only the outer part of the next card's peek. */
+private val RightFade = 40.dp
 private val MenuEdge = 48.dp
 private val HighlightGrow = 6.dp
 private val HighlightRadius = 20.dp
@@ -372,12 +375,14 @@ private fun LazyListState.aheadRoom(): Float {
 }
 
 /**
- * The row's ends, drawn as masks in the draw phase: an [EdgeFade] at each end the row can scroll towards, coming in
- * over the first [EdgeFade] of scrolling. The cards' rings reach above and below the row, so only the sides are cut.
+ * The row's ends, drawn as masks in the draw phase: an [EdgeFade] on the left and a [RightFade] on the right, at each
+ * end the row can scroll towards, coming in over the first [EdgeFade] of scrolling. The cards' rings reach above and
+ * below the row, so only the sides are cut.
  */
 private fun Modifier.rowEdges(list: LazyListState): Modifier =
     drawWithCache {
         val fade = EdgeFade.toPx()
+        val rightFade = RightFade.toPx()
         val layerPaint = Paint()
         onDrawWithContent {
             val left = (list.backRoom() / fade).coerceIn(0f, 1f)
@@ -396,7 +401,7 @@ private fun Modifier.rowEdges(list: LazyListState): Modifier =
                 } else {
                     0f
                 }
-            val rightStart = size.width - fade
+            val rightStart = size.width - rightFade
             val bodyRight =
                 if (right > 0f) {
                     val mask =

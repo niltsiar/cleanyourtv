@@ -43,6 +43,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -100,6 +102,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
@@ -130,11 +133,13 @@ import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.Wallpaper
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.ZoneId
 
@@ -151,7 +156,7 @@ private val LibraryRowHeight = 84.dp
 
 /** The grid fades in over this much under the band, and out over [BottomFade] at the bottom of the screen. */
 private val TopFade = 28.dp
-private val BottomFade = 36.dp
+private val BottomFade = 56.dp
 
 /** A focused tile's ring (its growth, gap, ring and hairline) reaches about 10 dp past its edge; the top fade ends this far above it. */
 private val RingClearance = 12.dp
@@ -159,8 +164,8 @@ private val RingClearance = 12.dp
 /** From the shelf's bottom edge up to where the grid is cut off and starts to fade in. */
 private val ShelfToFade = TopFade + RingClearance - TileGap
 
-/** From the bottom of the band's text to the shelf's bottom edge, with 24 dp between the text and the fade. */
-private val TitleToShelfBottom = 24.dp + ShelfToFade
+/** From the bottom of the band's text to the shelf's bottom edge, with 12 dp between the text and the fade. */
+private val TitleToShelfBottom = 12.dp + ShelfToFade
 private val HeroAscent = 36.sp
 private val ChipHeight = 32.dp
 private val ChipRim = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.32f), Color.White.copy(alpha = 0.08f)))
@@ -170,6 +175,17 @@ private val CinematicShelfHeight = CinematicTextHeight + TitleToShelfBottom
 /** A 48 sp title line (its ascent and descent), then the meta line or the key chips. */
 private val ShelfHeight = 52.dp + MetaGap + ChipHeight + TitleToShelfBottom
 private const val ROW_ABOVE_ALPHA = 0.4f
+
+/** Rows above the focused library pill draw brighter than rows above a tile, so their tiles still read as tiles. */
+private const val ROW_ABOVE_PILL_ALPHA = 0.55f
+
+/** A dock scrolled up for the grid fades out over the last of this before it reaches the shelf's bottom edge. */
+private val DockFadeOut = 28.dp
+private const val MENU_SCRIM = 0.5f
+private const val LIBRARY_SCRIM = 0.6f
+private const val BAND_TOP_BAR_ALPHA = 0.55f
+private const val BAND_IN_MS = 160
+private const val BAND_OUT_MS = 120
 private const val LIBRARY_SWAP_MS = 150
 
 /** The row the dock is in; rows count from 0 at the first grid row. */
@@ -202,7 +218,8 @@ private const val GRID_ITEMS_BEFORE = 2
  * OK on the Inputs button hangs the TV's input list under it; Back closes the list and returns focus to the button.
  * Each rise of [inputsRequests] (the system asked for the input list) opens the list.
  * The menus, the input list and [overlays] (the host's, such as the App library, open while [libraryOpen]) sit in one
- * [OverlayHost] over everything else on Home.
+ * [OverlayHost] over everything else on Home. The tile a menu acts on stays undimmed under it, and the library dims Home
+ * more than a menu does.
  */
 @Composable
 public fun HomeScreen(
@@ -260,6 +277,7 @@ public fun HomeScreen(
     val shelfHeight = if (shelfLayout.cinematic) CinematicShelfHeight else ShelfHeight
     val shelfBottom = ContentTop + shelfHeight
     val shelfModifier = Modifier.padding(top = ContentTop, start = ScreenMargin).height(shelfHeight - TitleToShelfBottom)
+    val band = rememberBandFade(currentState, input, libraryOpen)
     Box(
         modifier =
             modifier
@@ -302,9 +320,11 @@ public fun HomeScreen(
                 shelf = { state().takeIf { it.reorder == null && !input.pillFocused }?.shelf },
                 layout = shelfLayout,
                 modifier = shelfModifier,
+                titleAlpha = { band.title.value },
+                detailAlpha = { band.detail.value },
             )
         }
-        HeroTitle(state, input, shelfLayout.cinematic, shelfModifier)
+        HeroTitle(state, input, shelfLayout.cinematic, band, shelfModifier)
         WallpaperCaption(
             caption = { state().wallpaper.caption },
             crossfade = wallpaperLayout.crossfade,
@@ -326,7 +346,12 @@ public fun HomeScreen(
             input = input,
             modifier = Modifier.align(Alignment.TopCenter),
         )
-        OverlayHost(open = { currentState.value().let { it.menu != null || it.inputsOpen } || libraryOpen() }) {
+        OverlayHost(
+            open = { currentState.value().let { it.menu != null || it.inputsOpen } || libraryOpen() },
+            strength = { if (libraryOpen()) LIBRARY_SCRIM else MENU_SCRIM },
+            spotlight = { input.anchor.value.takeIf { currentState.value().menu?.tileKey != null } },
+            spotlightShape = TileShape,
+        ) {
             menu?.let { open ->
                 key(open) {
                     MenuOverlay(
@@ -372,6 +397,7 @@ private fun HomeContent(
     // The focused tile rests one gap inside the dock panel, so at rest the dock panel's top edge is the shelf's bottom edge.
     val pivotPx = with(density) { (shelfBottom + TileGap).toPx() }
     val pivotSpec = remember(pivotPx) { PivotBringIntoViewSpec(pivotPx) }
+    val shelfBottomPx = with(density) { shelfBottom.toPx() }
     val window = LocalWindowInfo.current.containerSize
     val gridWidth = with(density) { window.width.toDp() } - ScreenMargin * 2
     val belowShelf = with(density) { window.height.toDp() } - shelfBottom - GridBottom
@@ -462,7 +488,7 @@ private fun HomeContent(
                     onFocus = onFocus,
                     onClick = onClick,
                     onOpenLibrary = onOpenLibrary,
-                    modifier = remember(focusRow) { Modifier.dimAboveFocus(DOCK_ROW, focusRow) },
+                    modifier = remember(focusRow, gridState, shelfBottomPx) { Modifier.dockLayer(focusRow, gridState, shelfBottomPx) },
                 )
             }
             itemsIndexed(grid, key = { _, app -> app.key }, contentType = { _, _ -> "tile" }) { index, app ->
@@ -599,16 +625,26 @@ private fun pillUp(
 
 /**
  * The row focus is on, animated: [DOCK_ROW] for the dock, the grid row of a grid tile, the row after the last for the
- * library pill, and [DOCK_ROW] while focus is outside the grid. Read it in layer lambdas only.
+ * library pill, and [DOCK_ROW] while focus is outside the grid. [floor] is the alpha of the rows above it, animated with
+ * it. Read both in layer lambdas only.
  */
+@Stable
+private class FocusDim {
+    val row = Animatable(DOCK_ROW.toFloat())
+    val floor = Animatable(ROW_ABOVE_ALPHA)
+
+    /** The alpha of [row]: [floor] while focus is a row or more below it, 1 from the focused row down. */
+    fun alphaOf(row: Int): Float = 1f - (1f - floor.value) * (this.row.value - row).coerceIn(0f, 1f)
+}
+
 @Composable
 private fun rememberFocusRow(
     state: () -> HomeUiState,
     input: HomeInput,
     layout: HomeLayout,
-): Animatable<Float, AnimationVector1D> {
+): FocusDim {
     val motion = TvTheme.motion
-    val row = remember { Animatable(DOCK_ROW.toFloat()) }
+    val dim = remember { FocusDim() }
     LaunchedEffect(state, input, layout, motion) {
         snapshotFlow {
             val shown = state()
@@ -619,21 +655,48 @@ private fun rememberFocusRow(
                 inGrid >= 0 -> inGrid / layout.columns
                 else -> DOCK_ROW
             }
-        }.collectLatest { row.animateTo(it.toFloat(), motion.tweenSpec(ROW_DIM_MS)) }
+        }.collectLatest { dim.row.animateTo(it.toFloat(), motion.tweenSpec(ROW_DIM_MS)) }
     }
-    return row
+    LaunchedEffect(input, motion) {
+        snapshotFlow { if (input.pillFocused) ROW_ABOVE_PILL_ALPHA else ROW_ABOVE_ALPHA }
+            .collectLatest { dim.floor.animateTo(it, motion.tweenSpec(ROW_DIM_MS)) }
+    }
+    return dim
 }
 
 private const val ROW_DIM_MS = 160
 
-/** Draws the item at [ROW_ABOVE_ALPHA] while [focusRow] is below its [row]. */
+/** Draws the item of grid [row] at the alpha [dim] gives it. */
 private fun Modifier.dimAboveFocus(
     row: Int,
-    focusRow: Animatable<Float, AnimationVector1D>,
+    dim: FocusDim,
 ): Modifier =
     graphicsLayer {
         compositingStrategy = CompositingStrategy.ModulateAlpha
-        alpha = 1f - (1f - ROW_ABOVE_ALPHA) * (focusRow.value - row).coerceIn(0f, 1f)
+        alpha = dim.alphaOf(row)
+    }
+
+/**
+ * The dock's layer: dimmed as [dimAboveFocus] dims a row, and faded out over the [DockFadeOut] before its bottom edge
+ * scrolls up to [shelfBottomPx], so a dock scrolled up for the grid leaves nothing in the grid's top fade.
+ */
+private fun Modifier.dockLayer(
+    dim: FocusDim,
+    grid: LazyGridState,
+    shelfBottomPx: Float,
+): Modifier =
+    graphicsLayer {
+        compositingStrategy = CompositingStrategy.ModulateAlpha
+        val info = grid.layoutInfo
+        val dock = info.visibleItemsInfo.firstOrNull { it.key == "dock" }
+        val shown =
+            if (dock == null) {
+                0f
+            } else {
+                val bottom = dock.offset.y - info.viewportStartOffset + dock.size.height
+                ((bottom - shelfBottomPx) / DockFadeOut.toPx()).coerceIn(0f, 1f)
+            }
+        alpha = dim.alphaOf(DOCK_ROW) * shown
     }
 
 /**
@@ -696,38 +759,97 @@ private fun ContentDrawScope.drawMasked(
 }
 
 /**
- * What the band over the grid says when the cinematic shelf does not. A [meta] of a space keeps the line's place.
- * [quick] swaps in [LIBRARY_SWAP_MS].
+ * How the band over the grid shows: whole; on the top bar (or a menu or list it opened) its title dimmed and the rest
+ * gone, so it does not claim a dock app is selected; and gone under the App library, whose panel would cut through it.
+ */
+private enum class BandLook(
+    val title: Float,
+    val detail: Float,
+) {
+    Whole(1f, 1f),
+    TopBar(BAND_TOP_BAR_ALPHA, 0f),
+    Gone(0f, 0f),
+}
+
+/** The band's two fades: its title, and the meta line, the page dots and the key chips under it. Read them in layer lambdas only. */
+@Stable
+private class BandFade {
+    val title = Animatable(1f)
+    val detail = Animatable(1f)
+}
+
+/** The band's fades, following focus and what is open: in with the library's scrim in [BAND_IN_MS], back in [BAND_OUT_MS]. */
+@Composable
+private fun rememberBandFade(
+    state: State<() -> HomeUiState>,
+    input: HomeInput,
+    libraryOpen: () -> Boolean,
+): BandFade {
+    val motion = TvTheme.motion
+    val band = remember { BandFade() }
+    val currentLibraryOpen = rememberUpdatedState(libraryOpen)
+    LaunchedEffect(input, motion) {
+        var shown = BandLook.Whole
+        snapshotFlow {
+            val home = state.value()
+            when {
+                currentLibraryOpen.value() -> BandLook.Gone
+                input.topBarFocused || home.inputsOpen || (home.menu != null && home.menu.tileKey == null) -> BandLook.TopBar
+                else -> BandLook.Whole
+            }
+        }.collectLatest { look ->
+            val spec = motion.tweenSpec<Float>(if (shown == BandLook.Gone && look != BandLook.Gone) BAND_OUT_MS else BAND_IN_MS)
+            shown = look
+            coroutineScope {
+                launch { band.title.animateTo(look.title, spec) }
+                band.detail.animateTo(look.detail, spec)
+            }
+        }
+    }
+    return band
+}
+
+/**
+ * What the band over the grid says when the cinematic shelf does not. A [meta] of a space keeps the line's place;
+ * [opened] puts when Home last opened the tile there instead. [quick] swaps in [LIBRARY_SWAP_MS].
  */
 @Immutable
 private data class HeroLine(
     val title: String,
     val meta: String = " ",
+    val opened: OpenedAt? = null,
     val hint: ReorderHint? = null,
     val quick: Boolean = false,
 )
 
 /**
- * The band over the grid: the focused tile's name; on the library pill the library's name and size; in a reorder or
- * edit-dock mode the mode's name and its keys. A new line cross-fades with the old one as the cinematic shelf's does
- * ([TitleSlots]). The meta line keeps its slot when empty, so the title stands where the [cinematic] shelf's does.
+ * The band over the grid: the focused tile's name and when Home last opened it; on the library pill the library's
+ * name and size; in a reorder or edit-dock mode the mode's name and its keys. A new line cross-fades with the old one
+ * as the cinematic shelf's does ([TitleSlots]). The meta line keeps its slot when empty, so the title stands where the
+ * [cinematic] shelf's does. It draws at the [band]'s fades.
  */
 @Composable
 private fun HeroTitle(
     state: () -> HomeUiState,
     input: HomeInput,
     cinematic: Boolean,
+    band: BandFade,
     modifier: Modifier = Modifier,
 ) {
     val hint by remember(state) { derivedStateOf { state().reorder?.hint } }
     val count by remember(state) { derivedStateOf { state().libraryCount } }
-    val label by remember(state) { derivedStateOf { state().let { if (cinematic && it.shelf != null) "" else it.focusedLabel } } }
+    val tile by remember(state) {
+        derivedStateOf {
+            val home = state()
+            if (cinematic && home.shelf != null) HeroLine("") else HeroLine(home.focusedLabel, opened = home.focusedOpened)
+        }
+    }
     val mode = hint
     val line =
         when {
             mode != null -> HeroLine(stringResource(if (mode == ReorderHint.Reorder) R.string.reorder else R.string.dock_edit), hint = mode)
             input.pillFocused -> HeroLine(stringResource(R.string.library_entry), libraryCountText(count), quick = true)
-            else -> HeroLine(label)
+            else -> tile
         }
     val animated = TvTheme.motion.animated
     val rise = with(LocalDensity.current) { TitleRise.roundToPx() }
@@ -739,6 +861,8 @@ private fun HeroTitle(
             line,
             animated,
             rise,
+            // A new time for the same tile, as the clock moves on, replaces the old one without a cross-fade.
+            key = { it.copy(opened = null) },
             inMillis = { from, to -> if (from.quick || to.quick) LIBRARY_SWAP_MS else CINEMATIC_MS },
         ) { shown, live ->
             Column {
@@ -747,17 +871,26 @@ private fun HeroTitle(
                     style = titleStyle,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.testTag(if (live) "shelf:title" else "").lineBetween(HeroAscent, TitleDescent),
+                    modifier =
+                        Modifier
+                            .testTag(if (live) "shelf:title" else "")
+                            .lineBetween(HeroAscent, TitleDescent)
+                            .graphicsLayer { alpha = band.title.value },
                 )
-                Box(Modifier.padding(start = MetaIndent, top = MetaGap).height(detail)) {
+                Box(Modifier.padding(start = MetaIndent, top = MetaGap).height(detail).drawnAt { band.detail.value }) {
                     when (val keys = shown.hint?.takeIf { live }) {
                         ReorderHint.Reorder -> {
                             KeyChips()
                         }
 
                         null -> {
+                            val opened = shown.opened
                             BasicText(
-                                if (live) shown.meta else "",
+                                when {
+                                    !live -> AnnotatedString("")
+                                    opened != null -> lastOpenedLine(opened)
+                                    else -> AnnotatedString(shown.meta)
+                                },
                                 style = metaStyle,
                                 maxLines = 1,
                                 modifier = Modifier.testTag(if (live) "shelf:title-meta" else "").height(MetaSlot),

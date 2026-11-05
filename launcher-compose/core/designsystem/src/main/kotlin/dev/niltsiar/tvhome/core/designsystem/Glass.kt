@@ -132,7 +132,8 @@ private val OverlayShadow = Color.Black.copy(alpha = 0.50f)
 private val OverlayElevation = 24.dp
 
 private val GlassPanelShape = RoundedCornerShape(20.dp)
-private val OverlayShape = RoundedCornerShape(28.dp)
+internal val OverlayCorner = 28.dp
+private val OverlayShape = RoundedCornerShape(OverlayCorner)
 
 /** The shadow under a chrome surface: none, the dock's, or a pill's. */
 public enum class ChromeShadow(

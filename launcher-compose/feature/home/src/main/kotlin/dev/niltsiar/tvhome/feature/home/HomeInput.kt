@@ -46,6 +46,9 @@ internal class HomeInput(
     /** Whether focus is on the library pill, which sits in the grid but is no tile. */
     var pillFocused by mutableStateOf(false)
 
+    /** Whether focus is on a top-bar button. */
+    var topBarFocused by mutableStateOf(false)
+
     /** The library was opened from the top bar button, so closing it returns there. */
     var fromTopBar = false
 

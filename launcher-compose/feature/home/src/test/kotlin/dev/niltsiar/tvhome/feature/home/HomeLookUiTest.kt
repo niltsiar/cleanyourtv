@@ -27,6 +27,7 @@ import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
+import dev.niltsiar.tvhome.core.model.SkyPalette
 import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertTrue
@@ -37,6 +38,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import kotlin.math.abs
+
+private const val WHITE = 0xFFFFFFFF.toInt()
 
 /** How Home draws over its wallpaper, read from the rendered pixels: the scrim, the grid's edges and the dimmed tiles. */
 @RunWith(RobolectricTestRunner::class)
@@ -61,6 +64,7 @@ class HomeLookUiTest {
         apps: List<AppEntry> = whiteApps(9),
         wallpaper: Wallpaper = Wallpaper(),
         config: TvConfig = SixColumns,
+        skyIntensity: Int = 0,
     ) {
         val sources = sources(apps = flowOf(AppList(apps)), wallpaper = flowOf(wallpaper))
         compose.setContent {
@@ -73,6 +77,7 @@ class HomeLookUiTest {
                     onFocus = viewModel::onFocus,
                     onClick = {},
                     topBar = config.topBarLayout(),
+                    wallpaperLayout = WallpaperLayout(skyIntensity = skyIntensity),
                     actions = viewModel.actions,
                 )
             }
@@ -164,19 +169,41 @@ class HomeLookUiTest {
     }
 
     @Test
-    fun the_grid_fades_out_over_the_bottom_36_dp_of_the_screen() {
+    fun the_grid_fades_out_over_the_bottom_56_dp_of_the_screen() {
         showHome(apps = whiteApps(30))
         val screen = screen()
         val column = bounds("tile:pkg.8")
         val x = (column.left.value + column.right.value) / 2
+        val y = screen.bottom.value - 40f
         val lowest =
             listOf(14, 20, 26)
                 .flatMap { compose.onAllNodesWithTag("tile:pkg.$it").fetchSemanticsNodes() }
                 .map { with(compose.density) { it.boundsInRoot.top.toDp() to it.boundsInRoot.bottom.toDp() } }
-                .first { (top, bottom) -> top.value < screen.bottom.value - 40f && bottom >= screen.bottom }
+                .first { (top, bottom) -> top.value < y && bottom.value > y }
 
-        assertNear(255, redAt(Offset(x, lowest.first.value + 2f)), 2)
+        assertTrue(lowest.first.value < y)
+        assertNear(Math.round(255 * 40f / 56f), redAt(Offset(x, y)), 4)
         assertTrue(redAt(Offset(x, screen.bottom.value - 3f)) < 40)
+    }
+
+    @Test
+    fun the_scrim_darkens_the_top_right_corner_over_the_sky_too() {
+        val whiteSky = SkyPalette(top = WHITE, mid = WHITE, bottom = WHITE, glow = WHITE, sun = 0, sunX = 0.5f)
+        showHome(apps = whiteApps(1), wallpaper = Wallpaper(picture = white, sky = whiteSky), skyIntensity = 50)
+
+        // Black 0.55 at the top, where the left scrim has run out: 255 x 0.45.
+        assertNear(115, redAt(Offset(screen().right.value - 2f, 1f)), 4)
+    }
+
+    @Test
+    fun the_frost_bakes_the_scrim_over_the_sky_too() {
+        val whiteSky = SkyPalette(top = WHITE, mid = WHITE, bottom = WHITE, glow = WHITE, sun = 0, sunX = 0.5f)
+        val thumbnail = ImageBitmap(40, 40).also { Canvas(it).drawRect(Rect(0f, 0f, 40f, 40f), Paint().apply { color = Color.White }) }
+
+        val frost = bakeFrost(thumbnail, whiteSky, skyAlpha = 0.5f).toPixelMap()
+
+        // About half the 0.55 top scrim survives the blur at the top right; the sky over it would lift it past 180.
+        assertTrue(Math.round(frost[39, 0].red * 255) < 150)
     }
 
     @Test

@@ -20,7 +20,8 @@ import java.util.Locale
 /**
  * What the screen shows. [clock], [amPm], [date] and [greeting] are empty or null until the TV's time is valid.
  * [topBarApps] are the top_bar_apps that can be opened. [wallpaper] is the picture behind Home and its caption.
- * [focusedKey] is the tile that had focus last. [shelf] is the cinematic shelf's app while focus is on a dock tile, null otherwise and without cinematic_home.
+ * [focusedKey] is the tile that had focus last, and [focusedOpened] when Home last opened it, null if it never did.
+ * [shelf] is the cinematic shelf's app while focus is on a dock tile, null otherwise and without cinematic_home.
  * [menu] is the open tile or Settings menu, [reorder] a reorder or edit-dock session, and [focusRequest] asks the
  * screen to move focus to a tile or the Settings button. [inputs] is what the Inputs button and its list show, which
  * is [inputsOpen] while the list hangs under the button; the button shows until the TV says it has nothing to list.
@@ -38,6 +39,7 @@ public data class HomeUiState(
     val grid: List<AppEntry> = emptyList(),
     val focusedKey: String? = null,
     val focusedLabel: String = "",
+    val focusedOpened: OpenedAt? = null,
     val wallpaper: Wallpaper = Wallpaper(),
     val shelf: Shelf? = null,
     val menu: HomeMenu? = null,
@@ -278,8 +280,9 @@ internal fun homeUiState(
     inputs: InputsMenu = InputsMenu(available = false),
     inputsOpen: Boolean = false,
     libraryCount: Int? = null,
-): HomeUiState =
-    HomeUiState(
+): HomeUiState {
+    val focused = apps.all.firstOrNull { it.key == focusedKey } ?: apps.all.firstOrNull()
+    return HomeUiState(
         clock = now?.let { clockText(it, header.hour24, locale) }.orEmpty(),
         amPm = now?.let { amPmText(it, header.hour24, locale) }.orEmpty(),
         date = now?.format(DateTimeFormatter.ofPattern(header.datePattern, locale)).orEmpty(),
@@ -289,7 +292,8 @@ internal fun homeUiState(
         dock = apps.dock,
         grid = apps.grid,
         focusedKey = focusedKey,
-        focusedLabel = (apps.all.firstOrNull { it.key == focusedKey } ?: apps.all.firstOrNull())?.label.orEmpty(),
+        focusedLabel = focused?.label.orEmpty(),
+        focusedOpened = focused?.let { openedAt(it.key, lastOpened, now, header.hour24, zone) },
         wallpaper = wallpaper,
         shelf = if (cinematic) shelfFor(apps, focusedKey, lastOpened, now, header.hour24, zone) else null,
         menu = menu,
@@ -299,6 +303,20 @@ internal fun homeUiState(
         inputsOpen = inputsOpen,
         libraryCount = libraryCount,
     )
+}
+
+/** When Home last opened the tile [key], from [lastOpened]; null if it never did or while the time is not valid. */
+private fun openedAt(
+    key: String,
+    lastOpened: Map<String, Long>,
+    now: LocalDateTime?,
+    hour24: Boolean,
+    zone: ZoneId,
+): OpenedAt? {
+    val opened = lastOpened[key] ?: return null
+    if (now == null) return null
+    return OpenedAt(opened, now.atZone(zone).toInstant().toEpochMilli(), hour24)
+}
 
 /**
  * The shelf for the focused app, resolved like the label: an unknown key gives the first app. Null when that app is
@@ -315,19 +333,13 @@ internal fun shelfFor(
     val app = apps.all.firstOrNull { it.key == focusedKey } ?: apps.all.firstOrNull() ?: return null
     val position = apps.dock.indexOfFirst { it.key == app.key }
     if (position < 0) return null
-    val opened = lastOpened[app.key]
     return Shelf(
         key = app.key,
         label = app.label,
         accent = app.accent,
         position = position,
         count = apps.dock.size,
-        lastOpened =
-            if (opened == null || now == null) {
-                null
-            } else {
-                OpenedAt(opened, now.atZone(zone).toInstant().toEpochMilli(), hour24)
-            },
+        lastOpened = openedAt(app.key, lastOpened, now, hour24, zone),
     )
 }
 

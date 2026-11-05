@@ -2,6 +2,9 @@ package dev.niltsiar.tvhome.feature.home
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Canvas
@@ -52,8 +55,10 @@ class HomeOverlayLookUiTest {
         }
     private val apps = (1..9).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it", image = white) }
 
+    private var libraryOpen by mutableStateOf(false)
+
     private fun showHome() {
-        val sources = sources(apps = flowOf(AppList(apps)), inputs = flowOf(FourPorts))
+        val sources = sources(apps = flowOf(AppList(apps)), inputs = flowOf(FourPorts), powerMenuAvailable = { true })
         compose.setContent {
             TvTheme(glassKind = GlassKind.Flat) {
                 val viewModel = rememberHomeViewModel(sources, SixColumns, mutableListOf())
@@ -65,6 +70,7 @@ class HomeOverlayLookUiTest {
                     onClick = {},
                     topBar = SixColumns.topBarLayout(),
                     actions = viewModel.actions,
+                    libraryOpen = { libraryOpen },
                 )
             }
         }
@@ -123,7 +129,8 @@ class HomeOverlayLookUiTest {
                 minOf(menu.right, tile.right).value - 12f,
                 (maxOf(firstRow.bottom, tile.top).value + minOf(menu.bottom, tile.bottom).value) / 2,
             )
-        assertNear(0x14 + 9, redAt(under), 9)
+        // The panel's 0.98 of #141721 over the white tile under the half scrim.
+        assertNear(Math.round(0.98f * 0x14 + 0.02f * (255 + 0x07) / 2), redAt(under), 2)
     }
 
     @Test
@@ -141,6 +148,55 @@ class HomeOverlayLookUiTest {
         settle()
         compose.onNodeWithTag("menu").assertDoesNotExist()
         assertNear(255, redAt(far), 2)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_app_library_dims_home_behind_it_to_forty_percent() {
+        showHome()
+        val farTile = bounds("tile:pkg.6")
+        val far = Offset((farTile.left.value + farTile.right.value) / 2, (farTile.top.value + farTile.bottom.value) / 2)
+
+        libraryOpen = true
+        settle()
+
+        assertNear(Math.round(255 * 0.4f + 0x07 * 0.6f), redAt(far), 3)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_tile_a_menu_acts_on_stays_undimmed_inside_a_thin_white_ring() {
+        showHome()
+        val tile = bounds("tile:pkg.1")
+        openTileMenu()
+
+        val middle = (tile.top.value + tile.bottom.value) / 2
+        assertNear(255, redAt(Offset(tile.left.value + 8f, middle)), 2)
+        // The dimmed dock, in the gap after the tile, and past the ring on its other side.
+        val dimmed = redAt(Offset(tile.right.value + 12f, middle))
+        assertNear(dimmed, redAt(Offset(tile.left.value - 4f, middle)), 3)
+        // 1 dp out from the tile's edge, in the middle of the 2 dp ring: white at 0.70 over the dimmed dock.
+        assertNear(Math.round(dimmed + 0.7f * (255 - dimmed)), redAt(Offset(tile.left.value - 1f, middle)), 8)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun settings_menu_rows_have_corners_concentric_with_the_panel() {
+        showHome()
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionUp) }
+        settle()
+        repeat(2) {
+            compose.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
+            settle()
+        }
+        compose.onNodeWithContentDescription("Settings").assertIsFocused()
+        openTileMenu()
+        compose.onNodeWithTag("menu:EditDock").assertIsFocused()
+
+        val row = bounds("menu:EditDock")
+        assertNear(0xF2, redAt(Offset(row.right.value - 12f, (row.top.value + row.bottom.value) / 2)), 3)
+        // 5 dp in from the corner lies inside a 14 dp corner and outside a 20 dp one.
+        assertTrue(redAt(Offset(row.left.value + 5f, row.top.value + 5f)) < 0x80)
     }
 
     /** The red channel at the empty right end of the focused first row of the open tile menu. */

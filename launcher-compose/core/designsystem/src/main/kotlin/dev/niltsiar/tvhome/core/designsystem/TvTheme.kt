@@ -48,7 +48,8 @@ public class TvTypography(
 )
 
 /**
- * The surfaces that follow the system's night mode. [overlay] fills menus, the Inputs list and the App library;
+ * The surfaces that follow the system's night mode. [overlay] fills menus, the Inputs list and the App library, and
+ * [card] the idle cards on the library's panel;
  * [chromeTint] goes over the frost of the clock pill, the top-bar buttons, the dock and the library pill. A focused row
  * or button fills with [pillFill] and draws its text and icons in [pillContent], its other text in [pillSecondary].
  */
@@ -56,6 +57,7 @@ public class TvTypography(
 public class TvSurfaces internal constructor(
     public val dark: Boolean,
     public val overlay: Color,
+    public val card: Color,
     public val chromeTint: Color,
     public val pillFill: Color,
     public val pillContent: Color,
@@ -84,7 +86,8 @@ private val OnLightColors =
 private val DarkSurfaces =
     TvSurfaces(
         dark = true,
-        overlay = Color(0xFF141721).copy(alpha = 0.93f),
+        overlay = Color(0xFF141721).copy(alpha = 0.98f),
+        card = Color(0xFF1C2030),
         chromeTint = Color(0xFF0B0D12).copy(alpha = 0.55f),
         pillFill = Color(0xFFF2F4F8),
         pillContent = Color(0xFF0B0D12),
@@ -94,7 +97,8 @@ private val DarkSurfaces =
 private val LightSurfaces =
     TvSurfaces(
         dark = false,
-        overlay = Color(0xFFF4F6FA).copy(alpha = 0.94f),
+        overlay = Color(0xFFF4F6FA).copy(alpha = 0.98f),
+        card = Color(0xFFE9EBEF),
         chromeTint = Color(0xFFF4F6FA).copy(alpha = 0.55f),
         pillFill = Color(0xFF11141B),
         pillContent = Color(0xFFF4F6FA),

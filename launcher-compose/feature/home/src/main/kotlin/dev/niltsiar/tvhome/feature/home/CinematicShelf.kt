@@ -99,14 +99,17 @@ private class HeldShelf {
  * The cinematic shelf above the dock: the focused dock app's name, when Home last opened it, and one dot per dock app
  * (their slot stays without dots, so the title stands where the band's other titles do).
  * It fades in with the first dock focus and out when [shelf] is null, keeping the last app's text meanwhile. A new app's
- * name and time cross-fade with the old ones ([TitleSlots]); the dots stay and only their long dot slides. Every animated
- * value is read in a layer, placement or draw lambda.
+ * name and time cross-fade with the old ones ([TitleSlots]); the dots stay and only their long dot slides. The name
+ * draws at [titleAlpha], the time and the dots at [detailAlpha]. Every animated value is read in a layer, placement or
+ * draw lambda.
  */
 @Composable
 internal fun CinematicShelf(
     shelf: () -> Shelf?,
     layout: ShelfLayout,
     modifier: Modifier = Modifier,
+    titleAlpha: () -> Float = { 1f },
+    detailAlpha: () -> Float = { 1f },
 ) {
     val current by remember(shelf) { derivedStateOf(shelf) }
     val held = remember { HeldShelf() }
@@ -136,7 +139,11 @@ internal fun CinematicShelf(
                         style = titleStyle,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.testTag(if (live) "shelf:name" else "").lineBetween(TitleAscent, TitleDescent),
+                        modifier =
+                            Modifier
+                                .testTag(if (live) "shelf:name" else "")
+                                .lineBetween(TitleAscent, TitleDescent)
+                                .graphicsLayer { this.alpha = titleAlpha() },
                     )
                     BasicText(
                         text = if (live) lastOpenedLine(app.lastOpened) else AnnotatedString(""),
@@ -146,7 +153,8 @@ internal fun CinematicShelf(
                             Modifier
                                 .padding(start = MetaIndent, top = MetaGap)
                                 .testTag(if (live) "shelf:meta" else "")
-                                .height(MetaSlot),
+                                .height(MetaSlot)
+                                .drawnAt(detailAlpha),
                     )
                 }
             }
@@ -155,7 +163,7 @@ internal fun CinematicShelf(
                     position = shown.position,
                     count = shown.count,
                     animated = layout.animated,
-                    modifier = Modifier.padding(start = MetaIndent, top = DotsGap),
+                    modifier = Modifier.padding(start = MetaIndent, top = DotsGap).drawnAt(detailAlpha),
                 )
             } else {
                 Spacer(Modifier.height(DotsGap + DotSize))
@@ -268,6 +276,13 @@ private class TitleSlotsState<T : Any>(
     ) = animate(value.floatValue, target, animationSpec = tween(millis, easing = CinematicEasing)) { v, _ -> value.floatValue = v }
 }
 
+/** Draws this at [alpha] in a layer that multiplies each of its draws, for content that only rests at 0 or 1. */
+internal fun Modifier.drawnAt(alpha: () -> Float): Modifier =
+    graphicsLayer {
+        compositingStrategy = CompositingStrategy.ModulateAlpha
+        this.alpha = alpha()
+    }
+
 /** This style with the shadow that keeps the band's text readable on a bright picture. */
 @Composable
 internal fun TextStyle.withHeroShadow(): TextStyle {
@@ -277,7 +292,7 @@ internal fun TextStyle.withHeroShadow(): TextStyle {
 
 /** "Last opened <time>" with the time in white; a space when there is none, which keeps the line's height. */
 @Composable
-private fun lastOpenedLine(opened: OpenedAt?): AnnotatedString {
+internal fun lastOpenedLine(opened: OpenedAt?): AnnotatedString {
     if (opened == null) return AnnotatedString(" ")
     val context = LocalContext.current
     val relative = remember(opened) { describeLastOpened(context, opened) }

@@ -30,6 +30,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.testTag
@@ -42,7 +43,6 @@ import androidx.compose.ui.unit.roundToIntRect
 
 private val MenuGap = 10.dp
 private val MenuRise = 14.dp
-private val RowShape = RoundedCornerShape(14.dp)
 private const val MENU_START_SCALE = 0.94f
 private val PanelPadding = 14.dp
 private val RowSpacing = 8.dp
@@ -64,8 +64,9 @@ public class BesideAnchor(
 /**
  * An overlay panel of [rows] hanging from [anchor] (in the root's coordinates): below it, or above when it would not fit,
  * from its left edge, or from its right edge when [alignEnd]; or [beside] it. Each row is [rowHeight] tall, shows the
- * string [label] gives and carries the test tag [rowTag]; the panel's own tag is `menu`, [padding] inside its edge. It
- * rises and fades in with a spring and takes focus on its first row, and never goes above [topLimit]; focus cannot leave it.
+ * string [label] gives and carries the test tag [rowTag]; the panel's own tag is `menu`, [padding] inside its edge, and
+ * the rows' corners are concentric with the panel's. It rises and fades in with a spring and takes focus on its first
+ * row, and never goes above [topLimit]; focus cannot leave it.
  */
 @Composable
 public fun <T> GlassMenu(
@@ -82,9 +83,11 @@ public fun <T> GlassMenu(
     padding: Dp = PanelPadding,
 ) {
     val first = remember { FocusRequester() }
+    val rowShape = remember(padding) { RoundedCornerShape(OverlayCorner - padding) }
     GlassDropdown(anchor, alignEnd, first, modifier, topLimit = topLimit, beside = beside, padding = padding) {
         rows.forEachIndexed { index, row ->
-            MenuItem(label(row), rowTag(row), { onPick(row) }, rowHeight, if (index == 0) Modifier.focusRequester(first) else Modifier)
+            val focus = if (index == 0) Modifier.focusRequester(first) else Modifier
+            MenuItem(label(row), rowTag(row), { onPick(row) }, rowHeight, rowShape, focus)
         }
     }
 }
@@ -226,9 +229,10 @@ private fun MenuItem(
     tag: String,
     onClick: () -> Unit,
     height: Dp,
+    shape: Shape,
     modifier: Modifier = Modifier,
 ) {
-    FocusPill(onClick = onClick, modifier = modifier.fillMaxWidth().height(height).testTag(tag), shape = RowShape) { ink ->
+    FocusPill(onClick = onClick, modifier = modifier.fillMaxWidth().height(height).testTag(tag), shape = shape) { ink ->
         BasicText(
             text = stringResource(label),
             style = TvTheme.typography.pillLabel,

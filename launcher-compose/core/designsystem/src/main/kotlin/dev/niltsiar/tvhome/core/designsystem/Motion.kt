@@ -66,6 +66,9 @@ public data class Motion(
         /** How long a focused tile takes to grow, in milliseconds. */
         public const val FOCUS_MS: Int = 160
 
+        /** How long a button's icon moves when the button takes focus, in milliseconds, with the default easing. */
+        public const val ICON_MS: Int = 450
+
         private const val OVERSHOOT_DAMPING = 0.5f
     }
 }

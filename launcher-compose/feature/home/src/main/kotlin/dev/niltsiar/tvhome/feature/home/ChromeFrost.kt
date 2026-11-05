@@ -45,7 +45,7 @@ internal fun ChromeFrostEffect(
 }
 
 /**
- * The frost of the chrome surfaces: [thumbnail] under Home's scrim and the [sky] at [skyAlpha], box-blurred and made
+ * The frost of the chrome surfaces: [thumbnail] under the [sky] at [skyAlpha] and Home's scrim, box-blurred and made
  * more colourful. It allocates one bitmap of the thumbnail's size and two pixel buffers; call it off the main thread.
  */
 internal fun bakeFrost(
@@ -58,8 +58,8 @@ internal fun bakeFrost(
     val frost = ImageBitmap(width, height)
     CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(frost), Size(width.toFloat(), height.toFloat())) {
         drawImage(thumbnail)
-        drawHomeScrim()
         if (sky != null && skyAlpha > 0f) drawSky(sky, skyAlpha)
+        drawHomeScrim()
     }
     val pixels = IntArray(width * height)
     frost.readPixels(pixels)
