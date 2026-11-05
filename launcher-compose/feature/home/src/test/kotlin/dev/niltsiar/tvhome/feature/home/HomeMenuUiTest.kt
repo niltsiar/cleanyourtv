@@ -2,7 +2,11 @@ package dev.niltsiar.tvhome.feature.home
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
@@ -11,10 +15,15 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.model.AppEntry
+import dev.niltsiar.tvhome.core.model.AppList
+import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -32,9 +41,13 @@ class HomeMenuUiTest {
     private val saved = mutableListOf<Pair<List<String>, Int>>()
     private val clicked = mutableListOf<String>()
 
-    private fun showHome(config: TvConfig = SixColumns) {
+    private fun showHome(
+        config: TvConfig = SixColumns,
+        apps: List<AppEntry> = NineApps,
+    ) {
         val sources =
             sources(
+                apps = flowOf(AppList(apps)),
                 saveOrder = { keys, docked ->
                     saved += keys to docked
                     true
@@ -191,4 +204,58 @@ class HomeMenuUiTest {
         compose.onNodeWithTag("menu:EditDock").assertExists()
         compose.onNode(hasTestTag("menu:Reorder") and hasAnyAncestor(hasTestTag("menu"))).assertExists()
     }
+
+    private fun boundsOf(tag: String): Rect = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
+
+    @Test
+    fun a_tile_menu_hangs_from_its_tile_without_covering_the_top_bar() {
+        showHome()
+        val tile = boundsOf("tile:pkg.1")
+
+        holdOk()
+
+        val menu = boundsOf("menu")
+        assertTrue(menu.left in tile.left..tile.right)
+        assertTrue(menu.top >= tile.bottom || menu.bottom <= tile.top)
+        assertTrue(menu.top >= topBarBottom())
+    }
+
+    @Test
+    @Config(qualifiers = "w960dp-h360dp-xhdpi")
+    fun a_tile_menu_with_no_room_below_or_above_its_tile_still_stays_under_the_top_bar() {
+        showHome()
+
+        holdOk()
+
+        assertTrue(boundsOf("menu").top >= topBarBottom())
+    }
+
+    @Test
+    fun the_reorder_hint_sits_clear_of_every_tile_and_inside_the_screen() {
+        showHome(apps = (1..40).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") })
+
+        press(Key.Menu)
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+
+        val hint = boundsOf("reorder:hint")
+        val tiles =
+            compose
+                .onAllNodes(SemanticsMatcher("is a tile") { it.config.getOrNull(SemanticsProperties.TestTag)?.startsWith("tile:") == true })
+                .fetchSemanticsNodes()
+                .map { it.boundsInRoot }
+                .filter { it.width > 0f && it.height > 0f }
+        assertTrue(tiles.isNotEmpty())
+        assertEquals(emptyList<Rect>(), tiles.filter { it.overlaps(hint) })
+        assertTrue(
+            hint.bottom <= compose
+                .onRoot()
+                .fetchSemanticsNode()
+                .boundsInRoot.bottom - screenMargin(),
+        )
+    }
+
+    private fun topBarBottom() = with(compose.density) { (TopBarTop + TopBarHeight).toPx() }
+
+    private fun screenMargin() = with(compose.density) { 20.dp.toPx() }
 }

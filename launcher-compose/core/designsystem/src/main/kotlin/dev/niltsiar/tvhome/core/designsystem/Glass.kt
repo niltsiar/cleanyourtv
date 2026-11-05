@@ -104,6 +104,11 @@ private val GlassInteractions =
         }
     }
 
+private const val DENSE_ALPHA = 0.95f
+
+private val DenseSheen =
+    Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.08f), Color.Transparent))
+
 private val FlatRim =
     Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.32f), Color.White.copy(alpha = 0.06f)))
 
@@ -120,7 +125,8 @@ private fun rememberRefractiveGlassStyle(shape: RoundedCornerShape): GlassStyle 
 
 /**
  * A panel drawn as the state's [GlassKind]. [interactionSource] drives the glass response to press and D-pad focus; share it with the
- * clickable that owns the surface.
+ * clickable that owns the surface. A [dense] panel is for an overlay with content of its own: its body is nearly opaque
+ * in either kind, so what is behind never competes with it, and only the rim and a sheen keep the glass look.
  */
 @Composable
 public fun GlassSurface(
@@ -128,17 +134,26 @@ public fun GlassSurface(
     modifier: Modifier = Modifier,
     shape: RoundedCornerShape = GlassPanelShape,
     interactionSource: InteractionSource? = null,
+    dense: Boolean = false,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val surface =
-        when (glass.kind) {
-            GlassKind.Refractive -> {
+        when {
+            dense -> {
+                modifier
+                    .clip(shape)
+                    .background(TvTheme.colors.surface.copy(alpha = DENSE_ALPHA))
+                    .background(DenseSheen)
+                    .border(1.dp, FlatRim, shape)
+            }
+
+            glass.kind == GlassKind.Refractive -> {
                 modifier
                     .clip(shape)
                     .hazeGlass(input = glass.input, style = rememberRefractiveGlassStyle(shape), interactionSource = interactionSource)
             }
 
-            GlassKind.Flat -> {
+            else -> {
                 modifier
                     .clip(shape)
                     .background(TvTheme.colors.background.copy(alpha = FLAT_SCRIM_ALPHA))

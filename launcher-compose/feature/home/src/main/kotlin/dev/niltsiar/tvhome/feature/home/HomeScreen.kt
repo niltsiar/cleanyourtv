@@ -41,8 +41,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -69,6 +71,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.node.LayoutModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.platform.LocalConfiguration
@@ -127,6 +130,7 @@ private val ShelfFullyShownInset = 4.dp
 private val ShelfRise = 14.dp
 private val GridBottom = 48.dp
 private val HintBottom = 28.dp
+private val HintGap = 16.dp
 private val LibraryRowHeight = 84.dp
 private const val TILE_ASPECT = 16f / 9f
 
@@ -192,6 +196,9 @@ public fun HomeScreen(
         }
     val menu by remember { derivedStateOf { currentState.value().menu } }
     val hint by remember { derivedStateOf { currentState.value().reorder?.hint } }
+    // The grid ends above the hint, so no tile is ever under it.
+    var hintHeight by remember { mutableIntStateOf(0) }
+    val hintReserve = if (hint == null) 0.dp else with(LocalDensity.current) { hintHeight.toDp() } + HintBottom + HintGap
     val inputsOpen by remember { derivedStateOf { currentState.value().inputsOpen } }
     val backOpen by remember {
         derivedStateOf { currentState.value().let { it.menu != null || it.reorder != null || it.inputsOpen } }
@@ -231,6 +238,7 @@ public fun HomeScreen(
             homePresses,
             libraryOpen,
             onOpenLibrary,
+            Modifier.padding(bottom = hintReserve),
         )
         if (shelfLayout.cinematic) CinematicShelf(shelf = { state().shelf }, layout = shelfLayout, modifier = shelfModifier)
         ShelfTitle(
@@ -258,7 +266,16 @@ public fun HomeScreen(
             input = input,
             modifier = Modifier.align(Alignment.TopCenter),
         )
-        hint?.let { ReorderHintPill(glass, it, Modifier.align(Alignment.BottomCenter).padding(bottom = HintBottom)) }
+        hint?.let {
+            ReorderHintPill(
+                glass,
+                it,
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(start = ScreenMargin, end = ScreenMargin, bottom = HintBottom)
+                    .onSizeChanged { size -> hintHeight = size.height },
+            )
+        }
         menu?.let { open ->
             key(open) { MenuOverlay(glass, open.rows, input.anchor, alignEnd = open.tileKey == null, onPick = input.actions.onMenuPick) }
         }

@@ -44,7 +44,7 @@ private const val MENU_START_SCALE = 0.94f
  * A glass panel of [rows] hanging from [anchor] (in the root's coordinates): below it, or above when it would not fit,
  * from its left edge, or from its right edge when [alignEnd]. Each row shows the string [label] gives and carries the
  * test tag [rowTag]; the panel's own tag is `menu`. It rises and fades in with a spring and takes focus on its first
- * row; focus cannot leave it.
+ * row, and never goes above [topLimit]; focus cannot leave it. A [dense] menu is for one that opens over a screen with content of its own.
  */
 @Composable
 public fun <T> GlassMenu(
@@ -56,9 +56,11 @@ public fun <T> GlassMenu(
     rowTag: (T) -> String,
     onPick: (T) -> Unit,
     modifier: Modifier = Modifier,
+    topLimit: Dp = 0.dp,
+    dense: Boolean = false,
 ) {
     val first = remember { FocusRequester() }
-    GlassDropdown(glass, anchor, alignEnd, first, modifier) {
+    GlassDropdown(glass, anchor, alignEnd, first, modifier, topLimit = topLimit, dense = dense) {
         rows.forEachIndexed { index, row ->
             MenuItem(label(row), rowTag(row), { onPick(row) }, if (index == 0) Modifier.focusRequester(first) else Modifier)
         }
@@ -68,7 +70,7 @@ public fun <T> GlassMenu(
 /**
  * The glass panel behind [GlassMenu] and the Inputs list: [content] in a column hanging from [anchor] as [GlassMenu]
  * does. The panel is as wide as its widest row, from [minWidth] to [maxWidth], and stays [edgeMargin] inside the sides of
- * the screen. It rises and fades in with a spring,
+ * the screen and never above [topLimit] (a top bar to keep clear). It rises and fades in with a spring,
  * then focus goes to [firstFocus], which the caller puts on one of the rows; focus cannot leave the panel.
  */
 @OptIn(ExperimentalComposeUiApi::class)
@@ -82,6 +84,8 @@ public fun GlassDropdown(
     minWidth: Dp = 0.dp,
     maxWidth: Dp = Dp.Unspecified,
     edgeMargin: Dp = 0.dp,
+    topLimit: Dp = 0.dp,
+    dense: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val motion = TvTheme.motion
@@ -96,6 +100,7 @@ public fun GlassDropdown(
             GlassSurface(
                 glass = glass,
                 shape = RoundedCornerShape(20.dp),
+                dense = dense,
                 modifier =
                     Modifier.testTag("menu").graphicsLayer {
                         compositingStrategy = CompositingStrategy.ModulateAlpha
@@ -131,11 +136,29 @@ public fun GlassDropdown(
                     margin,
                     maxOf(margin, constraints.maxWidth - panel.width - margin),
                 )
-            val below = at.bottom.toInt() + gap
-            val y = if (below + panel.height <= constraints.maxHeight) below else maxOf(0, at.top.toInt() - gap - panel.height)
-            panel.place(x, y)
+            panel.place(x, dropdownTop(at.top.toInt(), at.bottom.toInt(), panel.height, constraints.maxHeight, gap, topLimit.roundToPx()))
         }
     }
+}
+
+/**
+ * Where a panel [panelHeight] tall goes vertically for an anchor spanning [anchorTop] to [anchorBottom]: below it, else
+ * above it, each [gap] away. When neither side has room the panel overlaps the anchor, but stays between [topLimit] and
+ * the bottom of the [containerHeight] (the top first, when the panel is taller than that).
+ */
+internal fun dropdownTop(
+    anchorTop: Int,
+    anchorBottom: Int,
+    panelHeight: Int,
+    containerHeight: Int,
+    gap: Int,
+    topLimit: Int,
+): Int {
+    val below = anchorBottom + gap
+    if (below + panelHeight <= containerHeight) return below
+    val above = anchorTop - gap - panelHeight
+    if (above >= topLimit) return above
+    return above.coerceIn(topLimit, maxOf(topLimit, containerHeight - panelHeight))
 }
 
 @Composable

@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.designsystem.GlassMenu
 import dev.niltsiar.tvhome.core.designsystem.GlassState
@@ -38,7 +39,9 @@ private fun MenuRow.label(): Int =
         MenuRow.PowerMenu -> R.string.power_menu
     }
 
-/** The tile menu or the Settings menu: [rows] hanging from [anchor], each tagged `menu:<row name>`. */
+private val MenuTopLimit = TopBarTop + TopBarHeight + 8.dp
+
+/** The tile menu or the Settings menu: [rows] hanging from [anchor], each tagged `menu:<row name>`; never over the top bar. */
 @Composable
 internal fun MenuOverlay(
     glass: GlassState,
@@ -48,7 +51,17 @@ internal fun MenuOverlay(
     onPick: (MenuRow) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    GlassMenu(glass, rows, anchor, alignEnd, label = MenuRow::label, rowTag = { "menu:${it.name}" }, onPick = onPick, modifier = modifier)
+    GlassMenu(
+        glass,
+        rows,
+        anchor,
+        alignEnd,
+        label = MenuRow::label,
+        rowTag = { "menu:${it.name}" },
+        onPick = onPick,
+        modifier = modifier,
+        topLimit = MenuTopLimit,
+    )
 }
 
 @StringRes
@@ -68,11 +81,14 @@ internal fun ReorderHintPill(
     modifier: Modifier = Modifier,
 ) {
     val motion = TvTheme.motion
+    val label = TvTheme.typography.pillLabel
+    val style = remember(label) { label.copy(textAlign = TextAlign.Center) }
     val reveal = remember { Animatable(if (motion.animations) 0f else 1f) }
     LaunchedEffect(Unit) { reveal.animateTo(1f, motion.springSpec(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)) }
     GlassSurface(
         glass = glass,
         shape = RoundedCornerShape(28.dp),
+        dense = true,
         modifier =
             modifier.testTag("reorder:hint").graphicsLayer {
                 compositingStrategy = CompositingStrategy.ModulateAlpha
@@ -82,7 +98,7 @@ internal fun ReorderHintPill(
     ) {
         BasicText(
             text = stringResource(hint.label()),
-            style = TvTheme.typography.pillLabel,
+            style = style,
             modifier = Modifier.padding(horizontal = 28.dp, vertical = 14.dp),
         )
     }

@@ -139,6 +139,7 @@ internal fun LibraryScreen(
         GlassSurface(
             glass = glass,
             shape = PanelShape,
+            dense = true,
             modifier =
                 Modifier
                     .padding(horizontal = PanelMargin)
@@ -173,6 +174,7 @@ internal fun LibraryScreen(
                 label = LibraryRow::label,
                 rowTag = { "menu:${it.name}" },
                 onPick = actions.onPick,
+                dense = true,
             )
         }
     }
