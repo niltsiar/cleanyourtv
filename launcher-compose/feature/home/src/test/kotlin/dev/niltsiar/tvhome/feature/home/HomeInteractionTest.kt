@@ -1,5 +1,6 @@
 package dev.niltsiar.tvhome.feature.home
 
+import androidx.compose.ui.graphics.Color
 import app.cash.molecule.RecompositionMode
 import app.cash.molecule.moleculeFlow
 import app.cash.turbine.test
@@ -573,6 +574,30 @@ class HomeInteractionTest {
 
             presenter(focusMemory = memory).test {
                 assertEquals("pkg.8", awaitMatching { it.dock.isNotEmpty() }.focusedKey)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun tiles_that_lose_their_artwork_and_get_it_back_keep_their_order_and_focus_and_save_nothing() =
+        runTest {
+            val apps = MutableStateFlow(AppList(NineApps.map { it.copy(accent = Color.Red) }))
+            presenter(apps = apps).test {
+                awaitMatching { it.dock.isNotEmpty() }
+                events.send(HomeEvent.Focus("pkg.3"))
+                val before = awaitMatching { it.focusedKey == "pkg.3" && it.dock.first().accent == Color.Red }
+
+                apps.value = AppList(NineApps)
+                val trimmed = awaitMatching { it.dock.first().accent == Color.Unspecified }
+                apps.value = AppList(NineApps.map { it.copy(accent = Color.Blue) })
+                val reloaded = awaitMatching { it.dock.first().accent == Color.Blue }
+
+                for (state in listOf(trimmed, reloaded)) {
+                    assertEquals(before.dock.map { it.key }, state.dock.map { it.key })
+                    assertEquals(before.grid.map { it.key }, state.grid.map { it.key })
+                    assertEquals("pkg.3", state.focusedKey)
+                }
+                assertEquals(emptyList<Pair<List<String>, Int>>(), saves)
                 cancelAndIgnoreRemainingEvents()
             }
         }

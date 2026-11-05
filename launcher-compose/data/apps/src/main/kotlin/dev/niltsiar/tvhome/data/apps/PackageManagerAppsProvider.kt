@@ -17,6 +17,7 @@ import dev.niltsiar.tvhome.core.model.AppList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.update
@@ -49,6 +50,13 @@ public class PackageManagerAppsProvider(
     private val orderFile = File(context.filesDir, ORDER_FILE_NAME)
     internal val library = LibraryStore(context.filesDir)
     private val refreshes = MutableStateFlow(0)
+
+    /** Counts the [trimImages] calls. */
+    private val trims = MutableStateFlow(0)
+
+    /** Set by [trimImages], cleared when a list with images goes out: the next start loads the images again. */
+    @Volatile
+    private var imagesDropped = false
     private val packageFilter =
         IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
@@ -81,14 +89,22 @@ public class PackageManagerAppsProvider(
     public val apps: Flow<AppList> =
         flow {
             var seen = refreshes.value
-            val loaded = load()
+            var trimmed = trims.value
+            var loaded = load()
             emit(loaded.toAppList(withImages = false))
             emit(loaded.toAppList(withImages = true))
+            imagesDropped = false
             // A refresh shows no bare labels first: that would blank every banner for a frame.
-            refreshes.collect { version ->
+            refreshes.combine(trims) { version, trim -> version to trim }.collect { (version, trim) ->
                 if (version != seen) {
                     seen = version
-                    emit(load().toAppList(withImages = true))
+                    trimmed = trim
+                    loaded = load()
+                    emit(loaded.toAppList(withImages = true))
+                    imagesDropped = false
+                } else if (trim != trimmed) {
+                    trimmed = trim
+                    emit(loaded.toAppList(withImages = false))
                 }
             }
         }.flowOn(Dispatchers.IO)
@@ -97,11 +113,18 @@ public class PackageManagerAppsProvider(
     public val topBarApps: Flow<List<AppEntry>> =
         flow {
             var seen = refreshes.value
-            emit(loadTopBarApps())
-            refreshes.collect { version ->
+            var trimmed = trims.value
+            var bar = loadTopBarApps()
+            emit(bar)
+            refreshes.combine(trims) { version, trim -> version to trim }.collect { (version, trim) ->
                 if (version != seen) {
                     seen = version
-                    emit(loadTopBarApps())
+                    trimmed = trim
+                    bar = loadTopBarApps()
+                    emit(bar)
+                } else if (trim != trimmed) {
+                    trimmed = trim
+                    emit(bar.map { it.copy(image = null) })
                 }
             }
         }.flowOn(Dispatchers.IO)
@@ -148,15 +171,27 @@ public class PackageManagerAppsProvider(
     /** The library choices with the config's library_apps added. */
     internal fun libraryChoices(): LibraryChoices = library.load().let { it.copy(added = it.added + config.libraryApps) }
 
-    /** Home is on screen: follow package changes, and reload now if some happened while it was not. Main thread. */
+    /**
+     * Memory is short while Home is stopped: let go of the hero arts, and send the tiles and top-bar apps on again without
+     * their images. Nothing is reordered or saved. The next [onStart] loads the images again. Main thread.
+     */
+    public fun trimImages() {
+        heroArts.clear()
+        imagesDropped = true
+        trims.update { it + 1 }
+    }
+
+    /**
+     * Home is on screen: follow package changes, and reload now if some happened while it was not or if [trimImages]
+     * dropped the images. Main thread.
+     */
     public fun onStart() {
         if (!receiving) {
             ContextCompat.registerReceiver(context, packageReceiver, packageFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
             receiving = true
         }
-        val sequence = packageSequence ?: return
-        val changed = context.packageManager.getChangedPackages(sequence)
-        if (changed != null && changed.packageNames.isNotEmpty()) requestRefresh()
+        val changed = packageSequence?.let { context.packageManager.getChangedPackages(it) }
+        if (imagesDropped || (changed != null && changed.packageNames.isNotEmpty())) requestRefresh()
     }
 
     /** Home left the screen: package changes wait for [onStart]. Main thread. */

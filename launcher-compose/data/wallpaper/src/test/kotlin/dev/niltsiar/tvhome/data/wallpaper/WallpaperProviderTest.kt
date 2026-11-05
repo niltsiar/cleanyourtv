@@ -160,4 +160,29 @@ class WallpaperProviderTest {
                 expectNoEvents()
             }
         }
+
+    @Test
+    fun a_trim_while_stopped_drops_the_picture_and_the_next_start_decodes_it_again() =
+        runBlocking {
+            val clock = MutableSharedFlow<LocalDateTime?>()
+            val provider = provider(rotating)
+            provider.wallpaper(clock).test {
+                provider.onStart()
+                withTimeout(5_000) { clock.subscriptionCount.first { it > 0 } }
+                clock.emit(noon)
+                val shown = awaitItem().picture
+                assertSame(pictures.getValue("a.jpg"), shown)
+                provider.onStop()
+                withTimeout(5_000) { clock.subscriptionCount.first { it == 0 } }
+
+                provider.releasePicture()
+                assertNull(awaitItem().picture)
+
+                provider.onStart()
+                withTimeout(5_000) { clock.subscriptionCount.first { it > 0 } }
+                clock.emit(noon)
+                assertSame(pictures.getValue("a.jpg"), awaitItem().picture)
+                assertEquals(listOf("a.jpg", "a.jpg"), decoded)
+            }
+        }
 }

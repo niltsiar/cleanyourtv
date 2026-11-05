@@ -11,6 +11,7 @@ import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import java.io.File
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -69,7 +71,12 @@ public class WallpaperProvider internal constructor(
 
     private val started = MutableStateFlow(false)
     private val pictures by lazy(::loadPictures)
+    private val releases = MutableSharedFlow<Wallpaper>(extraBufferCapacity = 1)
+
+    @Volatile
     private var picture: ImageBitmap? = null
+
+    @Volatile
     private var displayed = ""
 
     /** Home is on screen: the picture follows the clock. Main thread. */
@@ -83,16 +90,28 @@ public class WallpaperProvider internal constructor(
     }
 
     /**
+     * Memory is short while Home is stopped: forget the decoded picture, and send [wallpaper] on again without it. The
+     * next tick after [onStart] decodes it again. Main thread.
+     */
+    public fun releasePicture() {
+        picture = null
+        displayed = ""
+        releases.tryEmit(Wallpaper())
+    }
+
+    /**
      * The wallpaper at each tick of [clock] while started; a tick with no valid time is skipped. The listing, decoding
      * and preferences run on the IO dispatcher, one tick at a time.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     public fun wallpaper(clock: Flow<LocalDateTime?>): Flow<Wallpaper> =
-        started
-            .flatMapLatest { if (it) clock.filterNotNull() else emptyFlow() }
-            .map(::advance)
-            .flowOn(Dispatchers.IO)
-            .distinctUntilChanged()
+        merge(
+            started
+                .flatMapLatest { if (it) clock.filterNotNull() else emptyFlow() }
+                .map(::advance)
+                .flowOn(Dispatchers.IO),
+            releases,
+        ).distinctUntilChanged()
 
     /** Shows what [now] calls for: the next picture when it is due, one of the time of day's group, or the same one. */
     internal fun advance(now: LocalDateTime): Wallpaper {

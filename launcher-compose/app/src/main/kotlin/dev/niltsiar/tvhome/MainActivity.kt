@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.initializer
@@ -125,6 +126,14 @@ class MainActivity : ComponentActivity() {
         graph.networkMonitor.onStop()
         graph.timeChanges.onStop()
         graph.wallpaperProvider.onStop()
+    }
+
+    /** Another app needs the memory while Home is stopped: drop the artwork and the picture, which the next start loads again. */
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (!shouldReleaseOnTrim(level, lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))) return
+        graph.appsProvider.trimImages()
+        graph.wallpaperProvider.releasePicture()
     }
 
     override fun onResume() {
