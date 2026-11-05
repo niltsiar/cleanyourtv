@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -30,6 +31,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -302,8 +304,11 @@ private fun HomeContent(
     val sideMargin = ScreenMargin + gridWidth * ((1f - share) / 2f)
     val rowTileWidth = (gridWidth - TileGap * (layout.columns + 1)) / layout.columns
     val firstDockTile = remember { FocusRequester() }
+    val dockRow = rememberLazyListState()
     LaunchedEffect(gridState) {
-        snapshotFlow { state().focusRequest }.filterNotNull().collect { request -> focusOn(request.target, gridState, state, input) }
+        snapshotFlow { state().focusRequest }.filterNotNull().collect { request ->
+            focusOn(request.target, gridState, dockRow, layout.singleRow, state, input)
+        }
     }
     LaunchedEffect(gridState) {
         var wasOpen = false
@@ -311,7 +316,7 @@ private fun HomeContent(
             if (wasOpen && !open) {
                 val target = if (input.fromTopBar) LIBRARY_BUTTON_FOCUS else LIBRARY_FOCUS
                 input.fromTopBar = false
-                focusOn(target, gridState, state, input)
+                focusOn(target, gridState, dockRow, layout.singleRow, state, input)
             }
             wasOpen = open
         }
@@ -350,6 +355,7 @@ private fun HomeContent(
                     glass = glass,
                     focus = dockFocus,
                     firstTile = firstDockTile,
+                    row = dockRow,
                     input = input,
                     dock = state().dock,
                     grid = grid,
@@ -358,6 +364,7 @@ private fun HomeContent(
                     rowTileWidth = rowTileWidth,
                     onFocus = onFocus,
                     onClick = onClick,
+                    onOpenLibrary = onOpenLibrary,
                     modifier = Modifier.fadeUnderShelf(gridState, "dock", shelfBottom),
                 )
             }
@@ -384,9 +391,15 @@ private fun HomeContent(
                             ),
                 )
             }
-            if (layout.libraryPill) {
+            if (layout.libraryPill && !layout.singleRow) {
                 item(key = LIBRARY_FOCUS, span = { GridItemSpan(maxLineSpan) }, contentType = "library") {
-                    LibraryPill(glass, input, state, layout, onOpenLibrary)
+                    LibraryPill(
+                        glass,
+                        input,
+                        onOpenLibrary,
+                        Modifier.fillMaxWidth().height(LibraryRowHeight),
+                        up = { pillUp(input, state(), layout) },
+                    )
                 }
             }
         }
@@ -400,16 +413,32 @@ private fun HomeContent(
 private suspend fun focusOn(
     target: String,
     gridState: LazyGridState,
+    dockRow: LazyListState,
+    singleRow: Boolean,
     state: () -> HomeUiState,
     input: HomeInput,
 ) {
     val grid = state().grid
     val inGrid = grid.indexOfFirst { it.key == target }
     val shown = gridState.layoutInfo.visibleItemsInfo
+    val pillInRow = target == LIBRARY_FOCUS && singleRow
     when {
-        inGrid >= 0 -> if (shown.none { it.key == target }) gridState.scrollToItem(inGrid + GRID_ITEMS_BEFORE)
-        target == LIBRARY_FOCUS -> if (shown.none { it.key == LIBRARY_FOCUS }) gridState.scrollToItem(GRID_ITEMS_BEFORE + grid.size)
-        shown.none { it.key == "dock" } -> gridState.scrollToItem(0)
+        inGrid >= 0 -> {
+            if (shown.none { it.key == target }) gridState.scrollToItem(inGrid + GRID_ITEMS_BEFORE)
+        }
+
+        pillInRow -> {
+            if (shown.none { it.key == "dock" }) gridState.scrollToItem(0)
+            if (dockRow.layoutInfo.visibleItemsInfo.none { it.key == LIBRARY_FOCUS }) dockRow.scrollToItem(state().dock.size)
+        }
+
+        target == LIBRARY_FOCUS -> {
+            if (shown.none { it.key == LIBRARY_FOCUS }) gridState.scrollToItem(GRID_ITEMS_BEFORE + grid.size)
+        }
+
+        shown.none { it.key == "dock" } -> {
+            gridState.scrollToItem(0)
+        }
     }
     withFrameNanos { }
     withFrameNanos { }
@@ -417,19 +446,20 @@ private suspend fun focusOn(
 }
 
 /**
- * The App library pill after the last row. Only Up leaves it, to the tile in the last row under the column that had
- * focus last.
+ * The App library pill, centred in [modifier]'s box: after the last row, where only Up leaves it, to the tile [up] names;
+ * or, [inRow], the last item of the single dock row, where Left walks back along the row and Up leaves as a tile's does.
  */
 @Composable
 private fun LibraryPill(
     glass: GlassState,
     input: HomeInput,
-    state: () -> HomeUiState,
-    layout: HomeLayout,
     onOpen: () -> Unit,
+    modifier: Modifier,
+    inRow: Boolean = false,
+    up: () -> FocusRequester? = { null },
 ) {
     val ink = rememberUpdatedState(TvTheme.colors.onSurface)
-    Box(modifier = Modifier.fillMaxWidth().height(LibraryRowHeight), contentAlignment = Alignment.Center) {
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
         GlassIconButton(
             glass = glass,
             contentDescription = stringResource(R.string.library_entry),
@@ -438,10 +468,10 @@ private fun LibraryPill(
                 Modifier
                     .testTag("library:pill")
                     .focusProperties {
-                        left = FocusRequester.Cancel
+                        if (!inRow) left = FocusRequester.Cancel
                         right = FocusRequester.Cancel
                         down = FocusRequester.Cancel
-                        pillUp(input, state(), layout)?.let { up = it }
+                        up()?.let { this.up = it }
                     }.focusRequester(input.requester(LIBRARY_FOCUS))
                     .onFocusChanged { input.pillFocused = it.isFocused },
             label = { BasicText(stringResource(R.string.library_entry), style = TvTheme.typography.pillLabel, maxLines = 1) },
@@ -535,6 +565,7 @@ private fun Dock(
     glass: GlassState,
     focus: FocusRequester,
     firstTile: FocusRequester,
+    row: LazyListState,
     input: HomeInput,
     dock: List<AppEntry>,
     grid: List<AppEntry>,
@@ -543,10 +574,13 @@ private fun Dock(
     rowTileWidth: Dp,
     onFocus: (String) -> Unit,
     onClick: (String) -> Unit,
+    onOpenLibrary: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LaunchedEffect(dock.isNotEmpty()) {
         if (dock.isNotEmpty()) {
+            // The row held only the library pill until now, and a lazy row keeps its visible item in place.
+            if (layout.singleRow) row.scrollToItem(0)
             // The grid attaches its items during layout, after this effect starts.
             withFrameNanos { }
             firstTile.requestFocus()
@@ -557,6 +591,7 @@ private fun Dock(
             // The grid's pivot scroll is vertical; this row scrolls sideways the usual way.
             CompositionLocalProvider(LocalBringIntoViewSpec provides RevealBringIntoViewSpec) {
                 LazyRow(
+                    state = row,
                     modifier = Modifier.focusRequester(focus).focusRestorer(),
                     contentPadding = PaddingValues(TileGap),
                     horizontalArrangement = Arrangement.spacedBy(TileGap),
@@ -576,6 +611,17 @@ private fun Dock(
                                     .then(if (index == 0) Modifier.focusRequester(firstTile) else Modifier)
                                     .towardLibrary(input, layout, grid, last = index == dock.lastIndex, row = -1, column = index),
                         )
+                    }
+                    if (layout.libraryPill) {
+                        item(key = LIBRARY_FOCUS, contentType = "library") {
+                            LibraryPill(
+                                glass,
+                                input,
+                                onOpenLibrary,
+                                Modifier.width(rowTileWidth).aspectRatio(TILE_ASPECT),
+                                inRow = true,
+                            )
+                        }
                     }
                 }
             }
@@ -671,7 +717,7 @@ private fun Modifier.towardLibrary(
     column: Int,
 ): Modifier {
     if (!layout.libraryPill) return this
-    val rightTo = if (last && (row >= 0 || grid.isEmpty())) input.requester(LIBRARY_FOCUS) else null
+    val rightTo = if (last && !layout.singleRow && (row >= 0 || grid.isEmpty())) input.requester(LIBRARY_FOCUS) else null
     val downTo = libraryDown(input, layout, grid, row, column)
     if (rightTo == null && downTo == null) return this
     return focusProperties {

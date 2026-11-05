@@ -1,21 +1,29 @@
 package dev.niltsiar.tvhome.feature.home
 
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onChild
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -146,5 +154,66 @@ class HomeLibraryUiTest {
 
         assertEquals(listOf("toggle"), toggles)
         assertEquals(1, opened)
+    }
+
+    private var libraryOpen by mutableStateOf(false)
+
+    private fun showSingleRowHome() {
+        val config = SixColumns.copy(singleRow = true, appLibrary = true)
+        compose.setContent {
+            TvTheme(glassKind = GlassKind.Flat) {
+                val viewModel = rememberHomeViewModel(sources(), config, mutableListOf())
+                val state = viewModel.uiState.collectAsState()
+                HomeScreen(
+                    state = { state.value },
+                    layout = config.homeLayout(),
+                    onFocus = viewModel::onFocus,
+                    onClick = {},
+                    topBar = config.topBarLayout(),
+                    actions = viewModel.actions,
+                    libraryOpen = { libraryOpen },
+                    onOpenLibrary = { libraryOpen = true },
+                )
+            }
+        }
+        compose.waitForIdle()
+        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+    }
+
+    @Test
+    fun in_a_single_row_the_pill_is_the_row_s_last_item_that_right_from_the_last_tile_reaches_and_left_leaves() {
+        showSingleRowHome()
+        repeat(8) { press(Key.DirectionRight) }
+        compose.onNodeWithTag("tile:pkg.9").assertIsFocused()
+
+        press(Key.DirectionRight)
+
+        compose.onNodeWithTag("library:pill").assertIsFocused()
+        val pill = compose.onNodeWithTag("library:pill").getBoundsInRoot()
+        val tile = compose.onNodeWithTag("tile:pkg.9").getBoundsInRoot()
+        assertTrue("pill $pill, tile $tile", pill.top < tile.bottom)
+
+        press(Key.DirectionLeft)
+
+        compose.onNodeWithTag("tile:pkg.9").assertIsFocused()
+    }
+
+    @Test
+    fun in_a_single_row_closing_the_library_scrolls_the_row_to_the_pill_and_focuses_it() {
+        showSingleRowHome()
+        repeat(9) { press(Key.DirectionRight) }
+        compose.onNodeWithTag("library:pill").assertIsFocused()
+        press(Key.DirectionCenter)
+        assertTrue(libraryOpen)
+        compose.onNodeWithTag("dock").onChild().performScrollToIndex(0)
+        compose.waitForIdle()
+        compose.onNodeWithTag("tile:pkg.1").requestFocus()
+        compose.waitForIdle()
+        compose.onNodeWithTag("library:pill").assertIsNotDisplayed()
+
+        libraryOpen = false
+        compose.waitForIdle()
+
+        compose.onNodeWithTag("library:pill").assertIsFocused().assertIsDisplayed()
     }
 }
