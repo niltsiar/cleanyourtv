@@ -12,6 +12,7 @@
   <string name="library_hint_open">Presiona para abrir · Mantén presionado para ver opciones</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d aplicación</item>
+    <item quantity="many">%1$d de aplicaciones</item>
     <item quantity="other">%1$d aplicaciones</item>
   </plurals>
 </resources>

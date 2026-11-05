@@ -17,6 +17,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
 import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
@@ -163,6 +164,15 @@ class HomeInputsUiTest {
 
         val width = compose.onNodeWithTag("menu").getBoundsInRoot().width
         assertTrue("$width", width >= 150.dp)
+    }
+
+    @Test
+    fun every_row_is_46_dp_tall() {
+        showHome()
+
+        openList()
+
+        (0..3).forEach { row -> assertEquals(46.dp, compose.onNodeWithTag("input:$row").getBoundsInRoot().height) }
     }
 
     @Test

@@ -34,9 +34,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -44,6 +49,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.niltsiar.tvhome.core.designsystem.FocusInk
 import dev.niltsiar.tvhome.core.designsystem.FocusPill
 import dev.niltsiar.tvhome.core.designsystem.GlassDropdown
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
@@ -55,18 +61,30 @@ import dev.niltsiar.tvhome.core.model.visible
 
 private val MinListWidth = 150.dp
 private val MaxListWidth = 360.dp
-private val RowHeight = 44.dp
+private val RowHeight = 46.dp
 private val RowShape = RoundedCornerShape(14.dp)
-private val DotSize = 8.dp
+private const val ICON_ALPHA = 0.9f
+private const val NO_DEVICE_ALPHA = 0.5f
+private val CapsuleHeight = 24.dp
+private val DotSize = 6.dp
 private val Connected = Color(0xFF34C759)
+
+/** The "Connected" capsule on a dark background, and on a light one: a focused row in night mode, an idle row on the light surface. */
+private val CapsuleFillOnDark = Color(0x2934C759)
+private val CapsuleRimOnDark = Color(0x6634C759)
+private val CapsuleTextOnDark = Color(0xFF6EE787)
+private val CapsuleFillOnLight = Color(0x2E34C759)
+private val CapsuleRimOnLight = Color(0x8034C759)
+private val CapsuleTextOnLight = Color(0xFF1B7A35)
 private const val PULSE_MS = 1800
 private const val HALO_ALPHA = 0.4f
 private const val HALO_GROWTH = 1.8f
+private const val SEPARATOR_ALPHA = 0.12f
 
 /**
  * The TV's input list hanging under the Inputs button at [anchor]: as wide as the button, or 150 dp, and wider for a
- * long name up to 360 dp. Each [InputRow.Port] row shows a dot while its port is connected, with a soft ring that
- * pulses outward unless [animated] is off. "More inputs" shows the rows [rows] folds. The Live TV row comes last.
+ * long name up to 360 dp. Each [InputRow.Port] row shows a green capsule while its port is connected, its dot ringed
+ * by a pulse unless [animated] is off. "More inputs" shows the rows [rows] folds. The Live TV row comes last.
  * Rows are tagged `input:<n>` by position, the list `menu`.
  */
 @Composable
@@ -159,7 +177,7 @@ internal fun InputsMenu(
                             .fillMaxWidth()
                             .padding(horizontal = 12.dp, vertical = 2.dp)
                             .height(1.dp)
-                            .background(Color(0x1FFFFFFF)),
+                            .background(TvTheme.colors.onSurface.copy(alpha = SEPARATOR_ALPHA)),
                     )
                 }
             }
@@ -198,23 +216,30 @@ private fun InputItem(
     modifier: Modifier = Modifier,
 ) {
     val typography = TvTheme.typography
-    val status = remember(typography) { typography.pillLabel.copy(fontSize = 11.sp) }
+    val noDevice = remember(typography) { typography.caption.copy(fontSize = 13.sp) }
     val painter = painterResource(icon)
     FocusPill(onClick = onClick, modifier = modifier.fillMaxWidth().height(RowHeight).testTag(tag), shape = RowShape) { ink ->
-        Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Spacer(Modifier.size(20.dp).drawBehind { with(painter) { draw(size, colorFilter = ColorFilter.tint(ink.content())) } })
+        Row(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Spacer(
+                Modifier.size(20.dp).drawBehind {
+                    with(painter) { draw(size, alpha = ICON_ALPHA, colorFilter = ColorFilter.tint(ink.content())) }
+                },
+            )
             Spacer(Modifier.width(10.dp))
             BasicText(label, style = typography.pillLabel, maxLines = 1, overflow = TextOverflow.Ellipsis, color = ink.content)
             Spacer(Modifier.weight(1f).widthIn(min = 12.dp))
             when (connection) {
                 InputConnection.Connected -> {
-                    PulsingDot(pulse)
-                    Spacer(Modifier.width(8.dp))
-                    BasicText(stringResource(R.string.input_connected), style = status, maxLines = 1, color = ink.secondary)
+                    ConnectedCapsule(ink, pulse)
                 }
 
                 InputConnection.Disconnected -> {
-                    BasicText(stringResource(R.string.input_not_connected), style = status, maxLines = 1, color = ink.secondary)
+                    BasicText(
+                        stringResource(R.string.input_not_connected),
+                        style = noDevice,
+                        maxLines = 1,
+                        color = { ink.content().copy(alpha = NO_DEVICE_ALPHA) },
+                    )
                 }
 
                 InputConnection.Unknown -> {
@@ -222,6 +247,49 @@ private fun InputItem(
                 }
             }
         }
+    }
+}
+
+/**
+ * "Connected" in a green capsule. Its colours follow what is behind it, the row's fill or the surface: the light ones
+ * while that is light, crossing over as the row's [ink] fills.
+ */
+@Composable
+private fun ConnectedCapsule(
+    ink: FocusInk,
+    pulse: State<Float>,
+) {
+    val dark = TvTheme.surfaces.dark
+    val typography = TvTheme.typography
+    val style = remember(typography) { typography.chipKey.copy(fontSize = 12.sp) }
+    val light = { if (dark) ink.progress() else 1f - ink.progress() }
+    Row(
+        modifier =
+            Modifier
+                .height(CapsuleHeight)
+                .drawBehind {
+                    val t = light()
+                    val radius = CornerRadius(size.height / 2f)
+                    drawRoundRect(lerp(CapsuleFillOnDark, CapsuleFillOnLight, t), cornerRadius = radius)
+                    val rim = 1.dp.toPx()
+                    drawRoundRect(
+                        lerp(CapsuleRimOnDark, CapsuleRimOnLight, t),
+                        topLeft = Offset(rim / 2f, rim / 2f),
+                        size = Size(size.width - rim, size.height - rim),
+                        cornerRadius = CornerRadius(size.height / 2f - rim / 2f),
+                        style = Stroke(rim),
+                    )
+                }.padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        PulsingDot(pulse)
+        Spacer(Modifier.width(6.dp))
+        BasicText(
+            stringResource(R.string.input_connected),
+            style = style,
+            maxLines = 1,
+            color = { lerp(CapsuleTextOnDark, CapsuleTextOnLight, light()) },
+        )
     }
 }
 

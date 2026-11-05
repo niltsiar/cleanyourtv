@@ -13,10 +13,15 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.designsystem.GlassKind
@@ -48,7 +53,7 @@ class HomeOverlayLookUiTest {
     private val apps = (1..9).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it", image = white) }
 
     private fun showHome() {
-        val sources = sources(apps = flowOf(AppList(apps)))
+        val sources = sources(apps = flowOf(AppList(apps)), inputs = flowOf(FourPorts))
         compose.setContent {
             TvTheme(glassKind = GlassKind.Flat) {
                 val viewModel = rememberHomeViewModel(sources, SixColumns, mutableListOf())
@@ -156,5 +161,53 @@ class HomeOverlayLookUiTest {
     @Test
     fun a_focused_menu_row_is_a_dark_pill_with_night_mode_off() {
         assertNear(0x11, focusedRowRed(), 3)
+    }
+
+    private fun openInputs() {
+        showHome()
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionUp) }
+        settle()
+        compose.onNodeWithContentDescription("Inputs").assertIsFocused()
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+        settle()
+        compose.onNodeWithTag("input:0").assertIsFocused()
+    }
+
+    /**
+     * The red channel inside the "Connected" capsule of the Inputs row [row], just right of its text, against the one
+     * the row shows right of the capsule, blended as a capsule fill of [fillAlpha] would blend #34C759 over it.
+     */
+    private fun assertCapsuleFill(
+        row: Int,
+        fillAlpha: Int,
+    ) {
+        val text =
+            compose
+                .onNode(hasText("Connected") and hasAnyAncestor(hasTestTag("input:$row")), useUnmergedTree = true)
+                .getBoundsInRoot()
+        val bounds = bounds("input:$row")
+        val middle = (text.top.value + text.bottom.value) / 2
+        val behind = redAt(Offset(bounds.right.value - 6f, middle))
+        assertNear(behind + Math.round((0x34 - behind) * fillAlpha / 255f), redAt(Offset(text.right.value + 4f, middle)), 3)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun an_unfocused_connected_row_shows_the_faint_green_capsule_in_night_mode() {
+        openInputs()
+        assertCapsuleFill(row = 1, fillAlpha = 0x29)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun a_focused_connected_row_shows_the_stronger_green_capsule_on_its_light_pill_in_night_mode() {
+        openInputs()
+        assertCapsuleFill(row = 0, fillAlpha = 0x2E)
+    }
+
+    @Test
+    fun an_unfocused_connected_row_shows_the_stronger_green_capsule_on_the_light_surface() {
+        openInputs()
+        assertCapsuleFill(row = 1, fillAlpha = 0x2E)
     }
 }

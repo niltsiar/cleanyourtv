@@ -36,6 +36,8 @@ public class FocusInk internal constructor(
     public val content: ColorProducer,
     /** Any other text. */
     public val secondary: ColorProducer,
+    /** How far the pill has filled, from 0 to 1, for content that changes with it. */
+    public val progress: () -> Float,
 )
 
 /**
@@ -67,6 +69,7 @@ public fun FocusPill(
             FocusInk(
                 content = { lerp(colors.onSurface, surfaces.pillContent, focus.value.coerceIn(0f, 1f)) },
                 secondary = { lerp(colors.onSurfaceMuted, surfaces.pillSecondary, focus.value.coerceIn(0f, 1f)) },
+                progress = { focus.value.coerceIn(0f, 1f) },
             )
         }
     Box(

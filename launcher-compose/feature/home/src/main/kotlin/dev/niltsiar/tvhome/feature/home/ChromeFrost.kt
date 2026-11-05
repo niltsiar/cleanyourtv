@@ -63,14 +63,23 @@ internal fun bakeFrost(
     }
     val pixels = IntArray(width * height)
     frost.readPixels(pixels)
+    blur(pixels, width, height)
+    saturate(pixels)
+    frost.asAndroidBitmap().setPixels(pixels, 0, width, 0, 0, width, height)
+    return frost
+}
+
+/** [BLUR_PASSES] box blurs of [BLUR_RADIUS] across and down the opaque [pixels] of a [width] by [height] image, in place. */
+internal fun blur(
+    pixels: IntArray,
+    width: Int,
+    height: Int,
+) {
     val scratch = IntArray(pixels.size)
     repeat(BLUR_PASSES) {
         blurLines(pixels, scratch, lines = height, length = width, step = 1, lineStep = width)
         blurLines(scratch, pixels, lines = width, length = height, step = width, lineStep = 1)
     }
-    saturate(pixels)
-    frost.asAndroidBitmap().setPixels(pixels, 0, width, 0, 0, width, height)
-    return frost
 }
 
 /** A box blur along each of [lines] lines of [length] pixels, from [from] into [to]; the pixels past an end repeat it. */
@@ -101,7 +110,7 @@ private fun blurLines(
 }
 
 /** Pushes each pixel's colour away from its grey by [SATURATION]. */
-private fun saturate(pixels: IntArray) {
+internal fun saturate(pixels: IntArray) {
     for (i in pixels.indices) {
         val pixel = pixels[i]
         val r = pixel shr 16 and CHANNEL

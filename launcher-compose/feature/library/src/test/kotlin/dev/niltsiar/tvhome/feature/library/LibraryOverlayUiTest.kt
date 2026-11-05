@@ -7,16 +7,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.DpRect
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.width
 import app.cash.molecule.RecompositionMode
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -140,6 +145,29 @@ class LibraryOverlayUiTest {
 
         back()
         compose.onNodeWithTag("library").assertDoesNotExist()
+    }
+
+    @Test
+    fun a_held_ok_opens_the_menu_16_dp_beside_its_card_and_inside_the_screen() {
+        showLibrary()
+        compose.onNodeWithTag("card:${key("Delta")}").assertIsFocused()
+        val grown = compose.onNodeWithTag("card:${key("Delta")}").getBoundsInRoot()
+        // Its bounds include its focus growth of 8%; the menu goes beside its slot in the row.
+        val growth = grown.width * (1f - 1f / 1.08f) / 2f
+        val card = DpRect(grown.left + growth, grown.top, grown.right - growth, grown.bottom)
+
+        compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
+        compose.mainClock.advanceTimeBy(600)
+        compose.waitForIdle()
+        compose.onRoot().performKeyInput { keyUp(Key.DirectionCenter) }
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.waitForIdle()
+
+        val menu = compose.onNodeWithTag("menu").getBoundsInRoot()
+        val screen = compose.onRoot().getBoundsInRoot()
+        assertTrue("menu $menu, card $card", menu.left >= card.right + 16.dp - 1.dp || menu.right <= card.left - 16.dp + 1.dp)
+        assertTrue("menu $menu, screen $screen", menu.left >= screen.left && menu.right <= screen.right)
+        assertTrue("menu $menu, screen $screen", menu.top >= screen.top && menu.bottom <= screen.bottom)
     }
 
     @Test

@@ -12,6 +12,7 @@
   <string name="library_hint_open">Prem per obrir · Mantén per a opcions</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d aplicació</item>
+    <item quantity="many">%1$d d\'aplicacions</item>
     <item quantity="other">%1$d aplicacions</item>
   </plurals>
 </resources>
