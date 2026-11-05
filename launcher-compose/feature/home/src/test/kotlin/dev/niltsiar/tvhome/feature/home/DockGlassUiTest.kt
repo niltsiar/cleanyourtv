@@ -21,6 +21,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.DpRect
+import androidx.compose.ui.unit.width
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
@@ -73,6 +74,11 @@ class DockGlassUiTest {
     private fun grey(level: Int) = (0xFF shl 24) or (level shl 16) or (level shl 8) or level
 
     private val uniform = bitmap(40, 40) { _, _ -> (0xFF shl 24) or (180 shl 16) or (110 shl 8) or 60 }
+    private val cyan = bitmap(40, 40) { _, _ -> (0xFF shl 24) or (0 shl 16) or (200 shl 8) or 255 }
+    private val lightApps =
+        (1..9).map {
+            AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it", image = bitmap(16, 9) { _, _ -> grey(255) })
+        }
     private val white = bitmap(40, 40) { _, _ -> grey(255) }
 
     /** Black at the top to white at the bottom, so a frost drawn a few dp off its place reads as another grey. */
@@ -83,8 +89,10 @@ class DockGlassUiTest {
         config: TvConfig = cinematic,
         darkTheme: Boolean = true,
         wallpaper: Flow<Wallpaper> = flowOf(Wallpaper(thumbnail = thumbnail)),
+        shown: List<AppEntry> = apps,
+        docked: Int = 0,
     ) {
-        val sources = sources(apps = flowOf(AppList(apps)), wallpaper = wallpaper)
+        val sources = sources(apps = flowOf(AppList(shown, docked)), wallpaper = wallpaper)
         compose.setContent {
             TvTheme(darkTheme = darkTheme) {
                 glass = rememberGlassState()
@@ -138,12 +146,19 @@ class DockGlassUiTest {
         return compose.onRoot().captureToImage().toPixelMap()[(point.x * density).toInt(), (point.y * density).toInt()]
     }
 
-    /** The frost [thumbnail] bakes to, as it lies behind [point] on the screen. */
+    /** The frost [thumbnail] bakes to, as it lies behind [point] on the screen; with [glass] as the dock's glass holds it. */
     private fun frostAt(
         thumbnail: ImageBitmap,
         point: Offset,
+        glass: Boolean = false,
     ): Color {
-        val frost = bakeFrost(thumbnail, null, 0f).toPixelMap()
+        val baked = bakeFrost(thumbnail, null, 0f)
+        if (glass) {
+            val pixels = IntArray(baked.width * baked.height).also { baked.readPixels(it) }
+            clampSaturation(pixels, 0.35f)
+            baked.asAndroidBitmap().setPixels(pixels, 0, baked.width, 0, 0, baked.width, baked.height)
+        }
+        val frost = baked.toPixelMap()
         val screen = compose.onRoot().getBoundsInRoot()
         val x = (point.x / screen.right.value * frost.width - 0.5f).coerceIn(0f, frost.width - 1f)
         val y = (point.y / screen.bottom.value * frost.height - 0.5f).coerceIn(0f, frost.height - 1f)
@@ -225,7 +240,59 @@ class DockGlassUiTest {
         showHome(uniform, cinematic.copy(dockGlass = true))
         val at = gap()
 
-        assertSame(over(light, 0.36f, frostAt(uniform, at)), screenAt(at))
+        assertSame(over(light, 0.36f, frostAt(uniform, at, glass = true)), screenAt(at))
+    }
+
+    private fun saturation(colour: Color): Float {
+        val high = maxOf(colour.red, colour.green, colour.blue)
+        val low = minOf(colour.red, colour.green, colour.blue)
+        return (high - low) / (1f - abs(high + low - 1f))
+    }
+
+    @Test
+    fun dock_glass_holds_a_saturated_wallpaper_to_035_saturation_so_a_sky_colour_does_not_pool() {
+        showHome(cyan, cinematic.copy(dockGlass = true))
+
+        assertTrue("saturation ${saturation(screenAt(gap()))}", saturation(screenAt(gap())) <= 0.36f)
+    }
+
+    @Test
+    fun dock_glass_draws_a_black_012_edge_inside_each_dock_tile() {
+        showHome(uniform, cinematic.copy(dockGlass = true), shown = lightApps)
+        val tile = dockTile(2)
+        val density = compose.activity.resources.displayMetrics.density
+        val image = compose.onRoot().captureToImage().toPixelMap()
+        val y = ((tile.top.value + tile.bottom.value) / 2f * density).toInt()
+        val left = (tile.left.value * density).toInt()
+        val edge = (left..left + 2).map { image[it, y].green }
+
+        assertEquals("edge $edge", 1f - 0.12f, edge.min(), 0.03f)
+        assertEquals(1f, image[left + 20, y].green, 0.01f)
+    }
+
+    @Test
+    fun a_dock_with_four_tiles_in_a_row_of_six_is_a_panel_for_four_centred_with_28_dp_at_the_sides() {
+        showHome(uniform, cinematic.copy(fillDock = false), docked = 4)
+        val panel = compose.onNodeWithTag("dock").getBoundsInRoot()
+        val screen = compose.onRoot().getBoundsInRoot()
+        val first = dockTile(1)
+        val second = dockTile(2)
+        val column = (880f - 5 * 24f) / 6f
+
+        assertEquals(4 * column + 3 * 24f + 2 * 28f, panel.width.value, 1f)
+        assertEquals(screen.width.value / 2f, (panel.left.value + panel.right.value) / 2f, 1f)
+        assertEquals(28f, first.left.value - panel.left.value, 1f)
+        assertEquals(24f, second.left.value - first.right.value, 1f)
+        assertEquals(column, first.width.value, 1f)
+    }
+
+    @Test
+    fun a_dock_with_a_full_row_keeps_the_panel_one_gap_wider_than_the_grid_on_each_side() {
+        showHome(uniform)
+        val panel = compose.onNodeWithTag("dock").getBoundsInRoot()
+
+        assertEquals(880f + 2 * 24f, panel.width.value, 1f)
+        assertEquals(24f, dockTile(1).left.value - panel.left.value, 1f)
     }
 
     @Test

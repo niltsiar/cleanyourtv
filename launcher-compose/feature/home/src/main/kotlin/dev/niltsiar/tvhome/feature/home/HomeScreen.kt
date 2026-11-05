@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -64,12 +65,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -85,6 +88,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -155,26 +159,21 @@ internal val TopBarTop = 20.dp
 internal val TopBarHeight = 56.dp
 private val ContentTop = TopBarTop + TopBarHeight + 20.dp
 private val CaptionTop = TopBarTop + TopBarHeight + 8.dp
-private val TileShape = RoundedCornerShape(12.dp)
+private val TileCorner = 12.dp
+private val TileShape = RoundedCornerShape(TileCorner)
+private val GlassTileStrokeWidth = 0.5.dp
+private val GlassTileStroke = Color.Black.copy(alpha = 0.12f)
 private val DockShape = RoundedCornerShape(32.dp)
 private val GridBottom = 48.dp
 private val LibraryRowHeight = 84.dp
 
-/**
- * The grid fades in over this much under the band, and out over [BottomFade] at the bottom of the screen, over
- * [BottomFadeGrown] while the grid is scrolled and more of it lies below the screen.
- */
-private val TopFade = 28.dp
-private val BottomFade = 56.dp
-private val BottomFadeGrown = 80.dp
+/** The padding at the sides of a dock panel that has fewer tiles than the row holds. */
+private val DockShrunkSide = 28.dp
 
-/** A focused tile's ring (its growth, gap, ring and hairline) reaches about 10 dp past its edge; the top fade ends this far above it. */
-private val RingClearance = 12.dp
+/** From the shelf's bottom edge up to the line under which a row at the top of the grid counts as fully visible. */
+private val ShelfToFade = 16.dp
 
-/** From the shelf's bottom edge up to where the grid is cut off and starts to fade in. */
-private val ShelfToFade = TopFade + RingClearance - TileGap
-
-/** From the bottom of the band's text to the shelf's bottom edge, with 12 dp between the text and the fade. */
+/** From the bottom of the band's text to the shelf's bottom edge, with 12 dp between the text and the grid's cutoff. */
 private val TitleToShelfBottom = 12.dp + ShelfToFade
 private val HeroAscent = 36.sp
 private val ChipHeight = 32.dp
@@ -325,7 +324,13 @@ public fun HomeScreen(
             cinematic = backdrop,
             headerLightness = { glass.headerLightness },
         )
-        ChromeFrostEffect(glass, wallpaper = { state().wallpaper }, skyIntensity = wallpaperLayout.skyIntensity, dock = dim.band)
+        ChromeFrostEffect(
+            glass,
+            wallpaper = { state().wallpaper },
+            skyIntensity = wallpaperLayout.skyIntensity,
+            dock = dim.band,
+            dockGlass = dockLook.band && dockLook.glass,
+        )
         HomeContent(
             glass,
             dockFocus,
@@ -507,7 +512,7 @@ private fun HomeContent(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .gridEdges(gridState, fadeStart = shelfBottom - ShelfToFade, gate = ShelfToFade)
+                    .gridEdges(gridState, dim::lowPx, cutoff = shelfBottom - ShelfToFade)
                     .onFocusChanged {
                         input.gridFocused = it.hasFocus
                         if (!it.hasFocus) input.travel.reset()
@@ -917,87 +922,6 @@ private fun Modifier.dockLayer(
         translationY = dim.lowPx()
     }
 
-/**
- * The grid's edges, drawn as a mask in the draw phase: nothing above [fadeStart], a [TopFade] under it, and a
- * [BottomFade] at the bottom of the screen. At rest the top fade is off, so the resting dock is whole; it comes in over
- * the first [gate] of scrolling, before anything reaches [fadeStart]. The bottom fade grows to [BottomFadeGrown] with that
- * scrolling, while the grid can scroll on, and is back to [BottomFade] at its end. Each fade is a layer the size of its strip.
- */
-private fun Modifier.gridEdges(
-    grid: LazyGridState,
-    fadeStart: Dp,
-    gate: Dp,
-): Modifier =
-    drawWithCache {
-        val top = fadeStart.toPx()
-        val fadeEnd = top + TopFade.toPx()
-        val fadeRest = BottomFade.toPx()
-        val fadeGrowth = BottomFadeGrown.toPx() - fadeRest
-        val gatePx = gate.toPx()
-        val fadeIn = Brush.verticalGradient(0f to Color.Transparent, 1f to Color.Black, startY = top, endY = fadeEnd)
-        var bottomFade = -1f
-        var fadeOut: Brush? = null
-        val layerPaint = Paint()
-        onDrawWithContent {
-            val scrolled = if (grid.firstVisibleItemIndex > 0) gatePx else grid.firstVisibleItemScrollOffset.toFloat()
-            val shown = (scrolled / gatePx).coerceIn(0f, 1f)
-            val fade = fadeRest + fadeGrowth * minOf(shown, (grid.aheadRoom() / fadeGrowth).coerceIn(0f, 1f))
-            val bottomStart = size.height - fade
-            if (fade != bottomFade) {
-                bottomFade = fade
-                fadeOut = null
-            }
-            val bottomMask =
-                fadeOut
-                    ?: Brush.verticalGradient(0f to Color.Black, 1f to Color.Transparent, startY = bottomStart, endY = size.height).also {
-                        fadeOut = it
-                    }
-            val bodyTop =
-                if (shown > 0f) {
-                    val mask =
-                        if (shown < 1f) {
-                            Brush.verticalGradient(
-                                0f to Color.Black.copy(alpha = 1f - shown),
-                                1f to Color.Black,
-                                startY = top,
-                                endY = fadeEnd,
-                            )
-                        } else {
-                            fadeIn
-                        }
-                    drawMasked(top, fadeEnd, mask, layerPaint)
-                    fadeEnd
-                } else {
-                    top
-                }
-            clipRect(top = bodyTop, bottom = bottomStart) { this@onDrawWithContent.drawContent() }
-            drawMasked(bottomStart, size.height, bottomMask, layerPaint)
-        }
-    }
-
-/** How far the grid can still scroll, in pixels: infinite while its last item is not laid out, 0 at its end. */
-private fun LazyGridState.aheadRoom(): Float {
-    val info = layoutInfo
-    val last = info.visibleItemsInfo.lastOrNull() ?: return 0f
-    if (last.index != info.totalItemsCount - 1) return Float.POSITIVE_INFINITY
-    return (last.offset.y + last.size.height - (info.viewportEndOffset - info.afterContentPadding)).toFloat().coerceAtLeast(0f)
-}
-
-/** The content between [top] and [bottom], its alpha multiplied by [mask]'s in a layer of that strip only. */
-private fun ContentDrawScope.drawMasked(
-    top: Float,
-    bottom: Float,
-    mask: Brush,
-    paint: Paint,
-) {
-    if (bottom <= top) return
-    val canvas = drawContext.canvas
-    canvas.saveLayer(Rect(0f, top, size.width, bottom), paint)
-    clipRect(top = top, bottom = bottom) { this@drawMasked.drawContent() }
-    drawRect(mask, topLeft = Offset(0f, top), size = Size(size.width, bottom - top), blendMode = BlendMode.DstIn)
-    canvas.restore()
-}
-
 /** How the band over the grid shows: whole, or gone under the App library, whose panel would cut through it. */
 private enum class BandLook(
     val title: Float,
@@ -1249,8 +1173,11 @@ private fun Dock(
     onOpenLibrary: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // One gap wider on each side than the grid, so the tiles inside its padding sit on the grid's columns.
-    DockPanel(glass, look, edge, modifier.outset(TileGap).fillMaxWidth().testTag("dock")) {
+    // One gap wider on each side than the grid, so the tiles inside its padding sit on the grid's columns. With fewer
+    // tiles than the row holds the panel is as wide as they are, centred.
+    val shrunk = look.band && !layout.singleRow && dock.size < layout.columns
+    val width = if (shrunk) Modifier.wrapContentWidth() else Modifier.fillMaxWidth()
+    DockPanel(glass, look, edge, modifier.outset(TileGap).then(width).testTag("dock")) {
         if (layout.singleRow) {
             // The grid's pivot scroll is vertical; this row scrolls sideways the usual way.
             CompositionLocalProvider(LocalBringIntoViewSpec provides RevealBringIntoViewSpec) {
@@ -1275,6 +1202,7 @@ private fun Dock(
                             reordering = reordering,
                             tileMenu = layout.tileMenu,
                             edge = edge,
+                            glassStroke = look.band && look.glass,
                             modifier =
                                 Modifier
                                     .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = TvTheme.motion.placementSpec)
@@ -1303,7 +1231,7 @@ private fun Dock(
                         .focusRequester(focus)
                         .focusRestorer()
                         .focusGroup()
-                        .padding(TileGap),
+                        .padding(horizontal = if (shrunk) DockShrunkSide else TileGap, vertical = TileGap),
                 horizontalArrangement = Arrangement.spacedBy(TileGap),
             ) {
                 dock.forEachIndexed { index, app ->
@@ -1329,9 +1257,9 @@ private fun Dock(
                             reordering = reordering,
                             tileMenu = layout.tileMenu,
                             edge = edge,
+                            glassStroke = look.band && look.glass,
                             modifier =
-                                Modifier
-                                    .weight(1f)
+                                (if (shrunk) Modifier.width(rowTileWidth) else Modifier.weight(1f))
                                     .slideToIndex(index, TileGap)
                                     .then(if (index == 0) Modifier.focusRequester(firstTile) else Modifier)
                                     .then(ends),
@@ -1339,7 +1267,7 @@ private fun Dock(
                     }
                 }
                 // Slots with no app stay empty, so the tiles keep the width of a column.
-                repeat(layout.columns - dock.size) { Spacer(Modifier.weight(1f)) }
+                if (!shrunk) repeat(layout.columns - dock.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }
@@ -1442,6 +1370,7 @@ private fun AppTile(
     tileMenu: Boolean,
     modifier: Modifier = Modifier,
     edge: DockEdgeLight? = null,
+    glassStroke: Boolean = false,
 ) {
     val key = app.key
     val requester = remember(input, key) { input.requester(key) }
@@ -1504,7 +1433,22 @@ private fun AppTile(
         // An image tile is one semantics node, which the benchmark reads as "art has landed"; a text tile adds its label.
         // The surface clips this box, so its fill is drawn: a shaped background would add a node.
         val surface = TvTheme.colors.surface
-        Box(Modifier.fillMaxSize().drawBehind { drawRect(surface) }, contentAlignment = Alignment.Center) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .drawBehind { drawRect(surface) }
+                .then(
+                    if (glassStroke) {
+                        Modifier.drawWithContent {
+                            drawContent()
+                            drawGlassStroke()
+                        }
+                    } else {
+                        Modifier
+                    },
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
             val image = app.image
             if (image != null) {
                 Image(bitmap = image, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
@@ -1514,6 +1458,18 @@ private fun AppTile(
             }
         }
     }
+}
+
+/** A 1 px edge, a half dp at the 960 dp design width, drawn inside the tile's shape over its art, so a light tile holds on glass. */
+private fun ContentDrawScope.drawGlassStroke() {
+    val width = GlassTileStrokeWidth.toPx()
+    drawRoundRect(
+        GlassTileStroke,
+        topLeft = Offset(width / 2f, width / 2f),
+        size = Size(size.width - width, size.height - width),
+        cornerRadius = CornerRadius(TileCorner.toPx() - width / 2f),
+        style = Stroke(width),
+    )
 }
 
 /** The name over the bottom of a tile whose art is the app's icon, which names nothing; the tile's description says it already. */

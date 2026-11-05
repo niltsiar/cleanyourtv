@@ -71,7 +71,7 @@ public fun DockSurface(
             modifier
                 .then(DockShadowElement(shape))
                 .clip(shape)
-                .glassFrost(glass)
+                .glassFrost(glass, dock = true)
                 .drawBehind {
                     drawRect(tint())
                     drawRect(DockSheen)

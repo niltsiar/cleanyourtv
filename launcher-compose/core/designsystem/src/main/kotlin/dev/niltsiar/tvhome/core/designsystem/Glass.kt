@@ -40,6 +40,9 @@ public class GlassState internal constructor() {
     /** A small, blurred picture of what is behind the screen's surfaces. */
     public var frost: ImageBitmap? by mutableStateOf(null)
 
+    /** The [frost] with its saturation held down, for the dock's glass; null when the dock does not use glass. */
+    public var dockFrost: ImageBitmap? by mutableStateOf(null)
+
     /** The mean CIE L* (0 to 100) of the [frost] under the dock: how bright the wallpaper is where the dock sits. */
     public var dockLightness: Float by mutableStateOf(0f)
 
@@ -123,22 +126,31 @@ public fun OverlaySurface(
     }
 }
 
-/** Draws the state's frost as it lies behind this node on screen; a move of the node redraws it, nothing recomposes. */
-public fun Modifier.glassFrost(glass: GlassState): Modifier = this then FrostElement(glass)
+/**
+ * Draws the state's frost as it lies behind this node on screen, or with [dock] its [GlassState.dockFrost] when it has
+ * one; a move of the node redraws it, nothing recomposes.
+ */
+public fun Modifier.glassFrost(
+    glass: GlassState,
+    dock: Boolean = false,
+): Modifier = this then FrostElement(glass, dock)
 
 private data class FrostElement(
     val glass: GlassState,
+    val dock: Boolean,
 ) : ModifierNodeElement<FrostNode>() {
-    override fun create() = FrostNode(glass)
+    override fun create() = FrostNode(glass, dock)
 
     override fun update(node: FrostNode) {
         node.glass = glass
+        node.dock = dock
         node.invalidateDraw()
     }
 }
 
 private class FrostNode(
     var glass: GlassState,
+    var dock: Boolean,
 ) : Modifier.Node(),
     DrawModifierNode,
     GlobalPositionAwareModifierNode {
@@ -156,7 +168,7 @@ private class FrostNode(
     }
 
     override fun ContentDrawScope.draw() {
-        val frost = glass.frost
+        val frost = (if (dock) glass.dockFrost else null) ?: glass.frost
         if (frost != null && screen != IntSize.Zero) {
             drawImage(
                 image = frost,

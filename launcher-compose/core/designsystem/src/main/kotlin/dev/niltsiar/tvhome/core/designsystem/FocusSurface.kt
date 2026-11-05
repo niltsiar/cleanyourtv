@@ -41,14 +41,17 @@ private val RingWidth = 3.dp
 private val RingGap = 3.dp
 private val HairlineWidth = 1.dp
 private val Hairline = Color(0x73000000)
+private val OuterStrokeWidth = 1.dp
+private val OuterStroke = Color.Black.copy(alpha = 0.35f)
 private val GlowElevation = 16.dp
 private val Gloss = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f), Color.Transparent))
 
 /**
  * A D-pad target, for tiles and cards: scales up and gets a lit top, a white ring with a dark hairline outside it and a
- * glow while focused; how it moves is the theme's [Motion]. Only the content is clipped to [shape]; the ring floats
- * outside it and its corners are concentric to the shape's, so a parent must leave the grown surface plus 7dp times
- * [focusedScale] free around it or it clips the ring. [onFocused] fires on gaining focus. [interactionSource] receives
+ * glow while focused, and a 1 dp black stroke at 0.35 outside the hairline, so the ring holds on a bright wallpaper; how it
+ * moves is the theme's [Motion]. Only the content is clipped to [shape]; the ring floats outside it and its corners are
+ * concentric to the shape's, so a parent must leave the grown surface plus 8dp times [focusedScale] free around it or it
+ * clips the ring. [onFocused] fires on gaining focus. [interactionSource] receives
  * the press and focus events, for content that reacts to them. [accent] colours the glow; unspecified takes the
  * theme's. [ring] colours the ring instead of white. [glow] turns the glow off: the elevation shadow also shows through
  * a translucent surface, as a dark patch. The animation starts in the focus callback and is read in the layer and draw
@@ -98,6 +101,13 @@ public fun FocusSurface(
                             )
                             val hairline = HairlineWidth.toPx()
                             drawOutline(outline.grownBy(gap + width + hairline / 2f), Hairline, alpha = progress, style = Stroke(hairline))
+                            val stroke = OuterStrokeWidth.toPx()
+                            drawOutline(
+                                outline.grownBy(gap + width + hairline + stroke / 2f),
+                                OuterStroke,
+                                alpha = progress,
+                                style = Stroke(stroke),
+                            )
                         }
                     }
                 }.clip(shape)

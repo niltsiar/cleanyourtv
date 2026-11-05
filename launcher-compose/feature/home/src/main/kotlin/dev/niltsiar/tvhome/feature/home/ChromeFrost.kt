@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 import kotlin.math.cbrt
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -28,6 +29,9 @@ private const val SATURATION = 1.45f
 private const val BRIGHTNESS = 1.08f
 private const val OPAQUE = 0xFF shl 24
 private const val CHANNEL = 0xFF
+
+/** The most HSL saturation the dock's glass takes from the wallpaper, so a sky colour does not pool at one end of the panel. */
+private const val GLASS_MAX_SATURATION = 0.35f
 
 private const val LIGHTNESS_PERCENTILE = 0.9f
 private const val DESIGN_WIDTH_DP = 960f
@@ -47,6 +51,7 @@ private val TopBarButtonsBand =
 
 private class Baked(
     val frost: ImageBitmap,
+    val dockFrost: ImageBitmap?,
     val dockLightness: Float,
     val headerLightness: Float,
     val topBarLightness: Float,
@@ -56,7 +61,8 @@ private class Baked(
  * Keeps [glass]'s frost on the wallpaper's [Wallpaper.thumbnail] and sky, baked off the main thread each time either
  * changes, and [GlassState.dockLightness] on the part of it under the [dock] (as fractions of the screen). It also keeps
  * [GlassState.headerLightness] and [GlassState.topBarLightness], measured on the thumbnail and sky before the scrim. No
- * thumbnail, no frost and a lightness of 0, which gives the base tint and the fixed scrims.
+ * thumbnail, no frost and a lightness of 0, which gives the base tint and the fixed scrims. With [dockGlass] it also
+ * keeps [GlassState.dockFrost], the frost with its HSL saturation held to 0.35.
  */
 @Composable
 internal fun ChromeFrostEffect(
@@ -64,8 +70,9 @@ internal fun ChromeFrostEffect(
     wallpaper: () -> Wallpaper,
     skyIntensity: Int,
     dock: Rect,
+    dockGlass: Boolean,
 ) {
-    LaunchedEffect(glass, skyIntensity, dock) {
+    LaunchedEffect(glass, skyIntensity, dock, dockGlass) {
         snapshotFlow { wallpaper().let { it.thumbnail to it.sky } }.distinctUntilChanged().collectLatest { (thumbnail, sky) ->
             val baked =
                 thumbnail?.let {
@@ -75,6 +82,17 @@ internal fun ChromeFrostEffect(
                         val base = unscrimmedPixels(it, sky, skyIntensity / 100f)
                         Baked(
                             frost,
+                            dockFrost =
+                                if (dockGlass) {
+                                    bitmapOf(
+                                        pixels.copyOf().also { p ->
+                                            clampSaturation(p, GLASS_MAX_SATURATION)
+                                        },
+                                        frost,
+                                    )
+                                } else {
+                                    null
+                                },
                             dockLightness = meanLightness(pixels, frost.width, frost.height, dock),
                             headerLightness = lightnessPercentile(base, it.width, it.height, HeaderBand, LIGHTNESS_PERCENTILE),
                             topBarLightness = lightnessPercentile(base, it.width, it.height, TopBarButtonsBand, LIGHTNESS_PERCENTILE),
@@ -82,6 +100,7 @@ internal fun ChromeFrostEffect(
                     }
                 }
             glass.frost = baked?.frost
+            glass.dockFrost = baked?.dockFrost
             glass.dockLightness = baked?.dockLightness ?: 0f
             glass.headerLightness = baked?.headerLightness ?: 0f
             glass.topBarLightness = baked?.topBarLightness ?: 0f
@@ -109,6 +128,13 @@ internal fun bakeFrost(
     frost.asAndroidBitmap().setPixels(pixels, 0, width, 0, 0, width, height)
     return frost
 }
+
+/** An opaque bitmap the size of [like] holding [pixels]. */
+private fun bitmapOf(
+    pixels: IntArray,
+    like: ImageBitmap,
+): ImageBitmap =
+    ImageBitmap(like.width, like.height).also { it.asAndroidBitmap().setPixels(pixels, 0, like.width, 0, 0, like.width, like.height) }
 
 /** The [thumbnail] under the [sky] at [skyAlpha], and under Home's fixed scrim when [scrim] is true. */
 private fun paint(
@@ -184,6 +210,36 @@ internal fun saturate(pixels: IntArray) {
         pixels[i] = OPAQUE or (boost(luma, r) shl 16) or (boost(luma, g) shl 8) or boost(luma, b)
     }
 }
+
+/**
+ * Holds the HSL saturation of each opaque pixel to [max], keeping its hue and lightness: the channels move toward the
+ * pixel's lightness together.
+ */
+internal fun clampSaturation(
+    pixels: IntArray,
+    max: Float,
+) {
+    for (i in pixels.indices) {
+        val pixel = pixels[i]
+        val r = (pixel shr 16 and CHANNEL) / CHANNEL.toFloat()
+        val g = (pixel shr 8 and CHANNEL) / CHANNEL.toFloat()
+        val b = (pixel and CHANNEL) / CHANNEL.toFloat()
+        val high = maxOf(r, g, b)
+        val low = minOf(r, g, b)
+        val lightness = (high + low) / 2f
+        val chroma = high - low
+        val room = 1f - abs(2f * lightness - 1f)
+        if (chroma <= max * room) continue
+        val keep = max * room / chroma
+        pixels[i] = OPAQUE or (squeeze(r, lightness, keep) shl 16) or (squeeze(g, lightness, keep) shl 8) or squeeze(b, lightness, keep)
+    }
+}
+
+private fun squeeze(
+    channel: Float,
+    lightness: Float,
+    keep: Float,
+): Int = ((lightness + (channel - lightness) * keep) * CHANNEL).roundToInt().coerceIn(0, CHANNEL)
 
 /** Lifts every channel of the opaque [pixels] by [BRIGHTNESS]. */
 internal fun brighten(pixels: IntArray) {

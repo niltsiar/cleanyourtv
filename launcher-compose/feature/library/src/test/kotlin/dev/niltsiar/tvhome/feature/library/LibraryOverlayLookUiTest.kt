@@ -224,6 +224,28 @@ class LibraryOverlayLookUiTest {
         assertTrue("${grownCard(app(1))} in $grid", grownCard(app(1)).top - reach >= grid.top - 1.dp)
     }
 
+    /** Whether the pixel at ([x], [y]) differs from the panel 40 dp to its left, where a chevron's tip would be. */
+    private fun cueAt(
+        x: Dp,
+        y: Dp,
+    ): Boolean = abs(redAt(x, y) - redAt(x - 40.dp, y)) > 40
+
+    @Test
+    fun a_chevron_under_the_grid_says_cards_wait_below_and_one_at_its_top_says_cards_wait_above() {
+        showLibrary(twentyThree)
+        val grid = bounds("library:cards")
+        val middle = (grid.left + grid.right) / 2
+        val bottomTip = grid.bottom + 9.dp
+        val topTip = grid.top + 3.5.dp
+
+        assertTrue("bottom cue at the start", cueAt(middle, bottomTip))
+        assertTrue("no top cue at the start", !cueAt(middle, topTip))
+
+        press(Key.DirectionDown, times = 3)
+        assertTrue("no bottom cue with the last row in view", !cueAt(middle, bottomTip))
+        assertTrue("top cue with the first row scrolled out", cueAt(middle, topTip))
+    }
+
     @Test
     @Config(qualifiers = "+night")
     fun the_ring_of_the_first_card_shows_whole_at_its_side_and_top() {

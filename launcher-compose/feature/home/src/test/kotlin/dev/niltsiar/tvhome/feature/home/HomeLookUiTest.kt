@@ -164,41 +164,74 @@ class HomeLookUiTest {
         assertDrawnAt(0.40f, centreOf(dockTile(6)), centreOf(dockTile(5)))
     }
 
+    /** The red channel over the middle of tile [tag], [below] dp under its top edge. */
+    private fun redUnderTop(
+        tag: String,
+        below: Float,
+    ): Int {
+        val tile = bounds(tag)
+        return redAt(Offset((tile.left.value + tile.right.value) / 2, tile.top.value + below))
+    }
+
+    /** The red channel over the middle of tile [tag], [above] dp over its bottom edge. */
+    private fun redAboveBottom(
+        tag: String,
+        above: Float,
+    ): Int {
+        val tile = bounds(tag)
+        return redAt(Offset((tile.left.value + tile.right.value) / 2, tile.bottom.value - above))
+    }
+
     @Test
-    fun the_first_grid_row_peeking_under_the_dock_fades_out_over_the_bottom_56_dp_of_the_screen() {
+    fun the_row_under_the_low_dock_shows_at_most_40_px_of_its_top_at_half_alpha() {
         showHome(apps = whiteApps(30))
-        val bottom = screen().bottom.value
-        val peek = bounds("tile:pkg.8")
+        val screen = screen().bottom.value
 
-        assertTrue("the row starts at ${peek.top}, above the fade", peek.top.value < bottom - 56f)
-        assertNear(Math.round(255 * 20f / 56f), redOverColumnTwo(20f), 4)
-        assertTrue(redOverColumnTwo(3f) < 40)
-    }
-
-    /** The red channel over the second column of tiles, [fromBottom] dp above the screen's bottom. */
-    private fun redOverColumnTwo(fromBottom: Float): Int {
-        val column = bounds("tile:pkg.8")
-        return redAt(Offset((column.left.value + column.right.value) / 2, screen().bottom.value - fromBottom))
+        // 40 px of the 1080 px frame are 20 dp here.
+        assertTrue("the row starts at ${bounds("tile:pkg.8").top}", bounds("tile:pkg.8").top.value + 21f < screen)
+        assertNear(Math.round(255 * 0.5f * (1 - 2f / 20f)), redUnderTop("tile:pkg.8", 2f), 8)
+        assertNear(Math.round(255 * 0.5f * (1 - 10f / 20f)), redUnderTop("tile:pkg.8", 10f), 8)
+        assertTrue("past the peek ${redUnderTop("tile:pkg.8", 21f)}", redUnderTop("tile:pkg.8", 21f) < 8)
     }
 
     @Test
-    fun the_bottom_fade_grows_to_80_dp_while_the_grid_is_scrolled_and_goes_on_below_the_screen() {
+    fun in_the_grid_layout_the_bottom_fade_leaves_the_last_fully_visible_row_whole_and_has_the_next_row_gone_by_y_1060_of_1080() {
         showHome(apps = whiteApps(30))
         press(Key.DirectionDown)
         compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+        val screen = screen().bottom.value
+        assertTrue("row 2 ends at ${bounds("tile:pkg.20").bottom}", bounds("tile:pkg.20").bottom.value < screen - 12f)
+        assertTrue("row 3 starts at ${bounds("tile:pkg.26").top}", bounds("tile:pkg.26").top.value < screen)
 
-        assertNear(Math.round(255 * 70f / 80f), redOverColumnTwo(70f), 4)
-        assertNear(Math.round(255 * 40f / 80f), redOverColumnTwo(40f), 4)
+        assertNear(255, redAboveBottom("tile:pkg.20", 1f), 2)
+        val limit = screen * 1060f / 1080f
+        val tile = bounds("tile:pkg.26")
+        assertTrue("under the limit", redAt(Offset((tile.left.value + tile.right.value) / 2, limit + 1f)) < 4)
     }
 
     @Test
-    fun the_bottom_fade_is_56_dp_at_the_end_of_the_grid() {
+    fun at_the_end_of_the_grid_the_last_row_stays_whole() {
         showHome(apps = whiteApps(30))
         repeat(4) { press(Key.DirectionDown) }
         compose.onNodeWithTag("tile:pkg.25").assertIsFocused()
 
-        assertNear(255, redOverColumnTwo(70f), 4)
-        assertNear(Math.round(255 * 52f / 56f), redOverColumnTwo(52f), 4)
+        assertNear(255, redAboveBottom("tile:pkg.26", 1f), 2)
+    }
+
+    @Test
+    fun the_top_fade_runs_60_dp_and_ends_8_dp_above_the_first_fully_visible_row() {
+        showHome(apps = whiteApps(30))
+        repeat(2) { press(Key.DirectionDown) }
+        compose.onNodeWithTag("tile:pkg.13").assertIsFocused()
+        val row = bounds("tile:pkg.14").top.value
+        val above = bounds("tile:pkg.8")
+        assertTrue("the row above ends at ${above.bottom}", above.bottom.value < row)
+
+        // The row above the focused one draws at 0.40; the fade is 0 60 dp above its end and 1 at its end.
+        val x = (above.left.value + above.right.value) / 2
+        val bottom = redAt(Offset(x, above.bottom.value - 1f))
+        assertNear(Math.round(255 * 0.40f * (row - 8f - 60f).let { (above.bottom.value - 1f - it) / 60f }), bottom, 8)
+        assertTrue("above the fade ${redAt(Offset(x, row - 70f))}", redAt(Offset(x, row - 70f)) < 6)
     }
 
     @Test

@@ -60,7 +60,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
@@ -374,7 +378,45 @@ private fun Cards(
                 }
             }
         }
+        ScrollCue(gridState)
     }
+}
+
+private val CueWidth = 14.dp
+private val CueHeight = 7.dp
+private val CueStroke = 2.dp
+private const val CUE_ALPHA = 0.55f
+
+/**
+ * A chevron under the grid while cards lie below the view, and one in its top padding while cards lie above. It is drawn
+ * from the grid's scroll state in the draw phase: two short strokes, no layer, nothing recomposes with a focus move.
+ */
+@Composable
+private fun ScrollCue(grid: LazyGridState) {
+    val ink = TvTheme.colors.onSurface
+    Box(
+        Modifier.fillMaxSize().drawBehind {
+            if (grid.canScrollBackward) drawChevron(ink, GridEdge.toPx() / 2f, down = false)
+            if (grid.canScrollForward) drawChevron(ink, size.height + PanelBottom.toPx() / 2f, down = true)
+        },
+    )
+}
+
+private fun DrawScope.drawChevron(
+    ink: Color,
+    centreY: Float,
+    down: Boolean,
+) {
+    val centreX = size.width / 2f
+    val halfWidth = CueWidth.toPx() / 2f
+    val halfHeight = CueHeight.toPx() / 2f * if (down) 1f else -1f
+    val path =
+        Path().apply {
+            moveTo(centreX - halfWidth, centreY - halfHeight)
+            lineTo(centreX, centreY + halfHeight)
+            lineTo(centreX + halfWidth, centreY - halfHeight)
+        }
+    drawPath(path, ink.copy(alpha = CUE_ALPHA), style = Stroke(CueStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
 }
 
 /** The grid's move for an arrow key, null for any other key. Left and right swap in a right-to-left layout. */

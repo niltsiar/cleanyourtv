@@ -136,4 +136,38 @@ class FocusSurfaceMotionTest {
         assertTrue("drawn $growing", growing > 100f)
         assertEquals(100f, (bounds.right - bounds.left).value, 0.01f)
     }
+
+    /** The grey of the tile frame's middle row at [dp] in from its left edge; the frame is 140 dp wide at 2 pixels to the dp. */
+    private fun greyAt(dp: Float): Float {
+        val image = compose.onNodeWithTag("frame").captureToImage().toPixelMap()
+        return image[(dp * 2f).toInt(), image.height / 2].green
+    }
+
+    @Test
+    fun a_focused_ring_has_a_dark_stroke_outside_its_hairline_on_a_bright_backdrop_and_none_at_rest() {
+        compose.setContent {
+            view = LocalView.current
+            TvTheme {
+                Box(Modifier.size(140.dp).background(Color.White).testTag("frame"), contentAlignment = Alignment.Center) {
+                    Box(Modifier.align(Alignment.TopStart).size(1.dp).focusable())
+                    FocusSurface(onClick = {}, glow = false, modifier = Modifier.size(100.dp).focusRequester(requester).testTag("tile")) {
+                        Box(Modifier.fillMaxSize().background(Color.Red))
+                    }
+                }
+            }
+        }
+        compose.runOnUiThread { view.requestFocusFromTouch() }
+        compose.waitForIdle()
+        // At 1.08 the ring's pieces lie, in dp from the tile's grown edge: gap 3.24, ring to 6.48, hairline to 7.56, stroke to 8.64.
+        val strokeAt = 70f - 54f - 8.1f
+        val outsideAt = 70f - 54f - 9.5f
+        assertEquals(1f, greyAt(strokeAt), 0.01f)
+
+        compose.runOnUiThread { requester.requestFocus() }
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.waitForIdle()
+
+        assertEquals(1f - 0.35f, greyAt(strokeAt), 0.04f)
+        assertEquals(1f, greyAt(outsideAt), 0.01f)
+    }
 }
