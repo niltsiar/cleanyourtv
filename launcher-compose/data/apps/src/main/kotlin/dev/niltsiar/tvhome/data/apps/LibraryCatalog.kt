@@ -53,6 +53,9 @@ public class LibraryCatalog(
 
     public suspend fun load(): List<LibraryApp> = withContext(Dispatchers.IO) { read() }
 
+    /** How many apps [load] would list, without reading their labels or art. */
+    public suspend fun count(): Int = withContext(Dispatchers.IO) { launchable().apps.size }
+
     /**
      * The art of one app for its card, made on the first ask and kept until the catalogue loads again or [release].
      * An app whose art fails to load gets none.
@@ -91,11 +94,15 @@ public class LibraryCatalog(
             apps.library.save(packageName, onHome).also { if (it) apps.libraryChanged() }
         }
 
-    private fun read(): List<LibraryApp> {
+    /** The first launcher activity of each package the library offers, and the packages with a TV launcher activity. */
+    private data class Launchable(
+        val apps: Map<String, ResolveInfo>,
+        val tvPackages: Set<String>,
+    )
+
+    private fun launchable(): Launchable {
         val pm = context.packageManager
-        val hidden = config.hiddenApps.toSet()
         val excluded = config.libraryExcludedApps.toSet()
-        val choices = apps.libraryChoices()
         val tvPackages = HashSet<String>()
         val unique = LinkedHashMap<String, ResolveInfo>()
         for (category in listOf(Intent.CATEGORY_LEANBACK_LAUNCHER, Intent.CATEGORY_LAUNCHER)) {
@@ -107,6 +114,14 @@ public class LibraryCatalog(
                 if (pkg != context.packageName && pkg !in excluded) unique.putIfAbsent(pkg, info)
             }
         }
+        return Launchable(unique, tvPackages)
+    }
+
+    private fun read(): List<LibraryApp> {
+        val pm = context.packageManager
+        val hidden = config.hiddenApps.toSet()
+        val choices = apps.libraryChoices()
+        val (unique, tvPackages) = launchable()
         arts.clear()
         infos = unique.values.associateBy { ComponentName(it.activityInfo.packageName, it.activityInfo.name).flattenToShortString() }
         val result =

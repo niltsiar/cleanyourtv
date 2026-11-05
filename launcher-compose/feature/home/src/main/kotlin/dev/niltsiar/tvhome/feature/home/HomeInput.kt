@@ -2,7 +2,9 @@ package dev.niltsiar.tvhome.feature.home
 
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.key.Key
@@ -16,7 +18,7 @@ import dev.niltsiar.tvhome.core.designsystem.isOk
 
 /**
  * The things the tiles and the top bar share for menus and reorder mode. Only [reordering] is read in composition, by the
- * tiles and the reorder button.
+ * tiles and the reorder button, and [pillFocused] by the band over the grid.
  */
 @Stable
 internal class HomeInput(
@@ -38,11 +40,11 @@ internal class HomeInput(
     /** Where the Inputs button is, in the root's coordinates; zero until it is laid out. The Inputs list hangs from it. */
     val inputsBounds = mutableStateOf(Rect.Zero)
 
-    /** Whether focus is on a tile, set by the grid. A reorder mode takes OK only there. */
-    var gridFocused = false
+    /** Whether focus is in the grid, set by the grid. A reorder mode takes OK only there. */
+    var gridFocused by mutableStateOf(false)
 
     /** Whether focus is on the library pill, which sits in the grid but is no tile. */
-    var pillFocused = false
+    var pillFocused by mutableStateOf(false)
 
     /** The library was opened from the top bar button, so closing it returns there. */
     var fromTopBar = false

@@ -1,28 +1,14 @@
 package dev.niltsiar.tvhome.feature.home
 
 import androidx.annotation.StringRes
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import dev.niltsiar.tvhome.core.designsystem.BesideAnchor
 import dev.niltsiar.tvhome.core.designsystem.GlassMenu
-import dev.niltsiar.tvhome.core.designsystem.OverlaySurface
-import dev.niltsiar.tvhome.core.designsystem.TvTheme
-
-private val MenuRise = 14.dp
 
 @StringRes
 private fun MenuRow.label(): Int =
@@ -39,26 +25,50 @@ private fun MenuRow.label(): Int =
     }
 
 private val MenuTopLimit = TopBarTop + TopBarHeight + 8.dp
+private val MenuClearance = 16.dp
+private val SettingsRowHeight = 42.dp
+private val SettingsPadding = 8.dp
 
-/** The tile menu or the Settings menu: [rows] hanging from [anchor], each tagged `menu:<row name>`; never over the top bar. */
+/**
+ * The tile menu or the Settings menu: [rows], each tagged `menu:<row name>`, never over the top bar. A [tileMenu] sits
+ * beside its tile ([anchor]) and under [bandBottom], the bottom of the band over the grid, when it fits there. The
+ * Settings menu hangs from the Settings button with shorter rows, so it ends clear of the dock.
+ */
 @Composable
 internal fun MenuOverlay(
     rows: List<MenuRow>,
     anchor: State<Rect>,
-    alignEnd: Boolean,
+    tileMenu: Boolean,
+    bandBottom: Dp,
     onPick: (MenuRow) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    GlassMenu(
-        rows,
-        anchor,
-        alignEnd,
-        label = MenuRow::label,
-        rowTag = { "menu:${it.name}" },
-        onPick = onPick,
-        modifier = modifier,
-        topLimit = MenuTopLimit,
-    )
+    if (tileMenu) {
+        GlassMenu(
+            rows,
+            anchor,
+            alignEnd = false,
+            label = MenuRow::label,
+            rowTag = { "menu:${it.name}" },
+            onPick = onPick,
+            modifier = modifier,
+            topLimit = MenuTopLimit,
+            beside = BesideAnchor(top = bandBottom + MenuClearance, fallbackTop = TopBarTop + TopBarHeight + MenuClearance),
+        )
+    } else {
+        GlassMenu(
+            rows,
+            anchor,
+            alignEnd = true,
+            label = MenuRow::label,
+            rowTag = { "menu:${it.name}" },
+            onPick = onPick,
+            modifier = modifier,
+            topLimit = MenuTopLimit,
+            rowHeight = SettingsRowHeight,
+            padding = SettingsPadding,
+        )
+    }
 }
 
 @StringRes
@@ -69,31 +79,3 @@ internal fun ReorderHint.label(): Int =
         ReorderHint.DockChooseApp -> R.string.dock_edit_pick_app
         ReorderHint.DockPlaceForApp -> R.string.dock_edit_pick_place
     }
-
-/** The line that says what the keys do in reorder and edit-dock modes. It rises into place. */
-@Composable
-internal fun ReorderHintPill(
-    hint: ReorderHint,
-    modifier: Modifier = Modifier,
-) {
-    val motion = TvTheme.motion
-    val label = TvTheme.typography.pillLabel
-    val style = remember(label) { label.copy(textAlign = TextAlign.Center) }
-    val reveal = remember { Animatable(if (motion.animations) 0f else 1f) }
-    LaunchedEffect(Unit) { reveal.animateTo(1f, motion.springSpec(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)) }
-    OverlaySurface(
-        shape = RoundedCornerShape(28.dp),
-        modifier =
-            modifier.testTag("reorder:hint").graphicsLayer {
-                compositingStrategy = CompositingStrategy.ModulateAlpha
-                alpha = reveal.value.coerceIn(0f, 1f)
-                translationY = (1f - reveal.value) * MenuRise.toPx()
-            },
-    ) {
-        BasicText(
-            text = stringResource(hint.label()),
-            style = style,
-            modifier = Modifier.padding(horizontal = 28.dp, vertical = 14.dp),
-        )
-    }
-}

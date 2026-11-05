@@ -3,14 +3,20 @@ package dev.niltsiar.tvhome.feature.home
 import android.text.format.DateFormat
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -36,6 +42,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -50,6 +57,8 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -58,6 +67,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
@@ -66,12 +76,17 @@ import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
+import androidx.compose.ui.graphics.drawscope.ContentDrawScope
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.node.LayoutModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
@@ -80,7 +95,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
@@ -91,6 +108,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.designsystem.ChromeShadow
 import dev.niltsiar.tvhome.core.designsystem.FocusSurface
 import dev.niltsiar.tvhome.core.designsystem.GlassIconButton
@@ -113,6 +131,7 @@ import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.Wallpaper
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
@@ -127,14 +146,35 @@ internal val TopBarHeight = 56.dp
 private val ContentTop = TopBarTop + TopBarHeight + 20.dp
 private val CaptionTop = TopBarTop + TopBarHeight + 8.dp
 private val TileShape = RoundedCornerShape(12.dp)
-private val ShelfHeight = 72.dp
-private val ShelfTitleGap = 12.dp
-private val ShelfFade = 40.dp
-private val ShelfFullyShownInset = 4.dp
+private val DockShape = RoundedCornerShape(32.dp)
 private val GridBottom = 48.dp
-private val HintBottom = 28.dp
-private val HintGap = 16.dp
 private val LibraryRowHeight = 84.dp
+
+/** The grid fades in over this much under the band, and out over [BottomFade] at the bottom of the screen. */
+private val TopFade = 28.dp
+private val BottomFade = 36.dp
+
+/** A focused tile's ring (its growth, gap, ring and hairline) reaches about 10 dp past its edge; the top fade ends this far above it. */
+private val RingClearance = 12.dp
+
+/** From the shelf's bottom edge up to where the grid is cut off and starts to fade in. */
+private val ShelfToFade = TopFade + RingClearance - TileGap
+
+/** From the bottom of the band's text to the shelf's bottom edge, with 24 dp between the text and the fade. */
+private val TitleToShelfBottom = 24.dp + ShelfToFade
+private val HeroAscent = 36.sp
+private val ChipHeight = 32.dp
+private val ChipRim = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.32f), Color.White.copy(alpha = 0.08f)))
+private val ChipKeyFill = Color.White.copy(alpha = 0.16f)
+private val CinematicShelfHeight = CinematicTextHeight + TitleToShelfBottom
+
+/** A 48 sp title line (its ascent and descent), then the meta line or the key chips. */
+private val ShelfHeight = 52.dp + MetaGap + ChipHeight + TitleToShelfBottom
+private const val ROW_ABOVE_ALPHA = 0.4f
+private const val LIBRARY_SWAP_MS = 150
+
+/** The row the dock is in; rows count from 0 at the first grid row. */
+private const val DOCK_ROW = -1
 private val ReorderRing = Color(0xFFFF6B4A)
 private const val TILE_ASPECT = 16f / 9f
 
@@ -202,10 +242,6 @@ public fun HomeScreen(
             ).also { it.anchor.value = menuAnchor }
         }
     val menu by remember { derivedStateOf { currentState.value().menu } }
-    val hint by remember { derivedStateOf { currentState.value().reorder?.hint } }
-    // The grid ends above the hint, so no tile is ever under it.
-    var hintHeight by remember { mutableIntStateOf(0) }
-    val hintReserve = if (hint == null) 0.dp else with(LocalDensity.current) { hintHeight.toDp() } + HintBottom + HintGap
     val inputsOpen by remember { derivedStateOf { currentState.value().inputsOpen } }
     val backOpen by remember {
         derivedStateOf { currentState.value().let { it.menu != null || it.reorder != null || it.inputsOpen } }
@@ -222,13 +258,27 @@ public fun HomeScreen(
     val gridState = rememberLazyGridState()
     val backdrop = rememberCinematicBackdrop(shelfLayout, shelf = { state().shelf }, heroArt = heroArt)
     val shelfHeight = if (shelfLayout.cinematic) CinematicShelfHeight else ShelfHeight
-    val shelfModifier = Modifier.padding(top = ContentTop, start = ScreenMargin).height(shelfHeight - ShelfTitleGap)
+    val shelfBottom = ContentTop + shelfHeight
+    val shelfModifier = Modifier.padding(top = ContentTop, start = ScreenMargin).height(shelfHeight - TitleToShelfBottom)
     Box(
         modifier =
             modifier
                 .fillMaxSize()
                 .background(wallpaperLayout.background)
-                .onPreviewKeyEvent { input.onPreview(it, currentState.value()) },
+                .onPreviewKeyEvent { input.onPreview(it, currentState.value()) }
+                .focusProperties {
+                    // Focus coming back from outside (the window regains it, or the focused tile was removed) arrives with
+                    // a direction, and the nearest target that way is a top-bar button; it goes to the dock instead.
+                    onEnter = {
+                        if (requestedFocusDirection != FocusDirection.Enter) {
+                            try {
+                                dockFocus.requestFocus()
+                            } catch (e: IllegalStateException) {
+                                // The dock is scrolled out of the grid: the search goes on as usual.
+                            }
+                        }
+                    }
+                }.focusGroup(),
     ) {
         WallpaperBackdrop(glass, wallpaper = { state().wallpaper }, layout = wallpaperLayout, cinematic = backdrop)
         ChromeFrostEffect(glass, wallpaper = { state().wallpaper }, skyIntensity = wallpaperLayout.skyIntensity)
@@ -240,19 +290,21 @@ public fun HomeScreen(
             state,
             layout,
             shelfLayout,
-            ContentTop + shelfHeight,
+            shelfBottom,
             onFocus,
             onClick,
             homePresses,
             libraryOpen,
             onOpenLibrary,
-            Modifier.padding(bottom = hintReserve),
         )
-        if (shelfLayout.cinematic) CinematicShelf(shelf = { state().shelf }, layout = shelfLayout, modifier = shelfModifier)
-        ShelfTitle(
-            label = { state().let { if (shelfLayout.cinematic && it.shelf != null) "" else it.focusedLabel } },
-            modifier = shelfModifier,
-        )
+        if (shelfLayout.cinematic) {
+            CinematicShelf(
+                shelf = { state().takeIf { it.reorder == null && !input.pillFocused }?.shelf },
+                layout = shelfLayout,
+                modifier = shelfModifier,
+            )
+        }
+        HeroTitle(state, input, shelfLayout.cinematic, shelfModifier)
         WallpaperCaption(
             caption = { state().wallpaper.caption },
             crossfade = wallpaperLayout.crossfade,
@@ -274,18 +326,17 @@ public fun HomeScreen(
             input = input,
             modifier = Modifier.align(Alignment.TopCenter),
         )
-        hint?.let {
-            ReorderHintPill(
-                it,
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(start = ScreenMargin, end = ScreenMargin, bottom = HintBottom)
-                    .onSizeChanged { size -> hintHeight = size.height },
-            )
-        }
         OverlayHost(open = { currentState.value().let { it.menu != null || it.inputsOpen } || libraryOpen() }) {
             menu?.let { open ->
-                key(open) { MenuOverlay(open.rows, input.anchor, alignEnd = open.tileKey == null, onPick = input.actions.onMenuPick) }
+                key(open) {
+                    MenuOverlay(
+                        open.rows,
+                        input.anchor,
+                        tileMenu = open.tileKey != null,
+                        bandBottom = shelfBottom - ShelfToFade,
+                        onPick = input.actions.onMenuPick,
+                    )
+                }
             }
             if (inputsOpen) {
                 InputsMenu(
@@ -316,7 +367,6 @@ private fun HomeContent(
     homePresses: () -> Int,
     libraryOpen: () -> Boolean,
     onOpenLibrary: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
     // The focused tile rests one gap inside the dock panel, so at rest the dock panel's top edge is the shelf's bottom edge.
@@ -332,12 +382,13 @@ private fun HomeContent(
             tileWidthShare(gridWidth.value, belowShelf.value, layout.columns, layout.rowsBelowDock, TileGap.value)
         }
     val sideMargin = ScreenMargin + gridWidth * ((1f - share) / 2f)
-    val rowTileWidth = (gridWidth - TileGap * (layout.columns + 1)) / layout.columns
+    val rowTileWidth = (gridWidth - TileGap * (layout.columns - 1)) / layout.columns
     val firstDockTile = remember { FocusRequester() }
     val dockRow = rememberLazyListState()
     // Equal lists keep the grid's item provider, so a focus move or a clock tick does not compose the items again.
     val dock by remember(state) { derivedStateOf(structuralEqualityPolicy()) { state().dock } }
     val grid by remember(state) { derivedStateOf(structuralEqualityPolicy()) { state().grid } }
+    val focusRow = rememberFocusRow(state, input, layout)
     LaunchedEffect(gridState) {
         snapshotFlow { state().focusRequest }.filterNotNull().collect { request ->
             focusOn(request.target, gridState, dockRow, layout.singleRow, state, input)
@@ -382,14 +433,16 @@ private fun HomeContent(
             horizontalArrangement = Arrangement.spacedBy(TileGap),
             verticalArrangement = Arrangement.spacedBy(TileGap),
             modifier =
-                modifier
+                Modifier
                     .fillMaxSize()
                     .glassSource(glass, zIndex = 1f)
+                    .gridEdges(gridState, fadeStart = shelfBottom - ShelfToFade, gate = ShelfToFade)
                     .onFocusChanged { input.gridFocused = it.hasFocus }
                     .semantics { testTagsAsResourceId = true },
         ) {
             item(key = "shelf", span = { GridItemSpan(maxLineSpan) }, contentType = "shelf") {
-                Spacer(Modifier.fillMaxWidth().height(shelfBottom - ContentTop))
+                // The grid's spacing follows it, so the dock rests at the shelf's bottom edge, where the pivot puts it.
+                Spacer(Modifier.fillMaxWidth().height(shelfBottom - ContentTop - TileGap))
             }
             item(key = "dock", span = { GridItemSpan(maxLineSpan) }, contentType = "dock") {
                 Dock(
@@ -406,20 +459,22 @@ private fun HomeContent(
                     onFocus = onFocus,
                     onClick = onClick,
                     onOpenLibrary = onOpenLibrary,
-                    modifier = Modifier.fadeUnderShelf(gridState, "dock", shelfBottom),
+                    modifier = remember(focusRow) { Modifier.dimAboveFocus(DOCK_ROW, focusRow) },
                 )
             }
             itemsIndexed(grid, key = { _, app -> app.key }, contentType = { _, _ -> "tile" }) { index, app ->
                 val toward =
-                    remember(input, layout, grid, index) {
-                        Modifier.towardLibrary(
-                            input,
-                            layout,
-                            grid,
-                            last = index == grid.lastIndex,
-                            row = index / layout.columns,
-                            column = index % layout.columns,
-                        )
+                    remember(input, layout, grid, index, focusRow) {
+                        Modifier
+                            .dimAboveFocus(index / layout.columns, focusRow)
+                            .towardLibrary(
+                                input,
+                                layout,
+                                grid,
+                                last = index == grid.lastIndex,
+                                row = index / layout.columns,
+                                column = index % layout.columns,
+                            )
                     }
                 AppTile(
                     app = app,
@@ -431,7 +486,6 @@ private fun HomeContent(
                     modifier =
                         Modifier
                             .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = TvTheme.motion.placementSpec)
-                            .fadeUnderShelf(gridState, app.key, shelfBottom)
                             .then(toward),
                 )
             }
@@ -539,72 +593,237 @@ private fun pillUp(
     return input.requester(key)
 }
 
-/** Fades the item with the row it is in: fully visible from just above the shelf's bottom edge down, gone [ShelfFade] above that. */
-private fun Modifier.fadeUnderShelf(
-    grid: LazyGridState,
-    key: Any,
-    shelfBottom: Dp,
-): Modifier = this then FadeUnderShelfElement(grid, key, shelfBottom)
-
-private data class FadeUnderShelfElement(
-    val grid: LazyGridState,
-    val key: Any,
-    val shelfBottom: Dp,
-) : ModifierNodeElement<FadeUnderShelfNode>() {
-    override fun create() = FadeUnderShelfNode(grid, key, shelfBottom)
-
-    override fun update(node: FadeUnderShelfNode) {
-        node.grid = grid
-        node.key = key
-        node.shelfBottom = shelfBottom
+/**
+ * The row focus is on, animated: [DOCK_ROW] for the dock, the grid row of a grid tile, the row after the last for the
+ * library pill, and [DOCK_ROW] while focus is outside the grid. Read it in layer lambdas only.
+ */
+@Composable
+private fun rememberFocusRow(
+    state: () -> HomeUiState,
+    input: HomeInput,
+    layout: HomeLayout,
+): Animatable<Float, AnimationVector1D> {
+    val motion = TvTheme.motion
+    val row = remember { Animatable(DOCK_ROW.toFloat()) }
+    LaunchedEffect(state, input, layout, motion) {
+        snapshotFlow {
+            val shown = state()
+            val inGrid = shown.grid.indexOfFirst { it.key == shown.focusedKey }
+            when {
+                !input.gridFocused || layout.singleRow -> DOCK_ROW
+                input.pillFocused -> (shown.grid.size + layout.columns - 1) / layout.columns
+                inGrid >= 0 -> inGrid / layout.columns
+                else -> DOCK_ROW
+            }
+        }.collectLatest { row.animateTo(it.toFloat(), motion.tweenSpec(ROW_DIM_MS)) }
     }
+    return row
 }
 
-private class FadeUnderShelfNode(
-    var grid: LazyGridState,
-    var key: Any,
-    var shelfBottom: Dp,
-) : Modifier.Node(),
-    LayoutModifierNode {
-    override fun MeasureScope.measure(
-        measurable: Measurable,
-        constraints: Constraints,
-    ): MeasureResult {
-        val placeable = measurable.measure(constraints)
-        return layout(placeable.width, placeable.height) {
-            placeable.placeWithLayer(0, 0) {
-                compositingStrategy = CompositingStrategy.ModulateAlpha
-                val info = grid.layoutInfo
-                val item = info.visibleItemsInfo.firstOrNull { it.key == key } ?: return@placeWithLayer
-                val top = item.offset.y - info.viewportStartOffset
-                val fade = ShelfFade.toPx()
-                alpha = ((top - ((shelfBottom - ShelfFullyShownInset).toPx() - fade)) / fade).coerceIn(0f, 1f)
+private const val ROW_DIM_MS = 160
+
+/** Draws the item at [ROW_ABOVE_ALPHA] while [focusRow] is below its [row]. */
+private fun Modifier.dimAboveFocus(
+    row: Int,
+    focusRow: Animatable<Float, AnimationVector1D>,
+): Modifier =
+    graphicsLayer {
+        compositingStrategy = CompositingStrategy.ModulateAlpha
+        alpha = 1f - (1f - ROW_ABOVE_ALPHA) * (focusRow.value - row).coerceIn(0f, 1f)
+    }
+
+/**
+ * The grid's edges, drawn as a mask in the draw phase: nothing above [fadeStart], a [TopFade] under it, and a
+ * [BottomFade] at the bottom of the screen. At rest the top fade is off, so the resting dock is whole; it comes in over
+ * the first [gate] of scrolling, before anything reaches [fadeStart]. Each fade is a layer the size of its strip.
+ */
+private fun Modifier.gridEdges(
+    grid: LazyGridState,
+    fadeStart: Dp,
+    gate: Dp,
+): Modifier =
+    drawWithCache {
+        val top = fadeStart.toPx()
+        val fadeEnd = top + TopFade.toPx()
+        val bottomStart = size.height - BottomFade.toPx()
+        val gatePx = gate.toPx()
+        val fadeIn = Brush.verticalGradient(0f to Color.Transparent, 1f to Color.Black, startY = top, endY = fadeEnd)
+        val fadeOut = Brush.verticalGradient(0f to Color.Black, 1f to Color.Transparent, startY = bottomStart, endY = size.height)
+        val layerPaint = Paint()
+        onDrawWithContent {
+            val scrolled = if (grid.firstVisibleItemIndex > 0) gatePx else grid.firstVisibleItemScrollOffset.toFloat()
+            val shown = (scrolled / gatePx).coerceIn(0f, 1f)
+            val bodyTop =
+                if (shown > 0f) {
+                    val mask =
+                        if (shown < 1f) {
+                            Brush.verticalGradient(
+                                0f to Color.Black.copy(alpha = 1f - shown),
+                                1f to Color.Black,
+                                startY = top,
+                                endY = fadeEnd,
+                            )
+                        } else {
+                            fadeIn
+                        }
+                    drawMasked(top, fadeEnd, mask, layerPaint)
+                    fadeEnd
+                } else {
+                    top
+                }
+            clipRect(top = bodyTop, bottom = bottomStart) { this@onDrawWithContent.drawContent() }
+            drawMasked(bottomStart, size.height, fadeOut, layerPaint)
+        }
+    }
+
+/** The content between [top] and [bottom], its alpha multiplied by [mask]'s in a layer of that strip only. */
+private fun ContentDrawScope.drawMasked(
+    top: Float,
+    bottom: Float,
+    mask: Brush,
+    paint: Paint,
+) {
+    if (bottom <= top) return
+    val canvas = drawContext.canvas
+    canvas.saveLayer(Rect(0f, top, size.width, bottom), paint)
+    clipRect(top = top, bottom = bottom) { this@drawMasked.drawContent() }
+    drawRect(mask, topLeft = Offset(0f, top), size = Size(size.width, bottom - top), blendMode = BlendMode.DstIn)
+    canvas.restore()
+}
+
+/**
+ * What the band over the grid says when the cinematic shelf does not. A [meta] of a space keeps the line's place.
+ * [quick] swaps in [LIBRARY_SWAP_MS].
+ */
+@Immutable
+private data class HeroLine(
+    val title: String,
+    val meta: String = " ",
+    val hint: ReorderHint? = null,
+    val quick: Boolean = false,
+)
+
+/**
+ * The band over the grid: the focused tile's name; on the library pill the library's name and size; in a reorder or
+ * edit-dock mode the mode's name and its keys. A new line cross-fades with the old one as the cinematic shelf's does
+ * ([titleSwap]). The meta line keeps its slot when empty, so the title stands where the [cinematic] shelf's does.
+ */
+@Composable
+private fun HeroTitle(
+    state: () -> HomeUiState,
+    input: HomeInput,
+    cinematic: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val hint by remember(state) { derivedStateOf { state().reorder?.hint } }
+    val count by remember(state) { derivedStateOf { state().libraryCount } }
+    val label by remember(state) { derivedStateOf { state().let { if (cinematic && it.shelf != null) "" else it.focusedLabel } } }
+    val mode = hint
+    val line =
+        when {
+            mode != null -> HeroLine(stringResource(if (mode == ReorderHint.Reorder) R.string.reorder else R.string.dock_edit), hint = mode)
+            input.pillFocused -> HeroLine(stringResource(R.string.library_entry), libraryCountText(count), quick = true)
+            else -> HeroLine(label)
+        }
+    val animated = TvTheme.motion.animated
+    val rise = with(LocalDensity.current) { TitleRise.roundToPx() }
+    val titleStyle = TvTheme.typography.heroTitle.withHeroShadow()
+    val metaStyle = TvTheme.typography.cinematicMeta.withHeroShadow()
+    val detail = (if (cinematic) ShelfDetailHeight else MetaGap + ChipHeight) - MetaGap
+    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.BottomStart) {
+        AnimatedContent(
+            targetState = line,
+            transitionSpec = {
+                val quick = initialState.quick || targetState.quick
+                if (quick) titleSwap(animated, rise, LIBRARY_SWAP_MS) else titleSwap(animated, rise)
+            },
+            label = "shelfTitle",
+        ) { shown ->
+            Column {
+                BasicText(
+                    text = shown.title,
+                    style = titleStyle,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.testTag("shelf:title").lineBetween(HeroAscent, TitleDescent),
+                )
+                Box(Modifier.padding(start = MetaIndent, top = MetaGap).height(detail)) {
+                    when (val keys = shown.hint) {
+                        ReorderHint.Reorder -> {
+                            KeyChips()
+                        }
+
+                        null -> {
+                            BasicText(
+                                shown.meta,
+                                style = metaStyle,
+                                maxLines = 1,
+                                modifier = Modifier.testTag("shelf:title-meta").height(MetaSlot),
+                            )
+                        }
+
+                        else -> {
+                            BasicText(
+                                stringResource(keys.label()),
+                                style = metaStyle,
+                                maxLines = 1,
+                                modifier = Modifier.testTag("reorder:hint"),
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-/** The focused app's name. A new name cross-fades with the old one as the cinematic shelf's does ([titleSwap]). */
 @Composable
-private fun ShelfTitle(
-    label: () -> String,
-    modifier: Modifier = Modifier,
-) {
-    val text by remember(label) { derivedStateOf(label) }
-    val animated = TvTheme.motion.animated
-    val rise = with(LocalDensity.current) { TitleRise.roundToPx() }
-    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.BottomStart) {
-        AnimatedContent(targetState = text, transitionSpec = { titleSwap(animated, rise) }, label = "shelfTitle") { shown ->
-            BasicText(
-                text = shown,
-                style = TvTheme.typography.shelfTitle,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.testTag("shelf:title"),
-            )
-        }
+private fun libraryCountText(count: Int?): String = count?.let { pluralStringResource(R.plurals.library_app_count, it, it) } ?: " "
+
+/** The keys of reorder mode, one chip each: OK picks up, the arrows move, Back drops, Back twice finishes. */
+@Composable
+private fun KeyChips() {
+    Row(Modifier.testTag("reorder:hint"), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        KeyChip(R.string.reorder_key_ok, R.string.reorder_pick_up)
+        KeyChip(R.string.reorder_key_arrows, R.string.reorder_move)
+        KeyChip(R.string.reorder_key_back, R.string.reorder_drop)
+        KeyChip(R.string.reorder_key_back_twice, R.string.reorder_finish)
     }
 }
+
+@Composable
+private fun KeyChip(
+    @StringRes key: Int,
+    @StringRes action: Int,
+) {
+    val typography = TvTheme.typography
+    Row(
+        modifier =
+            Modifier
+                .height(ChipHeight)
+                .border(1.dp, ChipRim, CircleShape)
+                .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        BasicText(
+            stringResource(key),
+            style = typography.chipKey,
+            maxLines = 1,
+            modifier = Modifier.background(ChipKeyFill, CircleShape).padding(horizontal = 8.dp, vertical = 2.dp),
+        )
+        BasicText(stringResource(action), style = typography.chipLabel, maxLines = 1)
+    }
+}
+
+/** Measures the content [by] wider on each side than the room it gets, and centres it over that room. */
+private fun Modifier.outset(by: Dp): Modifier =
+    layout { measurable, constraints ->
+        val extra = by.roundToPx() * 2
+        val width = constraints.maxWidth + extra
+        val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
+        layout(constraints.maxWidth, placeable.height) { placeable.place(-extra / 2, 0) }
+    }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -624,7 +843,13 @@ private fun Dock(
     onOpenLibrary: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    GlassSurface(glass = glass, modifier = modifier.fillMaxWidth().testTag("dock"), shadow = ChromeShadow.Dock) {
+    // One gap wider on each side than the grid, so the tiles inside its padding sit on the grid's columns.
+    GlassSurface(
+        glass = glass,
+        modifier = modifier.outset(TileGap).fillMaxWidth().testTag("dock"),
+        shape = DockShape,
+        shadow = ChromeShadow.Dock,
+    ) {
         if (layout.singleRow) {
             // The grid's pivot scroll is vertical; this row scrolls sideways the usual way.
             CompositionLocalProvider(LocalBringIntoViewSpec provides RevealBringIntoViewSpec) {
@@ -794,7 +1019,7 @@ private fun AppTile(
         ring = ring,
         modifier =
             modifier
-                .then(if (reordering) Modifier.reorderLook(key, input) else Modifier)
+                .then(if (reordering) Modifier.reorderLook(key, input, TileShape) else Modifier)
                 .aspectRatio(TILE_ASPECT)
                 .testTag("tile:$key")
                 .then(if (app.image != null) Modifier.semantics { contentDescription = app.label } else Modifier)
@@ -823,12 +1048,36 @@ private fun AppTile(
             val image = app.image
             if (image != null) {
                 Image(bitmap = image, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                if (app.iconArt) IconTileLabel(app.label)
             } else {
                 BasicText(text = app.label, style = TvTheme.typography.tileLabel, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
     }
 }
+
+/** The name over the bottom of a tile whose art is the app's icon, which names nothing; the tile's description says it already. */
+@Composable
+private fun BoxScope.IconTileLabel(label: String) {
+    Box(
+        modifier =
+            Modifier
+                .matchParentSize()
+                .drawBehind { drawRect(IconTileShade) }
+                .clearAndSetSemantics {},
+        contentAlignment = Alignment.BottomStart,
+    ) {
+        BasicText(
+            label,
+            style = TvTheme.typography.tileCaption,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(10.dp),
+        )
+    }
+}
+
+private val IconTileShade = Brush.verticalGradient(0.4f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.8f))
 
 @Preview(name = "Home 1080p glass", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
 @Composable

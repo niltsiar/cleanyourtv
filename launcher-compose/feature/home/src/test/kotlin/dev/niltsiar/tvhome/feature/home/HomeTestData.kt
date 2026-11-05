@@ -49,6 +49,7 @@ internal fun sources(
     removeFromHome: suspend (String) -> Boolean = { true },
     inputs: Flow<InputsMenu> = emptyFlow(),
     focusMemory: FocusMemory = FocusMemory(),
+    libraryCount: Flow<Int> = emptyFlow(),
 ) = HomeSources(
     apps,
     clock,
@@ -64,6 +65,7 @@ internal fun sources(
     removeFromHome = removeFromHome,
     inputs = inputs,
     focusMemory = focusMemory,
+    libraryCount = libraryCount,
 )
 
 internal fun port(

@@ -33,4 +33,16 @@
   <string name="dock_edit_hint">Choose the dock place to change and press OK. Back to finish.</string>
   <string name="dock_edit_pick_app">Now choose the app to put there and press OK. Back to choose another place.</string>
   <string name="dock_edit_pick_place">Choose the dock place for this app and press OK. Back to cancel.</string>
+  <string name="reorder_key_ok">OK</string>
+  <string name="reorder_pick_up">pick up</string>
+  <string name="reorder_key_arrows">Arrows</string>
+  <string name="reorder_move">move</string>
+  <string name="reorder_key_back">Back</string>
+  <string name="reorder_drop">drop</string>
+  <string name="reorder_key_back_twice">Back ×2</string>
+  <string name="reorder_finish">finish</string>
+  <plurals name="library_app_count">
+    <item quantity="one">%1$d app</item>
+    <item quantity="other">%1$d apps</item>
+  </plurals>
 </resources>

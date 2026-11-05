@@ -29,4 +29,16 @@
   <string name="dock_edit_hint">Wähle den Dock-Platz, den du ändern willst, und drücke OK. Zurück zum Beenden.</string>
   <string name="dock_edit_pick_app">Wähle jetzt die App für diesen Platz und drücke OK. Zurück, um einen anderen Platz zu wählen.</string>
   <string name="dock_edit_pick_place">Wähle den Dock-Platz für diese App und drücke OK. Zurück zum Abbrechen.</string>
+  <string name="reorder_key_ok">OK</string>
+  <string name="reorder_pick_up">anheben</string>
+  <string name="reorder_key_arrows">Pfeile</string>
+  <string name="reorder_move">verschieben</string>
+  <string name="reorder_key_back">Zurück</string>
+  <string name="reorder_drop">ablegen</string>
+  <string name="reorder_key_back_twice">Zurück ×2</string>
+  <string name="reorder_finish">beenden</string>
+  <plurals name="library_app_count">
+    <item quantity="one">%1$d App</item>
+    <item quantity="other">%1$d Apps</item>
+  </plurals>
 </resources>

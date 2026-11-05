@@ -208,15 +208,14 @@ class HomeMenuUiTest {
     private fun boundsOf(tag: String): Rect = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
 
     @Test
-    fun a_tile_menu_hangs_from_its_tile_without_covering_the_top_bar() {
+    fun a_tile_menu_opens_beside_its_tile_without_covering_the_top_bar() {
         showHome()
         val tile = boundsOf("tile:pkg.1")
 
         holdOk()
 
         val menu = boundsOf("menu")
-        assertTrue(menu.left in tile.left..tile.right)
-        assertTrue(menu.top >= tile.bottom || menu.bottom <= tile.top)
+        assertTrue(menu.left >= tile.right)
         assertTrue(menu.top >= topBarBottom())
     }
 

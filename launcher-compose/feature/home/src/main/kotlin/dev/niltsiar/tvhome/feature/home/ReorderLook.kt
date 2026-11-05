@@ -13,7 +13,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -23,21 +31,31 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-private const val DIMMED_ALPHA = 0.45f
-private const val LIFT_SCALE = 0.08f
+private const val DIMMED_ALPHA = 0.70f
+
+/** The carried tile has focus, so FocusSurface's 1.08 applies inside this layer: together they make 1.12. */
+private const val LIFT_SCALE = 1.12f / 1.08f - 1f
 private const val WIGGLE_DEGREES = 1.6f
 private const val WIGGLE_MS = 150
 private const val DIM_MS = 140
 private val LiftHeight = 10.dp
+private val LiftShadow = 20.dp
+private val LiftShadowColor = Color.Black.copy(alpha = 0.55f)
+private val BadgeRadius = 12.dp
+private val ChevronHalf = 5.dp
+private val ChevronStroke = 2.dp
+private val ChevronColor = Color(0xFF0B0D12)
 
 /**
- * A tile's look in reorder and edit-dock modes: dimmed unless it is the carried one, which lifts, grows and wiggles
- * a little, and settles back with a spring when it is put down. The animated values are read in the layer lambda only.
+ * A tile's look in reorder and edit-dock modes: dimmed unless it is the carried one, which lifts, grows, casts a shadow
+ * in its [shape], wiggles a little and shows a white chevron badge on its left and right edges; it settles back with a
+ * spring when it is put down. The animated values are read in the layer and draw lambdas only.
  */
 @Composable
 internal fun Modifier.reorderLook(
     key: String,
     input: HomeInput,
+    shape: Shape,
 ): Modifier {
     val motion = TvTheme.motion
     // A tile built mid-session (it crossed from the grid into the dock) starts where it ends up.
@@ -76,6 +94,41 @@ internal fun Modifier.reorderLook(
         scaleY = scaleX
         translationY = -LiftHeight.toPx() * raised
         rotationZ = WIGGLE_DEGREES * wiggle.value * raised
+        shadowElevation = LiftShadow.toPx() * raised.coerceIn(0f, 1f)
+        this.shape = shape
+        ambientShadowColor = LiftShadowColor
+        spotShadowColor = LiftShadowColor
+    }.drawWithCache {
+        val radius = BadgeRadius.toPx()
+        val half = ChevronHalf.toPx()
+        val stroke = Stroke(ChevronStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        val middle = size.height / 2f
+        val left = chevron(Offset(0f, middle), half, pointsLeft = true)
+        val right = chevron(Offset(size.width, middle), half, pointsLeft = false)
+        onDrawWithContent {
+            drawContent()
+            val shown = lift.value.coerceIn(0f, 1f)
+            if (shown > 0f) {
+                drawCircle(Color.White, radius, Offset(0f, middle), alpha = shown)
+                drawCircle(Color.White, radius, Offset(size.width, middle), alpha = shown)
+                drawPath(left, ChevronColor, alpha = shown, style = stroke)
+                drawPath(right, ChevronColor, alpha = shown, style = stroke)
+            }
+        }
+    }
+}
+
+/** A chevron centred on [center], [half] tall above and below it, pointing left or right. */
+private fun chevron(
+    center: Offset,
+    half: Float,
+    pointsLeft: Boolean,
+): Path {
+    val tip = if (pointsLeft) -half / 2f else half / 2f
+    return Path().apply {
+        moveTo(center.x - tip, center.y - half)
+        lineTo(center.x + tip, center.y)
+        lineTo(center.x - tip, center.y + half)
     }
 }
 

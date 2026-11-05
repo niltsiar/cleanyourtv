@@ -31,4 +31,16 @@
   <string name="dock_edit_hint">Değiştirilecek dock yerini seçip Tamam\'a basın. Bitirmek için Geri.</string>
   <string name="dock_edit_pick_app">Şimdi oraya konacak uygulamayı seçip Tamam\'a basın. Başka bir yer seçmek için Geri.</string>
   <string name="dock_edit_pick_place">Bu uygulama için bir dock yeri seçip Tamam\'a basın. İptal için Geri.</string>
+  <string name="reorder_key_ok">Tamam</string>
+  <string name="reorder_pick_up">al</string>
+  <string name="reorder_key_arrows">Oklar</string>
+  <string name="reorder_move">taşı</string>
+  <string name="reorder_key_back">Geri</string>
+  <string name="reorder_drop">bırak</string>
+  <string name="reorder_key_back_twice">Geri ×2</string>
+  <string name="reorder_finish">bitir</string>
+  <plurals name="library_app_count">
+    <item quantity="one">%1$d uygulama</item>
+    <item quantity="other">%1$d uygulama</item>
+  </plurals>
 </resources>

@@ -33,4 +33,16 @@
   <string name="dock_edit_hint">Välj platsen i favoritraden som du vill ändra och tryck OK. Tillbaka för att avsluta.</string>
   <string name="dock_edit_pick_app">Välj nu appen som ska ligga där och tryck OK. Tillbaka för att välja en annan plats.</string>
   <string name="dock_edit_pick_place">Välj en plats i favoritraden för appen och tryck OK. Tillbaka för att avbryta.</string>
+  <string name="reorder_key_ok">OK</string>
+  <string name="reorder_pick_up">plocka upp</string>
+  <string name="reorder_key_arrows">Pilar</string>
+  <string name="reorder_move">flytta</string>
+  <string name="reorder_key_back">Tillbaka</string>
+  <string name="reorder_drop">placera</string>
+  <string name="reorder_key_back_twice">Tillbaka ×2</string>
+  <string name="reorder_finish">avsluta</string>
+  <plurals name="library_app_count">
+    <item quantity="one">%1$d app</item>
+    <item quantity="other">%1$d appar</item>
+  </plurals>
 </resources>

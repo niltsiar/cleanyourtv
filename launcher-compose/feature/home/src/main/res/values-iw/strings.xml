@@ -33,4 +33,17 @@
   <string name="dock_edit_hint">בחרו מקום בשורת המועדפים ולחצו אישור. חזרה לסיום.</string>
   <string name="dock_edit_pick_app">עכשיו בחרו את האפליקציה שתופיע שם ולחצו אישור. חזרה לבחירת מקום אחר.</string>
   <string name="dock_edit_pick_place">בחרו מקום בשורת המועדפים לאפליקציה הזו ולחצו אישור. חזרה לביטול.</string>
+  <string name="reorder_key_ok">אישור</string>
+  <string name="reorder_pick_up">הרמה</string>
+  <string name="reorder_key_arrows">חצים</string>
+  <string name="reorder_move">הזזה</string>
+  <string name="reorder_key_back">חזרה</string>
+  <string name="reorder_drop">הנחה</string>
+  <string name="reorder_key_back_twice">חזרה ×2</string>
+  <string name="reorder_finish">סיום</string>
+  <plurals name="library_app_count">
+    <item quantity="one">אפליקציה אחת</item>
+    <item quantity="two">שתי אפליקציות</item>
+    <item quantity="other">%1$d אפליקציות</item>
+  </plurals>
 </resources>

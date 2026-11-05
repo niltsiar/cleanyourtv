@@ -34,9 +34,13 @@ public class TvTypography(
     public val greeting: TextStyle,
     public val pillLabel: TextStyle,
     public val shelfTitle: TextStyle,
+    public val heroTitle: TextStyle,
     public val cinematicTitle: TextStyle,
     public val cinematicMeta: TextStyle,
     public val tileLabel: TextStyle,
+    public val tileCaption: TextStyle,
+    public val chipKey: TextStyle,
+    public val chipLabel: TextStyle,
     public val caption: TextStyle,
     public val screensaverClock: TextStyle,
     public val screensaverAmPm: TextStyle,
@@ -126,12 +130,15 @@ private fun typographyFor(colors: TvColors): TvTypography {
     val clockSize = 32.sp
     val dateSize = 18.sp
     val amPmSize = 14.sp
-    val greetingSize = 11.sp
+    val greetingSize = 13.sp
     val pillLabelSize = 16.sp
     val shelfTitleSize = 40.sp
+    val heroTitleSize = 48.sp
     val cinematicTitleSize = 68.sp
     val cinematicMetaSize = 15.sp
     val tileLabelSize = 16.sp
+    val tileCaptionSize = 13.sp
+    val chipSize = 15.sp
     val captionSize = 15.sp
     val screensaverClockSize = 160.sp
     val screensaverAmPmSize = 26.sp
@@ -162,11 +169,11 @@ private fun typographyFor(colors: TvColors): TvTypography {
             ),
         greeting =
             TextStyle(
-                color = colors.onSurfaceMuted,
+                color = colors.onSurface.copy(alpha = 0.8f),
                 fontSize = greetingSize,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
                 letterSpacing = 0.18.em,
-                fontFamily = googleSansFlex(FontWeight.Medium, greetingSize, width = 100f, roundness = 0f),
+                fontFamily = googleSansFlex(FontWeight.SemiBold, greetingSize, width = 100f, roundness = 0f),
             ),
         pillLabel =
             TextStyle(
@@ -182,6 +189,14 @@ private fun typographyFor(colors: TvColors): TvTypography {
                 fontWeight = FontWeight.SemiBold,
                 fontFamily = googleSansFlex(FontWeight.SemiBold, shelfTitleSize, width = 112f, roundness = 100f),
             ),
+        heroTitle =
+            TextStyle(
+                color = colors.onSurface,
+                fontSize = heroTitleSize,
+                fontWeight = FontWeight.Normal,
+                letterSpacing = (-0.025).em,
+                fontFamily = googleSansFlex(FontWeight.Normal, heroTitleSize, width = 112f, roundness = 100f),
+            ),
         cinematicTitle =
             TextStyle(
                 color = colors.onSurface,
@@ -192,7 +207,7 @@ private fun typographyFor(colors: TvColors): TvTypography {
             ),
         cinematicMeta =
             TextStyle(
-                color = colors.onSurface.copy(alpha = 0.7f),
+                color = colors.onSurface.copy(alpha = 0.85f),
                 fontSize = cinematicMetaSize,
                 fontWeight = FontWeight.Normal,
                 fontFamily = googleSansFlex(FontWeight.Normal, cinematicMetaSize, width = 100f, roundness = 0f),
@@ -203,6 +218,27 @@ private fun typographyFor(colors: TvColors): TvTypography {
                 fontSize = tileLabelSize,
                 fontWeight = FontWeight.Medium,
                 fontFamily = googleSansFlex(FontWeight.Medium, tileLabelSize, width = 100f, roundness = 0f),
+            ),
+        tileCaption =
+            TextStyle(
+                color = Color.White,
+                fontSize = tileCaptionSize,
+                fontWeight = FontWeight.SemiBold,
+                fontFamily = googleSansFlex(FontWeight.SemiBold, tileCaptionSize, width = 100f, roundness = 0f),
+            ),
+        chipKey =
+            TextStyle(
+                color = colors.onSurface,
+                fontSize = chipSize,
+                fontWeight = FontWeight.SemiBold,
+                fontFamily = googleSansFlex(FontWeight.SemiBold, chipSize, width = 100f, roundness = 0f),
+            ),
+        chipLabel =
+            TextStyle(
+                color = colors.onSurface,
+                fontSize = chipSize,
+                fontWeight = FontWeight.Normal,
+                fontFamily = googleSansFlex(FontWeight.Normal, chipSize, width = 100f, roundness = 0f),
             ),
         caption =
             TextStyle(

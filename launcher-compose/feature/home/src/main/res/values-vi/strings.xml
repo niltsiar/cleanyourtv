@@ -32,4 +32,15 @@
   <string name="dock_edit_hint">Chọn vị trí trên dock cần đổi rồi nhấn OK. Nhấn Quay lại để kết thúc.</string>
   <string name="dock_edit_pick_app">Giờ chọn ứng dụng để đặt vào đó rồi nhấn OK. Nhấn Quay lại để chọn vị trí khác.</string>
   <string name="dock_edit_pick_place">Chọn vị trí trên dock cho ứng dụng này rồi nhấn OK. Nhấn Quay lại để hủy.</string>
+  <string name="reorder_key_ok">OK</string>
+  <string name="reorder_pick_up">nhấc</string>
+  <string name="reorder_key_arrows">Mũi tên</string>
+  <string name="reorder_move">di chuyển</string>
+  <string name="reorder_key_back">Back</string>
+  <string name="reorder_drop">đặt xuống</string>
+  <string name="reorder_key_back_twice">Back ×2</string>
+  <string name="reorder_finish">xong</string>
+  <plurals name="library_app_count">
+    <item quantity="other">%1$d ứng dụng</item>
+  </plurals>
 </resources>

@@ -9,7 +9,8 @@ import androidx.compose.ui.graphics.ImageBitmap
  * two tiles, so the key, not the package, names a tile. [image] is the TV banner or the icon, sized for a tile.
  * [accent] is the vivid colour of the art, which the focus highlight and the cinematic shelf take; unspecified while
  * the art is not loaded. [leanback] is true when the package has a LEANBACK_LAUNCHER activity, so its tile launches like
- * the TV's own.
+ * the TV's own. [iconArt] is true when [image] is the app's icon drawn in the middle of the tile, which names nothing,
+ * rather than a banner.
  */
 @Immutable
 public data class AppEntry(
@@ -19,6 +20,7 @@ public data class AppEntry(
     val image: ImageBitmap? = null,
     val accent: Color = Color.Unspecified,
     val leanback: Boolean = false,
+    val iconArt: Boolean = false,
 )
 
 /** The tiles in Home's order, and how many of the leading ones are dock apps (the rest follow in the grid). */

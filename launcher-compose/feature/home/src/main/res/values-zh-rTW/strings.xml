@@ -32,4 +32,15 @@
   <string name="dock_edit_hint">選擇要變更的 Dock 位置，然後按確定。按返回完成。</string>
   <string name="dock_edit_pick_app">現在選擇要放在那裡的應用程式，然後按確定。按返回重新選擇位置。</string>
   <string name="dock_edit_pick_place">為此應用程式選擇 Dock 位置，然後按確定。按返回取消。</string>
+  <string name="reorder_key_ok">確定</string>
+  <string name="reorder_pick_up">選取</string>
+  <string name="reorder_key_arrows">方向鍵</string>
+  <string name="reorder_move">移動</string>
+  <string name="reorder_key_back">返回</string>
+  <string name="reorder_drop">放下</string>
+  <string name="reorder_key_back_twice">返回 ×2</string>
+  <string name="reorder_finish">完成</string>
+  <plurals name="library_app_count">
+    <item quantity="other">%1$d 個應用程式</item>
+  </plurals>
 </resources>

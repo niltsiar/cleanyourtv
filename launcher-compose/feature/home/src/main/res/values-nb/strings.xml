@@ -32,4 +32,16 @@
   <string name="dock_edit_hint">Velg plassen du vil endre i favorittraden, og trykk OK. Trykk Tilbake for å avslutte.</string>
   <string name="dock_edit_pick_app">Velg appen du vil plassere der, og trykk OK. Trykk Tilbake for å velge en annen plass.</string>
   <string name="dock_edit_pick_place">Velg en plass i favorittraden for denne appen, og trykk OK. Trykk Tilbake for å avbryte.</string>
+  <string name="reorder_key_ok">OK</string>
+  <string name="reorder_pick_up">velg</string>
+  <string name="reorder_key_arrows">Piler</string>
+  <string name="reorder_move">flytt</string>
+  <string name="reorder_key_back">Tilbake</string>
+  <string name="reorder_drop">plasser</string>
+  <string name="reorder_key_back_twice">Tilbake ×2</string>
+  <string name="reorder_finish">avslutt</string>
+  <plurals name="library_app_count">
+    <item quantity="one">%1$d app</item>
+    <item quantity="other">%1$d apper</item>
+  </plurals>
 </resources>

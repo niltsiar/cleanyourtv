@@ -29,4 +29,15 @@
   <string name="dock_edit_hint">เลือกตำแหน่งในแถบแอปที่ต้องการเปลี่ยน แล้วกด OK กดย้อนกลับเพื่อเสร็จสิ้น</string>
   <string name="dock_edit_pick_app">จากนั้นเลือกแอปที่จะวางตรงนั้น แล้วกด OK กดย้อนกลับเพื่อเลือกตำแหน่งอื่น</string>
   <string name="dock_edit_pick_place">เลือกตำแหน่งในแถบแอปสำหรับแอปนี้ แล้วกด OK กดย้อนกลับเพื่อยกเลิก</string>
+  <string name="reorder_key_ok">OK</string>
+  <string name="reorder_pick_up">เลือก</string>
+  <string name="reorder_key_arrows">ลูกศร</string>
+  <string name="reorder_move">ย้าย</string>
+  <string name="reorder_key_back">ย้อนกลับ</string>
+  <string name="reorder_drop">วาง</string>
+  <string name="reorder_key_back_twice">ย้อนกลับ ×2</string>
+  <string name="reorder_finish">เสร็จสิ้น</string>
+  <plurals name="library_app_count">
+    <item quantity="other">%1$d แอป</item>
+  </plurals>
 </resources>

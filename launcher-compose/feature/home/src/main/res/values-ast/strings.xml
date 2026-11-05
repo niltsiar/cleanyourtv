@@ -30,4 +30,16 @@
   <string name="dock_edit_hint">Escueyi\'l sitiu del dock que quies camudar y calca OK. Atrás pa finar.</string>
   <string name="dock_edit_pick_app">Agora escueyi l\'aplicación que quies poner ende y calca OK. Atrás pa escoyer otru sitiu.</string>
   <string name="dock_edit_pick_place">Escueyi\'l sitiu del dock pa esta aplicación y calca OK. Atrás pa encaboxar.</string>
+  <string name="reorder_key_ok">D\'acuerdu</string>
+  <string name="reorder_pick_up">escoyer</string>
+  <string name="reorder_key_arrows">Fleches</string>
+  <string name="reorder_move">mover</string>
+  <string name="reorder_key_back">Atrás</string>
+  <string name="reorder_drop">soltar</string>
+  <string name="reorder_key_back_twice">Atrás ×2</string>
+  <string name="reorder_finish">finar</string>
+  <plurals name="library_app_count">
+    <item quantity="one">%1$d aplicación</item>
+    <item quantity="other">%1$d aplicaciones</item>
+  </plurals>
 </resources>

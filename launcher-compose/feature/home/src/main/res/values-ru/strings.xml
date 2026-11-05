@@ -32,4 +32,18 @@
   <string name="dock_edit_hint">Выберите место в доке и нажмите ОК. Назад — готово.</string>
   <string name="dock_edit_pick_app">Теперь выберите приложение для этого места и нажмите ОК. Назад — выбрать другое место.</string>
   <string name="dock_edit_pick_place">Выберите место в доке для этого приложения и нажмите ОК. Назад — отмена.</string>
+  <string name="reorder_key_ok">ОК</string>
+  <string name="reorder_pick_up">взять</string>
+  <string name="reorder_key_arrows">Стрелки</string>
+  <string name="reorder_move">переместить</string>
+  <string name="reorder_key_back">Назад</string>
+  <string name="reorder_drop">поставить</string>
+  <string name="reorder_key_back_twice">Назад ×2</string>
+  <string name="reorder_finish">готово</string>
+  <plurals name="library_app_count">
+    <item quantity="one">%1$d приложение</item>
+    <item quantity="few">%1$d приложения</item>
+    <item quantity="many">%1$d приложений</item>
+    <item quantity="other">%1$d приложения</item>
+  </plurals>
 </resources>

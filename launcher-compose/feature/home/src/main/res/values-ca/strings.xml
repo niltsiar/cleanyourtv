@@ -31,4 +31,17 @@
   <string name="dock_edit_hint">Tria la posició del dock que vols canviar i prem D\'acord. Enrere per acabar.</string>
   <string name="dock_edit_pick_app">Ara tria l\'aplicació que hi vols posar i prem D\'acord. Enrere per triar una altra posició.</string>
   <string name="dock_edit_pick_place">Tria la posició del dock per a aquesta aplicació i prem D\'acord. Enrere per cancel·lar.</string>
+  <string name="reorder_key_ok">D\'acord</string>
+  <string name="reorder_pick_up">agafar</string>
+  <string name="reorder_key_arrows">Fletxes</string>
+  <string name="reorder_move">moure</string>
+  <string name="reorder_key_back">Enrere</string>
+  <string name="reorder_drop">deixar</string>
+  <string name="reorder_key_back_twice">Enrere ×2</string>
+  <string name="reorder_finish">acabar</string>
+  <plurals name="library_app_count">
+    <item quantity="one">%1$d aplicació</item>
+    <item quantity="many">%1$d d\'aplicacions</item>
+    <item quantity="other">%1$d aplicacions</item>
+  </plurals>
 </resources>

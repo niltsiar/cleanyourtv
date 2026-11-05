@@ -32,4 +32,17 @@
   <string name="dock_edit_hint">Escolha o lugar do dock que quer mudar e pressione OK. Voltar para terminar.</string>
   <string name="dock_edit_pick_app">Agora escolha o app para colocar lá e pressione OK. Voltar para escolher outro lugar.</string>
   <string name="dock_edit_pick_place">Escolha o lugar do dock para este app e pressione OK. Voltar para cancelar.</string>
+  <string name="reorder_key_ok">OK</string>
+  <string name="reorder_pick_up">pegar</string>
+  <string name="reorder_key_arrows">Setas</string>
+  <string name="reorder_move">mover</string>
+  <string name="reorder_key_back">Voltar</string>
+  <string name="reorder_drop">pousar</string>
+  <string name="reorder_key_back_twice">Voltar ×2</string>
+  <string name="reorder_finish">terminar</string>
+  <plurals name="library_app_count">
+    <item quantity="one">%1$d app</item>
+    <item quantity="many">%1$d apps</item>
+    <item quantity="other">%1$d apps</item>
+  </plurals>
 </resources>

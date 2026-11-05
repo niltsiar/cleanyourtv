@@ -24,6 +24,7 @@ import java.util.Locale
  * [menu] is the open tile or Settings menu, [reorder] a reorder or edit-dock session, and [focusRequest] asks the
  * screen to move focus to a tile or the Settings button. [inputs] is what the Inputs button and its list show, which
  * is [inputsOpen] while the list hangs under the button; the button shows until the TV says it has nothing to list.
+ * [libraryCount] is how many apps the App library lists, null until it is known.
  */
 @Immutable
 public data class HomeUiState(
@@ -44,6 +45,7 @@ public data class HomeUiState(
     val focusRequest: FocusRequest? = null,
     val inputs: InputsMenu = InputsMenu(available = false),
     val inputsOpen: Boolean = false,
+    val libraryCount: Int? = null,
 )
 
 /** Focus goes to the tile with this key, or to the Settings button for [SETTINGS_FOCUS]. A new [token] asks again. */
@@ -157,6 +159,8 @@ public class HomeSources(
     public val inputs: Flow<InputsMenu> = emptyFlow(),
     /** Where focus was last, kept across the activity being created again. */
     public val focusMemory: FocusMemory = FocusMemory(),
+    /** How many apps the App library lists, again after each change; never emits without the library. */
+    public val libraryCount: Flow<Int> = emptyFlow(),
 )
 
 internal sealed interface HomeEvent {
@@ -273,6 +277,7 @@ internal fun homeUiState(
     focusRequest: FocusRequest? = null,
     inputs: InputsMenu = InputsMenu(available = false),
     inputsOpen: Boolean = false,
+    libraryCount: Int? = null,
 ): HomeUiState =
     HomeUiState(
         clock = now?.let { clockText(it, header.hour24, locale) }.orEmpty(),
@@ -292,6 +297,7 @@ internal fun homeUiState(
         focusRequest = focusRequest,
         inputs = inputs,
         inputsOpen = inputsOpen,
+        libraryCount = libraryCount,
     )
 
 /**

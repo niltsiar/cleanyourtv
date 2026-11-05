@@ -31,4 +31,18 @@
   <string name="dock_edit_hint">Wybierz miejsce w docku do zmiany i naciśnij OK. Wstecz, aby zakończyć.</string>
   <string name="dock_edit_pick_app">Teraz wybierz aplikację, która ma się tam znaleźć, i naciśnij OK. Wstecz, aby wybrać inne miejsce.</string>
   <string name="dock_edit_pick_place">Wybierz miejsce w docku dla tej aplikacji i naciśnij OK. Wstecz, aby anulować.</string>
+  <string name="reorder_key_ok">OK</string>
+  <string name="reorder_pick_up">podnieś</string>
+  <string name="reorder_key_arrows">Strzałki</string>
+  <string name="reorder_move">przesuń</string>
+  <string name="reorder_key_back">Wstecz</string>
+  <string name="reorder_drop">upuść</string>
+  <string name="reorder_key_back_twice">Wstecz ×2</string>
+  <string name="reorder_finish">zakończ</string>
+  <plurals name="library_app_count">
+    <item quantity="one">%1$d aplikacja</item>
+    <item quantity="few">%1$d aplikacje</item>
+    <item quantity="many">%1$d aplikacji</item>
+    <item quantity="other">%1$d aplikacji</item>
+  </plurals>
 </resources>

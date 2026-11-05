@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicText
@@ -32,6 +33,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.FirstBaseline
@@ -42,6 +44,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
@@ -49,8 +52,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import kotlin.math.abs
-
-internal val CinematicShelfHeight = 144.dp
 
 /** How far a new shelf title rises into place as it fades in. */
 internal val TitleRise = 8.dp
@@ -65,11 +66,21 @@ private const val TITLE_OUT_MS = 120
 internal fun <T> cinematicTween(): TweenSpec<T> = tween(CINEMATIC_MS, easing = CinematicEasing)
 
 private val TitleAscent = 50.sp
-private val TitleDescent = 16.sp
-private val MetaIndent = 4.dp
-private val MetaGap = 12.dp
+
+/** Below the baseline of either title voice, so both stand on one line. */
+internal val TitleDescent = 16.sp
+internal val MetaIndent = 4.dp
+internal val MetaGap = 12.dp
+internal val MetaSlot = 20.dp
 private val DotsGap = 16.dp
 private val DotSize = 6.dp
+
+/** Under the title line: the meta line and the dots. */
+internal val ShelfDetailHeight = MetaGap + MetaSlot + DotsGap + DotSize
+
+/** The cinematic title line (its ascent and descent at the default font scale) and [ShelfDetailHeight]. */
+internal val CinematicTextHeight = 66.dp + ShelfDetailHeight
+private val HeroShadow = Color(0x80000000)
 private val DotWide = 20.dp
 private val DotSpacing = 6.dp
 private val DotRest = Color(0x4DFFFFFF)
@@ -81,7 +92,8 @@ private class HeldShelf {
 }
 
 /**
- * The cinematic shelf above the dock: the focused dock app's name, when Home last opened it, and one dot per dock app.
+ * The cinematic shelf above the dock: the focused dock app's name, when Home last opened it, and one dot per dock app
+ * (their slot stays without dots, so the title stands where the band's other titles do).
  * It fades in with the first dock focus and out when [shelf] is null, keeping the last app's text meanwhile. A new app's
  * name and time cross-fade with the old ones ([titleSwap]); the dots stay and only their long dot slides. Every animated
  * value is read in a layer, placement or draw lambda.
@@ -103,6 +115,8 @@ internal fun CinematicShelf(
     }
     val shown = held.shelf ?: return
     val rise = with(LocalDensity.current) { TitleRise.roundToPx() }
+    val titleStyle = TvTheme.typography.cinematicTitle.withHeroShadow()
+    val metaStyle = TvTheme.typography.cinematicMeta.withHeroShadow()
     Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.BottomStart) {
         Column(
             modifier =
@@ -120,16 +134,20 @@ internal fun CinematicShelf(
                 Column {
                     BasicText(
                         text = app.label,
-                        style = TvTheme.typography.cinematicTitle,
+                        style = titleStyle,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.testTag("shelf:name").lineBetween(TitleAscent, TitleDescent),
                     )
                     BasicText(
                         text = lastOpenedLine(app.lastOpened),
-                        style = TvTheme.typography.cinematicMeta,
+                        style = metaStyle,
                         maxLines = 1,
-                        modifier = Modifier.padding(start = MetaIndent, top = MetaGap),
+                        modifier =
+                            Modifier
+                                .padding(start = MetaIndent, top = MetaGap)
+                                .testTag("shelf:meta")
+                                .height(MetaSlot),
                     )
                 }
             }
@@ -140,6 +158,8 @@ internal fun CinematicShelf(
                     animated = layout.animated,
                     modifier = Modifier.padding(start = MetaIndent, top = DotsGap),
                 )
+            } else {
+                Spacer(Modifier.height(DotsGap + DotSize))
             }
         }
     }
@@ -147,21 +167,29 @@ internal fun CinematicShelf(
 
 /**
  * How a shelf title gives way to the next: the old one fades out in [TITLE_OUT_MS] while the new one fades in from
- * nothing and rises [risePx] into place. Both keep their place in the layout, so nothing below them moves.
+ * nothing over [millis] and rises [risePx] into place. Both keep their place in the layout, so nothing below them moves.
  */
 internal fun titleSwap(
     animated: Boolean,
     risePx: Int,
+    millis: Int = CINEMATIC_MS,
 ): ContentTransform =
     if (animated) {
         ContentTransform(
-            fadeIn(cinematicTween()) + slideInVertically(cinematicTween()) { risePx },
+            fadeIn(tween(millis, easing = CinematicEasing)) + slideInVertically(tween(millis, easing = CinematicEasing)) { risePx },
             fadeOut(tween(TITLE_OUT_MS, easing = CinematicEasing)),
             sizeTransform = null,
         )
     } else {
         ContentTransform(EnterTransition.None, ExitTransition.None, sizeTransform = null)
     }
+
+/** This style with the shadow that keeps the band's text readable on a bright picture. */
+@Composable
+internal fun TextStyle.withHeroShadow(): TextStyle {
+    val density = LocalDensity.current.density
+    return remember(this, density) { copy(shadow = Shadow(HeroShadow, Offset(0f, 2 * density), 8 * density)) }
+}
 
 /** "Last opened <time>" with the time in white; a space when there is none, which keeps the line's height. */
 @Composable
@@ -215,7 +243,7 @@ private fun PositionDots(
  * Makes a one-line text take [above] over its baseline and [below] under it, whatever the font's own line height:
  * the title's box runs from just above its capitals to just below its descenders, so the lines under it sit close.
  */
-private fun Modifier.lineBetween(
+internal fun Modifier.lineBetween(
     above: TextUnit,
     below: TextUnit,
 ): Modifier =

@@ -41,6 +41,7 @@ internal fun homePresenter(
     val network by sources.network.collectAsState(NoNetwork)
     val wallpaper by sources.wallpaper.collectAsState(NoWallpaper)
     val lastOpened by sources.lastOpened.collectAsState(NoOpened)
+    val libraryCount by sources.libraryCount.collectAsState(null)
     // Read again with each new time, which also follows the TV's 12/24-hour setting after a stop and start of Home.
     val hour24 = remember(now, config.clockFormat) { config.clockFormat.is24Hour(sources.systemHour24) }
     val header =
@@ -64,5 +65,6 @@ internal fun homePresenter(
         focusRequest = interaction.focusRequest,
         inputs = interaction.inputs ?: UnknownInputs,
         inputsOpen = interaction.inputsOpen,
+        libraryCount = libraryCount,
     )
 }

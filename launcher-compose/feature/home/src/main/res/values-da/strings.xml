@@ -28,4 +28,16 @@
   <string name="dock_edit">Redigér dock</string>
   <string name="reorder">Flyt apps</string>
   <string name="power_menu">Genstart…</string>
+  <string name="reorder_key_ok">OK</string>
+  <string name="reorder_pick_up">tag</string>
+  <string name="reorder_key_arrows">Pile</string>
+  <string name="reorder_move">flyt</string>
+  <string name="reorder_key_back">Tilbage</string>
+  <string name="reorder_drop">slip</string>
+  <string name="reorder_key_back_twice">Tilbage ×2</string>
+  <string name="reorder_finish">afslut</string>
+  <plurals name="library_app_count">
+    <item quantity="one">%1$d app</item>
+    <item quantity="other">%1$d apps</item>
+  </plurals>
 </resources>

@@ -31,4 +31,16 @@
   <string name="dock_edit_hint">ডকের যে জায়গাটি বদলাতে চান সেটি বেছে OK চাপুন। শেষ হলে Back চাপুন।</string>
   <string name="dock_edit_pick_app">ওই জায়গায় যে অ্যাপ রাখতে চান সেটি বেছে OK চাপুন। অন্য জায়গা বাছতে Back চাপুন।</string>
   <string name="dock_edit_pick_place">এই অ্যাপের জন্য ডকের একটি জায়গা বেছে OK চাপুন। বাতিল করতে Back চাপুন।</string>
+  <string name="reorder_key_ok">OK</string>
+  <string name="reorder_pick_up">তুলুন</string>
+  <string name="reorder_key_arrows">তীর</string>
+  <string name="reorder_move">সরান</string>
+  <string name="reorder_key_back">Back</string>
+  <string name="reorder_drop">বসান</string>
+  <string name="reorder_key_back_twice">Back ×2</string>
+  <string name="reorder_finish">শেষ</string>
+  <plurals name="library_app_count">
+    <item quantity="one">%1$dটি অ্যাপ</item>
+    <item quantity="other">%1$dটি অ্যাপ</item>
+  </plurals>
 </resources>

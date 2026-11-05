@@ -45,13 +45,12 @@ private const val SKY_GLOW_Y = 0.80f
 private const val SKY_GLOW_RADIUS = 0.55f
 private const val MAX_ALPHA = 255f
 private val CaptionMaxWidth = 520.dp
-private val Scrim = Brush.verticalGradient(listOf(Color(0x33000000), Color(0xB305060A)))
 private val TopScrim = Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.55f), 0.45f to Color.Transparent)
 private val LeftScrim = Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.40f), 0.55f to Color.Transparent)
 
 /**
- * What is behind Home, drawn in the draw phase only: the picture, a scrim that keeps the white text readable on any
- * picture, then the time-of-day sky. A new picture cross-fades in over the old one with no recomposition per frame
+ * What is behind Home, drawn in the draw phase only: the picture, the scrim that keeps the white text readable on any
+ * picture ([drawHomeScrim], which the chrome's frost bakes too), then the time-of-day sky. A new picture cross-fades in over the old one with no recomposition per frame
  * and no offscreen layer. The [cinematic] shelf's art, glow and scrim come last. It is a glass source, so the panels
  * above it sample what it draws.
  */
@@ -108,7 +107,7 @@ private class PictureFade(
             previous?.let { drawCover(it, 1f) }
             if (next != null) {
                 drawCover(next, t)
-                drawRect(Scrim, alpha = if (previous == null) t else 1f)
+                drawHomeScrim(alpha = if (previous == null) t else 1f)
             }
         }
 }
@@ -131,9 +130,9 @@ private fun DrawScope.drawCover(
 }
 
 /** Darkens the top and the left of the picture, where the top bar and the titles sit. */
-internal fun DrawScope.drawHomeScrim() {
-    drawRect(TopScrim)
-    drawRect(LeftScrim)
+internal fun DrawScope.drawHomeScrim(alpha: Float = 1f) {
+    drawRect(TopScrim, alpha = alpha)
+    drawRect(LeftScrim, alpha = alpha)
 }
 
 /** Night blues to a warm horizon, with a glow that travels with the sun, over everything drawn before it. */

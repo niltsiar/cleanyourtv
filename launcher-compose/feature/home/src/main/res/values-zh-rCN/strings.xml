@@ -32,4 +32,15 @@
   <string name="dock_edit_hint">选择要更改的程序坞位置，然后按确定。按返回完成。</string>
   <string name="dock_edit_pick_app">现在选择要放在那里的应用，然后按确定。按返回重新选择位置。</string>
   <string name="dock_edit_pick_place">选择这个应用要放的程序坞位置，然后按确定。按返回取消。</string>
+  <string name="reorder_key_ok">确定</string>
+  <string name="reorder_pick_up">选中</string>
+  <string name="reorder_key_arrows">方向键</string>
+  <string name="reorder_move">移动</string>
+  <string name="reorder_key_back">返回</string>
+  <string name="reorder_drop">放下</string>
+  <string name="reorder_key_back_twice">返回 ×2</string>
+  <string name="reorder_finish">完成</string>
+  <plurals name="library_app_count">
+    <item quantity="other">%1$d 个应用</item>
+  </plurals>
 </resources>

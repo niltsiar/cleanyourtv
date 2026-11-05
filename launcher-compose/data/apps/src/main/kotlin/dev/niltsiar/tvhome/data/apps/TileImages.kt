@@ -46,10 +46,14 @@ internal fun isBannerShaped(
     height: Int,
 ): Boolean = width <= 0 || height <= 0 || width >= height * 1.4f
 
-/** What one tile shows: its [image] (null when the app has no art) and the [accent] colour picked from the art, as ARGB. */
+/**
+ * What one tile shows: its [image] (null when the app has no art) and the [accent] colour picked from the art, as ARGB.
+ * [fromIcon] is true when the image is the app's icon in the middle of the tile, not a banner.
+ */
 internal class TileArt(
     val image: ImageBitmap?,
     val accent: Int,
+    val fromIcon: Boolean = false,
 )
 
 /** Draws the artwork of one tile: the app's banner, or its icon. */
@@ -67,7 +71,7 @@ internal class TileImages(
             return TileArt(banner.toBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888).asImageBitmap(), accentOf(banner))
         }
         val drawable = icon() ?: return TileArt(null, NO_ART_ACCENT)
-        return TileArt(drawable.centeredOnTile().asImageBitmap(), accentOf(drawable))
+        return TileArt(drawable.centeredOnTile().asImageBitmap(), accentOf(drawable), fromIcon = true)
     }
 
     /** The art the cinematic shelf softens: the tile's banner, else its icon. */

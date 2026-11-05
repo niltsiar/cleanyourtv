@@ -32,4 +32,15 @@
   <string name="dock_edit_hint">Pilih posisi dock yang ingin diubah lalu tekan OK. Kembali untuk selesai.</string>
   <string name="dock_edit_pick_app">Sekarang pilih aplikasi untuk ditempatkan di sana lalu tekan OK. Kembali untuk memilih posisi lain.</string>
   <string name="dock_edit_pick_place">Pilih posisi dock untuk aplikasi ini lalu tekan OK. Kembali untuk membatalkan.</string>
+  <string name="reorder_key_ok">OK</string>
+  <string name="reorder_pick_up">ambil</string>
+  <string name="reorder_key_arrows">Panah</string>
+  <string name="reorder_move">pindahkan</string>
+  <string name="reorder_key_back">Kembali</string>
+  <string name="reorder_drop">tempatkan</string>
+  <string name="reorder_key_back_twice">Kembali ×2</string>
+  <string name="reorder_finish">selesai</string>
+  <plurals name="library_app_count">
+    <item quantity="other">%1$d aplikasi</item>
+  </plurals>
 </resources>

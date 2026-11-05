@@ -32,4 +32,18 @@
   <string name="dock_edit_hint">Vyberte místo v doku, které chcete změnit, a stiskněte OK. Tlačítkem Zpět skončíte.</string>
   <string name="dock_edit_pick_app">Nyní vyberte aplikaci pro toto místo a stiskněte OK. Tlačítkem Zpět vyberete jiné místo.</string>
   <string name="dock_edit_pick_place">Vyberte místo v doku pro tuto aplikaci a stiskněte OK. Tlačítkem Zpět zrušíte.</string>
+  <string name="reorder_key_ok">OK</string>
+  <string name="reorder_pick_up">zvednout</string>
+  <string name="reorder_key_arrows">Šipky</string>
+  <string name="reorder_move">posunout</string>
+  <string name="reorder_key_back">Zpět</string>
+  <string name="reorder_drop">položit</string>
+  <string name="reorder_key_back_twice">Zpět ×2</string>
+  <string name="reorder_finish">skončit</string>
+  <plurals name="library_app_count">
+    <item quantity="one">%1$d aplikace</item>
+    <item quantity="few">%1$d aplikace</item>
+    <item quantity="many">%1$d aplikace</item>
+    <item quantity="other">%1$d aplikací</item>
+  </plurals>
 </resources>

@@ -28,6 +28,8 @@ import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 
 @DependencyGraph(AppScope::class)
@@ -144,6 +146,7 @@ interface AppGraph {
     @SingleIn(AppScope::class)
     fun provideHomeSources(
         application: Application,
+        config: TvConfig,
         appsProvider: PackageManagerAppsProvider,
         lastOpened: LastOpened,
         networkMonitor: NetworkMonitor,
@@ -170,6 +173,15 @@ interface AppGraph {
             removeFromHome = { libraryCatalog.setOnHome(it, false) },
             inputs = inputsProvider.menu,
             focusMemory = focusMemory,
+            libraryCount =
+                if (config.appLibrary) {
+                    flow {
+                        emit(libraryCatalog.count())
+                        libraryCatalog.changes.collect { emit(libraryCatalog.count()) }
+                    }
+                } else {
+                    emptyFlow()
+                },
         )
 
     @Provides

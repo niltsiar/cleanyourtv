@@ -32,4 +32,16 @@
   <string name="dock_edit_hint">Valitse muutettava telakan paikka ja paina OK. Takaisin lopettaa.</string>
   <string name="dock_edit_pick_app">Valitse nyt sinne tuleva sovellus ja paina OK. Takaisin valitsee toisen paikan.</string>
   <string name="dock_edit_pick_place">Valitse telakan paikka tälle sovellukselle ja paina OK. Takaisin peruuttaa.</string>
+  <string name="reorder_key_ok">OK</string>
+  <string name="reorder_pick_up">nosta</string>
+  <string name="reorder_key_arrows">Nuolet</string>
+  <string name="reorder_move">siirrä</string>
+  <string name="reorder_key_back">Takaisin</string>
+  <string name="reorder_drop">laske</string>
+  <string name="reorder_key_back_twice">Takaisin ×2</string>
+  <string name="reorder_finish">lopeta</string>
+  <plurals name="library_app_count">
+    <item quantity="one">%1$d sovellus</item>
+    <item quantity="other">%1$d sovellusta</item>
+  </plurals>
 </resources>
