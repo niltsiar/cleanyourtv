@@ -48,6 +48,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.designsystem.FocusSurface
@@ -69,7 +70,7 @@ private val CardTop = 8.dp
 private val CardBottom = 8.dp
 private val NameGap = 4.dp
 private val NameHeight = 32.dp
-private const val NAME_LINES = 2
+internal const val NAME_LINES = 2
 private val EnterRise = 28.dp
 private const val POP_SCALE = 0.12f
 private const val FOCUSED_SCALE = 1.08f
@@ -241,11 +242,13 @@ private fun Name(
     val typography = TvTheme.typography
     val style = remember(typography) { typography.pillLabel.copy(fontSize = 13.sp, lineHeight = 16.sp, textAlign = TextAlign.Center) }
     val shown = remember(label, style, widthPx) { shownName(label, measurer, style, widthPx) }
+    val fit = remember(style) { WholeWords(style.fontSize) }
     BasicText(
         text = shown,
         style = style,
         maxLines = NAME_LINES,
         overflow = TextOverflow.Ellipsis,
+        autoSize = if (shown == label) fit else null,
         modifier = Modifier.padding(top = NameGap).fillMaxWidth().height(NameHeight),
     )
 }
@@ -253,8 +256,9 @@ private fun Name(
 private val Ellipsis = Char(0x2026).toString()
 
 /**
- * [label] as it shows in [NAME_LINES] lines of [widthPx]: whole, or cut where the last line ends with the ellipsis right
- * after its last character, where a plain ellipsis can follow a space.
+ * [label] as it shows in [NAME_LINES] lines of [widthPx]: whole, or, where no size down to the smallest [WholeWords] tries
+ * shows it whole, cut where the last line ends with the ellipsis right after its last character, where a plain ellipsis
+ * can follow a space.
  */
 internal fun shownName(
     label: String,
@@ -262,16 +266,18 @@ internal fun shownName(
     style: TextStyle,
     widthPx: Int,
 ): String {
-    val laidOut =
+    fun measure(size: TextUnit) =
         measurer.measure(
             label,
-            style,
+            style.copy(fontSize = size),
             TextOverflow.Ellipsis,
             maxLines = NAME_LINES,
             constraints = Constraints(maxWidth = widthPx),
         )
+    val laidOut = measure(style.fontSize)
     val last = laidOut.lineCount - 1
     if (!laidOut.isLineEllipsized(last)) return label
+    if (wholeWordsSize(style.fontSize, label, ::measure) != null) return label
     return label.substring(0, laidOut.getLineEnd(last, visibleEnd = true)).trimEnd() + Ellipsis
 }
 

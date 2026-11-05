@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PixelMap
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
@@ -33,6 +34,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
@@ -616,6 +619,70 @@ class LibraryOverlayLookUiTest {
         assertTrue("$cut", cut.none { it.endsWith(" " + ELLIPSIS) })
     }
 
+    /** The laid-out name on the card of [name]: the text of its first word is how the card is found. */
+    private fun nameLayout(name: String): TextLayoutResult {
+        val results = mutableListOf<TextLayoutResult>()
+        compose
+            .onNode(
+                hasText(name.substringBefore(' ').take(8), substring = true) and hasAnyAncestor(hasTestTag("card:${key(name)}")),
+                useUnmergedTree = true,
+            ).fetchSemanticsNode()
+            .config[SemanticsActions.GetTextLayoutResult]
+            .action!!(results)
+        return results.single()
+    }
+
+    private fun linesEndingInsideAWord(layout: TextLayoutResult): List<Int> {
+        val text = layout.layoutInput.text.text
+        return (0 until layout.lineCount - 1).filter { line ->
+            val end = layout.getLineEnd(line)
+            text[end - 1].isLetterOrDigit() && text[end].isLetterOrDigit()
+        }
+    }
+
+    private fun TextLayoutResult.lineWidth(line: Int) = getLineRight(line) - getLineLeft(line)
+
+    /** [layout]'s text laid out at its style's own size in the same box, as without autoSize. */
+    private fun unshrunk(layout: TextLayoutResult): TextLayoutResult {
+        val input = layout.layoutInput
+        return TextMeasurer(input.fontFamilyResolver, input.density, input.layoutDirection)
+            .measure(input.text, input.style, input.overflow, input.softWrap, input.maxLines, constraints = input.constraints)
+    }
+
+    @Test
+    fun a_name_with_a_long_word_shrinks_until_no_line_ends_inside_a_word() {
+        val name = "Temporizadores y reloj"
+        showLibrary(listOf(libraryApp(name)))
+
+        val layout = nameLayout(name)
+        assertEquals(name, layout.layoutInput.text.text)
+        assertTrue("the name must break inside a word without autoSize", linesEndingInsideAWord(unshrunk(layout)).isNotEmpty())
+        assertEquals(emptyList<Int>(), linesEndingInsideAWord(layout))
+        assertTrue("${layout.lineCount} lines", layout.lineCount <= 2 && !layout.isLineEllipsized(layout.lineCount - 1))
+    }
+
+    @Test
+    fun a_name_that_fits_keeps_the_full_size() {
+        showLibrary(listOf(libraryApp("Plex")))
+
+        val layout = nameLayout("Plex")
+        assertEquals(unshrunk(layout).lineWidth(0), layout.lineWidth(0), WIDTH_ROUNDING)
+    }
+
+    @Test
+    fun a_word_too_long_for_the_smallest_size_ends_in_an_ellipsis_within_two_lines_at_the_full_size() {
+        val name = "Supercalifragilisticexpialidocious Antidisestablishmentarianism Pneumonoultramicroscopic"
+        showLibrary(listOf(libraryApp(name)))
+
+        val layout = nameLayout(name)
+        assertTrue("${layout.lineCount} lines", layout.lineCount <= 2)
+        assertTrue(
+            layout.layoutInput.text.text
+                .endsWith(ELLIPSIS),
+        )
+        assertEquals(unshrunk(layout).lineWidth(layout.lineCount - 1), layout.lineWidth(layout.lineCount - 1), WIDTH_ROUNDING)
+    }
+
     private companion object {
         const val PANEL_X = 960
         const val PANEL_HEADER_Y = 103
@@ -626,6 +693,7 @@ class LibraryOverlayLookUiTest {
         const val RING_CORE = 300
         const val HALO_MIN = 4
         const val FOCUSED_SCALE = 1.08f
+        const val WIDTH_ROUNDING = 1.5f
         const val TEXT_OVER_GROUND = 60
         val ELLIPSIS = Char(0x2026).toString()
         val NAME_WORDS = "Control de TV con altavoces inteligentes para el salon principal de la casa de Maria Luisa".split(" ")
