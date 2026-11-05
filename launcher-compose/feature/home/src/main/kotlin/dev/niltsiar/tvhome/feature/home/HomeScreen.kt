@@ -141,14 +141,12 @@ import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.Wallpaper
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -734,9 +732,6 @@ private class FocusDim(
 private const val GROUP_MS = 320
 private const val GROUP_OVERSHOOT_DAMPING = 0.7f
 
-/** The frames a new group target must last before the group follows it. */
-private const val SETTLE_FRAMES = 2
-
 @Composable
 private fun rememberFocusDim(
     state: State<() -> HomeUiState>,
@@ -834,7 +829,6 @@ private fun groupLowFor(
  * Runs [dim]: its row and floor follow focus in [ROW_DIM_MS], and its group goes low or up as [groupLowFor] says, in
  * [GROUP_MS], at once without motion. It stays where it is while the App library is open.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 private fun FocusDimEffects(
     dim: FocusDim,
@@ -859,10 +853,6 @@ private fun FocusDimEffects(
             val shown = state.value()
             if (!currentLibraryOpen.value()) groupLowFor(shown, input, layout)?.let { low = it }
             low
-        }.mapLatest { toLow ->
-            // Closing a menu or the library hands focus to the first dock tile for a frame or two on its way back.
-            repeat(SETTLE_FRAMES) { withFrameNanos { } }
-            toLow
         }.collectLatest { toLow ->
             val target = if (toLow) 1f else 0f
             when {

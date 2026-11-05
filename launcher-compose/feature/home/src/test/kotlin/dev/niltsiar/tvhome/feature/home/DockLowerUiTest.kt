@@ -25,6 +25,7 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
@@ -344,6 +345,87 @@ class DockLowerUiTest {
         val stray = strayOf("shelf:name") { back() }
 
         compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+        assertTrue("the group strayed $stray dp", stray <= 1f)
+    }
+
+    @Test
+    fun focus_moving_from_the_grid_to_the_dock_starts_the_group_moving_on_the_first_frame_after_the_key() {
+        showHome()
+        focusGridTile()
+        val up = bottom("shelf:name")
+        compose.mainClock.autoAdvance = false
+
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionUp) }
+        compose.mainClock.advanceTimeBy(16)
+
+        val lowered = (bottom("shelf:name") - up).value
+        assertTrue("lowered $lowered dp one frame after the key", lowered >= 4f)
+    }
+
+    @Test
+    fun closing_the_settings_menu_leaves_the_group_low() {
+        showHome()
+        press(Key.DirectionUp)
+        repeat(2) { press(Key.DirectionRight) }
+        holdOk()
+        compose.onNodeWithTag("menu").assertExists()
+
+        val stray = strayOf("dock") { back() }
+
+        compose.onNodeWithTag("menu").assertDoesNotExist()
+        assertTrue("the group strayed $stray dp", stray <= 1f)
+    }
+
+    @Test
+    fun closing_the_inputs_list_leaves_the_group_low() {
+        showHome(inputs = flowOf(FourPorts))
+        press(Key.DirectionUp)
+        press(Key.DirectionCenter)
+        compose.onNodeWithTag("menu").assertExists()
+
+        val stray = strayOf("dock") { back() }
+
+        compose.onNodeWithTag("menu").assertDoesNotExist()
+        assertTrue("the group strayed $stray dp", stray <= 1f)
+    }
+
+    @Test
+    fun closing_the_inputs_list_opened_over_a_grid_row_lowers_the_group_once_for_the_button_focus_returns_to() {
+        showHome(inputs = flowOf(FourPorts))
+        focusGridTile()
+        inputsRequests++
+        compose.waitForIdle()
+        compose.onNodeWithTag("menu").assertExists()
+        val up = bottom("shelf:name")
+        compose.mainClock.autoAdvance = false
+
+        back()
+        val bottoms =
+            List(30) {
+                compose.mainClock.advanceTimeBy(16)
+                bottom("shelf:name")
+            }
+
+        compose.onNodeWithContentDescription("Inputs").assertIsFocused()
+        assertNear(up + 120.dp, bottoms.last())
+        assertTrue(
+            "the group moved back up on the way: $bottoms",
+            bottoms.zipWithNext().all { (before, after) -> after.value >= before.value },
+        )
+    }
+
+    @Test
+    fun closing_the_library_leaves_the_group_up() {
+        showHome()
+        repeat(3) { press(Key.DirectionDown) }
+        compose.onNodeWithTag("library:pill").assertIsFocused()
+        press(Key.DirectionCenter)
+        compose.onNodeWithTag("library").assertExists()
+        compose.mainClock.advanceTimeBy(1_000)
+
+        val stray = strayOf("shelf:name") { libraryOpen = false }
+
+        compose.onNodeWithTag("library:pill").assertIsFocused()
         assertTrue("the group strayed $stray dp", stray <= 1f)
     }
 
