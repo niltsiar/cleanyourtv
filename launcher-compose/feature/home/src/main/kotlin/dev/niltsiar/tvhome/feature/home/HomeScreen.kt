@@ -473,7 +473,7 @@ private fun LibraryPill(
     glass: GlassState,
     input: HomeInput,
     onOpen: () -> Unit,
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     inRow: Boolean = false,
     up: () -> FocusRequester? = { null },
 ) {
