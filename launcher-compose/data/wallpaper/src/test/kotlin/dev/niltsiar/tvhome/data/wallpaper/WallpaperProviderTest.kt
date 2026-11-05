@@ -56,7 +56,7 @@ class WallpaperProviderTest {
             preferences = preferences,
             decode = { file ->
                 decoded += file.name
-                if (file.name in unreadable) null else pictures.getOrPut(file.name) { ImageBitmap(1, 1) }
+                if (file.name in unreadable) null else DecodedPicture(pictures.getOrPut(file.name) { ImageBitmap(1, 1) }, null)
             },
             zone = { ZoneOffset.UTC },
         )

@@ -108,7 +108,7 @@ public data class TvConfig(
     val dockRow: Boolean = true,
     val animations: Boolean = true,
     val reducedMotion: Boolean = false,
-    val focusOvershoot: Boolean = true,
+    val focusOvershoot: Boolean = false,
     val tileMenu: Boolean = true,
     /** A top-bar button turns reorder mode on and off. */
     val reorderButton: Boolean = false,

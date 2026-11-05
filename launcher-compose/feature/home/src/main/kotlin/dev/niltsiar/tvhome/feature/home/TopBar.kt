@@ -31,12 +31,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -45,9 +43,12 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.isUnspecified
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -61,6 +62,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.designsystem.ChromeShadow
 import dev.niltsiar.tvhome.core.designsystem.GlassIconButton
 import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.designsystem.GlassSurface
@@ -89,6 +91,7 @@ private const val APP_ICON_ZOOM = 0.12f
 private const val APPS_ICON_GROWTH = 0.18f
 private const val DEFAULT_NETWORK_WIDTH_DP = 180
 private const val CLOCK_SLOTS = 5
+private const val DIVIDER_ALPHA = 0.2f
 private val NetworkIconRise = 6.dp
 private val DigitRise = 10.dp
 private val ClockPillPadding = 24.dp
@@ -165,7 +168,6 @@ internal fun TopBar(
     input: HomeInput,
     modifier: Modifier = Modifier,
 ) {
-    val ink = rememberUpdatedState(TvTheme.colors.onSurface)
     val inputsAvailable by remember(state) { derivedStateOf { state().inputs.available } }
     Row(
         modifier =
@@ -183,16 +185,18 @@ internal fun TopBar(
         if (layout.showInputsPill && inputsAvailable) {
             val inputsSource = remember { MutableInteractionSource() }
             val slide = rememberFocusTimeline(inputsSource, INPUTS_ARROW_MS, layout.animated)
+            val inputs = stringResource(R.string.inputs)
             GlassIconButton(
                 glass,
-                stringResource(R.string.inputs),
+                inputs,
                 onClick = input::openInputs,
                 modifier =
                     Modifier
                         .focusRequester(input.requester(INPUTS_FOCUS))
                         .onGloballyPositioned { input.inputsBounds.value = it.boundsInRoot() },
                 interactionSource = inputsSource,
-            ) {
+                focusLabel = inputs,
+            ) { _, ink ->
                 IconPart(R.drawable.ic_inputs_frame, ink)
                 IconPart(R.drawable.ic_inputs_arrow, ink) {
                     translationX = inputsArrowSlide(slide.value) * INPUTS_ARROW_SLIDE * size.width / ICON_VIEWPORT
@@ -200,26 +204,30 @@ internal fun TopBar(
             }
         }
         TopBarApps(glass, state, onAppClick)
-        if (layout.showNetworkPill) NetworkButton(glass, state, layout, ink, input.hold, onOpenNetwork, onOpenWifiSettings)
-        if (layout.reorderButton) ReorderButton(glass, input, ink)
+        if (layout.showNetworkPill) NetworkButton(glass, state, layout, input.hold, onOpenNetwork, onOpenWifiSettings)
+        if (layout.reorderButton) ReorderButton(glass, input)
         if (layout.libraryButton) {
+            val library = stringResource(R.string.library_entry)
             GlassIconButton(
                 glass,
-                stringResource(R.string.library_entry),
+                library,
                 onClick = onOpenLibrary,
                 modifier = Modifier.focusRequester(input.requester(LIBRARY_BUTTON_FOCUS)),
-            ) { focus -> AppsIcon(ink, focus) }
+                focusLabel = library,
+            ) { focus, ink -> AppsIcon(ink, focus) }
         }
+        val settings = stringResource(R.string.settings)
         GlassIconButton(
             glass,
-            stringResource(R.string.settings),
+            settings,
             onClick = onOpenSettings,
             modifier =
                 Modifier.focusRequester(input.requester(SETTINGS_FOCUS)).holdOk(input.hold, onHold = { bounds ->
                     input.anchor.value = bounds
                     input.actions.onSettingsMenu()
                 }),
-        ) { focus ->
+            focusLabel = settings,
+        ) { focus, ink ->
             IconPart(R.drawable.ic_settings, ink) { rotationZ = SETTINGS_TURN * focus() }
         }
     }
@@ -228,7 +236,7 @@ internal fun TopBar(
 /** The nine-square icon of the App library; it grows with focus. */
 @Composable
 internal fun AppsIcon(
-    ink: State<Color>,
+    ink: ColorProducer,
     focus: () -> Float,
 ) {
     IconPart(R.drawable.ic_apps, ink) {
@@ -243,13 +251,13 @@ internal fun AppsIcon(
 private fun ReorderButton(
     glass: GlassState,
     input: HomeInput,
-    ink: State<Color>,
 ) {
     val accent = TvTheme.colors.accent
     val reordering by input.reordering
-    val tint = animateColorAsState(if (reordering) accent else ink.value, tween(NETWORK_FADE_MS), label = "reorderTint")
-    GlassIconButton(glass, stringResource(R.string.reorder), onClick = input.actions.onToggleReorder) {
-        IconPart(R.drawable.ic_reorder, tint)
+    val on = animateFloatAsState(if (reordering) 1f else 0f, tween(NETWORK_FADE_MS), label = "reorderTint")
+    val reorder = stringResource(R.string.reorder)
+    GlassIconButton(glass, reorder, onClick = input.actions.onToggleReorder, focusLabel = reorder) { _, ink ->
+        IconPart(R.drawable.ic_reorder, { lerp(ink(), accent, on.value) })
     }
 }
 
@@ -262,11 +270,18 @@ internal fun ClockPill(
 ) {
     val hasTime by remember(state) { derivedStateOf { state().clock.isNotEmpty() } }
     if (!hasTime) return
-    val typography = TvTheme.typography
-    val clockStyle =
-        remember(typography, dateBelowClock) { if (dateBelowClock) typography.clock.copy(fontSize = 28.sp) else typography.clock }
-    val dateStyle = remember(typography, dateBelowClock) { if (dateBelowClock) typography.date.copy(fontSize = 14.sp) else typography.date }
-    GlassSurface(glass = glass, modifier = Modifier.fillMaxHeight().testTag("clock").clearAndSetSemantics {}, shape = CircleShape) {
+    GlassSurface(
+        glass = glass,
+        modifier = Modifier.fillMaxHeight().testTag("clock").clearAndSetSemantics {},
+        shape = CircleShape,
+        shadow = ChromeShadow.Pill,
+    ) {
+        val typography = TvTheme.typography
+        val clockStyle =
+            remember(typography, dateBelowClock) { if (dateBelowClock) typography.clock.copy(fontSize = 28.sp) else typography.clock }
+        val dateStyle =
+            remember(typography, dateBelowClock) { if (dateBelowClock) typography.date.copy(fontSize = 14.sp) else typography.date }
+        val divider = TvTheme.colors.onSurface.copy(alpha = DIVIDER_ALPHA)
         Row(
             modifier = Modifier.fillMaxHeight().padding(horizontal = ClockPillPadding),
             verticalAlignment = Alignment.CenterVertically,
@@ -282,7 +297,7 @@ internal fun ClockPill(
                 }
             } else {
                 ClockTime(state, clockStyle)
-                Spacer(Modifier.width(1.dp).height(24.dp).drawBehind { drawRect(Color(0x33FFFFFF)) })
+                Spacer(Modifier.width(1.dp).height(24.dp).drawBehind { drawRect(divider) })
                 Column(verticalArrangement = Arrangement.Center) {
                     GreetingText(state)
                     DateText(state, dateStyle)
@@ -383,7 +398,7 @@ private fun TopBarApps(
     val apps by remember(state) { derivedStateOf { state().topBarApps } }
     for (app in apps) {
         key(app.key) {
-            GlassIconButton(glass, app.label, onClick = { onClick(app.key) }) { focus ->
+            GlassIconButton(glass, app.label, onClick = { onClick(app.key) }, focusLabel = app.label) { focus, _ ->
                 val icon = app.image ?: return@GlassIconButton
                 Image(
                     bitmap = icon,
@@ -411,13 +426,13 @@ private fun NetworkButton(
     glass: GlassState,
     state: () -> HomeUiState,
     layout: TopBarLayout,
-    ink: State<Color>,
     hold: OkHold,
     onClick: () -> Unit,
     onHold: () -> Unit,
 ) {
     val network by remember(state) { derivedStateOf { state().network } }
-    val tint = animateColorAsState(networkTint(network, layout, ink.value), tween(NETWORK_FADE_MS), label = "networkTint")
+    val plain = networkTint(network, layout, Color.Unspecified).isUnspecified
+    val status = animateColorAsState(networkTint(network, layout, TvTheme.colors.onSurface), tween(NETWORK_FADE_MS), label = "networkTint")
     val wifi = animateFloatAsState(if (network.link == NetworkLink.Wifi) 1f else 0f, tween(NETWORK_FADE_MS), label = "wifi")
     val ethernet = animateFloatAsState(if (network.link == NetworkLink.Ethernet) 1f else 0f, tween(NETWORK_FADE_MS), label = "ethernet")
     val offline = animateFloatAsState(if (network.link == NetworkLink.Offline) 1f else 0f, tween(NETWORK_FADE_MS), label = "offline")
@@ -433,14 +448,16 @@ private fun NetworkButton(
         onClick = onClick,
         modifier = (if (showLabel) Modifier.widthIn(max = maxWidth.dp) else Modifier).holdOk(hold, onHold = { onHold() }),
         interactionSource = interactionSource,
+        focusLabel = linkName(network.link),
         label =
             if (showLabel) {
-                {
+                { ink ->
                     BasicText(
                         text = name,
                         style = TvTheme.typography.pillLabel,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        color = ink.content,
                         modifier = Modifier.weight(1f, fill = false),
                     )
                     if (badge != null) {
@@ -455,7 +472,8 @@ private fun NetworkButton(
             } else {
                 null
             },
-    ) {
+    ) { _, ink ->
+        val tint = ColorProducer { if (plain) ink() else status.value }
         IconPart(R.drawable.ic_wifi_dot, tint) {
             fade(wifi.value)
             alpha *= wifiLight(light.value, part = 0)
@@ -483,10 +501,15 @@ private fun GraphicsLayerScope.fade(shown: Float) {
 
 @Composable
 @ReadOnlyComposable
-private fun networkName(network: NetworkState): String =
-    when (network.link) {
+private fun networkName(network: NetworkState): String = network.ssid?.takeIf { network.link == NetworkLink.Wifi } ?: linkName(network.link)
+
+/** The kind of link, never the network's own name, so a focused button does not show the Wi-Fi name on screen. */
+@Composable
+@ReadOnlyComposable
+private fun linkName(link: NetworkLink): String =
+    when (link) {
         NetworkLink.Ethernet -> stringResource(R.string.ethernet)
-        NetworkLink.Wifi -> network.ssid ?: stringResource(R.string.wifi)
+        NetworkLink.Wifi -> stringResource(R.string.wifi)
         NetworkLink.Offline -> stringResource(R.string.offline)
     }
 
@@ -510,7 +533,7 @@ private fun vpnBadge(
 @Composable
 internal fun IconPart(
     @DrawableRes icon: Int,
-    tint: State<Color>,
+    tint: ColorProducer,
     layer: GraphicsLayerScope.() -> Unit = {},
 ) {
     val painter = painterResource(icon)
@@ -520,7 +543,7 @@ internal fun IconPart(
             .graphicsLayer {
                 compositingStrategy = CompositingStrategy.ModulateAlpha
                 layer()
-            }.drawBehind { with(painter) { draw(size, colorFilter = ColorFilter.tint(tint.value)) } },
+            }.drawBehind { with(painter) { draw(size, colorFilter = ColorFilter.tint(tint())) } },
     )
 }
 

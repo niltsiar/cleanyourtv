@@ -11,12 +11,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -75,40 +72,38 @@ class MainActivity : ComponentActivity() {
         applyViewInputsHandler(graph.config.handleViewInputs)
         setContent {
             TvTheme(glassKind = GlassKind.valueOf(BuildConfig.GLASS_KIND), motion = graph.config.motion()) {
-                // Home and the library both draw glass from what Home shows, so they share one state.
                 val glass = rememberGlassState()
-                Box(Modifier.fillMaxSize()) {
-                    val libraryOpen = if (graph.config.appLibrary) library.uiState.collectAsStateWithLifecycle() else null
-                    HomeHost(
-                        graph = graph,
-                        onLaunchApp = ::launchApp,
-                        onOpenSettings = ::openSettings,
-                        onOpenNetwork = ::openNetwork,
-                        onOpenWifiSettings = ::openWifiSettings,
-                        onOpenAppInfo = ::openAppInfo,
-                        onOpenNativeSettings = ::openNativeSettings,
-                        onOpenPowerMenu = PowerMenu::open,
-                        onOrderNotSaved = ::orderNotSaved,
-                        onLibrarySaveFailed = ::librarySaveFailed,
-                        onOpenInput = ::openInput,
-                        onNoInputs = { toast(R.string.no_inputs) },
-                        glass = glass,
-                        libraryOpen = { libraryOpen?.value?.open == true },
-                        onOpenLibrary = { library.onOpen() },
-                        homePresses = { homePresses },
-                        inputsRequests = { inputsRequests },
-                    )
-                    if (graph.config.appLibrary) {
-                        LibraryHost(
-                            graph = graph,
-                            viewModel = library,
-                            glass = glass,
-                            onLaunchApp = ::launchLibraryApp,
-                            onOpenAppInfo = ::openAppInfo,
-                            onSaveFailed = ::librarySaveFailed,
-                        )
-                    }
-                }
+                val libraryOpen = if (graph.config.appLibrary) library.uiState.collectAsStateWithLifecycle() else null
+                HomeHost(
+                    graph = graph,
+                    onLaunchApp = ::launchApp,
+                    onOpenSettings = ::openSettings,
+                    onOpenNetwork = ::openNetwork,
+                    onOpenWifiSettings = ::openWifiSettings,
+                    onOpenAppInfo = ::openAppInfo,
+                    onOpenNativeSettings = ::openNativeSettings,
+                    onOpenPowerMenu = PowerMenu::open,
+                    onOrderNotSaved = ::orderNotSaved,
+                    onLibrarySaveFailed = ::librarySaveFailed,
+                    onOpenInput = ::openInput,
+                    onNoInputs = { toast(R.string.no_inputs) },
+                    glass = glass,
+                    libraryOpen = { libraryOpen?.value?.open == true },
+                    onOpenLibrary = { library.onOpen() },
+                    homePresses = { homePresses },
+                    inputsRequests = { inputsRequests },
+                    overlays = {
+                        if (graph.config.appLibrary) {
+                            LibraryHost(
+                                graph = graph,
+                                viewModel = library,
+                                onLaunchApp = ::launchLibraryApp,
+                                onOpenAppInfo = ::openAppInfo,
+                                onSaveFailed = ::librarySaveFailed,
+                            )
+                        }
+                    },
+                )
             }
         }
     }

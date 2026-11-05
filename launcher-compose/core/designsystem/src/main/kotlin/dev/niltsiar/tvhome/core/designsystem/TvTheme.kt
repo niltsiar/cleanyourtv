@@ -1,5 +1,6 @@
 package dev.niltsiar.tvhome.core.designsystem
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
@@ -42,6 +43,21 @@ public class TvTypography(
     public val screensaverDate: TextStyle,
 )
 
+/**
+ * The surfaces that follow the system's night mode. [overlay] fills menus, the Inputs list and the App library;
+ * [chromeTint] goes over the frost of the clock pill, the top-bar buttons, the dock and the library pill. A focused row
+ * or button fills with [pillFill] and draws its text and icons in [pillContent], its other text in [pillSecondary].
+ */
+@Immutable
+public class TvSurfaces internal constructor(
+    public val dark: Boolean,
+    public val overlay: Color,
+    public val chromeTint: Color,
+    public val pillFill: Color,
+    public val pillContent: Color,
+    public val pillSecondary: Color,
+)
+
 private val DarkColors =
     TvColors(
         background = Color(0xFF0B0D12),
@@ -49,6 +65,36 @@ private val DarkColors =
         onSurface = Color(0xFFF2F4F8),
         onSurfaceMuted = Color(0xFF9AA3B5),
         accent = Color(0xFF7CB7FF),
+    )
+
+/** Text and icons on a light surface. */
+private val OnLightColors =
+    TvColors(
+        background = DarkColors.background,
+        surface = DarkColors.surface,
+        onSurface = Color(0xFF11141B),
+        onSurfaceMuted = Color(0xFF4A5263),
+        accent = DarkColors.accent,
+    )
+
+private val DarkSurfaces =
+    TvSurfaces(
+        dark = true,
+        overlay = Color(0xFF141721).copy(alpha = 0.93f),
+        chromeTint = Color(0xFF0B0D12).copy(alpha = 0.55f),
+        pillFill = Color(0xFFF2F4F8),
+        pillContent = Color(0xFF0B0D12),
+        pillSecondary = Color(0xFF4A5263),
+    )
+
+private val LightSurfaces =
+    TvSurfaces(
+        dark = false,
+        overlay = Color(0xFFF4F6FA).copy(alpha = 0.94f),
+        chromeTint = Color(0xFFF4F6FA).copy(alpha = 0.55f),
+        pillFill = Color(0xFF11141B),
+        pillContent = Color(0xFFF4F6FA),
+        pillSecondary = Color(0xFFB8BFCC),
     )
 
 /**
@@ -203,6 +249,11 @@ private val LocalTvTypography = staticCompositionLocalOf { typographyFor(DarkCol
 private val LocalMotion = staticCompositionLocalOf { Motion() }
 
 @Suppress("CompositionLocalAllowlist")
+private val LocalTvSurfaces = staticCompositionLocalOf { DarkSurfaces }
+
+private val OnLightTypography by lazy { typographyFor(OnLightColors) }
+
+@Suppress("CompositionLocalAllowlist")
 internal val LocalGlassKind = staticCompositionLocalOf { GlassKind.Refractive }
 
 public object TvTheme {
@@ -220,13 +271,22 @@ public object TvTheme {
         @Composable
         @ReadOnlyComposable
         get() = LocalMotion.current
+
+    public val surfaces: TvSurfaces
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalTvSurfaces.current
 }
 
-/** Dark-only TV theme. [glassKind] picks how glass surfaces draw, [motion] how anything moves. */
+/**
+ * The TV theme. Text over the wallpaper is always light; the [TvTheme.surfaces] are light or dark with [darkTheme].
+ * [glassKind] picks how glass surfaces draw, [motion] how anything moves.
+ */
 @Composable
 public fun TvTheme(
     glassKind: GlassKind = GlassKind.Refractive,
     motion: Motion = Motion(),
+    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
     CompositionLocalProvider(
@@ -234,6 +294,20 @@ public fun TvTheme(
         LocalTvTypography provides typographyFor(DarkColors),
         LocalGlassKind provides glassKind,
         LocalMotion provides motion,
+        LocalTvSurfaces provides if (darkTheme) DarkSurfaces else LightSurfaces,
         content = content,
     )
+}
+
+/** [content] on a surface drawn in [TvTheme.surfaces]: on a light one ([light] and night mode off) its text turns dark. */
+@Composable
+internal fun SurfaceContent(
+    light: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    if (!light || LocalTvSurfaces.current.dark) {
+        content()
+    } else {
+        CompositionLocalProvider(LocalTvColors provides OnLightColors, LocalTvTypography provides OnLightTypography, content = content)
+    }
 }

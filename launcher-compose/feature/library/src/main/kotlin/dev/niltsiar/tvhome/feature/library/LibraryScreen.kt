@@ -58,9 +58,8 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.designsystem.GlassMenu
-import dev.niltsiar.tvhome.core.designsystem.GlassState
-import dev.niltsiar.tvhome.core.designsystem.GlassSurface
 import dev.niltsiar.tvhome.core.designsystem.OkHold
+import dev.niltsiar.tvhome.core.designsystem.OverlaySurface
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.eatsOkUp
 import dev.niltsiar.tvhome.core.model.LibraryArt
@@ -68,11 +67,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 
-private const val DIM = 0.55f
 private val PanelMaxWidth = 800.dp
 private val PanelMargin = 32.dp
 private val PanelHeight = 300.dp
-private val PanelShape = RoundedCornerShape(26.dp)
 private val PanelRise = 56.dp
 private const val PANEL_START_SCALE = 0.92f
 private val RowPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp)
@@ -83,15 +80,14 @@ private const val HIGHLIGHT_STIFFNESS = 260f
 private const val HIGHLIGHT_DAMPING = 0.58f
 
 /**
- * The App library over Home. It is composed whenever the library is [LibraryUiState.open]: a Back handler from then on,
- * and the panel once the catalogue has loaded. [glass] is Home's, so the panel glasses what is behind it.
+ * The App library over Home, for Home's overlay host, which dims what is behind it. It is composed whenever the
+ * library is [LibraryUiState.open]: a Back handler from then on, and the panel once the catalogue has loaded.
  */
 @Composable
 public fun LibraryOverlay(
     state: () -> LibraryUiState,
     layout: LibraryLayout,
     actions: LibraryActions,
-    glass: GlassState,
     art: suspend (String) -> LibraryArt?,
     modifier: Modifier = Modifier,
 ) {
@@ -99,7 +95,7 @@ public fun LibraryOverlay(
     val shown by remember { derivedStateOf { state().shown } }
     val currentActions = rememberUpdatedState(actions)
     BackHandler(enabled = open) { currentActions.value.onBack() }
-    if (shown) LibraryScreen(state, layout, actions, glass, art, modifier)
+    if (shown) LibraryScreen(state, layout, actions, art, modifier)
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -108,7 +104,6 @@ internal fun LibraryScreen(
     state: () -> LibraryUiState,
     layout: LibraryLayout,
     actions: LibraryActions,
-    glass: GlassState,
     art: suspend (String) -> LibraryArt?,
     modifier: Modifier = Modifier,
 ) {
@@ -130,16 +125,12 @@ internal fun LibraryScreen(
             modifier
                 .fillMaxSize()
                 .testTag("library")
-                .drawBehind { drawRect(Color.Black, alpha = DIM * reveal.value.coerceIn(0f, 1f)) }
                 .onPreviewKeyEvent { hold.eatsOkUp(it) }
                 .focusProperties { exit = { FocusRequester.Cancel } }
                 .focusGroup(),
         contentAlignment = Alignment.Center,
     ) {
-        GlassSurface(
-            glass = glass,
-            shape = PanelShape,
-            dense = true,
+        OverlaySurface(
             modifier =
                 Modifier
                     .padding(horizontal = PanelMargin)
@@ -167,14 +158,12 @@ internal fun LibraryScreen(
         }
         menu?.let { open ->
             GlassMenu(
-                glass = glass,
                 rows = open.rows,
                 anchor = anchor,
                 alignEnd = false,
                 label = LibraryRow::label,
                 rowTag = { "menu:${it.name}" },
                 onPick = actions.onPick,
-                dense = true,
             )
         }
     }

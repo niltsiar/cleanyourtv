@@ -16,19 +16,19 @@ class MotionTest {
     private fun SpringSpec<*>.shape() = dampingRatio to stiffness
 
     @Test
-    fun a_focused_tile_grows_to_its_scale_and_springs_past_it_by_default() {
+    fun a_focused_tile_grows_to_its_scale_in_160_ms_by_default() {
         val motion = Motion()
 
-        assertEquals(1.1f, motion.focusScale(1.1f), 0f)
-        assertEquals(0.5f to Spring.StiffnessMedium, (motion.focusSpec as SpringSpec<Float>).shape())
+        assertEquals(1.08f, motion.focusScale(1.08f), 0f)
+        assertEquals(160, (motion.focusSpec as TweenSpec<Float>).durationMillis)
     }
 
     @Test
-    fun without_focus_overshoot_the_focus_spring_is_critically_damped() {
-        val motion = Motion(focusOvershoot = false)
+    fun with_focus_overshoot_the_focus_springs_past_its_scale() {
+        val motion = Motion(focusOvershoot = true)
 
-        assertEquals(1.1f, motion.focusScale(1.1f), 0f)
-        assertEquals(Spring.DampingRatioNoBouncy to Spring.StiffnessMedium, (motion.focusSpec as SpringSpec<Float>).shape())
+        assertEquals(1.08f, motion.focusScale(1.08f), 0f)
+        assertEquals(0.5f to Spring.StiffnessMedium, (motion.focusSpec as SpringSpec<Float>).shape())
     }
 
     @Test

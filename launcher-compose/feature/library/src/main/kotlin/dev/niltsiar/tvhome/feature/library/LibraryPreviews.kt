@@ -16,9 +16,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import dev.niltsiar.tvhome.core.designsystem.GlassKind
+import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
-import dev.niltsiar.tvhome.core.designsystem.glassSource
-import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.LibraryArt
 
@@ -57,32 +56,31 @@ private fun LibraryEmptyPreview() {
     LibraryPreviewFrame(LibraryUiState(open = true, shown = true))
 }
 
-/** The library over a stand-in for Home: a bright picture for the glass to draw from. */
+/** The library in Home's overlay host, over a stand-in for Home: a bright picture. */
 @Composable
 private fun LibraryPreviewFrame(state: LibraryUiState) {
     TvTheme(glassKind = GlassKind.Refractive) {
-        val glass = rememberGlassState()
         val layout = LibraryLayout(animated = false)
         Box(Modifier.fillMaxSize()) {
             Box(
                 Modifier
                     .fillMaxSize()
-                    .glassSource(glass)
                     .background(Brush.linearGradient(listOf(Color(0xFF0B3D66), Color(0xFF7A2E8E), Color(0xFFE5642B)))),
             )
-            LibraryScreen(
-                state = { state },
-                layout = layout,
-                actions = LibraryActions(),
-                glass = glass,
-                art = { key ->
-                    previewArt(
-                        state.cards
-                            .first { it.app.key == key }
-                            .app.accent,
-                    )
-                },
-            )
+            OverlayHost(open = { true }) {
+                LibraryScreen(
+                    state = { state },
+                    layout = layout,
+                    actions = LibraryActions(),
+                    art = { key ->
+                        previewArt(
+                            state.cards
+                                .first { it.app.key == key }
+                                .app.accent,
+                        )
+                    },
+                )
+            }
         }
     }
 }

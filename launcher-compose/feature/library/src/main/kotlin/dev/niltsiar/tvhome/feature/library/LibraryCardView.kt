@@ -122,7 +122,6 @@ internal fun LibraryCardView(
             onClick = { actions.onClick(key) },
             onFocused = { actions.onFocus(key) },
             shape = CardShape,
-            accent = artwork?.accent ?: Color.Unspecified,
             glow = false,
             focusedScale = FOCUSED_SCALE,
             modifier =

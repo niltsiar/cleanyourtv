@@ -46,6 +46,8 @@ private const val SKY_GLOW_RADIUS = 0.55f
 private const val MAX_ALPHA = 255f
 private val CaptionMaxWidth = 520.dp
 private val Scrim = Brush.verticalGradient(listOf(Color(0x33000000), Color(0xB305060A)))
+private val TopScrim = Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.55f), 0.45f to Color.Transparent)
+private val LeftScrim = Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.40f), 0.55f to Color.Transparent)
 
 /**
  * What is behind Home, drawn in the draw phase only: the picture, a scrim that keeps the white text readable on any
@@ -128,8 +130,14 @@ private fun DrawScope.drawCover(
     )
 }
 
+/** Darkens the top and the left of the picture, where the top bar and the titles sit. */
+internal fun DrawScope.drawHomeScrim() {
+    drawRect(TopScrim)
+    drawRect(LeftScrim)
+}
+
 /** Night blues to a warm horizon, with a glow that travels with the sun, over everything drawn before it. */
-private fun DrawScope.drawSky(
+internal fun DrawScope.drawSky(
     sky: SkyPalette,
     alpha: Float,
 ) {

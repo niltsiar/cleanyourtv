@@ -22,7 +22,7 @@ import dev.niltsiar.tvhome.feature.home.topBarLayout
 import dev.niltsiar.tvhome.feature.home.wallpaperLayout
 import java.util.Locale
 
-/** Home state comes from the Molecule-hosted presenter. */
+/** Home state comes from the Molecule-hosted presenter. [overlays] go in Home's overlay host. */
 @Composable
 internal fun HomeHost(
     graph: AppGraph,
@@ -42,6 +42,7 @@ internal fun HomeHost(
     onOpenLibrary: () -> Unit,
     homePresses: () -> Int,
     inputsRequests: () -> Int,
+    overlays: @Composable () -> Unit,
     locale: Locale = LocalConfiguration.current.locales[0],
     datePattern: String = stringResource(R.string.date_format),
     viewModel: MoleculeHomeViewModel = viewModel { MoleculeHomeViewModel(graph.homeSources, graph.config, locale, datePattern) },
@@ -88,5 +89,6 @@ internal fun HomeHost(
         libraryOpen = libraryOpen,
         onOpenLibrary = onOpenLibrary,
         inputsRequests = inputsRequests,
+        overlays = overlays,
     )
 }

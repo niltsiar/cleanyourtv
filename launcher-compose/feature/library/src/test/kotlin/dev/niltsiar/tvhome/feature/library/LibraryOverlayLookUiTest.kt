@@ -19,9 +19,8 @@ import androidx.compose.ui.test.onRoot
 import app.cash.molecule.RecompositionMode
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.GlassKind
+import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
-import dev.niltsiar.tvhome.core.designsystem.glassSource
-import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -32,7 +31,7 @@ import org.robolectric.annotation.GraphicsMode
 import java.util.Locale
 import kotlin.coroutines.EmptyCoroutineContext
 
-/** The library over a Home that is as bright as it gets, read from the rendered pixels. */
+/** The library in Home's overlay host over a Home that is as bright as it gets, read from the rendered pixels. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
@@ -49,7 +48,6 @@ class LibraryOverlayLookUiTest {
         lateinit var viewModel: MoleculeLibraryViewModel
         compose.setContent {
             TvTheme(glassKind = kind) {
-                val glass = rememberGlassState()
                 val scope = rememberCoroutineScope()
                 viewModel =
                     remember {
@@ -64,14 +62,15 @@ class LibraryOverlayLookUiTest {
                     }
                 val state = viewModel.uiState.collectAsState()
                 Box(Modifier.fillMaxSize()) {
-                    Box(Modifier.fillMaxSize().glassSource(glass).background(home))
-                    LibraryOverlay(
-                        state = { state.value },
-                        layout = config.libraryLayout(),
-                        actions = viewModel.actions,
-                        glass = glass,
-                        art = { null },
-                    )
+                    Box(Modifier.fillMaxSize().background(home))
+                    OverlayHost(open = { state.value.open }) {
+                        LibraryOverlay(
+                            state = { state.value },
+                            layout = config.libraryLayout(),
+                            actions = viewModel.actions,
+                            art = { null },
+                        )
+                    }
                 }
             }
         }

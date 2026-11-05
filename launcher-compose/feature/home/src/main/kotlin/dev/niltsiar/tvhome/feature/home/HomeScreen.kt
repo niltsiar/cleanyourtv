@@ -62,6 +62,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.ImageBitmap
@@ -90,11 +91,13 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import dev.niltsiar.tvhome.core.designsystem.ChromeShadow
 import dev.niltsiar.tvhome.core.designsystem.FocusSurface
 import dev.niltsiar.tvhome.core.designsystem.GlassIconButton
 import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.designsystem.GlassSurface
+import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.glassContainer
 import dev.niltsiar.tvhome.core.designsystem.glassSource
@@ -132,6 +135,7 @@ private val GridBottom = 48.dp
 private val HintBottom = 28.dp
 private val HintGap = 16.dp
 private val LibraryRowHeight = 84.dp
+private val ReorderRing = Color(0xFFFF6B4A)
 private const val TILE_ASPECT = 16f / 9f
 
 /** The grid items before the first grid tile: the shelf spacer and the dock. */
@@ -157,6 +161,8 @@ private const val GRID_ITEMS_BEFORE = 2
  * [libraryOpen] goes false again, focus returns to the one that opened it (the pill for any other way in).
  * OK on the Inputs button hangs the TV's input list under it; Back closes the list and returns focus to the button.
  * Each rise of [inputsRequests] (the system asked for the input list) opens the list.
+ * The menus, the input list and [overlays] (the host's, such as the App library, open while [libraryOpen]) sit in one
+ * [OverlayHost] over everything else on Home.
  */
 @Composable
 public fun HomeScreen(
@@ -179,6 +185,7 @@ public fun HomeScreen(
     libraryOpen: () -> Boolean = { false },
     onOpenLibrary: () -> Unit = {},
     inputsRequests: () -> Int = { 0 },
+    overlays: @Composable () -> Unit = {},
 ) {
     val dockFocus = remember { FocusRequester() }
     val currentState = rememberUpdatedState(state)
@@ -224,6 +231,7 @@ public fun HomeScreen(
                 .onPreviewKeyEvent { input.onPreview(it, currentState.value()) },
     ) {
         WallpaperBackdrop(glass, wallpaper = { state().wallpaper }, layout = wallpaperLayout, cinematic = backdrop)
+        ChromeFrostEffect(glass, wallpaper = { state().wallpaper }, skyIntensity = wallpaperLayout.skyIntensity)
         HomeContent(
             glass,
             dockFocus,
@@ -268,7 +276,6 @@ public fun HomeScreen(
         )
         hint?.let {
             ReorderHintPill(
-                glass,
                 it,
                 Modifier
                     .align(Alignment.BottomCenter)
@@ -276,17 +283,19 @@ public fun HomeScreen(
                     .onSizeChanged { size -> hintHeight = size.height },
             )
         }
-        menu?.let { open ->
-            key(open) { MenuOverlay(glass, open.rows, input.anchor, alignEnd = open.tileKey == null, onPick = input.actions.onMenuPick) }
-        }
-        if (inputsOpen) {
-            InputsMenu(
-                glass,
-                rows = { state().inputs.rows },
-                anchor = input.inputsBounds,
-                animated = topBar.animated,
-                onPick = input.actions.onInputPick,
-            )
+        OverlayHost(open = { currentState.value().let { it.menu != null || it.inputsOpen } || libraryOpen() }) {
+            menu?.let { open ->
+                key(open) { MenuOverlay(open.rows, input.anchor, alignEnd = open.tileKey == null, onPick = input.actions.onMenuPick) }
+            }
+            if (inputsOpen) {
+                InputsMenu(
+                    rows = { state().inputs.rows },
+                    anchor = input.inputsBounds,
+                    animated = topBar.animated,
+                    onPick = input.actions.onInputPick,
+                )
+            }
+            overlays()
         }
     }
 }
@@ -499,7 +508,6 @@ private fun LibraryPill(
     inRow: Boolean = false,
     up: () -> FocusRequester? = { null },
 ) {
-    val ink = rememberUpdatedState(TvTheme.colors.onSurface)
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         GlassIconButton(
             glass = glass,
@@ -515,8 +523,10 @@ private fun LibraryPill(
                         up()?.let { this.up = it }
                     }.focusRequester(input.requester(LIBRARY_FOCUS))
                     .onFocusChanged { input.pillFocused = it.isFocused },
-            label = { BasicText(stringResource(R.string.library_entry), style = TvTheme.typography.pillLabel, maxLines = 1) },
-        ) { focus -> AppsIcon(ink, focus) }
+            label = { ink ->
+                BasicText(stringResource(R.string.library_entry), style = TvTheme.typography.pillLabel, maxLines = 1, color = ink.content)
+            },
+        ) { focus, ink -> AppsIcon(ink, focus) }
     }
 }
 
@@ -614,7 +624,7 @@ private fun Dock(
     onOpenLibrary: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    GlassSurface(glass = glass, modifier = modifier.fillMaxWidth().testTag("dock")) {
+    GlassSurface(glass = glass, modifier = modifier.fillMaxWidth().testTag("dock"), shadow = ChromeShadow.Dock) {
         if (layout.singleRow) {
             // The grid's pivot scroll is vertical; this row scrolls sideways the usual way.
             CompositionLocalProvider(LocalBringIntoViewSpec provides RevealBringIntoViewSpec) {
@@ -775,11 +785,13 @@ private fun AppTile(
     val key = app.key
     val reordering by input.reordering
     val requester = remember(input, key) { input.requester(key) }
+    val ring = remember(input, key) { ColorProducer { if (input.carried.value == key) ReorderRing else Color.White } }
     FocusSurface(
         onClick = { onClick(key) },
         onFocused = { onFocus(key) },
         shape = TileShape,
         accent = accent,
+        ring = ring,
         modifier =
             modifier
                 .then(if (reordering) Modifier.reorderLook(key, input) else Modifier)

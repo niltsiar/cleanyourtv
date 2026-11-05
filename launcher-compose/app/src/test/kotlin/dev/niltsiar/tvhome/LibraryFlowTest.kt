@@ -43,7 +43,7 @@ import org.robolectric.annotation.Config
 import java.util.Locale
 import kotlin.coroutines.EmptyCoroutineContext
 
-/** Home and the library as the activity stacks them: the same glass state, one screen over the other. */
+/** Home and the library as the activity stacks them: the library in Home's overlay host. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
 class LibraryFlowTest {
@@ -98,13 +98,14 @@ class LibraryFlowTest {
                     glass = glass,
                     libraryOpen = { libraryState.open },
                     onOpenLibrary = library::onOpen,
-                )
-                LibraryOverlay(
-                    state = { libraryState },
-                    layout = config.libraryLayout(),
-                    actions = library.actions,
-                    glass = glass,
-                    art = { null },
+                    overlays = {
+                        LibraryOverlay(
+                            state = { libraryState },
+                            layout = config.libraryLayout(),
+                            actions = library.actions,
+                            art = { null },
+                        )
+                    },
                 )
             }
         }

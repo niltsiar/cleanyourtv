@@ -42,7 +42,7 @@ class ScreensaverWallpaperTest {
             single = File(themeDir.root, "wallpaper.jpg"),
             folder = collection,
             preferences = preferences,
-            decode = { file -> pictures.getOrPut(file.name) { ImageBitmap(1, 1) } },
+            decode = { file -> DecodedPicture(pictures.getOrPut(file.name) { ImageBitmap(1, 1) }, null) },
             zone = { ZoneOffset.UTC },
         )
 

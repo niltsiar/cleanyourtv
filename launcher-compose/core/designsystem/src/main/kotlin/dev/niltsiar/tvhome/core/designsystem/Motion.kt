@@ -12,25 +12,21 @@ import androidx.compose.ui.unit.IntOffset
 /**
  * The theme's say over motion: `animations`, `reduced_motion` and `focus_overshoot` of the config, read from [TvTheme.motion].
  * With [animations] off nothing moves: values jump. With [reducedMotion] every animation is a tween of at most
- * [REDUCED_MS], with no overshoot, and endless loops stand still ([animated] is false). [focusOvershoot] off makes the
- * focus spring settle without passing its target.
+ * [REDUCED_MS], with no overshoot, and endless loops stand still ([animated] is false). Focus moves in [FOCUS_MS];
+ * [focusOvershoot] makes it a spring that passes its target before it settles.
  */
 @Immutable
 public data class Motion(
     public val animations: Boolean = true,
     public val reducedMotion: Boolean = false,
-    public val focusOvershoot: Boolean = true,
+    public val focusOvershoot: Boolean = false,
 ) {
     /** Springs and endless loops run. */
     public val animated: Boolean get() = animations && !reducedMotion
 
     /** How a focused tile's scale and ring follow focus. */
     public val focusSpec: FiniteAnimationSpec<Float>
-        get() =
-            springSpec(
-                dampingRatio = if (focusOvershoot) OVERSHOOT_DAMPING else Spring.DampingRatioNoBouncy,
-                stiffness = Spring.StiffnessMedium,
-            )
+        get() = if (focusOvershoot) springSpec(OVERSHOOT_DAMPING, Spring.StiffnessMedium) else tweenSpec(FOCUS_MS)
 
     /** How a lazy list moves an item to its new place; null leaves it jumping. */
     public val placementSpec: FiniteAnimationSpec<IntOffset>?
@@ -66,6 +62,9 @@ public data class Motion(
     public companion object {
         /** The longest any reduced-motion animation runs, in milliseconds. */
         public const val REDUCED_MS: Int = 90
+
+        /** How long a focused tile takes to grow, in milliseconds. */
+        public const val FOCUS_MS: Int = 160
 
         private const val OVERSHOOT_DAMPING = 0.5f
     }

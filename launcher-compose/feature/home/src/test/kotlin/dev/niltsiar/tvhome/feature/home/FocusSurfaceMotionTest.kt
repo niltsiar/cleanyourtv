@@ -50,19 +50,20 @@ class FocusSurfaceMotionTest {
     }
 
     @Test
-    fun a_focused_tile_grows_to_110_percent_and_overshoots_by_default() {
+    fun a_focused_tile_grows_to_108_percent_without_passing_it_by_default() {
         val widths = widthsAfterFocus(Motion())
 
-        assertEquals(110f, widths.last(), 0.1f)
-        assertTrue("peaked at ${widths.max()}", widths.max() > 111f)
+        assertTrue("half way ${widths[4]}", widths[4] in 102f..107f)
+        assertEquals(108f, widths.last(), 0.1f)
+        assertTrue("peaked at ${widths.max()}", widths.max() <= 108.1f)
     }
 
     @Test
-    fun a_focused_tile_grows_to_110_percent_without_passing_it_when_focus_overshoot_is_off() {
-        val widths = widthsAfterFocus(Motion(focusOvershoot = false))
+    fun a_focused_tile_grows_to_108_percent_and_overshoots_when_focus_overshoot_is_on() {
+        val widths = widthsAfterFocus(Motion(focusOvershoot = true))
 
-        assertEquals(110f, widths.last(), 0.1f)
-        assertTrue("peaked at ${widths.max()}", widths.max() <= 110.1f)
+        assertEquals(108f, widths.last(), 0.1f)
+        assertTrue("peaked at ${widths.max()}", widths.max() > 109f)
     }
 
     @Test
@@ -73,18 +74,18 @@ class FocusSurfaceMotionTest {
     }
 
     @Test
-    fun a_focused_tile_reaches_110_percent_in_100_ms_without_overshoot_with_reduced_motion() {
+    fun a_focused_tile_reaches_108_percent_in_100_ms_without_overshoot_with_reduced_motion() {
         val widths = widthsAfterFocus(Motion(reducedMotion = true))
 
-        assertEquals(110f, widths[9], 0.1f)
-        assertTrue("peaked at ${widths.max()}", widths.max() <= 110.1f)
+        assertEquals(108f, widths[9], 0.1f)
+        assertTrue("peaked at ${widths.max()}", widths.max() <= 108.1f)
     }
 
     @Test
     fun a_focused_tile_is_already_growing_in_the_second_frame_after_focus() {
         compose.mainClock.autoAdvance = false
         compose.setContent {
-            TvTheme(glassKind = GlassKind.Flat, motion = Motion(focusOvershoot = false)) {
+            TvTheme(glassKind = GlassKind.Flat, motion = Motion()) {
                 FocusSurface(onClick = {}, modifier = Modifier.size(100.dp).focusRequester(requester).testTag("tile")) {}
             }
         }

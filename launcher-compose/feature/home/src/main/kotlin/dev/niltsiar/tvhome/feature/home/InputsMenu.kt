@@ -7,7 +7,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -45,9 +44,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.niltsiar.tvhome.core.designsystem.FocusSurface
+import dev.niltsiar.tvhome.core.designsystem.FocusPill
 import dev.niltsiar.tvhome.core.designsystem.GlassDropdown
-import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.InputConnection
 import dev.niltsiar.tvhome.core.model.InputIcon
@@ -61,7 +59,6 @@ private val RowHeight = 44.dp
 private val RowShape = RoundedCornerShape(14.dp)
 private val DotSize = 8.dp
 private val Connected = Color(0xFF34C759)
-private const val ROW_FOCUS_SCALE = 1.04f
 private const val PULSE_MS = 1800
 private const val HALO_ALPHA = 0.4f
 private const val HALO_GROWTH = 1.8f
@@ -74,7 +71,6 @@ private const val HALO_GROWTH = 1.8f
  */
 @Composable
 internal fun InputsMenu(
-    glass: GlassState,
     rows: () -> List<InputRow>,
     anchor: State<Rect>,
     animated: Boolean,
@@ -98,7 +94,6 @@ internal fun InputsMenu(
     val firstRow = shown.indexOfFirst { it !is InputRow.Separator }
     val firstFolded = remember(shown) { shown.indexOfFirst { it is InputRow.Port && it.folded } }
     GlassDropdown(
-        glass = glass,
         anchor = anchor,
         alignEnd = false,
         firstFocus = first,
@@ -203,29 +198,23 @@ private fun InputItem(
     modifier: Modifier = Modifier,
 ) {
     val typography = TvTheme.typography
-    val ink = TvTheme.colors.onSurface
-    val status = remember(typography) { typography.pillLabel.copy(fontSize = 11.sp, color = typography.date.color) }
-    FocusSurface(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth().height(RowHeight).testTag(tag),
-        shape = RowShape,
-        glow = false,
-        focusedScale = ROW_FOCUS_SCALE,
-    ) {
+    val status = remember(typography) { typography.pillLabel.copy(fontSize = 11.sp) }
+    val painter = painterResource(icon)
+    FocusPill(onClick = onClick, modifier = modifier.fillMaxWidth().height(RowHeight).testTag(tag), shape = RowShape) { ink ->
         Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Image(painterResource(icon), contentDescription = null, colorFilter = ColorFilter.tint(ink), modifier = Modifier.size(20.dp))
+            Spacer(Modifier.size(20.dp).drawBehind { with(painter) { draw(size, colorFilter = ColorFilter.tint(ink.content())) } })
             Spacer(Modifier.width(10.dp))
-            BasicText(label, style = typography.pillLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            BasicText(label, style = typography.pillLabel, maxLines = 1, overflow = TextOverflow.Ellipsis, color = ink.content)
             Spacer(Modifier.weight(1f).widthIn(min = 12.dp))
             when (connection) {
                 InputConnection.Connected -> {
                     PulsingDot(pulse)
                     Spacer(Modifier.width(8.dp))
-                    BasicText(stringResource(R.string.input_connected), style = status, maxLines = 1)
+                    BasicText(stringResource(R.string.input_connected), style = status, maxLines = 1, color = ink.secondary)
                 }
 
                 InputConnection.Disconnected -> {
-                    BasicText(stringResource(R.string.input_not_connected), style = status, maxLines = 1)
+                    BasicText(stringResource(R.string.input_not_connected), style = status, maxLines = 1, color = ink.secondary)
                 }
 
                 InputConnection.Unknown -> {

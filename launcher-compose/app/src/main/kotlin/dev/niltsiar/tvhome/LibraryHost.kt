@@ -8,19 +8,17 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.feature.library.LibraryEffect
 import dev.niltsiar.tvhome.feature.library.LibraryOverlay
 import dev.niltsiar.tvhome.feature.library.MoleculeLibraryViewModel
 import dev.niltsiar.tvhome.feature.library.libraryLayout
 
-/** The App library over Home: its state comes from the Molecule-hosted presenter. */
+/** The App library, for Home's overlay host: its state comes from the Molecule-hosted presenter. */
 @Composable
 internal fun LibraryHost(
     graph: AppGraph,
     viewModel: MoleculeLibraryViewModel,
-    glass: GlassState,
     onLaunchApp: (AppEntry) -> Unit,
     onOpenAppInfo: (String) -> Unit,
     onSaveFailed: () -> Unit,
@@ -42,7 +40,6 @@ internal fun LibraryHost(
         state = { state.value },
         layout = remember(graph) { graph.config.libraryLayout() },
         actions = viewModel.actions,
-        glass = glass,
         art = graph.librarySources.art,
     )
 }

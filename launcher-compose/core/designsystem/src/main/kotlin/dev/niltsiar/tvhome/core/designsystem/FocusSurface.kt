@@ -17,6 +17,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
@@ -28,21 +29,23 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 
-private const val FOCUSED_SCALE = 1.1f
-private val RingWidth = 2.dp
+private const val FOCUSED_SCALE = 1.08f
+private val RingWidth = 3.dp
 private val RingGap = 3.dp
-private val GlowElevation = 12.dp
+private val HairlineWidth = 1.dp
+private val Hairline = Color(0x73000000)
+private val GlowElevation = 16.dp
 private val Gloss = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f), Color.Transparent))
 
 /**
- * A D-pad target: scales up and gets a lit top, an accent ring and an accent glow while focused; how it moves is the
- * theme's [Motion] (a small overshoot by default). Only the content is clipped to [shape]; the ring floats outside it
- * and its corners are concentric to the shape's, so a parent must leave the grown surface plus 5dp times [focusedScale] free around it or it clips the ring.
- * [onFocused] fires on gaining focus. [interactionSource] receives the press and focus events, for content
- * that reacts to them. [accent] colours the ring and the glow; unspecified takes the theme's. [glow] turns the accent
- * glow off: the elevation shadow also shows through a translucent surface, as a dark patch, so glass has none. The
- * animation starts in the focus callback and is read in the layer and draw lambdas, so a focus change neither recomposes
- * nor relays out. [focusedScale] is the size it grows to; a surface that fills its parent grows less than a tile.
+ * A D-pad target, for tiles and cards: scales up and gets a lit top, a white ring with a dark hairline outside it and a
+ * glow while focused; how it moves is the theme's [Motion]. Only the content is clipped to [shape]; the ring floats
+ * outside it and its corners are concentric to the shape's, so a parent must leave the grown surface plus 7dp times
+ * [focusedScale] free around it or it clips the ring. [onFocused] fires on gaining focus. [interactionSource] receives
+ * the press and focus events, for content that reacts to them. [accent] colours the glow; unspecified takes the
+ * theme's. [ring] colours the ring instead of white. [glow] turns the glow off: the elevation shadow also shows through
+ * a translucent surface, as a dark patch. The animation starts in the focus callback and is read in the layer and draw
+ * lambdas, so a focus change neither recomposes nor relays out. [focusedScale] is the size it grows to.
  */
 @Composable
 public fun FocusSurface(
@@ -54,13 +57,14 @@ public fun FocusSurface(
     glow: Boolean = true,
     accent: Color = Color.Unspecified,
     focusedScale: Float = FOCUSED_SCALE,
+    ring: ColorProducer? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val motion = TvTheme.motion
     val focus = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val grownScale = motion.focusScale(focusedScale)
-    val ringColor = accent.takeOrElse { TvTheme.colors.accent }
+    val glowColor = accent.takeOrElse { TvTheme.colors.accent }
     Box(
         modifier =
             modifier
@@ -70,16 +74,24 @@ public fun FocusSurface(
                     scaleY = scale
                     shadowElevation = if (glow) GlowElevation.toPx() * focus.value.coerceIn(0f, 1f) else 0f
                     this.shape = shape
-                    ambientShadowColor = ringColor
-                    spotShadowColor = ringColor
+                    ambientShadowColor = glowColor
+                    spotShadowColor = glowColor
                 }.drawWithContent {
                     drawContent()
                     val progress = focus.value.coerceIn(0f, 1f)
                     if (progress > 0f) {
-                        drawOutline(shape.createOutline(size, layoutDirection, this), Gloss, alpha = progress)
-                        val ring = RingWidth.toPx()
-                        val ringOutline = shape.createOutline(size, layoutDirection, this).grownBy(RingGap.toPx() + ring / 2f)
-                        drawOutline(ringOutline, ringColor, alpha = progress, style = Stroke(ring))
+                        val outline = shape.createOutline(size, layoutDirection, this)
+                        drawOutline(outline, Gloss, alpha = progress)
+                        val width = RingWidth.toPx()
+                        val gap = RingGap.toPx()
+                        drawOutline(
+                            outline.grownBy(gap + width / 2f),
+                            ring?.invoke() ?: Color.White,
+                            alpha = progress,
+                            style = Stroke(width),
+                        )
+                        val hairline = HairlineWidth.toPx()
+                        drawOutline(outline.grownBy(gap + width + hairline / 2f), Hairline, alpha = progress, style = Stroke(hairline))
                     }
                 }.clip(shape)
                 .onFocusChanged {

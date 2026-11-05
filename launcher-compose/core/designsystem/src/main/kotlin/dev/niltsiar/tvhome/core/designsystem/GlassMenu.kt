@@ -37,18 +37,16 @@ import androidx.compose.ui.unit.dp
 private val MenuGap = 10.dp
 private val MenuRise = 14.dp
 private val RowShape = RoundedCornerShape(14.dp)
-private const val ROW_FOCUS_SCALE = 1.04f
 private const val MENU_START_SCALE = 0.94f
 
 /**
- * A glass panel of [rows] hanging from [anchor] (in the root's coordinates): below it, or above when it would not fit,
+ * An overlay panel of [rows] hanging from [anchor] (in the root's coordinates): below it, or above when it would not fit,
  * from its left edge, or from its right edge when [alignEnd]. Each row shows the string [label] gives and carries the
  * test tag [rowTag]; the panel's own tag is `menu`. It rises and fades in with a spring and takes focus on its first
- * row, and never goes above [topLimit]; focus cannot leave it. A [dense] menu is for one that opens over a screen with content of its own.
+ * row, and never goes above [topLimit]; focus cannot leave it.
  */
 @Composable
 public fun <T> GlassMenu(
-    glass: GlassState,
     rows: List<T>,
     anchor: State<Rect>,
     alignEnd: Boolean,
@@ -57,10 +55,9 @@ public fun <T> GlassMenu(
     onPick: (T) -> Unit,
     modifier: Modifier = Modifier,
     topLimit: Dp = 0.dp,
-    dense: Boolean = false,
 ) {
     val first = remember { FocusRequester() }
-    GlassDropdown(glass, anchor, alignEnd, first, modifier, topLimit = topLimit, dense = dense) {
+    GlassDropdown(anchor, alignEnd, first, modifier, topLimit = topLimit) {
         rows.forEachIndexed { index, row ->
             MenuItem(label(row), rowTag(row), { onPick(row) }, if (index == 0) Modifier.focusRequester(first) else Modifier)
         }
@@ -68,7 +65,7 @@ public fun <T> GlassMenu(
 }
 
 /**
- * The glass panel behind [GlassMenu] and the Inputs list: [content] in a column hanging from [anchor] as [GlassMenu]
+ * The overlay panel behind [GlassMenu] and the Inputs list: [content] in a column hanging from [anchor] as [GlassMenu]
  * does. The panel is as wide as its widest row, from [minWidth] to [maxWidth], and stays [edgeMargin] inside the sides of
  * the screen and never above [topLimit] (a top bar to keep clear). It rises and fades in with a spring,
  * then focus goes to [firstFocus], which the caller puts on one of the rows; focus cannot leave the panel.
@@ -76,7 +73,6 @@ public fun <T> GlassMenu(
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 public fun GlassDropdown(
-    glass: GlassState,
     anchor: State<Rect>,
     alignEnd: Boolean,
     firstFocus: FocusRequester,
@@ -85,7 +81,6 @@ public fun GlassDropdown(
     maxWidth: Dp = Dp.Unspecified,
     edgeMargin: Dp = 0.dp,
     topLimit: Dp = 0.dp,
-    dense: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val motion = TvTheme.motion
@@ -97,10 +92,7 @@ public fun GlassDropdown(
     LaunchedEffect(Unit) { reveal.animateTo(1f, motion.springSpec(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)) }
     Layout(
         content = {
-            GlassSurface(
-                glass = glass,
-                shape = RoundedCornerShape(20.dp),
-                dense = dense,
+            OverlaySurface(
                 modifier =
                     Modifier.testTag("menu").graphicsLayer {
                         compositingStrategy = CompositingStrategy.ModulateAlpha
@@ -168,17 +160,12 @@ private fun MenuItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    FocusSurface(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth().testTag(tag),
-        shape = RowShape,
-        glow = false,
-        focusedScale = ROW_FOCUS_SCALE,
-    ) {
+    FocusPill(onClick = onClick, modifier = modifier.fillMaxWidth().testTag(tag), shape = RowShape) { ink ->
         BasicText(
             text = stringResource(label),
             style = TvTheme.typography.pillLabel,
             maxLines = 1,
+            color = ink.content,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
         )
     }

@@ -447,7 +447,7 @@ class TvConfigParserTest {
             "dock_row" to ("false" to defaults.copy(dockRow = false)),
             "animations" to ("false" to defaults.copy(animations = false)),
             "reduced_motion" to ("true" to defaults.copy(reducedMotion = true)),
-            "focus_overshoot" to ("false" to defaults.copy(focusOvershoot = false)),
+            "focus_overshoot" to ("true" to defaults.copy(focusOvershoot = true)),
             "tile_menu" to ("false" to defaults.copy(tileMenu = false)),
             "reorder_button" to ("true" to defaults.copy(reorderButton = true)),
             "app_library" to ("true" to defaults.copy(appLibrary = true)),

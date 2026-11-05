@@ -3,7 +3,6 @@ package dev.niltsiar.tvhome.data.wallpaper
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
-import androidx.compose.ui.graphics.ImageBitmap
 import dev.niltsiar.tvhome.core.config.ThemeDirectory
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.SkyPalette
@@ -43,16 +42,20 @@ public class WallpaperProvider internal constructor(
     private val single: File?,
     private val folder: File?,
     private val preferences: SharedPreferences,
-    private val decode: (File) -> ImageBitmap?,
+    private val decode: (File) -> DecodedPicture?,
     private val zone: () -> ZoneId = ZoneId::systemDefault,
     private val random: Random = Random.Default,
 ) {
-    /** [dim] is the percent painted into each picture: wallpaper_dim for Home, clock_wallpaper_dim for the screensaver. */
+    /**
+     * [dim] is the percent painted into each picture: wallpaper_dim for Home, clock_wallpaper_dim for the screensaver.
+     * [thumbnails] gives each [Wallpaper] its [Wallpaper.thumbnail].
+     */
     public constructor(
         context: Context,
         config: TvConfig,
         theme: ThemeDirectory,
         dim: Int = config.wallpaperDim,
+        thumbnails: Boolean = true,
     ) : this(
         config = config,
         single = theme.wallpaperFile,
@@ -60,7 +63,7 @@ public class WallpaperProvider internal constructor(
         preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE),
         decode =
             with(context.resources.displayMetrics) {
-                WallpaperDecoder(widthPixels, heightPixels, config.wallpaperTrueColor, dim)::decode
+                WallpaperDecoder(widthPixels, heightPixels, config.wallpaperTrueColor, dim, thumbnails)::decode
             },
     )
 
@@ -74,7 +77,7 @@ public class WallpaperProvider internal constructor(
     private val releases = MutableSharedFlow<Wallpaper>(extraBufferCapacity = 1)
 
     @Volatile
-    private var picture: ImageBitmap? = null
+    private var picture: DecodedPicture? = null
 
     @Volatile
     private var displayed = ""
@@ -118,10 +121,12 @@ public class WallpaperProvider internal constructor(
         val zone = zone()
         selectPicture(now, zone)
         val minute = Sky.minuteOfDay(now.hour, now.minute)
+        val shown = picture
         return Wallpaper(
-            picture = picture,
-            caption = if (picture == null) null else pictures.captions[displayed],
+            picture = shown?.picture,
+            caption = if (shown == null) null else pictures.captions[displayed],
             sky = if (config.skyIntensity > 0) sky(now, minute, zone) else null,
+            thumbnail = shown?.thumbnail,
         )
     }
 

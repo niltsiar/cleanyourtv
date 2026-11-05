@@ -22,7 +22,7 @@ public class ScreensaverWallpaper internal constructor(
         context: Context,
         config: TvConfig,
         theme: ThemeDirectory,
-    ) : this(WallpaperProvider(context, config, theme, dim = config.clockWallpaperDim))
+    ) : this(WallpaperProvider(context, config, theme, dim = config.clockWallpaperDim, thumbnails = false))
 
     /**
      * The picture for now, decoded for the screen, or null when the theme has none or it cannot be read. It moves to the

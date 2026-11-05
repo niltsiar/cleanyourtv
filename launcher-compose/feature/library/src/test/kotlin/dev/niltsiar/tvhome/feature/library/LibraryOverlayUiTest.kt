@@ -16,7 +16,6 @@ import app.cash.molecule.RecompositionMode
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
-import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -48,7 +47,6 @@ class LibraryOverlayUiTest {
     private fun showLibrary(config: TvConfig = TvConfig(appLibrary = true)) {
         compose.setContent {
             TvTheme(glassKind = GlassKind.Flat) {
-                val glass = rememberGlassState()
                 val scope = rememberCoroutineScope()
                 viewModel =
                     remember {
@@ -67,7 +65,6 @@ class LibraryOverlayUiTest {
                     state = { state.value },
                     layout = config.libraryLayout(),
                     actions = viewModel.actions,
-                    glass = glass,
                     art = { null },
                 )
             }

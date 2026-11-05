@@ -19,8 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.designsystem.GlassMenu
-import dev.niltsiar.tvhome.core.designsystem.GlassState
-import dev.niltsiar.tvhome.core.designsystem.GlassSurface
+import dev.niltsiar.tvhome.core.designsystem.OverlaySurface
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 
 private val MenuRise = 14.dp
@@ -44,7 +43,6 @@ private val MenuTopLimit = TopBarTop + TopBarHeight + 8.dp
 /** The tile menu or the Settings menu: [rows] hanging from [anchor], each tagged `menu:<row name>`; never over the top bar. */
 @Composable
 internal fun MenuOverlay(
-    glass: GlassState,
     rows: List<MenuRow>,
     anchor: State<Rect>,
     alignEnd: Boolean,
@@ -52,7 +50,6 @@ internal fun MenuOverlay(
     modifier: Modifier = Modifier,
 ) {
     GlassMenu(
-        glass,
         rows,
         anchor,
         alignEnd,
@@ -76,7 +73,6 @@ internal fun ReorderHint.label(): Int =
 /** The line that says what the keys do in reorder and edit-dock modes. It rises into place. */
 @Composable
 internal fun ReorderHintPill(
-    glass: GlassState,
     hint: ReorderHint,
     modifier: Modifier = Modifier,
 ) {
@@ -85,10 +81,8 @@ internal fun ReorderHintPill(
     val style = remember(label) { label.copy(textAlign = TextAlign.Center) }
     val reveal = remember { Animatable(if (motion.animations) 0f else 1f) }
     LaunchedEffect(Unit) { reveal.animateTo(1f, motion.springSpec(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)) }
-    GlassSurface(
-        glass = glass,
+    OverlaySurface(
         shape = RoundedCornerShape(28.dp),
-        dense = true,
         modifier =
             modifier.testTag("reorder:hint").graphicsLayer {
                 compositingStrategy = CompositingStrategy.ModulateAlpha
