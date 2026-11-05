@@ -1,5 +1,6 @@
 package dev.niltsiar.tvhome.feature.home
 
+import androidx.compose.ui.geometry.Rect
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -69,13 +70,13 @@ class ChromeFrostTest {
     }
 
     @Test
-    fun saturation_moves_a_colour_30_percent_further_from_its_grey() {
+    fun saturation_moves_a_colour_45_percent_further_from_its_grey() {
         // Its grey is 0.2126 * 200 + 0.7152 * 100 + 0.0722 * 50 = 117.65.
         val pixels = intArrayOf(rgb(200, 100, 50))
 
         saturate(pixels)
 
-        assertEquals(listOf(225, 95, 30), channels(pixels[0]))
+        assertEquals(listOf(237, 92, 20), channels(pixels[0]))
     }
 
     @Test
@@ -86,6 +87,31 @@ class ChromeFrostTest {
 
         assertEquals(listOf(128, 128, 128), channels(pixels[0]))
         assertEquals(listOf(255, 0, 0), channels(pixels[1]))
+    }
+
+    @Test
+    fun brightening_lifts_each_channel_8_percent_and_clamps_at_the_top() {
+        val pixels = intArrayOf(rgb(100, 50, 0), rgb(250, 128, 240))
+
+        brighten(pixels)
+
+        assertEquals(listOf(108, 54, 0), channels(pixels[0]))
+        assertEquals(listOf(255, 138, 255), channels(pixels[1]))
+    }
+
+    @Test
+    fun the_lightness_under_the_dock_is_the_mean_L_star_of_the_pixels_inside_its_band() {
+        // A picture 10 wide: white on its left half, black on its right; L* of white is 100 and of black 0.
+        val pixels = IntArray(10 * 4) { if (it % 10 < 5) rgb(255, 255, 255) else rgb(0, 0, 0) }
+
+        assertEquals(100f, meanLightness(pixels, 10, 4, Rect(0.1f, 0.2f, 0.4f, 0.9f)), 0.01f)
+        assertEquals(0f, meanLightness(pixels, 10, 4, Rect(0.6f, 0.2f, 0.9f, 0.9f)), 0.01f)
+        assertEquals(50f, meanLightness(pixels, 10, 4, Rect(0f, 0f, 1f, 1f)), 0.01f)
+    }
+
+    @Test
+    fun a_mid_grey_is_L_star_53() {
+        assertEquals(53.4f, meanLightness(intArrayOf(rgb(128, 128, 128)), 1, 1, Rect(0f, 0f, 1f, 1f)), 0.2f)
     }
 
     private companion object {

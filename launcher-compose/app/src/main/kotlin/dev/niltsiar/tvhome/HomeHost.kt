@@ -16,6 +16,7 @@ import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.feature.home.HomeEffect
 import dev.niltsiar.tvhome.feature.home.HomeScreen
 import dev.niltsiar.tvhome.feature.home.MoleculeHomeViewModel
+import dev.niltsiar.tvhome.feature.home.dockLook
 import dev.niltsiar.tvhome.feature.home.homeLayout
 import dev.niltsiar.tvhome.feature.home.shelfLayout
 import dev.niltsiar.tvhome.feature.home.topBarLayout
@@ -71,6 +72,7 @@ internal fun HomeHost(
     val topBar = remember(graph) { graph.config.topBarLayout() }
     val wallpaperLayout = remember(graph) { graph.config.wallpaperLayout() }
     val shelfLayout = remember(graph) { graph.config.shelfLayout() }
+    val dockLook = remember(graph) { graph.config.dockLook() }
     HomeScreen(
         state = { state.value },
         layout = layout,
@@ -80,6 +82,7 @@ internal fun HomeHost(
         topBar = topBar,
         wallpaperLayout = wallpaperLayout,
         shelfLayout = shelfLayout,
+        dockLook = dockLook,
         heroArt = graph.homeSources.heroArt,
         onOpenSettings = viewModel::onOpenSettings,
         onOpenNetwork = viewModel::onOpenNetwork,

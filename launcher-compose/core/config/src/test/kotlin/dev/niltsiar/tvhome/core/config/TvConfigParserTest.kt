@@ -40,7 +40,8 @@ class TvConfigParserTest {
         assertTrue(config.wallpaper && config.fillDock && config.showGreeting && config.tileMenu && config.clockGlow)
         assertFalse(config.appLibrary || config.cinematicHome || config.singleRow || config.powerOnHomeAlways)
         assertTrue(config.cinematicDots && config.ambientGlow)
-        assertFalse(config.cinematicWhiteFocus || config.glowSnap || config.appGlow)
+        assertFalse(config.cinematicWhiteFocus || config.glowSnap)
+        assertTrue(config.appGlow)
         assertTrue(config.dockRow)
         assertFalse(config.reorderButton)
         assertFalse(config.appLibrarySelection || config.libraryButton || config.libraryOkOpens)
@@ -280,17 +281,31 @@ class TvConfigParserTest {
     fun the_cinematic_and_glow_keys_are_read_and_a_wrong_type_keeps_the_default() {
         val parsed =
             parseTvConfig(
-                """{"cinematic_dots": false, "cinematic_white_focus": true, "ambient_glow": false, "glow_snap": true, "app_glow": true}""",
+                """{"cinematic_dots": false, "cinematic_white_focus": true, "ambient_glow": false, "glow_snap": true, "app_glow": false}""",
             )
         val config = parsed.config
         assertFalse(config.cinematicDots || config.ambientGlow)
-        assertTrue(config.cinematicWhiteFocus && config.glowSnap && config.appGlow)
+        assertTrue(config.cinematicWhiteFocus && config.glowSnap)
+        assertFalse(config.appGlow)
         assertEquals(emptyList<String>(), parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys)
 
         val wrong = parseTvConfig("""{"cinematic_dots": "no", "app_glow": 1}""")
         assertTrue(wrong.config.cinematicDots)
-        assertFalse(wrong.config.appGlow)
+        assertTrue(wrong.config.appGlow)
         assertEquals(listOf("cinematic_dots", "app_glow"), wrong.rejectedKeys)
+    }
+
+    @Test
+    fun dock_opacity_takes_30_to_100_and_anything_else_keeps_the_guarded_default() {
+        assertEquals(30, parseTvConfig("""{"dock_opacity": 30}""").config.dockOpacity)
+        assertEquals(100, parseTvConfig("""{"dock_opacity": 100.9}""").config.dockOpacity)
+        assertEquals(null, parseTvConfig("""{}""").config.dockOpacity)
+
+        for (bad in listOf("29", "101", "\"70\"", "true")) {
+            val parsed = parseTvConfig("""{"dock_opacity": $bad}""")
+            assertEquals(bad, null, parsed.config.dockOpacity)
+            assertEquals(bad, listOf("dock_opacity"), parsed.rejectedKeys)
+        }
     }
 
     @Test
@@ -391,7 +406,7 @@ class TvConfigParserTest {
 
     @Test
     fun keys_with_no_reader_in_this_launcher_are_unsupported_and_change_nothing() {
-        val keys = listOf("app_banners", "dock_opacity", "dock_glass", "locale", "open_on_start_choice", "open_on_start_on_wake")
+        val keys = listOf("app_banners", "dock_title", "dock_even_padding", "locale", "open_on_start_choice", "open_on_start_on_wake")
         val parsed = parseTvConfig(keys.joinToString(prefix = "{", postfix = "}") { "\"$it\": true" })
 
         assertEquals(keys, parsed.unsupportedKeys)
@@ -432,7 +447,11 @@ class TvConfigParserTest {
             "cinematic_white_focus" to ("true" to defaults.copy(cinematicWhiteFocus = true)),
             "ambient_glow" to ("false" to defaults.copy(ambientGlow = false)),
             "glow_snap" to ("true" to defaults.copy(glowSnap = true)),
-            "app_glow" to ("true" to defaults.copy(appGlow = true)),
+            "app_glow" to ("false" to defaults.copy(appGlow = false)),
+            "dock_opacity" to ("70" to defaults.copy(dockOpacity = 70)),
+            "dock_glass" to ("true" to defaults.copy(dockGlass = true)),
+            "dock_band" to ("false" to defaults.copy(dockBand = false)),
+            "dock_edge_light" to ("false" to defaults.copy(dockEdgeLight = false)),
             "background_color" to (""""#112233"""" to defaults.copy(backgroundColor = 0xFF112233.toInt())),
             "wallpaper" to ("false" to defaults.copy(wallpaper = false)),
             "wallpaper_rotation_minutes" to ("30" to defaults.copy(wallpaperRotationMinutes = 30)),

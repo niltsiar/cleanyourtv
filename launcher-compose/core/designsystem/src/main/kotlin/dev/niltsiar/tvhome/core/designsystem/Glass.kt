@@ -39,6 +39,9 @@ import kotlin.math.roundToInt
 public class GlassState internal constructor() {
     /** A small, blurred picture of what is behind the screen's surfaces. */
     public var frost: ImageBitmap? by mutableStateOf(null)
+
+    /** The mean CIE L* (0 to 100) of the [frost] under the dock: how bright the wallpaper is where the dock sits. */
+    public var dockLightness: Float by mutableStateOf(0f)
 }
 
 @Composable
@@ -54,18 +57,17 @@ private val GlassPanelShape = RoundedCornerShape(20.dp)
 internal val OverlayCorner = 28.dp
 private val OverlayShape = RoundedCornerShape(OverlayCorner)
 
-/** The shadow under a chrome surface: none, the dock's, or a pill's. */
+/** The shadow under a chrome surface: none, or a pill's. */
 public enum class ChromeShadow(
     internal val elevation: Dp,
     internal val alpha: Float,
 ) {
     None(0.dp, 0f),
-    Dock(16.dp, 0.35f),
     Pill(8.dp, 0.30f),
 }
 
 /**
- * A chrome panel (the clock pill, the top-bar buttons, the dock, the library pill): the [GlassState.frost] under a tint, a
+ * A chrome panel (the clock pill, the top-bar buttons, the library pill): the [GlassState.frost] under a tint, a
  * sheen and a rim. It casts [shadow].
  */
 @Composable
@@ -82,7 +84,7 @@ public fun GlassSurface(
         modifier =
             shadowed
                 .clip(shape)
-                .then(FrostElement(glass))
+                .glassFrost(glass)
                 .background(TvTheme.surfaces.chromeTint)
                 .background(ChromeSheen)
                 .border(1.dp, Rim, shape),
@@ -115,6 +117,8 @@ public fun OverlaySurface(
 }
 
 /** Draws the state's frost as it lies behind this node on screen; a move of the node redraws it, nothing recomposes. */
+public fun Modifier.glassFrost(glass: GlassState): Modifier = this then FrostElement(glass)
+
 private data class FrostElement(
     val glass: GlassState,
 ) : ModifierNodeElement<FrostNode>() {

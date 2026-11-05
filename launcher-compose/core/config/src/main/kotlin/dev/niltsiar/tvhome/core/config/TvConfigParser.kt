@@ -23,11 +23,8 @@ private val unsupportedKeys: Set<String> =
         "advanced_effects",
         "always_show_names",
         "app_banners",
-        "dock_band",
         "dock_band_all",
         "dock_even_padding",
-        "dock_glass",
-        "dock_opacity",
         "dock_title",
         "fade_rows",
         "festival",
@@ -116,6 +113,10 @@ public fun parseTvConfig(json: String): ParsedConfig {
             ambientGlow = o.bool("ambient_glow", d.ambientGlow),
             glowSnap = o.bool("glow_snap", d.glowSnap),
             appGlow = o.bool("app_glow", d.appGlow),
+            dockOpacity = o.optionalInt("dock_opacity", 30..100),
+            dockGlass = o.bool("dock_glass", d.dockGlass),
+            dockBand = o.bool("dock_band", d.dockBand),
+            dockEdgeLight = o.bool("dock_edge_light", d.dockEdgeLight),
             backgroundColor = o.color("background_color", d.backgroundColor),
             wallpaper = o.bool("wallpaper", d.wallpaper),
             wallpaperRotationMinutes = o.int("wallpaper_rotation_minutes", d.wallpaperRotationMinutes, 0..1440),
@@ -209,6 +210,12 @@ private class Overlay(
         default: Int,
         range: IntRange,
     ): Int = value(key, default) { it.asInt()?.takeIf { n -> n in range } }
+
+    /** An int in [range], or null when the key is absent, not a number or out of range (the last two reject it). */
+    fun optionalInt(
+        key: String,
+        range: IntRange,
+    ): Int? = value(key, null) { it.asInt()?.takeIf { n -> n in range } }
 
     /**
      * "latitude" and "longitude" together: JSON numbers in range. A key that is bad or has no partner is rejected

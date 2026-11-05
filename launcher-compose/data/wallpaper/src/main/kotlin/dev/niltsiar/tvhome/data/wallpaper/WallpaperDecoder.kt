@@ -9,11 +9,11 @@ import androidx.compose.ui.graphics.asImageBitmap
 import java.io.File
 
 private const val TAG = "TvHome.Wallpaper"
-private const val THUMBNAIL_WIDTH = 80
+private const val THUMBNAIL_WIDTH = 120
 private const val OPAQUE = 0xFF shl 24
 private const val CHANNEL = 0xFF
 
-/** A decoded wallpaper: the [picture] for the screen and, when asked for, its 80 pixel wide [thumbnail]. */
+/** A decoded wallpaper: the [picture] for the screen and, when asked for, its 120 pixel wide [thumbnail]. */
 internal class DecodedPicture(
     val picture: ImageBitmap,
     val thumbnail: ImageBitmap?,
@@ -23,7 +23,7 @@ internal class DecodedPicture(
  * Decodes wallpaper files at the size a centre crop of the screen shows: sampled, then scaled, and refused when still
  * over [WallpaperSize.MAX_PIXELS]. RGB_565 halves the memory unless [trueColor]. [dim] (percent, 0 to 90) is painted
  * into each picture, so no full-screen shade is drawn on every frame. With [thumbnails] each picture also gets an
- * 80 pixel wide thumbnail. Decoding blocks: call it off the main thread.
+ * 120 pixel wide thumbnail. Decoding blocks: call it off the main thread.
  */
 internal class WallpaperDecoder(
     private val screenWidth: Int,

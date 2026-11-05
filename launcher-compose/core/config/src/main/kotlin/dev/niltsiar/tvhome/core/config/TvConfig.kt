@@ -84,8 +84,16 @@ public data class TvConfig(
     val ambientGlow: Boolean = true,
     /** The glow takes a new app's colour in one frame instead of dipping and fading. */
     val glowSnap: Boolean = false,
-    /** The focus highlight takes the focused app's colour on every tile, as the cinematic shelf does for the dock. */
-    val appGlow: Boolean = false,
+    /** The focus highlight takes the focused app's colour on every tile; false limits it to the dock. */
+    val appGlow: Boolean = true,
+    /** 30 to 100: the dock panel's tint is 0.85 times this percent. Null: the tint that lightens on a bright wallpaper. */
+    val dockOpacity: Int? = null,
+    /** The dock panel takes the light tint whatever the TV's night mode. */
+    val dockGlass: Boolean = false,
+    /** False draws no dock panel, frost, rim or shadow: the tiles float on the wallpaper. */
+    val dockBand: Boolean = true,
+    /** The focused dock tile lights the dock's top rim and floor in its colour. */
+    val dockEdgeLight: Boolean = true,
     /** Opaque ARGB. */
     val backgroundColor: Int = OPAQUE_BLACK,
     /** Whether the theme may show a wallpaper at all. */

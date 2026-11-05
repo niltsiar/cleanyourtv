@@ -51,3 +51,12 @@ internal fun ShelfLayout.focusAccent(
         cinematic && inDock -> if (whiteFocus) Color.White else art
         else -> Color.Unspecified
     }
+
+/**
+ * The colour of a tile's focus ring given the [art] colour of its app: the app's [ringColor] in the dock, and in the grid
+ * too with app_glow. cinematic_white_focus keeps every ring white.
+ */
+internal fun ShelfLayout.ringColour(
+    art: Color,
+    inDock: Boolean,
+): Color = if (whiteFocus || !(inDock || appGlow)) Color.White else ringColor(art)

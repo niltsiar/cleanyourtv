@@ -54,6 +54,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -88,11 +89,14 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.node.LayoutModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.platform.LocalConfiguration
@@ -115,11 +119,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.niltsiar.tvhome.core.designsystem.ChromeShadow
+import dev.niltsiar.tvhome.core.designsystem.DockEdgeLight
+import dev.niltsiar.tvhome.core.designsystem.DockSurface
 import dev.niltsiar.tvhome.core.designsystem.FocusSurface
 import dev.niltsiar.tvhome.core.designsystem.GlassIconButton
 import dev.niltsiar.tvhome.core.designsystem.GlassState
-import dev.niltsiar.tvhome.core.designsystem.GlassSurface
 import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.holdOk
@@ -210,6 +214,7 @@ private const val GRID_ITEMS_BEFORE = 2
  * [topBar] is the theme's top bar: which buttons show and how.
  * [wallpaperLayout] is the theme's say over the picture behind Home, which [HomeUiState.wallpaper] supplies.
  * [shelfLayout] is the theme's cinematic shelf and focus colours; [heroArt] gives it the softened art of a tile.
+ * [dockLook] is the theme's dock panel: its tint, its glass and the light of the focused tile on its rim.
  * The cinematic shelf makes the shelf taller.
  * [actions] carry the tile menu, the Settings menu and the reorder and edit-dock modes to the state. Holding OK on a tile
  * or the Settings button, or MENU on a tile, opens its menu; in a mode OK and the arrows move tiles. An open menu hangs from
@@ -234,6 +239,7 @@ public fun HomeScreen(
     topBar: TopBarLayout = TopBarLayout(),
     wallpaperLayout: WallpaperLayout = WallpaperLayout(),
     shelfLayout: ShelfLayout = ShelfLayout(),
+    dockLook: DockLook = DockLook(),
     heroArt: suspend (String) -> ImageBitmap? = { null },
     onOpenSettings: () -> Unit = {},
     onOpenNetwork: () -> Unit = {},
@@ -287,6 +293,9 @@ public fun HomeScreen(
             .graphicsLayer { translationY = dim.lowPx() }
     val band = rememberBandFade(libraryOpen)
     FocusDimEffects(dim, currentState, input, layout, libraryOpen)
+    val scope = rememberCoroutineScope()
+    val edge = remember(dockLook.edgeLight) { if (dockLook.edgeLight) DockEdgeLight(scope) else null }
+    if (edge != null) DockEdgeEffect(edge, currentState, input, layout, libraryOpen)
     Box(
         modifier =
             modifier
@@ -308,7 +317,7 @@ public fun HomeScreen(
                 }.focusGroup(),
     ) {
         WallpaperBackdrop(wallpaper = { state().wallpaper }, layout = wallpaperLayout, cinematic = backdrop)
-        ChromeFrostEffect(glass, wallpaper = { state().wallpaper }, skyIntensity = wallpaperLayout.skyIntensity)
+        ChromeFrostEffect(glass, wallpaper = { state().wallpaper }, skyIntensity = wallpaperLayout.skyIntensity, dock = dim.band)
         HomeContent(
             glass,
             dockFocus,
@@ -318,6 +327,8 @@ public fun HomeScreen(
             state,
             layout,
             shelfLayout,
+            dockLook,
+            edge,
             shelfBottom,
             onFocus,
             onClick,
@@ -365,6 +376,13 @@ public fun HomeScreen(
                     ?.translate(0f, dim.lowPx())
             },
             spotlightShape = TileShape,
+            spotlightRing = {
+                val shown = currentState.value()
+                val key = shown.menu?.tileKey
+                val inDock = shown.dock.firstOrNull { it.key == key }
+                val tile = inDock ?: shown.grid.firstOrNull { it.key == key }
+                tile?.let { shelfLayout.ringColour(it.accent, inDock = inDock != null) } ?: Color.White
+            },
         ) {
             menu?.let { open ->
                 key(open) {
@@ -401,6 +419,8 @@ private fun HomeContent(
     state: () -> HomeUiState,
     layout: HomeLayout,
     shelfLayout: ShelfLayout,
+    dockLook: DockLook,
+    edge: DockEdgeLight?,
     shelfBottom: Dp,
     onFocus: (String) -> Unit,
     onClick: (String) -> Unit,
@@ -472,8 +492,10 @@ private fun HomeContent(
                 Modifier
                     .fillMaxSize()
                     .gridEdges(gridState, fadeStart = shelfBottom - ShelfToFade, gate = ShelfToFade)
-                    .onFocusChanged { input.gridFocused = it.hasFocus }
-                    .semantics { testTagsAsResourceId = true },
+                    .onFocusChanged {
+                        input.gridFocused = it.hasFocus
+                        if (!it.hasFocus) input.travel.reset()
+                    }.semantics { testTagsAsResourceId = true },
         ) {
             item(key = "shelf", span = { GridItemSpan(maxLineSpan) }, contentType = "shelf") {
                 // The grid's spacing follows it, so the dock rests at the shelf's bottom edge, where the pivot puts it.
@@ -491,6 +513,8 @@ private fun HomeContent(
                     reordering = reordering,
                     layout = layout,
                     shelfLayout = shelfLayout,
+                    look = dockLook,
+                    edge = edge,
                     rowTileWidth = rowTileWidth,
                     onFocus = onFocus,
                     onClick = onClick,
@@ -515,6 +539,7 @@ private fun HomeContent(
                 AppTile(
                     app = app,
                     accent = shelfLayout.focusAccent(app.accent, inDock = false),
+                    ring = shelfLayout.ringColour(app.accent, inDock = false),
                     onFocus = onFocus,
                     onClick = onClick,
                     input = input,
@@ -613,7 +638,10 @@ private fun LibraryPill(
                         down = FocusRequester.Cancel
                         up()?.let { this.up = it }
                     }.focusRequester(input.requester(LIBRARY_FOCUS))
-                    .onFocusChanged { input.pillFocused = it.isFocused },
+                    .onFocusChanged {
+                        input.pillFocused = it.isFocused
+                        if (it.isFocused) input.travel.reset()
+                    },
             label = { ink ->
                 BasicText(stringResource(R.string.library_entry), style = TvTheme.typography.pillLabel, maxLines = 1, color = ink.content)
             },
@@ -639,7 +667,11 @@ private fun pillUp(
 @Stable
 private class FocusDim(
     private val lowering: State<Float>,
+    private val dockBand: State<Rect>,
 ) {
+    /** The dock panel in dock focus, as fractions of the window: where the frost's lightness is read. */
+    val band: Rect get() = dockBand.value
+
     val row = Animatable(DOCK_ROW.toFloat())
     val floor = Animatable(ROW_ABOVE_ALPHA)
     val low = Animatable(1f)
@@ -664,25 +696,32 @@ private fun rememberFocusDim(
     val density = LocalDensity.current
     val window = LocalWindowInfo.current.containerSize
     val gridCount by remember(state) { derivedStateOf { state.value().grid.size } }
-    val lowering =
+    val (lowering, band) =
         with(density) {
-            val gridWidth = window.width.toDp() - ScreenMargin * 2
+            val width = window.width.toDp()
             val height = window.height.toDp()
+            val gridWidth = width - ScreenMargin * 2
             val share = gridShare(layout, gridWidth, height, shelfBottom)
             val tileWidth = (gridWidth * share - TileGap * (layout.columns - 1)) / layout.columns
+            val tileHeight = tileWidth / TILE_ASPECT
             val gridRows = if (layout.singleRow) 0 else (gridCount + layout.columns - 1) / layout.columns
-            dockLowering(
-                windowHeight = height.value,
-                shelfBottom = shelfBottom.value,
-                tileHeight = tileWidth.value / TILE_ASPECT,
-                gap = TileGap.value,
-                gridRows = gridRows,
-                rowsBelowDock = layout.rowsBelowDock,
-                bottomMargin = GridBottom.value,
-            ).dp.toPx()
+            val lowered =
+                dockLowering(
+                    windowHeight = height.value,
+                    shelfBottom = shelfBottom.value,
+                    tileHeight = tileHeight.value,
+                    gap = TileGap.value,
+                    gridRows = gridRows,
+                    rowsBelowDock = layout.rowsBelowDock,
+                    bottomMargin = GridBottom.value,
+                ).dp
+            val edge = (ScreenMargin + gridWidth * ((1f - share) / 2f) - TileGap) / width
+            val top = shelfBottom + lowered
+            lowered.toPx() to Rect(edge, top / height, 1f - edge, (top + tileHeight + TileGap * 2) / height)
         }
-    val current = rememberUpdatedState(lowering)
-    return remember { FocusDim(current) }
+    val currentLowering = rememberUpdatedState(lowering)
+    val currentBand = rememberUpdatedState(band)
+    return remember { FocusDim(currentLowering, currentBand) }
 }
 
 /** The share of the grid's width its tiles use, so that [HomeLayout.rowsBelowDock] rows fit under a dock whose panel starts at [shelfBottom]. */
@@ -756,6 +795,29 @@ private fun FocusDimEffects(
                 else -> dim.low.animateTo(target, tween(GROUP_MS, easing = FastOutSlowInEasing))
             }
         }
+    }
+}
+
+/** Shows [edge] while focus is on a dock tile, and hides it for anything else: the top bar, a menu, the grid, the library. */
+@Composable
+private fun DockEdgeEffect(
+    edge: DockEdgeLight,
+    state: State<() -> HomeUiState>,
+    input: HomeInput,
+    layout: HomeLayout,
+    libraryOpen: () -> Boolean,
+) {
+    val currentLibraryOpen = rememberUpdatedState(libraryOpen)
+    LaunchedEffect(edge, state, input, layout) {
+        snapshotFlow {
+            val shown = state.value()
+            input.gridFocused &&
+                !input.pillFocused &&
+                shown.menu == null &&
+                !shown.inputsOpen &&
+                !currentLibraryOpen.value() &&
+                focusRowOf(shown, input, layout) == DOCK_ROW
+        }.collectLatest { edge.show(it) }
     }
 }
 
@@ -1118,6 +1180,8 @@ private fun Dock(
     reordering: Boolean,
     layout: HomeLayout,
     shelfLayout: ShelfLayout,
+    look: DockLook,
+    edge: DockEdgeLight?,
     rowTileWidth: Dp,
     onFocus: (String) -> Unit,
     onClick: (String) -> Unit,
@@ -1125,12 +1189,7 @@ private fun Dock(
     modifier: Modifier = Modifier,
 ) {
     // One gap wider on each side than the grid, so the tiles inside its padding sit on the grid's columns.
-    GlassSurface(
-        glass = glass,
-        modifier = modifier.outset(TileGap).fillMaxWidth().testTag("dock"),
-        shape = DockShape,
-        shadow = ChromeShadow.Dock,
-    ) {
+    DockPanel(glass, look, edge, modifier.outset(TileGap).fillMaxWidth().testTag("dock")) {
         if (layout.singleRow) {
             // The grid's pivot scroll is vertical; this row scrolls sideways the usual way.
             CompositionLocalProvider(LocalBringIntoViewSpec provides RevealBringIntoViewSpec) {
@@ -1148,11 +1207,13 @@ private fun Dock(
                         AppTile(
                             app = app,
                             accent = shelfLayout.focusAccent(app.accent, inDock = true),
+                            ring = shelfLayout.ringColour(app.accent, inDock = true),
                             onFocus = onFocus,
                             onClick = onClick,
                             input = input,
                             reordering = reordering,
                             tileMenu = layout.tileMenu,
+                            edge = edge,
                             modifier =
                                 Modifier
                                     .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = TvTheme.motion.placementSpec)
@@ -1200,11 +1261,13 @@ private fun Dock(
                         AppTile(
                             app = app,
                             accent = shelfLayout.focusAccent(app.accent, inDock = true),
+                            ring = shelfLayout.ringColour(app.accent, inDock = true),
                             onFocus = onFocus,
                             onClick = onClick,
                             input = input,
                             reordering = reordering,
                             tileMenu = layout.tileMenu,
+                            edge = edge,
                             modifier =
                                 Modifier
                                     .weight(1f)
@@ -1218,6 +1281,24 @@ private fun Dock(
                 repeat(layout.columns - dock.size) { Spacer(Modifier.weight(1f)) }
             }
         }
+    }
+}
+
+/** The dock's panel, or with the theme's dock_band off nothing but the room it takes. */
+@Composable
+private fun DockPanel(
+    glass: GlassState,
+    look: DockLook,
+    edge: DockEdgeLight?,
+    modifier: Modifier = Modifier,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    if (look.band) {
+        val dark = TvTheme.surfaces.dark
+        val tint = remember(look, dark, glass) { { look.tint(dark, glass.dockLightness) } }
+        DockSurface(glass, tint, DockShape, modifier, edge, content)
+    } else {
+        Box(modifier, content = content)
     }
 }
 
@@ -1280,30 +1361,52 @@ private fun Modifier.towardLibrary(
     }
 }
 
+/** Where a dock tile was laid out, for the edge light that follows focus to it. */
+private class Placed {
+    var tile: LayoutCoordinates? = null
+}
+
 @Composable
 private fun AppTile(
     app: AppEntry,
     accent: Color,
+    ring: Color,
     onFocus: (String) -> Unit,
     onClick: (String) -> Unit,
     input: HomeInput,
     reordering: Boolean,
     tileMenu: Boolean,
     modifier: Modifier = Modifier,
+    edge: DockEdgeLight? = null,
 ) {
     val key = app.key
     val requester = remember(input, key) { input.requester(key) }
-    val ring = remember(input, key) { ColorProducer { if (input.carried.value == key) ReorderRing else Color.White } }
+    val travel = input.travel
+    val motion = TvTheme.motion
+    val scope = rememberCoroutineScope()
+    val placed = remember { Placed() }
+    val ringColour =
+        remember(input, key, ring) {
+            ColorProducer { if (input.carried.value == key) ReorderRing else travel.colourFor(key, ring) }
+        }
     FocusSurface(
         onClick = { onClick(key) },
-        onFocused = { onFocus(key) },
+        onFocused = {
+            onFocus(key)
+            travel.arrive(key, ring, motion, scope)
+            val laidOut = placed.tile?.takeIf { it.isAttached }
+            if (edge != null && laidOut != null) {
+                edge.focus(laidOut.positionInRoot().x + laidOut.size.width / 2f) { travel.colourFor(key, ring) }
+            }
+        },
         shape = TileShape,
         accent = accent,
-        ring = ring,
+        ring = ringColour,
         modifier =
             modifier
                 .then(if (reordering) Modifier.reorderLook(key, input, TileShape) else Modifier)
                 .aspectRatio(TILE_ASPECT)
+                .then(if (edge != null) Modifier.onPlaced { placed.tile = it } else Modifier)
                 .testTag("tile:$key")
                 .then(if (app.image != null) Modifier.semantics { contentDescription = app.label } else Modifier)
                 .focusRequester(requester)

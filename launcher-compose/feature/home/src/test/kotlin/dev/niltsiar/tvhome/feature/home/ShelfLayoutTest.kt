@@ -43,6 +43,23 @@ class ShelfLayoutTest {
     }
 
     @Test
+    fun the_ring_takes_the_app_colour_in_the_dock_and_in_the_grid_only_with_app_glow() {
+        val ring = ringColor(art)
+
+        assertEquals(ring, ShelfLayout().ringColour(art, inDock = true))
+        assertEquals(Color.White, ShelfLayout().ringColour(art, inDock = false))
+        assertEquals(ring, ShelfLayout(appGlow = true).ringColour(art, inDock = false))
+    }
+
+    @Test
+    fun cinematic_white_focus_keeps_every_ring_white() {
+        val layout = ShelfLayout(whiteFocus = true, appGlow = true)
+
+        assertEquals(Color.White, layout.ringColour(art, inDock = true))
+        assertEquals(Color.White, layout.ringColour(art, inDock = false))
+    }
+
+    @Test
     fun the_theme_percentages_become_fractions_and_motion_follows_the_switches() {
         val layout = TvConfig(cinematicHome = true, cinematicArt = 20, cinematicScrim = 40, cinematicDots = false).shelfLayout()
 

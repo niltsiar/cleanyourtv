@@ -32,6 +32,9 @@ internal class HomeInput(
     private val openLibrary: State<() -> Unit> = mutableStateOf({}),
     val hold: OkHold = OkHold(),
 ) {
+    /** The colour of the focus ring as it moves from tile to tile. */
+    val travel = RingTravel()
+
     private val requesters = HashMap<String, FocusRequester>()
 
     val actions: HomeMenuActions get() = currentActions.value
