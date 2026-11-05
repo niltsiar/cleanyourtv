@@ -4,7 +4,6 @@ import android.text.format.DateFormat
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -711,7 +710,7 @@ private data class HeroLine(
 /**
  * The band over the grid: the focused tile's name; on the library pill the library's name and size; in a reorder or
  * edit-dock mode the mode's name and its keys. A new line cross-fades with the old one as the cinematic shelf's does
- * ([titleSwap]). The meta line keeps its slot when empty, so the title stands where the [cinematic] shelf's does.
+ * ([TitleSlots]). The meta line keeps its slot when empty, so the title stands where the [cinematic] shelf's does.
  */
 @Composable
 private fun HeroTitle(
@@ -736,34 +735,32 @@ private fun HeroTitle(
     val metaStyle = TvTheme.typography.cinematicMeta.withHeroShadow()
     val detail = (if (cinematic) ShelfDetailHeight else MetaGap + ChipHeight) - MetaGap
     Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.BottomStart) {
-        AnimatedContent(
-            targetState = line,
-            transitionSpec = {
-                val quick = initialState.quick || targetState.quick
-                if (quick) titleSwap(animated, rise, LIBRARY_SWAP_MS) else titleSwap(animated, rise)
-            },
-            label = "shelfTitle",
-        ) { shown ->
+        TitleSlots(
+            line,
+            animated,
+            rise,
+            inMillis = { from, to -> if (from.quick || to.quick) LIBRARY_SWAP_MS else CINEMATIC_MS },
+        ) { shown, live ->
             Column {
                 BasicText(
-                    text = shown.title,
+                    text = if (live) shown.title else "",
                     style = titleStyle,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.testTag("shelf:title").lineBetween(HeroAscent, TitleDescent),
+                    modifier = Modifier.testTag(if (live) "shelf:title" else "").lineBetween(HeroAscent, TitleDescent),
                 )
                 Box(Modifier.padding(start = MetaIndent, top = MetaGap).height(detail)) {
-                    when (val keys = shown.hint) {
+                    when (val keys = shown.hint?.takeIf { live }) {
                         ReorderHint.Reorder -> {
                             KeyChips()
                         }
 
                         null -> {
                             BasicText(
-                                shown.meta,
+                                if (live) shown.meta else "",
                                 style = metaStyle,
                                 maxLines = 1,
-                                modifier = Modifier.testTag("shelf:title-meta").height(MetaSlot),
+                                modifier = Modifier.testTag(if (live) "shelf:title-meta" else "").height(MetaSlot),
                             )
                         }
 

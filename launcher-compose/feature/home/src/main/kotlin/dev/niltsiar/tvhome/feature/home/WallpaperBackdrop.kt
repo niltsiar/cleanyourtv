@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -50,8 +51,10 @@ private val LeftScrim = Brush.horizontalGradient(0f to Color.Black.copy(alpha = 
 
 /**
  * What is behind Home, drawn in the draw phase only: the picture, the scrim that keeps the white text readable on any
- * picture ([drawHomeScrim], which the chrome's frost bakes too), then the time-of-day sky. A new picture cross-fades in over the old one with no recomposition per frame
- * and no offscreen layer. The [cinematic] shelf's art, glow and scrim come last. It is a glass source, so the panels
+ * picture ([drawHomeScrim], which the chrome's frost bakes too), then the time-of-day sky. A new picture cross-fades
+ * in over the old one with no recomposition per frame. These parts sit in one offscreen layer that the GPU redraws only
+ * when they change, so a frame costs one full-screen fill for them instead of one per part. The [cinematic] shelf's art,
+ * glow and scrim come last, outside that layer, as they animate on each dock move. It is a glass source, so the panels
  * above it sample what it draws.
  */
 @Composable
@@ -72,12 +75,21 @@ internal fun WallpaperBackdrop(
             modifier
                 .fillMaxSize()
                 .glassSource(glass)
+                .drawWithContent {
+                    drawContent()
+                    cinematic?.draw(this)
+                },
+    ) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                 .drawBehind {
                     fade.draw(this)
                     if (skyAlpha > 0f) sky?.let { drawSky(it, skyAlpha) }
-                    cinematic?.draw(this)
                 },
-    )
+        )
+    }
 }
 
 /** The picture on screen and the one it replaces. Both draw in the draw phase; only [progress] moves while fading. */

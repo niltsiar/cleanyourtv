@@ -15,16 +15,23 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorProducer
+import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.addOutline
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
@@ -45,7 +52,8 @@ private val Gloss = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f
  * the press and focus events, for content that reacts to them. [accent] colours the glow; unspecified takes the
  * theme's. [ring] colours the ring instead of white. [glow] turns the glow off: the elevation shadow also shows through
  * a translucent surface, as a dark patch. The animation starts in the focus callback and is read in the layer and draw
- * lambdas, so a focus change neither recomposes nor relays out. [focusedScale] is the size it grows to.
+ * lambdas, so a focus change neither recomposes nor relays out. [focusedScale] is the size it grows to. The growth is
+ * drawn, not a layer scale, so the surface's bounds stay put while it grows and accessibility has nothing to update.
  */
 @Composable
 public fun FocusSurface(
@@ -69,29 +77,28 @@ public fun FocusSurface(
         modifier =
             modifier
                 .graphicsLayer {
-                    val scale = 1f + (grownScale - 1f) * focus.value
-                    scaleX = scale
-                    scaleY = scale
                     shadowElevation = if (glow) GlowElevation.toPx() * focus.value.coerceIn(0f, 1f) else 0f
-                    this.shape = shape
+                    this.shape = ScaledShape(shape, 1f + (grownScale - 1f) * focus.value)
                     ambientShadowColor = glowColor
                     spotShadowColor = glowColor
                 }.drawWithContent {
-                    drawContent()
-                    val progress = focus.value.coerceIn(0f, 1f)
-                    if (progress > 0f) {
-                        val outline = shape.createOutline(size, layoutDirection, this)
-                        drawOutline(outline, Gloss, alpha = progress)
-                        val width = RingWidth.toPx()
-                        val gap = RingGap.toPx()
-                        drawOutline(
-                            outline.grownBy(gap + width / 2f),
-                            ring?.invoke() ?: Color.White,
-                            alpha = progress,
-                            style = Stroke(width),
-                        )
-                        val hairline = HairlineWidth.toPx()
-                        drawOutline(outline.grownBy(gap + width + hairline / 2f), Hairline, alpha = progress, style = Stroke(hairline))
+                    scale(1f + (grownScale - 1f) * focus.value) {
+                        this@drawWithContent.drawContent()
+                        val progress = focus.value.coerceIn(0f, 1f)
+                        if (progress > 0f) {
+                            val outline = shape.createOutline(size, layoutDirection, this)
+                            drawOutline(outline, Gloss, alpha = progress)
+                            val width = RingWidth.toPx()
+                            val gap = RingGap.toPx()
+                            drawOutline(
+                                outline.grownBy(gap + width / 2f),
+                                ring?.invoke() ?: Color.White,
+                                alpha = progress,
+                                style = Stroke(width),
+                            )
+                            val hairline = HairlineWidth.toPx()
+                            drawOutline(outline.grownBy(gap + width + hairline / 2f), Hairline, alpha = progress, style = Stroke(hairline))
+                        }
                     }
                 }.clip(shape)
                 .onFocusChanged {
@@ -134,3 +141,47 @@ internal fun Outline.grownBy(delta: Float): Outline =
     }
 
 private fun CornerRadius.grownBy(delta: Float): CornerRadius = CornerRadius(x + delta, y + delta)
+
+/** [base] grown [scale] times about its centre, as the drawn growth shows it, so the glow under it grows with it. */
+private data class ScaledShape(
+    val base: Shape,
+    val scale: Float,
+) : Shape {
+    override fun createOutline(
+        size: Size,
+        layoutDirection: LayoutDirection,
+        density: Density,
+    ): Outline {
+        val outline = base.createOutline(size, layoutDirection, density)
+        if (scale == 1f) return outline
+        val cx = size.width / 2f
+        val cy = size.height / 2f
+        if (outline is Outline.Rounded) {
+            val r = outline.roundRect
+            return Outline.Rounded(
+                RoundRect(
+                    left = cx + (r.left - cx) * scale,
+                    top = cy + (r.top - cy) * scale,
+                    right = cx + (r.right - cx) * scale,
+                    bottom = cy + (r.bottom - cy) * scale,
+                    topLeftCornerRadius = r.topLeftCornerRadius * scale,
+                    topRightCornerRadius = r.topRightCornerRadius * scale,
+                    bottomRightCornerRadius = r.bottomRightCornerRadius * scale,
+                    bottomLeftCornerRadius = r.bottomLeftCornerRadius * scale,
+                ),
+            )
+        }
+        val matrix =
+            Matrix().apply {
+                translate(cx, cy)
+                scale(scale, scale)
+                translate(-cx, -cy)
+            }
+        return Outline.Generic(
+            Path().apply {
+                addOutline(outline)
+                transform(matrix)
+            },
+        )
+    }
+}

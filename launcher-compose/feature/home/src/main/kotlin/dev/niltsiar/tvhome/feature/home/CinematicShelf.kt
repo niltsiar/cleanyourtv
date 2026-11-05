@@ -1,17 +1,11 @@
 package dev.niltsiar.tvhome.feature.home
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ContentTransform
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.TweenSpec
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -22,18 +16,26 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableFloatState
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.FirstBaseline
@@ -51,13 +53,15 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 /** How far a new shelf title rises into place as it fades in. */
 internal val TitleRise = 8.dp
 
 /** The one duration and easing of the cinematic shelf's moves from one app to the next: title, meta line, glow, art and dots. */
-private const val CINEMATIC_MS = 280
+internal const val CINEMATIC_MS = 280
 private val CinematicEasing: Easing = FastOutSlowInEasing
 
 /** How long the old title takes to fade out under the new one. */
@@ -95,7 +99,7 @@ private class HeldShelf {
  * The cinematic shelf above the dock: the focused dock app's name, when Home last opened it, and one dot per dock app
  * (their slot stays without dots, so the title stands where the band's other titles do).
  * It fades in with the first dock focus and out when [shelf] is null, keeping the last app's text meanwhile. A new app's
- * name and time cross-fade with the old ones ([titleSwap]); the dots stay and only their long dot slides. Every animated
+ * name and time cross-fade with the old ones ([TitleSlots]); the dots stay and only their long dot slides. Every animated
  * value is read in a layer, placement or draw lambda.
  */
 @Composable
@@ -125,28 +129,23 @@ internal fun CinematicShelf(
                     this.alpha = alpha.value
                 },
         ) {
-            AnimatedContent(
-                targetState = shown,
-                transitionSpec = { titleSwap(layout.animated, rise) },
-                contentKey = { it.key },
-                label = "shelfTitle",
-            ) { app ->
+            TitleSlots(shown, layout.animated, rise, key = { it.key }) { app, live ->
                 Column {
                     BasicText(
-                        text = app.label,
+                        text = if (live) app.label else "",
                         style = titleStyle,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.testTag("shelf:name").lineBetween(TitleAscent, TitleDescent),
+                        modifier = Modifier.testTag(if (live) "shelf:name" else "").lineBetween(TitleAscent, TitleDescent),
                     )
                     BasicText(
-                        text = lastOpenedLine(app.lastOpened),
+                        text = if (live) lastOpenedLine(app.lastOpened) else AnnotatedString(""),
                         style = metaStyle,
                         maxLines = 1,
                         modifier =
                             Modifier
                                 .padding(start = MetaIndent, top = MetaGap)
-                                .testTag("shelf:meta")
+                                .testTag(if (live) "shelf:meta" else "")
                                 .height(MetaSlot),
                     )
                 }
@@ -166,23 +165,108 @@ internal fun CinematicShelf(
 }
 
 /**
- * How a shelf title gives way to the next: the old one fades out in [TITLE_OUT_MS] while the new one fades in from
- * nothing over [millis] and rises [risePx] into place. Both keep their place in the layout, so nothing below them moves.
+ * Shows [target] in two slots that stay in the tree, so a new value only changes a slot's text. With [animated], a value
+ * of another [key] goes to the hidden slot and fades in over [inMillis] (of the old value and the new) while it rises
+ * [risePx] into place, and the shown one fades out in [TITLE_OUT_MS]; a value of the same key replaces the shown one.
+ * The fade is a layer's alpha and the rise a draw translation, so no node moves and nothing below them moves either.
+ * [content] shows one slot's value; `live` is false for a slot that has faded out, which shows nothing and has no tags.
  */
-internal fun titleSwap(
+@Composable
+internal fun <T : Any> TitleSlots(
+    target: T,
     animated: Boolean,
     risePx: Int,
-    millis: Int = CINEMATIC_MS,
-): ContentTransform =
-    if (animated) {
-        ContentTransform(
-            fadeIn(tween(millis, easing = CinematicEasing)) + slideInVertically(tween(millis, easing = CinematicEasing)) { risePx },
-            fadeOut(tween(TITLE_OUT_MS, easing = CinematicEasing)),
-            sizeTransform = null,
-        )
-    } else {
-        ContentTransform(EnterTransition.None, ExitTransition.None, sizeTransform = null)
+    key: (T) -> Any = { it },
+    inMillis: (from: T, to: T) -> Int = { _, _ -> CINEMATIC_MS },
+    content: @Composable (value: T, live: Boolean) -> Unit,
+) {
+    val slots = remember { TitleSlotsState(target) }
+    slots.show(target, key)
+    val generation = slots.generation
+    val cleared = slots.cleared
+    SideEffect { slots.start(generation, animated, risePx.toFloat()) }
+    LaunchedEffect(slots, generation) {
+        if (generation > 0 && animated) slots.run(generation, inMillis(slots.from, slots.values[slots.front]))
     }
+    Box {
+        for (slot in 0..1) {
+            Box(
+                Modifier
+                    .graphicsLayer { alpha = slots.alpha[slot].floatValue }
+                    .drawWithContent { translate(top = slots.rise[slot].floatValue) { this@drawWithContent.drawContent() } },
+            ) {
+                content(slots.values[slot], slot == slots.front || cleared < generation)
+            }
+        }
+    }
+}
+
+/**
+ * The two slots of [TitleSlots]. [show] runs in composition and only writes plain fields: [front] is the slot of the
+ * newest value and [generation] counts the swaps. [start] puts a new front slot where its fade begins before the frame
+ * draws it, and [run] animates the swap, then marks it [cleared].
+ */
+@Stable
+private class TitleSlotsState<T : Any>(
+    first: T,
+) {
+    val values = mutableListOf(first, first)
+    var front = 0
+    var generation = 0
+    var from: T = first
+    var cleared by mutableIntStateOf(0)
+    val alpha = listOf(mutableFloatStateOf(1f), mutableFloatStateOf(0f))
+    val rise = listOf(mutableFloatStateOf(0f), mutableFloatStateOf(0f))
+    private var started = 0
+
+    fun show(
+        target: T,
+        key: (T) -> Any,
+    ) {
+        if (key(target) != key(values[front])) {
+            from = values[front]
+            front = 1 - front
+            generation++
+        }
+        values[front] = target
+    }
+
+    fun start(
+        generation: Int,
+        animated: Boolean,
+        risePx: Float,
+    ) {
+        if (started == generation) return
+        started = generation
+        if (animated) {
+            alpha[front].floatValue = 0f
+            rise[front].floatValue = risePx
+        } else {
+            alpha[front].floatValue = 1f
+            rise[front].floatValue = 0f
+            alpha[1 - front].floatValue = 0f
+            cleared = generation
+        }
+    }
+
+    suspend fun run(
+        generation: Int,
+        inMillis: Int,
+    ) = coroutineScope {
+        val incoming = front
+        val outgoing = 1 - front
+        launch { tweenTo(alpha[incoming], 1f, inMillis) }
+        launch { tweenTo(rise[incoming], 0f, inMillis) }
+        tweenTo(alpha[outgoing], 0f, TITLE_OUT_MS)
+        cleared = generation
+    }
+
+    private suspend fun tweenTo(
+        value: MutableFloatState,
+        target: Float,
+        millis: Int,
+    ) = animate(value.floatValue, target, animationSpec = tween(millis, easing = CinematicEasing)) { v, _ -> value.floatValue = v }
+}
 
 /** This style with the shadow that keeps the band's text readable on a bright picture. */
 @Composable

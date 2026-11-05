@@ -6,8 +6,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.filter
+import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
@@ -91,4 +95,28 @@ class ShelfTitleCrossfadeTest {
         assertEquals(setOf("App 7", "App 8"), moving)
         assertEquals(setOf("App 8"), settled)
     }
+
+    @Test
+    fun a_new_cinematic_name_rises_into_place_without_moving_its_node() {
+        showHome(cinematic = true)
+        compose.mainClock.autoAdvance = false
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
+        repeat(3) { compose.mainClock.advanceTimeByFrame() }
+
+        val rising = topOf("shelf:name", "App 2")
+        compose.mainClock.advanceTimeBy(500)
+
+        assertEquals(topOf("shelf:name", "App 2"), rising, 0.01f)
+    }
+
+    private fun topOf(
+        tag: String,
+        text: String,
+    ): Float =
+        compose
+            .onAllNodesWithTag(tag)
+            .filter(hasText(text))
+            .onFirst()
+            .getBoundsInRoot()
+            .top.value
 }

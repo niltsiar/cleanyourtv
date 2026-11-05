@@ -134,13 +134,18 @@ class LibraryOverlayLookUiTest {
 
     private fun card(name: String): DpRect = bounds("card:${key(name)}")
 
-    /** The focused card's bounds before its focus growth, which its bounds in the root include. */
+    /** The focused card's bounds: its focus growth is drawn, so they are its size before it. */
     private fun focusedCard(name: String): DpRect {
         compose.onNodeWithTag("card:${key(name)}").assertIsFocused()
-        val grown = card(name)
-        val dx = grown.width * (1f - 1f / FOCUSED_SCALE) / 2f
-        val dy = grown.height * (1f - 1f / FOCUSED_SCALE) / 2f
-        return DpRect(grown.left + dx, grown.top + dy, grown.right - dx, grown.bottom - dy)
+        return card(name)
+    }
+
+    /** Where the focused card draws, grown about its centre. */
+    private fun grownCard(name: String): DpRect {
+        val card = focusedCard(name)
+        val dx = card.width * (FOCUSED_SCALE - 1f) / 2f
+        val dy = card.height * (FOCUSED_SCALE - 1f) / 2f
+        return DpRect(card.left - dx, card.top - dy, card.right + dx, card.bottom + dy)
     }
 
     /** The red channel, 0 to 255, of the screen at ([x], [y]). */
@@ -198,9 +203,8 @@ class LibraryOverlayLookUiTest {
     @Config(qualifiers = "+night")
     fun the_ring_of_the_first_card_shows_whole_at_its_side_and_top() {
         showLibrary(nineApps)
-        compose.onNodeWithTag("card:${key("App 1")}").assertIsFocused()
 
-        val grown = card("App 1")
+        val grown = grownCard("App 1")
         // The middle of the white ring: 3 dp wide, 3 dp out from the grown card, grown with it.
         val out = 4.5.dp * FOCUSED_SCALE
         assertTrue(redAt(grown.left - out, (grown.top + grown.bottom) / 2) >= WHITE)
