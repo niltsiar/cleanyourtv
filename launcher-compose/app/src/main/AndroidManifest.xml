@@ -86,7 +86,11 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.HOME" />
+                <!-- CVTE firmware sends the Home key and boot as MAIN + HOME + COMMON_HOME, which only matches a filter listing both (#1201). -->
+                <category android:name="android.intent.category.COMMON_HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
+                <!-- ColorOS TV: boot only promotes a HOME that declares this category. -->
+                <category android:name="com.heytap.tv.launcher.category.MODERN_HOME" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
