@@ -1,4 +1,4 @@
-"""scripts/switch-home.sh against a fake adb: the real script runs, only the transport is simulated.
+"""scripts/switch-home.sh and the Home and key service refusals of scripts/spike-gate.sh against a fake adb: the real script runs, only the transport is simulated.
 
 The fake keeps the TV's Settings values and Home activity in a JSON file and appends every adb call to a log, so a
 test can read the order of the calls and what was written. Nothing here touches a TV.
@@ -14,6 +14,7 @@ import unittest
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "switch-home.sh"
+GATE = Path(__file__).resolve().parents[1] / "spike-gate.sh"
 NEW = "dev.niltsiar.tvhome"
 NEW_KEY = f"{NEW}/.service.keys.KeyService"
 OLD = "com.gathin.tvhome"
@@ -148,6 +149,10 @@ class SwitchHomeTest(unittest.TestCase):
         full.update(env)
         return subprocess.run(["bash", str(SCRIPT), mode], env=full, capture_output=True, text=True, timeout=60)
 
+    def run_gate(self):
+        full = dict(os.environ, ADB=str(self.adb), TV_SERIAL=SERIAL, FAKE_ADB_STATE=str(self.state_path))
+        return subprocess.run(["bash", str(GATE)], env=full, capture_output=True, text=True, timeout=60)
+
     def test_new_sets_home_before_it_swaps_the_key_service_and_screensaver(self):
         result = self.run_script("new")
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -221,6 +226,28 @@ class SwitchHomeTest(unittest.TestCase):
         self.assertEqual(tv["settings"]["enabled_accessibility_services"], f"x.y/.Svc:{OLD_HOME_KEY}")
         self.assertEqual(tv["settings"]["accessibility_enabled"], "1")
         self.assertEqual(tv["settings"]["screensaver_components"], f"{OLD}/.ClockDream")
+
+    def test_old_restores_keys_and_screensaver_when_the_saved_home_is_ours(self):
+        self.tv(home=f"{NEW}/.MainActivity")
+        self.assertEqual(self.run_script("new").returncode, 0)
+        result = self.run_script("old")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("no usable saved state", result.stdout)
+        self.assertIn("is not an earlier launcher", result.stdout)
+        tv = self.read_tv()
+        self.assertEqual(tv["settings"], OLD_STATE["settings"])
+        self.assertEqual(tv["home"], f"{OLD}/.MainActivity")
+
+    def test_spike_gate_refuses_while_the_key_service_is_enabled_and_installs_nothing(self):
+        result = self.run_script("new")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.tv(home=f"{OLD}/.MainActivity")
+        Path(str(self.state_path) + ".log").unlink()
+        gate = self.run_gate()
+        self.assertEqual(gate.returncode, 2, gate.stderr)
+        self.assertIn("scripts/switch-home.sh old", gate.stderr)
+        self.assertEqual(self.writes(), [])
+        self.assertFalse([call for call in self.calls() if "install" in call])
 
     def test_keys_keep_writes_nothing_to_the_key_settings(self):
         result = self.run_script("new", KEYS="keep")

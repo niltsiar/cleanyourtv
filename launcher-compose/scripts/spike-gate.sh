@@ -9,7 +9,8 @@
 #          THEME_DIR   the theme folder (with config.json) to push back after the run; required on a TV below API 34
 #          TV_HOST     the TV's address for that push (default: TV_SERIAL without its port)
 #
-# It refuses to run (exit 2) while dev.niltsiar.tvhome is the TV's Home: switch-home.sh old first, new after.
+# It refuses to run (exit 2) while dev.niltsiar.tvhome is the TV's Home or its KeyService is in
+# enabled_accessibility_services: switch-home.sh old first, new after.
 # It installs dev.niltsiar.tvhome only. It never changes the TV's Home setting or any other package. Below API 34 its exit
 # trap runs tools/theme.sh, and that restarts the launcher: it force-stops dev.niltsiar.tvhome, starts it again and, when
 # the launcher's key helpers were enabled, switches the TV's accessibility service list off and on again (other apps'
@@ -84,6 +85,17 @@ HOME_ACTIVITY="$(
 case "$HOME_ACTIVITY" in
   "$PACKAGE"/*)
     echo "$PACKAGE is the TV's Home ($HOME_ACTIVITY), so the cold-start benchmark would not start cold." >&2
+    echo "Run scripts/switch-home.sh old first, run this gate, then run scripts/switch-home.sh new." >&2
+    exit 2
+    ;;
+esac
+
+# Below API 34 the benchmark's reinstall drops our key service from the enabled list, which strands the remote on a TV that
+# still names it, so it must be handed back to the old launcher first.
+SERVICES="$(adb_tv shell settings get secure enabled_accessibility_services 2> /dev/null | tr -d '\r')" || SERVICES=""
+case ":$SERVICES:" in
+  *":$PACKAGE/.service.keys.KeyService:"* | *":$PACKAGE/$PACKAGE.service.keys.KeyService:"*)
+    echo "$PACKAGE/.service.keys.KeyService is in enabled_accessibility_services, and the benchmark's reinstall would drop it." >&2
     echo "Run scripts/switch-home.sh old first, run this gate, then run scripts/switch-home.sh new." >&2
     exit 2
     ;;

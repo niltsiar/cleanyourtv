@@ -23,8 +23,9 @@
 #
 # Saved state: new writes enabled_accessibility_services, accessibility_enabled, screensaver_components and the Home
 # activity to $SWITCH_HOME_STATE_DIR/switch-home-<serial>.state before its first change, unless that file exists (a second
-# new keeps the first file). old puts those values back exactly, unset ones included, then deletes the file. With no file,
-# old falls back to the rules below and says so.
+# new keeps the first file). old puts those values back exactly, unset ones included, then deletes the file. With no file
+# or an incomplete one, old falls back to the rules below and says so. A saved Home that is unrecorded or is the Compose
+# launcher itself is replaced by $OLD_HOME/.MainActivity, and the other saved values are still restored.
 #
 # Without saved state the settings move like this:
 #   enabled_accessibility_services  new: the old HomeKeyService and InputKeyService leave the list and
@@ -306,18 +307,19 @@ if ! adb_tv get-state > /dev/null 2>&1; then
   }
 fi
 
-# old puts the saved values back when the file is there; without it, or with a file that names our launcher as Home
-# (new was never run from a clean state), it falls back to the fixed rules in the header.
+# old puts the saved values back when the file is there. A saved Home that is unrecorded or is our own launcher (new ran
+# while ours was already Home) cannot be restored, so only the Home activity falls back to $OLD_HOME/.MainActivity.
 USE_STATE=0
 if [ "$1" = old ]; then
-  if load_state && [ "${S_HOME%%/*}" != "$NEW_PACKAGE" ]; then
+  if load_state; then
     USE_STATE=1
-    if [ -n "$S_HOME" ]; then
+    echo "Restoring the values saved in $STATE_FILE"
+    if [ -n "$S_HOME" ] && [ "${S_HOME%%/*}" != "$NEW_PACKAGE" ]; then
       ACTIVITY=$S_HOME
       PACKAGE=${S_HOME%%/*}
+    else
+      echo "Note: the saved Home (${S_HOME:-none}) is not an earlier launcher; using $ACTIVITY."
     fi
-    echo "Restoring the values saved in $STATE_FILE"
-    if [ -z "$S_HOME" ]; then echo "Note: the earlier Home was not recorded; using $ACTIVITY."; fi
   else
     echo "Note: no usable saved state in $STATE_FILE; switching by the fixed rules, which may not match the earlier values."
   fi
