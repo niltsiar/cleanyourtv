@@ -12,4 +12,5 @@ dependencies {
     api(libs.androidx.compose.ui.graphics)
 
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
 }

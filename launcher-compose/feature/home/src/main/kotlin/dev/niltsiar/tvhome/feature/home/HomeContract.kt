@@ -314,6 +314,7 @@ internal fun AppList.arranged(
 ): AppList {
     val byKey = apps.associateBy { it.key }
     val ordered = keys.mapNotNull(byKey::get)
-    val rest = apps.filter { it.key !in keys.toSet() }
+    val placed = keys.toSet()
+    val rest = apps.filter { it.key !in placed }
     return AppList(ordered + rest, docked.coerceAtLeast(0))
 }

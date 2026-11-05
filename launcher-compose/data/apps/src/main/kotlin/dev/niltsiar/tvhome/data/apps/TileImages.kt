@@ -21,7 +21,6 @@ private const val MIN_WIDTH_DP = 80f
 private const val FOCUS_SCALE = 1.10f
 private const val FOCUS_ROOM_DP = 12f
 private const val ICON_FILL = 0.7f
-private const val BUNDLED_BANNER_PREFIX = "banner_"
 
 /**
  * The width a tile needs for a grid of [columns] across [innerWidthPx]: the cell, less room for the focus zoom, up to
@@ -47,19 +46,15 @@ internal fun isBannerShaped(
     height: Int,
 ): Boolean = width <= 0 || height <= 0 || width >= height * 1.4f
 
-/** A bundled banner is named `banner_*`; any other app_banners value is ignored. */
-internal fun isBundledBannerName(name: String?): Boolean = name != null && name.startsWith(BUNDLED_BANNER_PREFIX)
-
 /** What one tile shows: its [image] (null when the app has no art) and the [accent] colour picked from the art, as ARGB. */
 internal class TileArt(
     val image: ImageBitmap?,
     val accent: Int,
 )
 
-/** Draws the artwork of one tile: a bundled banner from app_banners, the app's banner, or its icon. */
+/** Draws the artwork of one tile: the app's banner, or its icon. */
 internal class TileImages(
     private val context: Context,
-    private val appBanners: Map<String, String>,
     private val widthPx: Int,
     private val heightPx: Int,
 ) {
@@ -81,21 +76,13 @@ internal class TileImages(
         icon: () -> Drawable?,
     ): Drawable? = banner(activity) ?: icon()
 
-    private fun banner(activity: ActivityInfo): Drawable? = bundledBanner(appBanners[activity.packageName]) ?: appBanner(activity)
-
     private fun accentOf(art: Drawable): Int {
         val pixels = IntArray(VIVID_SIDE * VIVID_SIDE)
         art.toBitmap(VIVID_SIDE, VIVID_SIDE, Bitmap.Config.ARGB_8888).getPixels(pixels, 0, VIVID_SIDE, 0, 0, VIVID_SIDE, VIVID_SIDE)
         return vividColor(pixels)
     }
 
-    private fun bundledBanner(name: String?): Drawable? {
-        if (!isBundledBannerName(name)) return null
-        val id = context.resources.getIdentifier(name, "drawable", context.packageName)
-        return if (id != 0) context.getDrawable(id) else null
-    }
-
-    private fun appBanner(activity: ActivityInfo): Drawable? {
+    private fun banner(activity: ActivityInfo): Drawable? {
         val pm = context.packageManager
         val id = activity.banner.takeIf { it != 0 } ?: activity.applicationInfo.banner
         var banner: Drawable? = null

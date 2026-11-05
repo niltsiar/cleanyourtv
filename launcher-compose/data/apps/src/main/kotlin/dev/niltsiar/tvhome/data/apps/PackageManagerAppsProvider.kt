@@ -44,7 +44,7 @@ public class PackageManagerAppsProvider(
     private val images =
         with(context.resources.displayMetrics) {
             val width = tileWidthPx(widthPixels, config.columns, density)
-            TileImages(context, config.appBanners, width, width * 9 / 16)
+            TileImages(context, width, width * 9 / 16)
         }
     private val orderFile = File(context.filesDir, ORDER_FILE_NAME)
     internal val library = LibraryStore(context.filesDir)

@@ -26,13 +26,6 @@ class TileImagesTest {
     }
 
     @Test
-    fun only_banner_names_pick_a_bundled_drawable() {
-        assertTrue(isBundledBannerName("banner_netflix"))
-        assertFalse(isBundledBannerName("ic_launcher"))
-        assertFalse(isBundledBannerName(null))
-    }
-
-    @Test
     fun the_tile_width_is_the_cell_less_room_for_the_focus_zoom_up_to_the_design_size() {
         assertEquals(360, tileWidthPx(innerWidthPx = 1920, columns = 4, density = 2f))
         assertEquals(269, tileWidthPx(innerWidthPx = 1920, columns = 6, density = 2f))

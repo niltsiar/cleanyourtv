@@ -1,16 +1,14 @@
 package dev.niltsiar.tvhome.data.system
 
-import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.Settings
-import android.util.Log
 import androidx.core.net.toUri
+import dev.niltsiar.tvhome.core.model.startActivitySafely
 import dev.niltsiar.tvhome.core.model.tvLaunchIntent
 
-private const val TAG = "TvHome.Settings"
 private val AospTvSettings = ComponentName("com.android.tv.settings", "com.android.tv.settings.MainSettings")
 
 /**
@@ -82,15 +80,5 @@ public class SystemSettings internal constructor(
             false
         }
 
-    private fun open(intent: Intent): Boolean =
-        try {
-            context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            true
-        } catch (e: ActivityNotFoundException) {
-            Log.w(TAG, "cannot open $intent: $e")
-            false
-        } catch (e: SecurityException) {
-            Log.w(TAG, "cannot open $intent: $e")
-            false
-        }
+    private fun open(intent: Intent): Boolean = context.startActivitySafely(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 }

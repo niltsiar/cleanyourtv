@@ -28,7 +28,7 @@ internal fun loadTopBarApps(
             AppEntry(
                 key = component.flattenToShortString(),
                 packageName = pkg,
-                label = info.loadLabel(pm).toString(),
+                label = cleanLabel(info.loadLabel(pm).toString(), pkg),
                 image = info.loadIcon(pm).toBitmap(iconPx, iconPx).asImageBitmap(),
                 leanback = tv != null,
             )

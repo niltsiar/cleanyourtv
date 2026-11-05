@@ -54,8 +54,6 @@ public data class TvConfig(
     val launchActions: Map<String, String> = emptyMap(),
     /** Package to the name its tile shows instead of the app's label. */
     val appLabels: Map<String, String> = emptyMap(),
-    /** Package to the name of a banner drawable its tile shows instead of the app's art. */
-    val appBanners: Map<String, String> = emptyMap(),
     val topBarApps: List<String> = emptyList(),
     val greetingName: String? = null,
     val showGreeting: Boolean = true,

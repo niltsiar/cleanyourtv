@@ -391,7 +391,7 @@ class TvConfigParserTest {
 
     @Test
     fun keys_with_no_reader_in_this_launcher_are_unsupported_and_change_nothing() {
-        val keys = listOf("dock_opacity", "dock_glass", "locale", "open_on_start_choice", "open_on_start_on_wake")
+        val keys = listOf("app_banners", "dock_opacity", "dock_glass", "locale", "open_on_start_choice", "open_on_start_on_wake")
         val parsed = parseTvConfig(keys.joinToString(prefix = "{", postfix = "}") { "\"$it\": true" })
 
         assertEquals(keys, parsed.unsupportedKeys)
@@ -412,7 +412,6 @@ class TvConfigParserTest {
             "single_row" to ("true" to defaults.copy(singleRow = true)),
             "launch_actions" to ("""["com.a=ACT"]""" to defaults.copy(launchActions = mapOf("com.a" to "ACT"))),
             "app_labels" to ("""["com.a=Alpha"]""" to defaults.copy(appLabels = mapOf("com.a" to "Alpha"))),
-            "app_banners" to ("""["com.a=banner"]""" to defaults.copy(appBanners = mapOf("com.a" to "banner"))),
             "top_bar_apps" to
                 ("""["com.t"]""" to defaults.copy(topBarApps = listOf("com.t"), hiddenApps = defaults.hiddenApps + "com.t")),
             "greeting_name" to (""""Ann"""" to defaults.copy(greetingName = "Ann")),

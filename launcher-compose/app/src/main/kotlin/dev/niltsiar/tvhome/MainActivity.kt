@@ -1,7 +1,6 @@
 package dev.niltsiar.tvhome
 
 import android.annotation.SuppressLint
-import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -27,12 +26,14 @@ import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.InputTarget
+import dev.niltsiar.tvhome.core.model.startActivitySafely
 import dev.niltsiar.tvhome.data.apps.LaunchResult
 import dev.niltsiar.tvhome.feature.library.MoleculeLibraryViewModel
 import dev.niltsiar.tvhome.service.keys.VendorKeys
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 import dev.niltsiar.tvhome.feature.home.R as FeatureR
 
 class MainActivity : ComponentActivity() {
@@ -49,7 +50,7 @@ class MainActivity : ComponentActivity() {
     private var resumed = false
     private val vendorKeys by lazy { VendorKeys(this, graph.config, graph.systemSettings, ::openSettings) }
     private val idleClock by lazy {
-        IdleClock(graph.config.homeIdleClockMinutes * MILLIS_PER_MINUTE, { resumed }, ::showClock)
+        IdleClock(TimeUnit.MINUTES.toMillis(graph.config.homeIdleClockMinutes.toLong()), { resumed }, ::showClock)
     }
     private val library: MoleculeLibraryViewModel by viewModels {
         viewModelFactory {
@@ -221,17 +222,14 @@ class MainActivity : ComponentActivity() {
 
     /** The app of boot_to_live_tv or the Open on start choice, or the Live TV app. */
     private fun openIntent(intent: Intent) {
-        try {
-            startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        } catch (e: ActivityNotFoundException) {
-            toast(R.string.not_available)
-        } catch (e: SecurityException) {
-            toast(R.string.not_available)
-        }
+        if (!startActivitySafely(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))) toast(R.string.not_available)
     }
 
-    private fun toast(message: Int) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    private fun toast(
+        message: Int,
+        length: Int = Toast.LENGTH_SHORT,
+    ) {
+        Toast.makeText(this, message, length).show()
     }
 
     private fun launchLibraryApp(app: AppEntry) {
@@ -239,7 +237,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun librarySaveFailed() {
-        Toast.makeText(this, FeatureR.string.library_save_failed, Toast.LENGTH_LONG).show()
+        toast(FeatureR.string.library_save_failed, Toast.LENGTH_LONG)
     }
 
     private fun openSettings() {
@@ -259,14 +257,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun orderNotSaved() {
-        Toast.makeText(this, R.string.order_not_saved, Toast.LENGTH_SHORT).show()
+        toast(R.string.order_not_saved)
     }
 
     private fun cantOpen(what: String) {
         Toast.makeText(this, getString(R.string.cant_open, what), Toast.LENGTH_SHORT).show()
-    }
-
-    private companion object {
-        const val MILLIS_PER_MINUTE = 60_000L
     }
 }

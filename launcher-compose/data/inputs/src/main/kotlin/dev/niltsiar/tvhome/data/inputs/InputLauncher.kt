@@ -6,6 +6,7 @@ import android.content.Intent
 import android.util.Log
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.InputTarget
+import dev.niltsiar.tvhome.core.model.startActivitySafely
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -41,7 +42,7 @@ public class InputLauncher(
     private val source = TvInputSource(appContext)
     private val coocaa = CoocaaSources(appContext)
     private val liveTv = LiveTv(appContext, config)
-    private val opener = InputOpener(config, appContext::startActivity)
+    private val opener = InputOpener(config, appContext::startActivitySafely)
 
     /** True when something started. Binder calls run on the IO dispatcher; activities start on the caller's. */
     public suspend fun open(target: InputTarget): Boolean =

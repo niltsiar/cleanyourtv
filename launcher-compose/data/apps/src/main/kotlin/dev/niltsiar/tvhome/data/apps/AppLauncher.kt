@@ -6,11 +6,12 @@ import android.content.Intent
 import android.util.Log
 import androidx.core.net.toUri
 import dev.niltsiar.tvhome.core.model.AppEntry
+import dev.niltsiar.tvhome.core.model.INPUT_PREFIX
 import dev.niltsiar.tvhome.core.model.InputTarget
+import dev.niltsiar.tvhome.core.model.inputIdOf
 
 private const val TAG = "TvHome.Launch"
 private const val VIEW_PREFIX = "view:"
-private const val INPUT_PREFIX = "input:"
 
 /** What Home's own launch of a tile came to; the caller turns it into a screen change or a toast. */
 public sealed interface LaunchResult {
@@ -66,17 +67,6 @@ public class AppLauncher(
         }
     }
 }
-
-/**
- * The TV input id of a launch_actions value "input:<id>", or null when the value is not one. An empty id ("input:"
- * alone) is none: the tile launches normally rather than switching to nothing.
- */
-internal fun inputIdOf(action: String?): String? =
-    action
-        ?.takeIf { it.startsWith(INPUT_PREFIX) }
-        ?.removePrefix(INPUT_PREFIX)
-        ?.trim()
-        ?.ifEmpty { null }
 
 /**
  * The tile's own activity by explicit component, started in a new task (with the leanback category for a TV app, so a

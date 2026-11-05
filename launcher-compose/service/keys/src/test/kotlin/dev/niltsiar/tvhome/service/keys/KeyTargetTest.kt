@@ -1,6 +1,7 @@
 package dev.niltsiar.tvhome.service.keys
 
 import android.accessibilityservice.AccessibilityService
+import dev.niltsiar.tvhome.core.model.inputIdOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -34,8 +35,8 @@ class KeyTargetTest {
     fun an_empty_guide_or_input_id_is_a_plain_package() {
         assertEquals(KeyTarget.App("guide:"), parseTarget("guide:"))
         assertEquals(KeyTarget.App("input: "), parseTarget("input: "))
-        assertNull(inputId("input: "))
-        assertNull(inputId("com.netflix.ninja"))
+        assertNull(inputIdOf("input: "))
+        assertNull(inputIdOf("com.netflix.ninja"))
     }
 
     @Test

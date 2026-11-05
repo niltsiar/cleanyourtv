@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import dev.niltsiar.tvhome.core.model.LauncherIntents
+import dev.niltsiar.tvhome.core.model.startActivitySafely
 
 /**
  * Answers com.android.tv.action.VIEW_INPUTS, the system input switcher that the remote's Input button turns into
@@ -14,7 +15,7 @@ import dev.niltsiar.tvhome.core.model.LauncherIntents
 class InputsRequestActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        startActivity(
+        startActivitySafely(
             Intent(this, MainActivity::class.java)
                 .setAction(LauncherIntents.VIEW_INPUTS)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),

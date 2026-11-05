@@ -1,6 +1,7 @@
 package dev.niltsiar.tvhome.service.keys
 
 import android.accessibilityservice.AccessibilityService
+import dev.niltsiar.tvhome.core.model.inputIdOf
 
 /** The action words of app_keys. "ignore" does nothing on purpose: the button is swallowed, for a shortcut pressed by accident. */
 internal enum class ActionWord(
@@ -48,22 +49,13 @@ internal sealed interface KeyTarget {
     ) : KeyTarget
 }
 
-private const val INPUT_PREFIX = "input:"
 private const val GUIDE_PREFIX = "guide:"
-
-/** The TV input id of an "input:<id>" target; null for any other target or an empty id. */
-internal fun inputId(target: String): String? =
-    target
-        .takeIf { it.startsWith(INPUT_PREFIX) }
-        ?.removePrefix(INPUT_PREFIX)
-        ?.trim()
-        ?.ifEmpty { null }
 
 /**
  * True for a "package/.Activity" target. An input id has slashes too, and ComponentName.unflattenFromString() would read
  * "input:com.tcl.tvinput" as its package, so an "input:" target never counts.
  */
-internal fun isActivity(target: String): Boolean = inputId(target) == null && target.indexOf('/') > 0
+internal fun isActivity(target: String): Boolean = inputIdOf(target) == null && target.indexOf('/') > 0
 
 internal fun parseTarget(target: String): KeyTarget {
     ActionWord.entries.firstOrNull { it.word == target }?.let { return KeyTarget.Action(it) }
@@ -75,7 +67,7 @@ internal fun parseTarget(target: String): KeyTarget {
             .takeIf { it.isNotEmpty() }
             ?.let { return KeyTarget.Guide(it) }
     }
-    inputId(target)?.let { return KeyTarget.Input(it) }
+    inputIdOf(target)?.let { return KeyTarget.Input(it) }
     return if (isActivity(target)) KeyTarget.Activity(target) else KeyTarget.App(target)
 }
 

@@ -1,6 +1,5 @@
 package dev.niltsiar.tvhome.data.inputs
 
-import android.content.ActivityNotFoundException
 import android.content.Intent
 import dev.niltsiar.tvhome.core.config.TvConfig
 import org.junit.Assert.assertEquals
@@ -17,7 +16,7 @@ private const val CHANNEL_TYPE = "vnd.android.cursor.item/channel"
 @RunWith(RobolectricTestRunner::class)
 class InputOpenerTest {
     private val started = mutableListOf<Intent>()
-    private var refuse: (Intent) -> Throwable? = { null }
+    private var refuse: (Intent) -> Boolean = { false }
 
     private fun open(
         config: TvConfig = TvConfig(liveTvPackage = null),
@@ -26,7 +25,7 @@ class InputOpenerTest {
     ): Boolean =
         InputOpener(config) { intent ->
             started += intent
-            refuse(intent)?.let { throw it }
+            !refuse(intent)
         }.open(id, parent)
 
     @Test
@@ -42,7 +41,7 @@ class InputOpenerTest {
 
     @Test
     fun the_live_tv_package_is_tried_first_so_that_no_chooser_shows_and_then_anything() {
-        refuse = { if (it.`package` != null) ActivityNotFoundException() else null }
+        refuse = { it.`package` != null }
 
         assertTrue(open(TvConfig(liveTvPackage = "com.tv.live")))
 
@@ -50,8 +49,8 @@ class InputOpenerTest {
     }
 
     @Test
-    fun a_security_exception_does_not_stop_the_fallbacks_and_a_total_refusal_returns_false() {
-        refuse = { SecurityException("needs ACCESS_TV_SOURCE") }
+    fun a_refusal_does_not_stop_the_fallbacks_and_a_total_refusal_returns_false() {
+        refuse = { true }
 
         assertFalse(open(TvConfig(liveTvPackage = "com.tv.live")))
 
@@ -60,7 +59,7 @@ class InputOpenerTest {
 
     @Test
     fun an_input_action_gets_the_same_uri_where_nothing_takes_the_view() {
-        refuse = { if (it.action == Intent.ACTION_VIEW) ActivityNotFoundException() else null }
+        refuse = { it.action == Intent.ACTION_VIEW }
 
         assertTrue(open(TvConfig(liveTvPackage = null, inputAction = "com.xgimi.action.hdmiPlayer")))
 
@@ -84,7 +83,7 @@ class InputOpenerTest {
     @Test
     fun a_cec_device_uses_the_source_number_of_its_port_but_opens_its_own_input() {
         val config = TvConfig(liveTvPackage = null, inputAction = "vendor.PLAY", inputSources = listOf("HW5=23"))
-        refuse = { if (it.action == "vendor.PLAY") ActivityNotFoundException() else null }
+        refuse = { it.action == "vendor.PLAY" }
 
         assertTrue(open(config, id = "com.mediatek.tvinput/.cec/CEC7", parent = PORT))
 
@@ -106,7 +105,7 @@ class InputOpenerTest {
 
     @Test
     fun a_failed_vendor_picker_falls_through_to_the_standard_way() {
-        refuse = { if (it.component != null) ActivityNotFoundException() else null }
+        refuse = { it.component != null }
 
         assertTrue(open(TvConfig(liveTvPackage = null, inputAction = "com.xiaomi.mitv.tvplayer/.ExternalSourceActivity")))
 

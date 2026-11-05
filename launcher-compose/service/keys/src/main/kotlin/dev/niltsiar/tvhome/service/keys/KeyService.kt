@@ -21,6 +21,7 @@ import android.widget.Toast
 import dev.niltsiar.tvhome.core.config.ThemeDirectory
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.LauncherIntents
+import dev.niltsiar.tvhome.core.model.startActivitySafely
 import dev.niltsiar.tvhome.data.system.SystemSettings
 
 private const val TAG = "TvHome.Keys"
@@ -141,15 +142,9 @@ public class KeyService : AccessibilityService() {
         val prefs = getSharedPreferences(BOOT_PREFS, MODE_PRIVATE)
         if (!firstBindAfterBoot(boot, prefs.getInt(PROBE_BOOT_KEY, -1), SystemClock.elapsedRealtime())) return
         prefs.edit().putInt(PROBE_BOOT_KEY, boot).apply()
-        try {
-            startActivity(
-                Intent(this, ProbeActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION),
-            )
-        } catch (e: ActivityNotFoundException) {
-            Log.w(TAG, "cannot start the boot probe: $e")
-        } catch (e: SecurityException) {
-            Log.w(TAG, "cannot start the boot probe: $e")
-        }
+        startActivitySafely(
+            Intent(this, ProbeActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION),
+        )
     }
 
     private fun tearDown() {

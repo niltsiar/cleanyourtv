@@ -179,13 +179,16 @@ private fun Art(
         } else if (artwork != null) {
             BasicText(
                 card.app.label
-                    .take(1)
+                    .firstCodePoint()
                     .uppercase(),
                 style = TvTheme.typography.shelfTitle.copy(fontSize = 28.sp),
             )
         }
     }
 }
+
+/** The first character, whole: a letter outside the Basic Multilingual Plane is two chars. */
+internal fun String.firstCodePoint(): String = if (isEmpty()) this else take(Character.charCount(codePointAt(0)))
 
 @Composable
 private fun Name(label: String) {

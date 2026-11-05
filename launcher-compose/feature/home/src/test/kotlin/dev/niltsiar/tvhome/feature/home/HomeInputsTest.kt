@@ -116,6 +116,20 @@ class HomeInputsTest {
         }
 
     @Test
+    fun the_button_stays_hidden_until_the_tv_has_said_what_it_lists() =
+        runTest {
+            val inputs = MutableSharedFlow<InputsMenu>()
+            presenter(inputs).test {
+                assertFalse(awaitMatching { it.dock.isNotEmpty() }.inputs.available)
+
+                inputs.emit(FourPorts)
+
+                assertTrue(awaitMatching { it.inputs == FourPorts }.inputs.available)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
     fun a_tv_with_no_inputs_hides_the_button_and_home_stopping_closes_the_list() =
         runTest {
             val none = InputsMenu(available = false)

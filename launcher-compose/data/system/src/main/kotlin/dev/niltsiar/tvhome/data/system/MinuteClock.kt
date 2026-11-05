@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.stateIn
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.util.concurrent.TimeUnit
 
 /** Boards without a battery-backed clock boot at 1970; any date before 2025-01-01 is that, not the time. */
 internal const val TIME_VALID_AFTER_MS = 1_735_689_600_000L
@@ -51,12 +52,11 @@ internal fun minuteClock(
                 } else {
                     val now = LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), zone())
                     send(now)
-                    delay(MILLIS_PER_MINUTE - (now.second * MILLIS_PER_SECOND + now.nano / NANOS_PER_MILLI))
+                    delay(TimeUnit.MINUTES.toMillis(1) - (now.second * MILLIS_PER_SECOND + now.nano / NANOS_PER_MILLI))
                 }
             }
         }
     }
 
-private const val MILLIS_PER_MINUTE = 60_000L
 private const val MILLIS_PER_SECOND = 1_000L
 private const val NANOS_PER_MILLI = 1_000_000L

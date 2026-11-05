@@ -1,18 +1,16 @@
 package dev.niltsiar.tvhome.service.keys
 
-import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
 import android.media.tv.TvContract
 import android.os.Build
-import android.util.Log
 import dev.niltsiar.tvhome.core.model.LauncherIntents
+import dev.niltsiar.tvhome.core.model.startActivitySafely
 import dev.niltsiar.tvhome.core.model.tvLaunchIntent
 import dev.niltsiar.tvhome.data.system.SystemSettings
 
-private const val TAG = "TvHome.Keys"
 private const val PROGRAM_DIR_TYPE = "vnd.android.cursor.dir/program"
 private const val CHANNEL_TYPE = "vnd.android.cursor.item/channel"
 
@@ -113,12 +111,6 @@ internal class TargetLauncher(
     }
 
     private fun start(intent: Intent) {
-        try {
-            context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        } catch (e: ActivityNotFoundException) {
-            Log.w(TAG, "cannot open $intent: $e")
-        } catch (e: SecurityException) {
-            Log.w(TAG, "cannot open $intent: $e")
-        }
+        context.startActivitySafely(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 }

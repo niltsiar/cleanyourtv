@@ -31,7 +31,7 @@ internal const val XIAOMI_SHORT_MENU_FLAGS: Int = 0x7531
  * so it does not also open the app.
  */
 public class OkHold(
-    private val holdMs: Long = HOLD_OK_MS,
+    public val holdMs: Long = HOLD_OK_MS,
 ) {
     private var downTime = NONE
 
@@ -157,7 +157,7 @@ private class HoldOkNode(
                     timer?.cancel()
                     timer =
                         coroutineScope.launch {
-                            delay(HOLD_OK_MS)
+                            delay(hold.holdMs)
                             if (hold.timeUp()) open()
                         }
                 }

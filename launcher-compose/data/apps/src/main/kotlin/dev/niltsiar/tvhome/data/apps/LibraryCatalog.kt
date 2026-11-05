@@ -45,7 +45,7 @@ public class LibraryCatalog(
     private val images =
         with(context.resources.displayMetrics) {
             val width = (ART_WIDTH_DP * density).roundToInt()
-            TileImages(context, config.appBanners, width, width * 9 / 16)
+            TileImages(context, width, width * 9 / 16)
         }
 
     /** Emits each time the installed apps or the Home choices change after the collection starts. */
@@ -140,6 +140,7 @@ public class LibraryCatalog(
         try {
             cleanLabel(info.loadLabel(pm).toString(), info.activityInfo.packageName)
         } catch (e: RuntimeException) {
+            Log.w(TAG, "no label for ${info.activityInfo.packageName}: $e")
             info.activityInfo.packageName
         }
 }

@@ -20,6 +20,7 @@ import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
+import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.LibraryApp
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.Wallpaper
@@ -64,6 +65,7 @@ class LibraryFlowTest {
                                 clock = flowOf(null),
                                 network = flowOf(NetworkState()),
                                 topBarApps = flowOf(emptyList()),
+                                inputs = flowOf(InputsMenu(available = true)),
                                 wallpaper = flowOf(Wallpaper()),
                                 systemHour24 = { true },
                                 saveOrder = { _, _ -> true },

@@ -18,8 +18,8 @@ private val NoNetwork = NetworkState()
 private val NoWallpaper = Wallpaper()
 private val NoOpened = emptyMap<String, Long>()
 
-/** The Inputs button before the TV has said what it lists: it shows, with nothing to open yet. */
-private val UnknownInputs = InputsMenu(available = true)
+/** The Inputs button before the TV has said what it lists: hidden, as the reference hides it until it finds something to list. */
+private val UnknownInputs = InputsMenu(available = false)
 
 /** Home's state logic for any host that runs a composable: Molecule today. It uses the Compose runtime only. */
 @Composable

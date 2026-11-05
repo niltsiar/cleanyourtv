@@ -35,6 +35,7 @@ internal class TvInputSource(
         try {
             manager?.getTvInputInfo(inputId)?.parentId
         } catch (e: RuntimeException) {
+            Log.w(TAG, "no parent for input $inputId: $e")
             null
         }
 
