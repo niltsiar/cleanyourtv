@@ -15,11 +15,12 @@ class HomeLayoutTest {
         share: Float,
         rows: Int,
         columns: Int = 6,
+        nameRoom: Float = 0f,
     ): Float {
         val inner = gridWidth * share
         val dockTile = (inner - (columns + 1) * gap) / columns * 9 / 16
         val gridTile = (inner - (columns - 1) * gap) / columns * 9 / 16
-        return dockTile + 2 * gap + rows * (gridTile + gap)
+        return dockTile + nameRoom + 2 * gap + rows * (gridTile + nameRoom + gap)
     }
 
     @Test
@@ -37,6 +38,15 @@ class HomeLayoutTest {
         val share = tileWidthShare(gridWidth, height, columns = 6, rowsBelowDock = 3, gap = gap)
         assertTrue("share $share", share < 1f && share > 0.85f)
         assertEquals(height, needed(share, rows = 3), 0.5f)
+    }
+
+    @Test
+    fun names_under_the_tiles_shrink_them_until_the_dock_and_the_rows_with_their_names_fit() {
+        val room = 360f
+        val bare = tileWidthShare(gridWidth, room, columns = 6, rowsBelowDock = 3, gap = gap)
+        val named = tileWidthShare(gridWidth, room, columns = 6, rowsBelowDock = 3, gap = gap, nameRoom = 4f)
+        assertTrue("shares $bare and $named", named < bare)
+        assertEquals(room, needed(named, rows = 3, nameRoom = 4f), 0.5f)
     }
 
     @Test
@@ -67,6 +77,22 @@ class HomeLayoutTest {
         assertEquals(540f - 48f - (245f + 70f + 48f + 94f), lowering(gridRows = 3, rowsBelowDock = 1), 0.01f)
         assertEquals(0f, lowering(gridRows = 3, rowsBelowDock = 3), 0f)
         assertEquals(lowering(gridRows = 3, rowsBelowDock = 1), lowering(gridRows = 1, rowsBelowDock = 3), 0.01f)
+    }
+
+    @Test
+    fun the_names_under_the_rows_that_must_fit_lower_the_dock_by_less() {
+        fun lowering(nameRoom: Float) =
+            dockLowering(
+                windowHeight = 600f,
+                shelfBottom = 245f,
+                tileHeight = 70f,
+                gap = 24f,
+                gridRows = 3,
+                rowsBelowDock = 1,
+                nameRoom = nameRoom,
+            )
+
+        assertEquals(lowering(nameRoom = 0f) - 2 * 36f, lowering(nameRoom = 36f), 0.01f)
     }
 
     private fun tiles(n: Int) = (1..n).map { AppEntry(key = "t$it", packageName = "t$it", label = "T$it") }

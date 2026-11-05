@@ -21,7 +21,6 @@ private val unsupportedKeys: Set<String> =
     setOf(
         "accent_color",
         "advanced_effects",
-        "always_show_names",
         "app_banners",
         "dock_band_all",
         "dock_even_padding",
@@ -91,6 +90,7 @@ public fun parseTvConfig(json: String): ParsedConfig {
             columns = o.int("columns", d.columns, 1..8),
             rowsBelowDock = o.int("rows_below_dock", d.rowsBelowDock, 0..3),
             singleRow = o.bool("single_row", d.singleRow),
+            alwaysShowNames = o.bool("always_show_names", d.alwaysShowNames),
             launchActions = packageMap(o.stringList("launch_actions", emptyList())),
             appLabels = packageMap(o.stringList("app_labels", emptyList())),
             topBarApps = topBarApps,

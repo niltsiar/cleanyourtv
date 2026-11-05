@@ -58,6 +58,8 @@ public data class TvConfig(
     /** 0 to 3. */
     val rowsBelowDock: Int = 0,
     val singleRow: Boolean = false,
+    /** Names under every tile, dimmed until focused; the dock panel and the grid's rows grow to hold them. */
+    val alwaysShowNames: Boolean = false,
     /** Package to the action its tile sends instead of opening the start screen. */
     val launchActions: Map<String, String> = emptyMap(),
     /** Package to the name its tile shows instead of the app's label. */

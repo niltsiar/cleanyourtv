@@ -40,7 +40,7 @@ import org.robolectric.annotation.Config
 @OptIn(InternalComposeTracingApi::class, ExperimentalComposeRuntimeApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
-class TileRecompositionTest {
+open class TileRecompositionTest {
     @get:Rule
     val compose = createComposeRule()
 
@@ -92,11 +92,14 @@ class TileRecompositionTest {
             override fun onScopeDisposed(scope: RecomposeScope) = Unit
         }
 
+    protected open val alwaysShowNames = false
+
     @Before
     fun showHome() {
         Composer.setTracer(tiles)
         val apps = (1..12).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") }
-        val config = TvConfig(columns = 6, cinematicHome = true, appLibrary = true, focusOvershoot = false)
+        val config =
+            TvConfig(columns = 6, cinematicHome = true, appLibrary = true, focusOvershoot = false, alwaysShowNames = alwaysShowNames)
         compose.setContent {
             val home = currentComposer.composition
             DisposableEffect(home) {
@@ -172,6 +175,11 @@ class TileRecompositionTest {
         compose.onNodeWithTag("tile:pkg.9").assertIsFocused()
         assertEquals(0, items.count)
     }
+}
+
+/** The names under the tiles fade in the draw phase, so a focus move recomposes no more than without them. */
+class NamedTileRecompositionTest : TileRecompositionTest() {
+    override val alwaysShowNames = true
 }
 
 @OptIn(InternalComposeTracingApi::class)

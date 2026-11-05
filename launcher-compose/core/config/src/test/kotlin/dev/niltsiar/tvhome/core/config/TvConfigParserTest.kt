@@ -441,6 +441,7 @@ class TvConfigParserTest {
             "columns" to ("6" to defaults.copy(columns = 6)),
             "rows_below_dock" to ("2" to defaults.copy(rowsBelowDock = 2)),
             "single_row" to ("true" to defaults.copy(singleRow = true)),
+            "always_show_names" to ("true" to defaults.copy(alwaysShowNames = true)),
             "launch_actions" to ("""["com.a=ACT"]""" to defaults.copy(launchActions = mapOf("com.a" to "ACT"))),
             "app_labels" to ("""["com.a=Alpha"]""" to defaults.copy(appLabels = mapOf("com.a" to "Alpha"))),
             "top_bar_apps" to

@@ -115,6 +115,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
@@ -142,6 +143,7 @@ import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.Wallpaper
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -154,6 +156,17 @@ import java.time.ZoneId
 
 internal val ScreenMargin = 40.dp
 internal val TileGap = 24.dp
+
+/** The gap under a tile that its focus ring clears, and the height of one line of its name. */
+private val TileNameGap = 14.dp
+private val TileNameLine = 22.dp
+
+/** The room always_show_names adds under a tile. */
+internal val TileNameRoom = TileNameGap + TileNameLine
+
+/** The alpha of the name under a tile without focus (the Java launcher's), and how long it takes to reach 1 on focus. */
+private const val NAME_REST_ALPHA = 0.75f
+private const val NAME_FADE_MS = 220
 internal val TopBarTop = 20.dp
 internal val TopBarHeight = 56.dp
 private val ContentTop = TopBarTop + TopBarHeight + 20.dp
@@ -583,6 +596,7 @@ private fun HomeContent(
                     input = input,
                     reordering = reordering,
                     tileMenu = layout.tileMenu,
+                    showName = layout.showNames,
                     modifier =
                         Modifier
                             .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = TvTheme.motion.placementSpec)
@@ -768,11 +782,12 @@ private fun rememberFocusDim(
                         gridRows = gridRows,
                         rowsBelowDock = layout.rowsBelowDock,
                         bottomMargin = GridBottom.value,
+                        nameRoom = layout.nameRoom(),
                     ).dp
                 }
             val edge = (ScreenMargin + gridWidth * ((1f - share) / 2f) - TileGap) / width
             val top = shelfBottom + lowered
-            lowered.toPx() to Rect(edge, top / height, 1f - edge, (top + tileHeight + TileGap * 2) / height)
+            lowered.toPx() to Rect(edge, top / height, 1f - edge, (top + tileHeight + TileGap * 2 + layout.nameRoom().dp) / height)
         }
     val currentLowering = rememberUpdatedState(lowering)
     val currentBand = rememberUpdatedState(band)
@@ -795,8 +810,12 @@ private fun gridShare(
             layout.columns,
             layout.rowsBelowDock,
             TileGap.value,
+            layout.nameRoom(),
         )
     }
+
+/** The room a tile's name takes under it, in dp; 0 with the names off. */
+private fun HomeLayout.nameRoom(): Float = if (showNames) TileNameRoom.value else 0f
 
 /** The row focus is on, as [FocusDim.row] counts it. */
 private fun focusRowOf(
@@ -1222,6 +1241,7 @@ private fun Dock(
                             input = input,
                             reordering = reordering,
                             tileMenu = layout.tileMenu,
+                            showName = layout.showNames,
                             edge = edge,
                             glassStroke = look.band && look.glass,
                             modifier =
@@ -1277,6 +1297,7 @@ private fun Dock(
                             input = input,
                             reordering = reordering,
                             tileMenu = layout.tileMenu,
+                            showName = layout.showNames,
                             edge = edge,
                             glassStroke = look.band && look.glass,
                             modifier =
@@ -1390,9 +1411,28 @@ private fun AppTile(
     reordering: Boolean,
     tileMenu: Boolean,
     modifier: Modifier = Modifier,
+    showName: Boolean = false,
     edge: DockEdgeLight? = null,
     glassStroke: Boolean = false,
 ) {
+    if (showName) {
+        NameUnder(app, modifier) {
+            AppTile(
+                app,
+                accent,
+                ring,
+                onFocus,
+                onClick,
+                input,
+                reordering,
+                tileMenu,
+                Modifier.fillMaxWidth(),
+                edge = edge,
+                glassStroke = glassStroke,
+            )
+        }
+        return
+    }
     val key = app.key
     val requester = remember(input, key) { input.requester(key) }
     val travel = input.travel
@@ -1478,6 +1518,49 @@ private fun AppTile(
                 BasicText(text = app.label, style = TvTheme.typography.tileLabel, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
+    }
+}
+
+/**
+ * [tile] with [app]'s name under it, at [NAME_REST_ALPHA] and at 1 while the tile has focus. The fade runs in the draw
+ * phase, so a focus move recomposes nothing.
+ */
+@Composable
+private fun NameUnder(
+    app: AppEntry,
+    modifier: Modifier = Modifier,
+    tile: @Composable () -> Unit,
+) {
+    val motion = TvTheme.motion
+    val alpha = remember { Animatable(NAME_REST_ALPHA) }
+    val scope = rememberCoroutineScope()
+    val style =
+        TvTheme.typography.tileLabel
+            .copy(color = TvTheme.colors.onSurface, textAlign = TextAlign.Center)
+            .withSubtitleShadow()
+    Column(
+        modifier.onFocusChanged {
+            val target = if (it.hasFocus) 1f else NAME_REST_ALPHA
+            if (alpha.targetValue != target) {
+                scope.launch(start = CoroutineStart.UNDISPATCHED) { alpha.animateTo(target, motion.tweenSpec(NAME_FADE_MS)) }
+            }
+        },
+    ) {
+        tile()
+        BasicText(
+            app.label,
+            style = style,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = TileNameGap)
+                    .height(TileNameLine)
+                    .testTag("name:${app.key}")
+                    .clearAndSetSemantics {}
+                    .drawnAt { alpha.value },
+        )
     }
 }
 
