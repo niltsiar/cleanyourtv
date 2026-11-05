@@ -8,6 +8,7 @@ Run from the repository root: python3 -m unittest discover -s launcher-compose/s
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 import unittest
@@ -17,6 +18,8 @@ SCRIPT = Path(__file__).resolve().parents[1] / "switch-home.sh"
 GATE = Path(__file__).resolve().parents[1] / "spike-gate.sh"
 NEW = "dev.niltsiar.tvhome"
 BENCHMARK = f"{NEW}.benchmark"
+THEME_STAGE = "/data/local/tmp/tvhome-benchmark-theme"
+THEME_SCRIPT = f"{THEME_STAGE}/push-theme.sh"
 NEW_KEY = f"{NEW}/.service.keys.KeyService"
 OLD = "com.gathin.tvhome"
 OLD_HOME_KEY = f"{OLD}/.HomeKeyService"
@@ -51,6 +54,10 @@ if args[:1] == ["get-state"]:
     out("device")
 elif args[:1] == ["connect"]:
     out("connected")
+elif args[:1] == ["push"]:
+    if not os.path.exists(args[1]):
+        sys.stderr.write(f"adb: error: cannot stat '{args[1]}'\n")
+        sys.exit(1)
 elif args[:1] in (["install"], ["uninstall"]):
     # The fake APKs hold the package they carry, so an install shows which package it replaced.
     package = open(args[-1]).read().strip() if args[0] == "install" else args[-1]
@@ -75,6 +82,8 @@ elif args[:1] == ["shell"]:
         out("       TOTAL PSS:    51200            TOTAL RSS:    90000")
     elif line.startswith("pm grant"):
         pass
+    elif line.startswith("sh /data/local/tmp/"):
+        out(state.get("theme_push_output", "theme pushed"))
     elif line.startswith("test -f"):
         if state["theme_config"]:
             out("present")
@@ -108,6 +117,7 @@ elif args[:1] == ["shell"]:
 FAKE_GRADLEW = r'''#!/usr/bin/env bash
 root="$(cd "$(dirname "$0")" && pwd)"
 echo "$*" >> "$root/gradle.log"
+printf '["gradle", "%s"]\n' "$*" >> "$FAKE_ADB_STATE.log"
 for task in "$@"; do
   case "$task" in
     :app:assembleRelease)
@@ -360,15 +370,30 @@ class SpikeGateRunTest(unittest.TestCase):
         gradlew.write_text(FAKE_GRADLEW)
         gradlew.chmod(0o755)
         (self.root / "benchmarkData.json").write_text(json.dumps(BENCHMARK_DATA))
+        self.theme = base / "theme"
+        (self.theme / "wallpapers").mkdir(parents=True)
+        for name in ("config.json", "wallpaper.jpg", "wallpapers/dusk.JPG", "wallpapers/captions.txt", "wallpapers/notes.md"):
+            (self.theme / name).write_text(name)
 
-    def run_gate(self, sdk):
+    def run_gate(self, sdk, theme_dir="default", **state):
         self.state_path.write_text(
-            json.dumps({"sdk": sdk, "home": "com.gathin.tvhome/.MainActivity", "settings": {"enabled_accessibility_services": "null"}})
+            json.dumps(
+                {"sdk": sdk, "home": "com.gathin.tvhome/.MainActivity", "settings": {"enabled_accessibility_services": "null"}, **state}
+            )
         )
         env = dict(os.environ, ADB=str(self.adb), TV_SERIAL=SERIAL, FAKE_ADB_STATE=str(self.state_path), IDLE_WAIT_SECONDS="0")
+        env.pop("THEME_DIR", None)
+        if theme_dir == "default":
+            theme_dir = self.theme
+        if theme_dir is not None:
+            env["THEME_DIR"] = str(theme_dir)
         return subprocess.run(
             ["bash", str(self.root / "scripts" / "spike-gate.sh")], env=env, capture_output=True, text=True, timeout=60
         )
+
+    def connected_test_index(self):
+        """Where the Gradle test task sits in the shared adb and Gradle call log."""
+        return next(i for i, call in enumerate(self.calls()) if call[0] == "gradle" and ":baselineprofile:connectedBenchmarkReleaseAndroidTest" in call[1])
 
     def calls(self):
         log = Path(str(self.state_path) + ".log")
@@ -404,6 +429,66 @@ class SpikeGateRunTest(unittest.TestCase):
         tasks = [word for word in (self.root / "gradle.log").read_text().split() if word.startswith(":")]
         self.assertIn(":baselineprofile:connectedBenchmarkReleaseAndroidTest", tasks)
         self.assertEqual([task for task in tasks if "install" in task.lower()], [])
+
+    def test_below_api_34_the_theme_goes_to_the_benchmark_package_before_the_test_task(self):
+        result = self.run_gate(31)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        calls = self.calls()
+        installed = next(i for i, call in enumerate(calls) if call[0] == "install")
+        pushes = [(i, call[-1]) for i, call in enumerate(calls) if call[0] == "push"]
+        ran = calls.index(["shell", "sh", THEME_SCRIPT])
+        test_task = self.connected_test_index()
+        self.assertEqual(
+            sorted(dest for _, dest in pushes),
+            sorted(
+                f"{THEME_STAGE}/{name}"
+                for name in ("config.json", "wallpaper.jpg", "wallpapers/dusk.JPG", "wallpapers/captions.txt", "push-theme.sh")
+            ),
+        )
+        self.assertTrue(all(installed < i < ran < test_task for i, _ in pushes), calls)
+        self.assertIn(f"-Pandroid.testInstrumentationRunnerArguments.tvhome.themeScript={THEME_SCRIPT}", calls[test_task][1])
+        self.assertEqual(calls[-1], ["shell", "rm", "-rf", THEME_STAGE])
+
+    def test_the_pushed_script_writes_through_the_benchmark_provider_and_names_no_other_package(self):
+        self.assertEqual(self.run_gate(31).returncode, 0)
+        script = (self.root / "build" / "spike-gate" / "push-theme.sh").read_text()
+        self.assertIn(f"uri=content://{BENCHMARK}.theme\n", script)
+        self.assertEqual(
+            re.findall(r"^put (\S+)$", script, re.MULTILINE),
+            ["config.json", "wallpaper.jpg", "wallpapers/captions.txt", "wallpapers/dusk.JPG"],
+        )
+        self.assertTrue(script.endswith(f"am force-stop {BENCHMARK}\necho theme pushed\n"), script)
+        self.assertEqual(re.findall(rf"{re.escape(NEW)}(?!\.benchmark)", script), [])
+
+    def test_below_api_34_without_a_theme_dir_the_gate_refuses_before_building_or_installing(self):
+        result = self.run_gate(31, theme_dir=None)
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn("THEME_DIR", result.stderr)
+        self.assertFalse((self.root / "gradle.log").exists())
+        self.assertFalse([call for call in self.calls() if "install" in call or "push" in call])
+
+    def test_a_theme_dir_without_config_json_or_with_an_unsafe_name_refuses_before_the_tv_is_asked(self):
+        (self.theme / "config.json").unlink()
+        self.assertEqual(self.run_gate(31).returncode, 2)
+        (self.theme / "config.json").write_text("{}")
+        (self.theme / "wallpapers" / "a b.png").write_text("x")
+        result = self.run_gate(31)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("a b.png", result.stderr)
+        self.assertFalse(Path(str(self.state_path) + ".log").exists())
+
+    def test_the_gate_stops_before_the_test_task_when_the_theme_does_not_reach_the_package(self):
+        result = self.run_gate(31, theme_push_output="config.json: Error while accessing provider")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("did not reach", result.stderr)
+        self.assertNotIn("connectedBenchmarkReleaseAndroidTest", (self.root / "gradle.log").read_text())
+        self.assertEqual(self.calls()[-1], ["shell", "rm", "-rf", THEME_STAGE])
+
+    def test_from_api_34_the_theme_is_optional_and_nothing_is_staged_without_it(self):
+        result = self.run_gate(34, theme_dir=None)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertFalse([call for call in self.calls() if "push" in call or THEME_SCRIPT in call])
+        self.assertNotIn("themeScript", (self.root / "gradle.log").read_text())
 
 
 if __name__ == "__main__":

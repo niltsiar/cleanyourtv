@@ -8,6 +8,7 @@
 #          PYTHON      python3 binary (default: python3 on PATH)
 #          GLASS       refractive (default) or flat: the glass kind to build, so two builds can be compared
 #          IDLE_WAIT_SECONDS   how long Home idles before its memory is read (default 10)
+#          THEME_DIR   the theme folder (with config.json) to measure with; required below API 34, see below
 #
 # It refuses to run (exit 2) while dev.niltsiar.tvhome is the TV's Home or its KeyService is in
 # enabled_accessibility_services: switch-home.sh old first, new after.
@@ -18,8 +19,12 @@
 # changes the TV's Home setting and never touches another package. The benchmark package stays installed afterwards.
 #
 # The app's data: below API 34 the Macrobenchmark library resets the app's compilation by uninstalling and installing it
-# again, which deletes that package's data. Here that package is dev.niltsiar.tvhome.benchmark, which nobody uses, so
-# nothing needs putting back. From API 34 the compilation is reset in place. The baseline profile step (API 33+) is the one
+# again, once per test and before the test's first warmup, which deletes that package's data. Here that package is
+# dev.niltsiar.tvhome.benchmark, which nobody uses, so only the theme needs putting back: without it Home shows no dock and
+# the sweep cannot run. THEME_DIR names the theme folder. The script stages its files and a push script under
+# /data/local/tmp, runs the script once before the idle reading, and passes its path to the tests, which run it again in
+# their first setup block, after the reset (HomeSweep.kt, pushTheme). The staged files are removed when the script ends.
+# From API 34 the compilation is reset in place and THEME_DIR is optional. The baseline profile step (API 33+) is the one
 # exception: it targets dev.niltsiar.tvhome itself, as a profile is keyed by the class names of the app people install, and
 # Gradle installs the non-minified build over it. android.injected.androidTest.leaveApksInstalledAfterRun=true keeps AGP from
 # uninstalling the app under test after the connected tests.
@@ -52,6 +57,9 @@ PACKAGE="dev.niltsiar.tvhome"
 BENCHMARK_PACKAGE="$PACKAGE.benchmark"
 ACTIVITY="$BENCHMARK_PACKAGE/$PACKAGE.MainActivity"
 IDLE_WAIT_SECONDS="${IDLE_WAIT_SECONDS:-10}"
+THEME_DIR="${THEME_DIR:-}"
+THEME_STAGE="/data/local/tmp/tvhome-benchmark-theme"
+THEME_SCRIPT="$THEME_STAGE/push-theme.sh"
 
 MAX_JANK_PERCENT=5
 # Fewer frames than this means the sweep in HomeSweep.kt did not move focus.
@@ -62,6 +70,37 @@ MAX_APK_BYTES=$((6 * 1024 * 1024))
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GRADLE=("$ROOT/gradlew" --console=plain "-Ptvhome.glass=$GLASS" -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true)
+
+# The files tools/theme.sh pushes, one path per line. The names go into a shell script, so they stay plain.
+theme_files() {
+  local file name
+  echo config.json
+  if [ -f "$THEME_DIR/wallpaper.jpg" ]; then echo wallpaper.jpg; fi
+  for file in "$THEME_DIR"/wallpapers/*; do
+    [ -f "$file" ] || continue
+    name="${file##*/}"
+    case "$name" in
+      captions.txt | *.[jJ][pP][gG] | *.[jJ][pP][eE][gG] | *.[pP][nN][gG] | *.[wW][eE][bB][pP]) ;;
+      *) continue ;;
+    esac
+    if [[ ! "$name" =~ ^[A-Za-z0-9_.-]+$ || "$name" == *..* ]]; then
+      echo "unsupported wallpaper filename in THEME_DIR: $name (letters, digits, '.', '_' and '-' only, no '..')" >&2
+      return 1
+    fi
+    echo "wallpapers/$name"
+  done
+}
+
+THEME_NAMES=""
+if [ -n "$THEME_DIR" ]; then
+  [ -f "$THEME_DIR/config.json" ] || {
+    echo "THEME_DIR '$THEME_DIR' has no config.json" >&2
+    exit 2
+  }
+  # An absolute path, as the script changes directory below.
+  THEME_DIR="$(cd "$THEME_DIR" && pwd)"
+  THEME_NAMES="$(theme_files)" || exit 2
+fi
 
 for tool in "$ADB" "$PYTHON"; do
   command -v "$tool" > /dev/null || {
@@ -93,12 +132,13 @@ case "$HOME_ACTIVITY" in
     ;;
 esac
 
-# A reinstall of dev.niltsiar.tvhome would drop our key service from the enabled list, which strands the remote on a TV
-# that still names it.
+# A precaution: the gate installs only the benchmark package, but a reinstall of dev.niltsiar.tvhome would drop our key
+# service from the enabled list, which strands the remote on a TV that still names it.
 SERVICES="$(adb_tv shell settings get secure enabled_accessibility_services 2> /dev/null | tr -d '\r')" || SERVICES=""
 case ":$SERVICES:" in
   *":$PACKAGE/.service.keys.KeyService:"* | *":$PACKAGE/$PACKAGE.service.keys.KeyService:"*)
-    echo "$PACKAGE/.service.keys.KeyService is in enabled_accessibility_services, and a reinstall of $PACKAGE would drop it." >&2
+    echo "$PACKAGE/.service.keys.KeyService is in enabled_accessibility_services. The gate does not reinstall $PACKAGE, but" \
+      "a reinstall would drop the entry, so it runs only while the service is off." >&2
     echo "Run scripts/switch-home.sh old first, run this gate, then run scripts/switch-home.sh new." >&2
     exit 2
     ;;
@@ -119,6 +159,13 @@ esac
 # The jank and overrun rows need frameOverrunMs, which Macrobenchmark records only on API 31+.
 if [ "$SDK" -lt 31 ]; then
   echo "the TV runs API $SDK; the jank and overrun rows need frameOverrunMs, recorded only on API 31+" >&2
+  exit 2
+fi
+
+# Below API 34 the benchmark's reset deletes the benchmark package's data, and its default config has no dock (see the header).
+if [ "$SDK" -lt 34 ] && [ -z "$THEME_DIR" ]; then
+  echo "the TV runs API $SDK: Macrobenchmark reinstalls $BENCHMARK_PACKAGE, which deletes its theme, and without a theme Home has no dock for the sweep." >&2
+  echo "Set THEME_DIR to the theme folder (with config.json) to measure with." >&2
   exit 2
 fi
 
@@ -187,6 +234,43 @@ BENCHMARK_APK="$(find "$ROOT/app/build/outputs/apk/benchmarkRelease" -name '*.ap
 APK_BYTES="$(wc -c < "$APK" | tr -d ' ')"
 adb_tv install -r "$BENCHMARK_APK" > /dev/null
 
+# The script is generated here and run on the TV by the shell user: Macrobenchmark runs it again in each test's first setup
+# block, and the UiAutomation shell command it goes through takes no redirects. `content` exits 0 when the provider throws,
+# so, as in tools/theme.sh, its output decides. The deletes clear what an earlier theme left in the benchmark package.
+if [ -n "$THEME_DIR" ]; then
+  echo "== Push the theme to $BENCHMARK_PACKAGE"
+  push_script="$ROOT/build/spike-gate/push-theme.sh"
+  mkdir -p "$(dirname "$push_script")"
+  {
+    cat << EOF
+cd $THEME_STAGE || exit 1
+uri=content://$BENCHMARK_PACKAGE.theme
+put() {
+  out=\$(content write --uri "\$uri/\$1" < "\$1" 2>&1) || { echo "\$1: \$out"; exit 1; }
+  case "\$out" in *Unsupported*|*"Error while accessing provider"*) echo "\$1: \$out"; exit 1 ;; esac
+}
+for gone in wallpaper.jpg wallpapers/captions.txt wallpapers; do content delete --uri "\$uri/\$gone" > /dev/null 2>&1; done
+EOF
+    for name in $THEME_NAMES; do echo "put $name"; done
+    echo "am force-stop $BENCHMARK_PACKAGE"
+    echo "echo theme pushed"
+  } > "$push_script"
+  trap 'adb_tv shell rm -rf "$THEME_STAGE" > /dev/null 2>&1 || true' EXIT
+  adb_tv shell "rm -rf $THEME_STAGE && mkdir -p $THEME_STAGE/wallpapers"
+  for name in $THEME_NAMES; do
+    adb_tv push "$THEME_DIR/$name" "$THEME_STAGE/$name" > /dev/null
+  done
+  adb_tv push "$push_script" "$THEME_SCRIPT" > /dev/null
+  PUSHED="$(adb_tv shell sh "$THEME_SCRIPT" | tr -d '\r')"
+  case "$PUSHED" in
+    *"theme pushed") ;;
+    *)
+      echo "the theme did not reach $BENCHMARK_PACKAGE: $PUSHED" >&2
+      exit 1
+      ;;
+  esac
+fi
+
 echo "== Home idle PSS"
 adb_tv shell am force-stop "$BENCHMARK_PACKAGE"
 adb_tv shell am start -W -n "$ACTIVITY" > /dev/null
@@ -208,8 +292,11 @@ for line in sys.stdin.read().splitlines():
 echo "== Benchmarks"
 RESULTS_DIR="$ROOT/baselineprofile/build/outputs/connected_android_test_additional_output"
 rm -rf "$RESULTS_DIR"
-"${GRADLE[@]}" ":baselineprofile:connectedBenchmarkReleaseAndroidTest" \
-  -Pandroid.testInstrumentationRunnerArguments.class=dev.niltsiar.tvhome.baselineprofile.HomeBenchmarks
+BENCHMARK_ARGS=(-Pandroid.testInstrumentationRunnerArguments.class=dev.niltsiar.tvhome.baselineprofile.HomeBenchmarks)
+if [ -n "$THEME_DIR" ]; then
+  BENCHMARK_ARGS+=("-Pandroid.testInstrumentationRunnerArguments.tvhome.themeScript=$THEME_SCRIPT")
+fi
+"${GRADLE[@]}" ":baselineprofile:connectedBenchmarkReleaseAndroidTest" "${BENCHMARK_ARGS[@]}"
 JSON="$(find "$RESULTS_DIR" -name '*benchmarkData.json' -exec ls -t {} + 2> /dev/null | head -n 1 || true)"
 [ -n "$JSON" ] || {
   echo "no benchmarkData.json under $RESULTS_DIR" >&2

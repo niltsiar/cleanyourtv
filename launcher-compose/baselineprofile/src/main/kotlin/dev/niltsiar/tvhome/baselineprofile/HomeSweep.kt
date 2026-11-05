@@ -25,6 +25,24 @@ internal val targetPackage: String by lazy {
     }
 }
 
+/**
+ * On-TV path of the script that `scripts/spike-gate.sh` stages to write the owner's theme into the benchmark package; null
+ * when the gate gave none. The dock the sweep needs comes from that theme.
+ */
+private val themeScript: String? by lazy { InstrumentationRegistry.getArguments().getString("tvhome.themeScript") }
+
+private const val THEME_PUSHED = "theme pushed"
+
+/**
+ * Writes the theme again. Below API 34 Macrobenchmark resets the compilation by uninstalling and installing the package, once
+ * per test and before its first warmup, which deletes the theme. The script stops the app, so the next start reads the theme.
+ */
+internal fun MacrobenchmarkScope.pushTheme() {
+    val script = themeScript ?: return
+    val output = device.executeShellCommand("sh $script").trim()
+    check(output.endsWith(THEME_PUSHED)) { "The theme did not reach $packageName: $output" }
+}
+
 /** The class name does not change with the benchmark build's package suffix, and that build has no launcher intent filter. */
 private const val MAIN_ACTIVITY = "dev.niltsiar.tvhome.MainActivity"
 

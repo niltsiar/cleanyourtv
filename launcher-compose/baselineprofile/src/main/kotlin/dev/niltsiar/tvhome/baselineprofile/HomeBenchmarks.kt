@@ -4,6 +4,7 @@ import androidx.benchmark.macro.BaselineProfileMode
 import androidx.benchmark.macro.CompilationMode
 import androidx.benchmark.macro.ExperimentalMetricApi
 import androidx.benchmark.macro.FrameTimingMetric
+import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.benchmark.macro.MemoryUsageMetric
 import androidx.benchmark.macro.StartupMode
 import androidx.benchmark.macro.StartupTimingMetric
@@ -26,6 +27,15 @@ class HomeBenchmarks {
     @get:Rule
     val rule = MacrobenchmarkRule()
 
+    /** JUnit builds one instance per test, and each test's reset deletes the theme once, before its first setup block. */
+    private var themePushed = false
+
+    private fun MacrobenchmarkScope.pushThemeOnce() {
+        if (themePushed) return
+        themePushed = true
+        pushTheme()
+    }
+
     @Test
     fun coldStartup() =
         rule.measureRepeated(
@@ -34,7 +44,10 @@ class HomeBenchmarks {
             compilationMode = Compilation,
             startupMode = StartupMode.COLD,
             iterations = STARTUP_ITERATIONS,
-            setupBlock = { pressHome() },
+            setupBlock = {
+                pushThemeOnce()
+                pressHome()
+            },
         ) {
             launchHome()
         }
@@ -48,6 +61,7 @@ class HomeBenchmarks {
             startupMode = StartupMode.WARM,
             iterations = SWEEP_ITERATIONS,
             setupBlock = {
+                pushThemeOnce()
                 launchHome()
                 awaitTileImages()
             },
