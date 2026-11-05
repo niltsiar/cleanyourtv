@@ -1,5 +1,7 @@
 package dev.niltsiar.tvhome.baselineprofile
 
+import android.content.ComponentName
+import android.content.Intent
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.KeyCharacterMap
@@ -13,7 +15,18 @@ import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
 import java.util.regex.Pattern
 
-internal const val TARGET_PACKAGE = "dev.niltsiar.tvhome"
+/**
+ * The package under test. The baseline profile plugin passes the tested variant's application id, so the profile
+ * generator gets the package people install and the benchmark gets its ".benchmark" copy.
+ */
+internal val targetPackage: String by lazy {
+    checkNotNull(InstrumentationRegistry.getArguments().getString("androidx.benchmark.targetPackageName")) {
+        "androidx.benchmark.targetPackageName is not set: run this through Gradle, whose baseline profile plugin passes it"
+    }
+}
+
+/** The class name does not change with the benchmark build's package suffix, and that build has no launcher intent filter. */
+private const val MAIN_ACTIVITY = "dev.niltsiar.tvhome.MainActivity"
 
 private const val HOME_READY_TIMEOUT_MS = 10_000L
 private const val FOCUS_TIMEOUT_MS = 2_000L
@@ -37,7 +50,7 @@ private fun focusedTile() = anyTile().focused(true)
 /** Launches Home and waits until at least one app tile is on screen. */
 internal fun MacrobenchmarkScope.launchHome() {
     pressHome()
-    startActivityAndWait()
+    startActivityAndWait(Intent().setComponent(ComponentName(targetPackage, MAIN_ACTIVITY)))
     check(device.wait(Until.hasObject(anyTile()), HOME_READY_TIMEOUT_MS)) { "No app tile appeared" }
 }
 

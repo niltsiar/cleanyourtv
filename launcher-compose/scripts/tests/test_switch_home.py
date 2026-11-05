@@ -1,4 +1,4 @@
-"""scripts/switch-home.sh and the Home and key service refusals of scripts/spike-gate.sh against a fake adb: the real script runs, only the transport is simulated.
+"""scripts/switch-home.sh and scripts/spike-gate.sh against a fake adb and a fake gradlew: the real scripts run, only the transport and the build are simulated.
 
 The fake keeps the TV's Settings values and Home activity in a JSON file and appends every adb call to a log, so a
 test can read the order of the calls and what was written. Nothing here touches a TV.
@@ -16,6 +16,7 @@ import unittest
 SCRIPT = Path(__file__).resolve().parents[1] / "switch-home.sh"
 GATE = Path(__file__).resolve().parents[1] / "spike-gate.sh"
 NEW = "dev.niltsiar.tvhome"
+BENCHMARK = f"{NEW}.benchmark"
 NEW_KEY = f"{NEW}/.service.keys.KeyService"
 OLD = "com.gathin.tvhome"
 OLD_HOME_KEY = f"{OLD}/.HomeKeyService"
@@ -50,11 +51,28 @@ if args[:1] == ["get-state"]:
     out("device")
 elif args[:1] == ["connect"]:
     out("connected")
+elif args[:1] in (["install"], ["uninstall"]):
+    # The fake APKs hold the package they carry, so an install shows which package it replaced.
+    package = open(args[-1]).read().strip() if args[0] == "install" else args[-1]
+    state.setdefault("changed", []).append(f"{args[0]} {package}")
+    save()
 elif args[:1] == ["shell"]:
     cmd = args[1:]
     line = " ".join(cmd)
     if line.startswith("pm path"):
         out("package:/data/app/base.apk")
+    elif line.startswith("pm clear") or line.startswith("pm uninstall"):
+        state.setdefault("changed", []).append(line)
+        save()
+    elif line == "getprop ro.build.version.sdk":
+        out(str(state.get("sdk", 34)))
+    elif line == "dumpsys display":
+        out("  mActiveSfDisplayMode=DisplayMode{id=1, width=3840, height=2160, vsyncRate=60.000004, peakRefreshRate=60.0}")
+    elif line.startswith("cmd package query-activities"):
+        out("dev.niltsiar.tvhome/dev.niltsiar.tvhome.MainActivity")
+        out("com.other.app/com.other.app.Main")
+    elif line.startswith("dumpsys meminfo"):
+        out("       TOTAL PSS:    51200            TOTAL RSS:    90000")
     elif line.startswith("pm grant"):
         pass
     elif line.startswith("test -f"):
@@ -86,6 +104,39 @@ elif args[:1] == ["shell"]:
             out("      * IntentBindRecord{7c}:")
             out("        requested=true received=true hasBound=true")
 '''
+
+FAKE_GRADLEW = r'''#!/usr/bin/env bash
+root="$(cd "$(dirname "$0")" && pwd)"
+echo "$*" >> "$root/gradle.log"
+for task in "$@"; do
+  case "$task" in
+    :app:assembleRelease)
+      mkdir -p "$root/app/build/outputs/apk/release"
+      echo dev.niltsiar.tvhome > "$root/app/build/outputs/apk/release/app-release.apk" ;;
+    :app:assembleBenchmarkRelease)
+      mkdir -p "$root/app/build/outputs/apk/benchmarkRelease"
+      echo dev.niltsiar.tvhome.benchmark > "$root/app/build/outputs/apk/benchmarkRelease/app-benchmarkRelease.apk" ;;
+    :baselineprofile:connectedBenchmarkReleaseAndroidTest)
+      out="$root/baselineprofile/build/outputs/connected_android_test_additional_output/run"
+      mkdir -p "$out"
+      cp "$root/benchmarkData.json" "$out/x-benchmarkData.json" ;;
+  esac
+done
+'''
+
+BENCHMARK_DATA = {
+    "benchmarks": [
+        {"name": "coldStartup", "metrics": {"timeToInitialDisplayMs": {"median": 900.0}}},
+        {
+            "name": "dpadSweep",
+            "metrics": {"frameCount": {"runs": [120, 120]}},
+            "sampledMetrics": {
+                "frameDurationCpuMs": {"P90": 5.0, "runs": [[3.0, 4.0], [3.0, 4.0]]},
+                "frameOverrunMs": {"P90": -2.0, "runs": [[-3.0, -4.0], [-3.0, -4.0]]},
+            },
+        },
+    ]
+}
 
 OLD_STATE = {
     "home": f"{OLD}/.MainActivity",
@@ -288,6 +339,71 @@ class SwitchHomeTest(unittest.TestCase):
             self.read_tv()["settings"]["enabled_accessibility_services"],
             f"x.y/.Svc:{OLD_HOME_KEY}:z.w/z.w.Other:{OLD_INPUT_KEY}",
         )
+
+
+class SpikeGateRunTest(unittest.TestCase):
+    """A whole gate run: the benchmark package takes every install, and dev.niltsiar.tvhome is never touched."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        base = Path(self.tmp.name)
+        self.adb = base / "adb"
+        self.adb.write_text(FAKE_ADB)
+        self.adb.chmod(0o755)
+        self.state_path = base / "tv.json"
+        self.root = base / "launcher-compose"
+        (self.root / "scripts").mkdir(parents=True)
+        for name in ("spike-gate.sh", "spike-gate-report.py"):
+            (self.root / "scripts" / name).write_text((GATE.parent / name).read_text())
+        gradlew = self.root / "gradlew"
+        gradlew.write_text(FAKE_GRADLEW)
+        gradlew.chmod(0o755)
+        (self.root / "benchmarkData.json").write_text(json.dumps(BENCHMARK_DATA))
+
+    def run_gate(self, sdk):
+        self.state_path.write_text(
+            json.dumps({"sdk": sdk, "home": "com.gathin.tvhome/.MainActivity", "settings": {"enabled_accessibility_services": "null"}})
+        )
+        env = dict(os.environ, ADB=str(self.adb), TV_SERIAL=SERIAL, FAKE_ADB_STATE=str(self.state_path), IDLE_WAIT_SECONDS="0")
+        return subprocess.run(
+            ["bash", str(self.root / "scripts" / "spike-gate.sh")], env=env, capture_output=True, text=True, timeout=60
+        )
+
+    def calls(self):
+        log = Path(str(self.state_path) + ".log")
+        return [json.loads(line) for line in log.read_text().splitlines()]
+
+    def test_the_benchmark_package_takes_every_install_below_and_above_api_34(self):
+        for sdk in (31, 34):
+            with self.subTest(sdk=sdk):
+                Path(str(self.state_path) + ".log").unlink(missing_ok=True)
+                result = self.run_gate(sdk)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(json.loads(self.state_path.read_text())["changed"], [f"install {BENCHMARK}"])
+
+    def test_no_adb_call_names_the_real_package(self):
+        result = self.run_gate(31)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        for call in self.calls():
+            for word in call:
+                self.assertNotEqual(word, NEW, call)
+                self.assertFalse(word.startswith(f"{NEW}/"), call)
+
+    def test_the_idle_start_and_memory_reading_use_the_benchmark_package(self):
+        result = self.run_gate(34)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        calls = self.calls()
+        self.assertIn(["shell", "am", "force-stop", BENCHMARK], calls)
+        self.assertIn(["shell", "am", "start", "-W", "-n", f"{BENCHMARK}/{NEW}.MainActivity"], calls)
+        self.assertIn(["shell", "dumpsys", "meminfo", BENCHMARK], calls)
+
+    def test_gradle_runs_the_benchmark_build_and_no_install_task(self):
+        result = self.run_gate(34)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        tasks = [word for word in (self.root / "gradle.log").read_text().split() if word.startswith(":")]
+        self.assertIn(":baselineprofile:connectedBenchmarkReleaseAndroidTest", tasks)
+        self.assertEqual([task for task in tasks if "install" in task.lower()], [])
 
 
 if __name__ == "__main__":

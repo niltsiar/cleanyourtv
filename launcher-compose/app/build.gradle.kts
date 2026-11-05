@@ -37,6 +37,25 @@ android {
             // Sideloaded over ADB and never published, so the debug key is enough.
             signingConfig = signingConfigs.getByName("debug")
         }
+        // The Macrobenchmark library reinstalls the app under test on API below 34, which deletes its data and drops its key
+        // service from the enabled list. The benchmark build is therefore a second package, so that run never touches the
+        // one people use. The baseline profile plugin keeps a build type that is already declared.
+        create("benchmarkRelease") {
+            initWith(getByName("release"))
+            matchingFallbacks += "release"
+            applicationIdSuffix = ".benchmark"
+        }
+    }
+}
+
+// The baseline profile plugin points the benchmarkRelease sources at the release ones, which hides this variant's own
+// manifest overlay. Its finalizeDsl runs first, so this one points the manifest back.
+androidComponents {
+    finalizeDsl {
+        android.sourceSets
+            .getByName("benchmarkRelease")
+            .manifest
+            .srcFile("src/benchmarkRelease/AndroidManifest.xml")
     }
 }
 

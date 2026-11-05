@@ -1,28 +1,28 @@
 #!/usr/bin/env bash
-# Spike gate: builds the release APK, installs it on the TV and prints the gate numbers with PASS/FAIL.
+# Spike gate: builds the release APK and the benchmark build, installs the benchmark build on the TV and prints the gate
+# numbers with PASS/FAIL.
 #
 # Usage:   scripts/spike-gate.sh
 # Env:     TV_SERIAL   adb serial of the TV, such as <tv ip>:5555 (required)
 #          ADB         adb binary (default: adb on PATH)
 #          PYTHON      python3 binary (default: python3 on PATH)
 #          GLASS       refractive (default) or flat: the glass kind to build, so two builds can be compared
-#          THEME_DIR   the theme folder (with config.json) to push back after the run; required on a TV below API 34
-#          TV_HOST     the TV's address for that push (default: TV_SERIAL without its port)
+#          IDLE_WAIT_SECONDS   how long Home idles before its memory is read (default 10)
 #
 # It refuses to run (exit 2) while dev.niltsiar.tvhome is the TV's Home or its KeyService is in
 # enabled_accessibility_services: switch-home.sh old first, new after.
-# It installs dev.niltsiar.tvhome only. It never changes the TV's Home setting or any other package. Below API 34 its exit
-# trap runs tools/theme.sh, and that restarts the launcher: it force-stops dev.niltsiar.tvhome, starts it again and, when
-# the launcher's key helpers were enabled, switches the TV's accessibility service list off and on again (other apps'
-# entries in it too, restored as they were).
+#
+# The benchmarks run against dev.niltsiar.tvhome.benchmark, the benchmarkRelease build of the same code (app/build.gradle.kts).
+# Its manifest has no Home, launcher, accessibility service, screensaver or input switcher entry, so the TV never offers it as
+# Home. This script installs that package only. It never installs, reinstalls, clears or uninstalls dev.niltsiar.tvhome, never
+# changes the TV's Home setting and never touches another package. The benchmark package stays installed afterwards.
 #
 # The app's data: below API 34 the Macrobenchmark library resets the app's compilation by uninstalling and installing it
-# again, which deletes the pushed theme (in the app's external files directory), the Home order, the library choices and
-# the last-opened times. No Gradle flag stops that. Below API 34 the script therefore refuses to run (exit 2) unless
-# THEME_DIR names the theme folder, and it pushes that folder back with tools/theme.sh when the run ends. The order, the
-# library choices and the last-opened times stay lost. From API 34 the compilation is reset in place, and
-# android.injected.androidTest.leaveApksInstalledAfterRun=true keeps AGP from uninstalling the app after the connected
-# tests, so the data survives.
+# again, which deletes that package's data. Here that package is dev.niltsiar.tvhome.benchmark, which nobody uses, so
+# nothing needs putting back. From API 34 the compilation is reset in place. The baseline profile step (API 33+) is the one
+# exception: it targets dev.niltsiar.tvhome itself, as a profile is keyed by the class names of the app people install, and
+# Gradle installs the non-minified build over it. android.injected.androidTest.leaveApksInstalledAfterRun=true keeps AGP from
+# uninstalling the app under test after the connected tests.
 set -euo pipefail
 
 usage() {
@@ -48,7 +48,10 @@ TV_SERIAL="${TV_SERIAL:?set TV_SERIAL to the TV adb serial, such as <tv ip>:5555
 ADB="${ADB:-adb}"
 PYTHON="${PYTHON:-python3}"
 PACKAGE="dev.niltsiar.tvhome"
-ACTIVITY="$PACKAGE/.MainActivity"
+# The benchmarkRelease build type adds this suffix. The class name keeps the real package, so the component spells it out.
+BENCHMARK_PACKAGE="$PACKAGE.benchmark"
+ACTIVITY="$BENCHMARK_PACKAGE/$PACKAGE.MainActivity"
+IDLE_WAIT_SECONDS="${IDLE_WAIT_SECONDS:-10}"
 
 MAX_JANK_PERCENT=5
 # Fewer frames than this means the sweep in HomeSweep.kt did not move focus.
@@ -90,12 +93,12 @@ case "$HOME_ACTIVITY" in
     ;;
 esac
 
-# Below API 34 the benchmark's reinstall drops our key service from the enabled list, which strands the remote on a TV that
-# still names it, so it must be handed back to the old launcher first.
+# Kept until a TV run shows the benchmark build leaves the real package alone: a reinstall of dev.niltsiar.tvhome would drop
+# our key service from the enabled list, which strands the remote on a TV that still names it.
 SERVICES="$(adb_tv shell settings get secure enabled_accessibility_services 2> /dev/null | tr -d '\r')" || SERVICES=""
 case ":$SERVICES:" in
   *":$PACKAGE/.service.keys.KeyService:"* | *":$PACKAGE/$PACKAGE.service.keys.KeyService:"*)
-    echo "$PACKAGE/.service.keys.KeyService is in enabled_accessibility_services, and the benchmark's reinstall would drop it." >&2
+    echo "$PACKAGE/.service.keys.KeyService is in enabled_accessibility_services, and a reinstall of $PACKAGE would drop it." >&2
     echo "Run scripts/switch-home.sh old first, run this gate, then run scripts/switch-home.sh new." >&2
     exit 2
     ;;
@@ -117,28 +120,6 @@ esac
 if [ "$SDK" -lt 31 ]; then
   echo "the TV runs API $SDK; the jank and overrun rows need frameOverrunMs, recorded only on API 31+" >&2
   exit 2
-fi
-
-# Below API 34 Macrobenchmark reinstalls the app to reset its compilation, which deletes the app's data (see the header).
-WIPES_DATA=0
-THEME_HOST="${TV_HOST:-}"
-if [ "$SDK" -lt 34 ]; then
-  WIPES_DATA=1
-  if [ -z "${THEME_DIR:-}" ] || [ ! -f "${THEME_DIR:-}/config.json" ]; then
-    echo "the TV runs API $SDK: the benchmark reinstalls $PACKAGE, which deletes its theme, order, library choices and last-opened data." >&2
-    echo "Set THEME_DIR to the theme folder (with config.json) to push back afterwards." >&2
-    exit 2
-  fi
-  THEME_DIR="$(cd "$THEME_DIR" && pwd)"
-  if [ -z "$THEME_HOST" ]; then
-    case "$TV_SERIAL" in
-      *:*) THEME_HOST="${TV_SERIAL%:*}" ;;
-      *)
-        echo "set TV_HOST to the TV's address: TV_SERIAL '$TV_SERIAL' has no host to push the theme back to" >&2
-        exit 2
-        ;;
-    esac
-  fi
 fi
 
 # The report's frame limit is one refresh period (1000 / refresh rate), read from the TV. The active
@@ -169,24 +150,6 @@ display_refresh_hz() {
 
 REFRESH_HZ="$(display_refresh_hz)" || exit 1
 
-# The connected tests leave the benchmark build installed, so put the release build back whatever happens, and
-# below API 34 the theme the reinstall deleted. APK is empty until the release build exists.
-APK=""
-finish() {
-  [ -n "$APK" ] || return 0
-  echo "== Reinstall release APK"
-  adb_tv install -r "$APK" > /dev/null || {
-    echo "could not reinstall $APK" >&2
-    return 0
-  }
-  if [ "$WIPES_DATA" = 1 ]; then
-    echo "== Push the theme back"
-    TV_HOST="$THEME_HOST" TV_PACKAGE="$PACKAGE" "$ROOT/../tools/theme.sh" "$THEME_DIR" > /dev/null ||
-      echo "could not push the theme back: run TV_HOST=$THEME_HOST TV_PACKAGE=$PACKAGE tools/theme.sh $THEME_DIR" >&2
-  fi
-}
-trap finish EXIT
-
 # Baseline profile collection needs API 33+ (or root); HomeBenchmarks compiles from warmup runs either way.
 if [ "$SDK" -ge 33 ]; then
   echo "== Baseline profile"
@@ -208,22 +171,28 @@ APP_COUNT="$(
   '
 )"
 
-echo "== Build and install release APK"
-"${GRADLE[@]}" ":app:assembleRelease"
+echo "== Build the release APK and the benchmark build, install the benchmark build"
+"${GRADLE[@]}" ":app:assembleRelease" ":app:assembleBenchmarkRelease"
 APK="$(find "$ROOT/app/build/outputs/apk/release" -name '*.apk' | head -n 1)"
 [ -n "$APK" ] || {
   echo "no release APK found" >&2
   exit 1
 }
+BENCHMARK_APK="$(find "$ROOT/app/build/outputs/apk/benchmarkRelease" -name '*.apk' | head -n 1)"
+[ -n "$BENCHMARK_APK" ] || {
+  echo "no benchmark APK found" >&2
+  exit 1
+}
+# The size gate is the APK people install; the benchmark build differs from it only in its manifest.
 APK_BYTES="$(wc -c < "$APK" | tr -d ' ')"
-adb_tv install -r "$APK" > /dev/null
+adb_tv install -r "$BENCHMARK_APK" > /dev/null
 
 echo "== Home idle PSS"
-adb_tv shell am force-stop "$PACKAGE"
+adb_tv shell am force-stop "$BENCHMARK_PACKAGE"
 adb_tv shell am start -W -n "$ACTIVITY" > /dev/null
-sleep 10
+sleep "$IDLE_WAIT_SECONDS"
 # The reader takes all of stdin before it matches, so adb never dies of SIGPIPE under pipefail.
-PSS_KB="$(adb_tv shell dumpsys meminfo "$PACKAGE" | "$PYTHON" -c '
+PSS_KB="$(adb_tv shell dumpsys meminfo "$BENCHMARK_PACKAGE" | "$PYTHON" -c '
 import re, sys
 for line in sys.stdin.read().splitlines():
     m = re.match(r"\s*TOTAL PSS:\s*(\d+)", line) or re.match(r"\s*TOTAL\s+(\d+)", line)

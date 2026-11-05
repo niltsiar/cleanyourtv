@@ -29,7 +29,7 @@ class HomeBenchmarks {
     @Test
     fun coldStartup() =
         rule.measureRepeated(
-            packageName = TARGET_PACKAGE,
+            packageName = targetPackage,
             metrics = listOf(StartupTimingMetric()),
             compilationMode = Compilation,
             startupMode = StartupMode.COLD,
@@ -42,7 +42,7 @@ class HomeBenchmarks {
     @Test
     fun dpadSweep() =
         rule.measureRepeated(
-            packageName = TARGET_PACKAGE,
+            packageName = targetPackage,
             metrics = listOf(FrameTimingMetric(), MemoryUsageMetric(MemoryUsageMetric.Mode.Last)),
             compilationMode = Compilation,
             startupMode = StartupMode.WARM,
