@@ -29,6 +29,9 @@ internal class HomeInput(
     val carried: State<String?>,
     val dimmed: State<Set<String>>,
     val reordering: State<Boolean>,
+    /** Which way the carried tile can still move. Read them in draw lambdas only. */
+    val canMoveLeft: State<Boolean> = mutableStateOf(false),
+    val canMoveRight: State<Boolean> = mutableStateOf(false),
     private val openLibrary: State<() -> Unit> = mutableStateOf({}),
     val hold: OkHold = OkHold(),
 ) {

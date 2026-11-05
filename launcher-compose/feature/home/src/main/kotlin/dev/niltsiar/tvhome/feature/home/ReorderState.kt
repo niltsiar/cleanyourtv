@@ -22,12 +22,15 @@ public enum class ReorderHint {
 
 /**
  * What the screen shows of a reorder or edit-dock session: the [carried] tile, the tiles to draw [dimmed], and the [hint].
+ * [canMoveLeft] and [canMoveRight] say which way the carried tile can still go along the list.
  */
 @Immutable
 public data class ReorderView(
     val carried: String?,
     val dimmed: Set<String>,
     val hint: ReorderHint,
+    val canMoveLeft: Boolean = false,
+    val canMoveRight: Boolean = false,
 )
 
 /** The order to keep: tile [keys] first to last and, with fill_dock off, how many lead the dock (else -1). */
@@ -142,7 +145,10 @@ internal data class ReorderState(
             else -> ReorderHint.DockChoosePlace
         }
 
-    fun view(): ReorderView = ReorderView(carried, dimmed(), hint())
+    fun view(): ReorderView {
+        val at = keys.indexOf(carried)
+        return ReorderView(carried, dimmed(), hint(), canMoveLeft = at > 0, canMoveRight = at in 0 until keys.lastIndex)
+    }
 
     companion object {
         /**

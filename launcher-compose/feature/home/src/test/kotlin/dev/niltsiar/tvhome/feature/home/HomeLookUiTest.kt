@@ -99,6 +99,11 @@ class HomeLookUiTest {
         settle()
     }
 
+    private fun back() {
+        compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        settle()
+    }
+
     private fun bounds(tag: String): DpRect = compose.onNodeWithTag(tag).getBoundsInRoot()
 
     private fun screen(): DpRect = compose.onRoot().getBoundsInRoot()
@@ -124,6 +129,12 @@ class HomeLookUiTest {
         val under = redAt(clear)
         assertNear(Math.round(alpha * 255 + (1 - alpha) * under), redAt(white), 4)
     }
+
+    private fun assertNear(
+        expected: Float,
+        actual: Float,
+        tolerance: Float,
+    ) = assertTrue("expected $expected, got $actual", abs(actual - expected) <= tolerance)
 
     private fun assertNear(
         expected: Int,
@@ -254,16 +265,159 @@ class HomeLookUiTest {
         assertTrue(Math.round(frost[39, 0].red * 255) < 150)
     }
 
+    private fun carryFirstTile() {
+        press(Key.Menu)
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+    }
+
     @Test
-    fun in_reorder_mode_the_tiles_not_carried_draw_at_seventy_percent() {
+    fun in_reorder_mode_the_tiles_not_carried_draw_at_sixty_five_percent() {
         showHome(apps = whiteAppsAndOneClear())
         val white = centreOf(dockTile(6))
         val clear = centreOf(dockTile(5))
 
-        press(Key.Menu)
-        press(Key.DirectionDown)
-        press(Key.DirectionCenter)
+        carryFirstTile()
 
-        assertDrawnAt(0.70f, white, clear)
+        assertDrawnAt(0.65f, white, clear)
+    }
+
+    @Test
+    fun in_reorder_mode_with_nothing_carried_no_tile_is_dimmed() {
+        showHome(apps = whiteAppsAndOneClear())
+        val white = centreOf(dockTile(6))
+        val clear = centreOf(dockTile(5))
+
+        carryFirstTile()
+        back()
+
+        assertDrawnAt(1f, white, clear)
+    }
+
+    /** The green channel, 0 to 255, of the screen at [point] (in dp): white art reads 255, the coral ring of a carried tile 107. */
+    private fun greenAt(point: Offset): Int {
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val density = compose.activity.resources.displayMetrics.density
+        return Math.round(pixels[(point.x * density).toInt(), (point.y * density).toInt()].green * 255)
+    }
+
+    /** The top and bottom, in dp, of the run of white art that crosses [y] in the column at [x]. */
+    private fun artSpan(
+        x: Float,
+        y: Float,
+    ): Pair<Float, Float> {
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val density = compose.activity.resources.displayMetrics.density
+
+        fun white(row: Int) = pixels[(x * density).toInt(), row].green > 0.8f
+        val centre = (y * density).toInt()
+        var top = centre
+        while (white(top - 1)) top--
+        var bottom = centre
+        while (white(bottom + 1)) bottom++
+        return top / density to (bottom + 1) / density
+    }
+
+    @Test
+    fun a_carried_tile_lifts_eight_dp_and_grows_eight_percent_over_the_focused_tile() {
+        showHome(apps = whiteApps(9))
+        val neighbour = dockTile(2)
+        val middle = (neighbour.top.value + neighbour.bottom.value) / 2
+        val at = bounds("tile:pkg.1")
+        val x = (at.left.value + at.right.value) / 2
+        val (restTop, restBottom) = artSpan(x, middle)
+
+        carryFirstTile()
+        val (top, bottom) = artSpan(x, middle)
+
+        val height = restBottom - restTop
+        assertNear(height * 1.08f, bottom - top, 1f)
+        assertNear((restTop + restBottom) / 2 - 8f, (top + bottom) / 2, 1f)
+    }
+
+    /** Whether the screen is white just outside the [side] edge of the carried tile's art, where only a chevron badge reaches. */
+    private fun badgeOn(
+        side: Int,
+        key: String,
+    ): Boolean {
+        val tile = bounds("tile:$key")
+        val middle = (tile.left.value + tile.right.value) / 2
+        // The badge sits on the layer's edge; the art, 1.08 larger, ends 5 or 6 dp past it, and the badge 12.
+        val edge = middle + side * (tile.right.value - tile.left.value) / 2
+        return greenAt(Offset(edge + side * 9f, (tile.top.value + tile.bottom.value) / 2)) > 230
+    }
+
+    @Test
+    fun the_carried_tile_shows_a_chevron_only_on_the_sides_it_can_move_to() {
+        showHome(apps = whiteApps(3))
+
+        carryFirstTile()
+        assertTrue("first tile, right", badgeOn(+1, "pkg.1"))
+        assertTrue("first tile, left", !badgeOn(-1, "pkg.1"))
+
+        press(Key.DirectionRight)
+        assertTrue("middle tile, right", badgeOn(+1, "pkg.1"))
+        assertTrue("middle tile, left", badgeOn(-1, "pkg.1"))
+
+        press(Key.DirectionRight)
+        assertTrue("last tile, right", !badgeOn(+1, "pkg.1"))
+        assertTrue("last tile, left", badgeOn(-1, "pkg.1"))
+    }
+
+    /** The red channel just outside a chip, inside its backing, and on its rim. */
+    private data class ChipPixels(
+        val outside: Int,
+        val inside: Int,
+        val rim: Int,
+    )
+
+    /** Reads the chip tagged [tag] over a white wallpaper. */
+    private fun chipPixels(tag: String): ChipPixels {
+        val chip = bounds("reorder:chip:$tag")
+        val middle = (chip.top.value + chip.bottom.value) / 2
+        val x = (chip.left.value + chip.right.value) / 2
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val density = compose.activity.resources.displayMetrics.density
+
+        fun red(
+            px: Float,
+            py: Float,
+        ) = Math.round(pixels[(px * density).toInt(), (py * density).toInt()].red * 255)
+        // The rim is 1 dp, two pixels, along the top edge; the brighter of its two rows.
+        val rim = maxOf(red(x, chip.top.value + 0.25f), red(x, chip.top.value + 0.75f))
+        return ChipPixels(outside = red(chip.left.value - 6f, middle), inside = red(chip.left.value + 5f, middle), rim = rim)
+    }
+
+    /** Backing #07080C at 0.55, then the rim, white at 0.20, both under the chip's [alpha]. */
+    private fun assertChipAt(
+        tag: String,
+        alpha: Float,
+    ) {
+        val (outside, inside, rim) = chipPixels(tag)
+        assertNear(Math.round(outside * (1 - 0.55f * alpha) + 7 * 0.55f * alpha), inside, 5)
+        assertNear(Math.round(inside + 0.20f * alpha * (255 - inside)), rim, 8)
+    }
+
+    @Test
+    fun with_nothing_carried_the_ok_and_finish_chips_are_at_full_alpha_and_the_others_at_sixty_percent() {
+        showHome(wallpaper = Wallpaper(picture = white))
+        carryFirstTile()
+        back()
+
+        assertChipAt("ok", 1f)
+        assertChipAt("back-twice", 1f)
+        assertChipAt("arrows", 0.60f)
+        assertChipAt("back", 0.60f)
+    }
+
+    @Test
+    fun with_a_tile_carried_the_move_and_drop_chips_are_at_full_alpha_and_the_others_at_sixty_percent() {
+        showHome(wallpaper = Wallpaper(picture = white))
+        carryFirstTile()
+
+        assertChipAt("arrows", 1f)
+        assertChipAt("back", 1f)
+        assertChipAt("ok", 0.60f)
+        assertChipAt("back-twice", 0.60f)
     }
 }

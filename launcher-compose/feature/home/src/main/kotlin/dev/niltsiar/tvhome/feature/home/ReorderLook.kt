@@ -8,6 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
@@ -31,14 +32,14 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-private const val DIMMED_ALPHA = 0.70f
+private const val DIMMED_ALPHA = 0.65f
 
-/** The carried tile has focus, so FocusSurface's 1.08 applies inside this layer: together they make 1.12. */
-private const val LIFT_SCALE = 1.12f / 1.08f - 1f
+/** The carried tile has focus, so FocusSurface's 1.08 applies inside this layer too. */
+private const val LIFT_SCALE = 0.08f
 private const val WIGGLE_DEGREES = 1.6f
 private const val WIGGLE_MS = 150
 private const val DIM_MS = 140
-private val LiftHeight = 10.dp
+private val LiftHeight = 8.dp
 private val LiftShadow = 20.dp
 private val LiftShadowColor = Color.Black.copy(alpha = 0.55f)
 private val BadgeRadius = 12.dp
@@ -48,8 +49,8 @@ private val ChevronColor = Color(0xFF0B0D12)
 
 /**
  * A tile's look in reorder and edit-dock modes: dimmed unless it is the carried one, which lifts, grows, casts a shadow
- * in its [shape], wiggles a little and shows a white chevron badge on its left and right edges; it settles back with a
- * spring when it is put down. The animated values are read in the layer and draw lambdas only.
+ * in its [shape], wiggles a little and shows a white chevron badge on each edge it can still move towards; it settles
+ * back with a spring when it is put down. The animated values are read in the layer and draw lambdas only.
  */
 @Composable
 internal fun Modifier.reorderLook(
@@ -62,6 +63,8 @@ internal fun Modifier.reorderLook(
     val dim = remember { Animatable(Snapshot.withoutReadObservation { if (key in input.dimmed.value) DIMMED_ALPHA else 1f }) }
     val lift = remember { Animatable(Snapshot.withoutReadObservation { if (input.carried.value == key) 1f else 0f }) }
     val wiggle = remember { Animatable(0f) }
+    val left = remember { Animatable(input.badgeAtStart(key, input.canMoveLeft)) }
+    val right = remember { Animatable(input.badgeAtStart(key, input.canMoveRight)) }
     LaunchedEffect(key, input, motion) {
         launch {
             snapshotFlow { if (key in input.dimmed.value) DIMMED_ALPHA else 1f }.collect { dim.animateTo(it, motion.tweenSpec(DIM_MS)) }
@@ -70,8 +73,11 @@ internal fun Modifier.reorderLook(
             snapshotFlow { input.carried.value == key }.collectLatest { carried ->
                 coroutineScope {
                     val liftSpec = motion.springSpec<Float>(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow)
+                    val sideSpec = motion.tweenSpec<Float>(DIM_MS)
                     if (carried) {
                         launch { lift.animateTo(1f, liftSpec) }
+                        launch { snapshotFlow { input.canMoveLeft.value }.collect { left.animateTo(if (it) 1f else 0f, sideSpec) } }
+                        launch { snapshotFlow { input.canMoveRight.value }.collect { right.animateTo(if (it) 1f else 0f, sideSpec) } }
                         if (motion.animated) {
                             launch {
                                 wiggle.snapTo(-1f)
@@ -81,6 +87,8 @@ internal fun Modifier.reorderLook(
                     } else {
                         launch { wiggle.animateTo(0f, liftSpec) }
                         launch { lift.animateTo(0f, liftSpec) }
+                        launch { left.animateTo(0f, sideSpec) }
+                        launch { right.animateTo(0f, sideSpec) }
                     }
                 }
             }
@@ -103,20 +111,29 @@ internal fun Modifier.reorderLook(
         val half = ChevronHalf.toPx()
         val stroke = Stroke(ChevronStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
         val middle = size.height / 2f
-        val left = chevron(Offset(0f, middle), half, pointsLeft = true)
-        val right = chevron(Offset(size.width, middle), half, pointsLeft = false)
+        val leftChevron = chevron(Offset(0f, middle), half, pointsLeft = true)
+        val rightChevron = chevron(Offset(size.width, middle), half, pointsLeft = false)
         onDrawWithContent {
             drawContent()
-            val shown = lift.value.coerceIn(0f, 1f)
-            if (shown > 0f) {
-                drawCircle(Color.White, radius, Offset(0f, middle), alpha = shown)
-                drawCircle(Color.White, radius, Offset(size.width, middle), alpha = shown)
-                drawPath(left, ChevronColor, alpha = shown, style = stroke)
-                drawPath(right, ChevronColor, alpha = shown, style = stroke)
+            val lifted = lift.value.coerceIn(0f, 1f)
+            val onLeft = lifted * left.value.coerceIn(0f, 1f)
+            val onRight = lifted * right.value.coerceIn(0f, 1f)
+            if (onLeft > 0f) {
+                drawCircle(Color.White, radius, Offset(0f, middle), alpha = onLeft)
+                drawPath(leftChevron, ChevronColor, alpha = onLeft, style = stroke)
+            }
+            if (onRight > 0f) {
+                drawCircle(Color.White, radius, Offset(size.width, middle), alpha = onRight)
+                drawPath(rightChevron, ChevronColor, alpha = onRight, style = stroke)
             }
         }
     }
 }
+
+private fun HomeInput.badgeAtStart(
+    key: String,
+    side: State<Boolean>,
+): Float = Snapshot.withoutReadObservation { if (carried.value == key && side.value) 1f else 0f }
 
 /** A chevron centred on [center], [half] tall above and below it, pointing left or right. */
 private fun chevron(

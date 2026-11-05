@@ -8,6 +8,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -175,7 +176,10 @@ private val ShelfToFade = 16.dp
 private val TitleToShelfBottom = 12.dp + ShelfToFade
 private val HeroAscent = 36.sp
 private val ChipHeight = 32.dp
-private val ChipRim = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.32f), Color.White.copy(alpha = 0.08f)))
+private val ChipRim = Color.White.copy(alpha = 0.20f)
+private val ChipBacking = Color(0xFF07080C).copy(alpha = 0.55f)
+private const val IDLE_CHIP_ALPHA = 0.60f
+private const val CHIP_FADE_MS = 140
 private val ChipKeyFill = Color.White.copy(alpha = 0.16f)
 private val CinematicShelfHeight = CinematicTextHeight + TitleToShelfBottom
 
@@ -265,6 +269,8 @@ public fun HomeScreen(
                 carried = derivedStateOf { currentState.value().reorder?.carried },
                 dimmed = derivedStateOf { currentState.value().reorder?.dimmed ?: emptySet() },
                 reordering = derivedStateOf { currentState.value().reorder != null },
+                canMoveLeft = derivedStateOf { currentState.value().reorder?.canMoveLeft == true },
+                canMoveRight = derivedStateOf { currentState.value().reorder?.canMoveRight == true },
                 openLibrary = currentOpenLibrary,
             ).also { it.anchor.value = menuAnchor }
         }
@@ -1040,7 +1046,7 @@ private fun HeroTitle(
                 Box(Modifier.padding(start = MetaIndent, top = MetaGap).height(detail).drawnAt { band.detail.value }) {
                     when (val keys = shown.hint?.takeIf { live }) {
                         ReorderHint.Reorder -> {
-                            KeyChips()
+                            KeyChips(input.carried)
                         }
 
                         null -> {
@@ -1110,27 +1116,39 @@ private fun barLine(
 @Composable
 private fun libraryCountText(count: Int?): String = count?.let { pluralStringResource(R.plurals.library_app_count, it, it) } ?: " "
 
-/** The keys of reorder mode, one chip each: OK picks up, the arrows move, Back drops, Back twice finishes. */
+/**
+ * The keys of reorder mode, one chip each: OK picks up, the arrows move, Back drops, Back twice finishes. The chips of the
+ * keys that do something now, given whether a tile is [carried], draw at full alpha and the others dimmer.
+ */
 @Composable
-private fun KeyChips() {
+private fun KeyChips(carried: State<String?>) {
+    val carrying by remember(carried) { derivedStateOf { carried.value != null } }
     Row(Modifier.testTag("reorder:hint"), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        KeyChip(R.string.reorder_key_ok, R.string.reorder_pick_up)
-        KeyChip(R.string.reorder_key_arrows, R.string.reorder_move)
-        KeyChip(R.string.reorder_key_back, R.string.reorder_drop)
-        KeyChip(R.string.reorder_key_back_twice, R.string.reorder_finish)
+        KeyChip("ok", R.string.reorder_key_ok, R.string.reorder_pick_up, !carrying)
+        KeyChip("arrows", R.string.reorder_key_arrows, R.string.reorder_move, carrying)
+        KeyChip("back", R.string.reorder_key_back, R.string.reorder_drop, carrying)
+        KeyChip("back-twice", R.string.reorder_key_back_twice, R.string.reorder_finish, !carrying)
     }
 }
 
 @Composable
 private fun KeyChip(
+    tag: String,
     @StringRes key: Int,
     @StringRes action: Int,
+    applies: Boolean,
 ) {
     val typography = TvTheme.typography
+    val alpha = animateFloatAsState(if (applies) 1f else IDLE_CHIP_ALPHA, TvTheme.motion.tweenSpec(CHIP_FADE_MS), label = "chip")
     Row(
         modifier =
             Modifier
-                .height(ChipHeight)
+                .testTag("reorder:chip:$tag")
+                .graphicsLayer {
+                    compositingStrategy = CompositingStrategy.ModulateAlpha
+                    this.alpha = alpha.value
+                }.height(ChipHeight)
+                .background(ChipBacking, CircleShape)
                 .border(1.dp, ChipRim, CircleShape)
                 .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
