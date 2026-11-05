@@ -19,4 +19,4 @@ KEYCODE_TV and KEYCODE_TV_INPUT are taken only when `capture_input_keys` is true
 - `scripts/switch-home.sh new` removes the two Java services from `enabled_accessibility_services` and adds `KeyService`. `old` puts the values saved before the first change back. `KEYS=keep` leaves the list alone.
 - The script waits for `KeyService` to bind. If it does not bind, the script restores the key settings.
 - A force stop of the launcher turns the service off, because Android removes a force-stopped app's accessibility services from the list. The Java launcher re-adds its helpers with `restore_key_services`. The Compose launcher does not support that key, so nothing re-adds the service.
-- `scripts/spike-gate.sh` refuses to run while `KeyService` is enabled, because the benchmark reinstall would drop it.
+- `scripts/spike-gate.sh` refuses to run while `KeyService` is enabled, as a precaution: a reinstall of the real package would drop the entry, and the gate installs only the separate benchmark package.
