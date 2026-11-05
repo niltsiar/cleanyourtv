@@ -31,7 +31,7 @@ internal const val XIAOMI_SHORT_MENU_FLAGS: Int = 0x7531
  * so it does not also open the app.
  */
 public class OkHold(
-    public val holdMs: Long = HOLD_OK_MS,
+    internal val holdMs: Long = HOLD_OK_MS,
 ) {
     private var downTime = NONE
 

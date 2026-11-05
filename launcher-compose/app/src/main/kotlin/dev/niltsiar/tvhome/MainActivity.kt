@@ -220,7 +220,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch { if (!graph.inputLauncher.open(target)) toast(R.string.not_available) }
     }
 
-    /** The app of boot_to_live_tv or the Open on start choice, or the Live TV app. */
+    /** The Live TV app of boot_to_live_tv. */
     private fun openIntent(intent: Intent) {
         if (!startActivitySafely(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))) toast(R.string.not_available)
     }
