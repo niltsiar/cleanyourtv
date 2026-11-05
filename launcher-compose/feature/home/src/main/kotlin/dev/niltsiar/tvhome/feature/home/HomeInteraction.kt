@@ -87,8 +87,7 @@ internal class HomeInteraction(
             }
 
             HomeEvent.OpenInputs -> {
-                inputsAsked = true
-                inputsChanged()
+                openInputs()
             }
 
             is HomeEvent.PickInput -> {
@@ -149,6 +148,16 @@ internal class HomeInteraction(
     suspend fun listLoaded(loaded: AppList) {
         list = loaded
         end()
+    }
+
+    /** A menu or a session in the way gives place to the list, as the Home key would clear them; an open list stays. */
+    private suspend fun openInputs() {
+        if (!inputsOpen) {
+            menu = null
+            end()
+        }
+        inputsAsked = true
+        inputsChanged()
     }
 
     fun inputsLoaded(loaded: InputsMenu) {

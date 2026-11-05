@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Locale
@@ -24,8 +25,14 @@ class HomeInputsTest {
     private val events = Channel<HomeEvent>(Channel.UNLIMITED)
     private val effects = Channel<HomeEffect>(Channel.UNLIMITED)
 
+    private val saves = mutableListOf<Pair<List<String>, Int>>()
+
     private fun presenter(inputs: Flow<InputsMenu>): Flow<HomeUiState> {
-        val sources = sources(inputs = inputs)
+        val sources =
+            sources(inputs = inputs, saveOrder = { keys, docked ->
+                saves += keys to docked
+                true
+            })
         return moleculeFlow(RecompositionMode.Immediate) {
             homePresenter(events.receiveAsFlow(), sources, SixColumns, effects::trySend, Locale.ENGLISH, "EEEE d MMMM")
         }
@@ -160,6 +167,76 @@ class HomeInputsTest {
                 events.send(HomeEvent.HomePressed)
 
                 assertFalse(awaitMatching { !it.inputsOpen }.inputsOpen)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun a_request_from_the_system_replaces_an_open_tile_menu_with_the_list() =
+        runTest {
+            presenter(flowOf(FourPorts)).test {
+                awaitMatching { it.inputs == FourPorts }
+                events.send(HomeEvent.TileMenu("pkg.2", held = true))
+                awaitMatching { it.menu != null }
+
+                events.send(HomeEvent.OpenInputs)
+
+                val state = awaitMatching { it.inputsOpen }
+                assertNull(state.menu)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun a_request_from_the_system_replaces_an_open_settings_menu_with_the_list() =
+        runTest {
+            presenter(flowOf(FourPorts)).test {
+                awaitMatching { it.inputs == FourPorts }
+                events.send(HomeEvent.SettingsMenu)
+                awaitMatching { it.menu != null }
+
+                events.send(HomeEvent.OpenInputs)
+
+                val state = awaitMatching { it.inputsOpen }
+                assertNull(state.menu)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun a_request_from_the_system_ends_a_reorder_keeps_its_order_and_opens_the_list() =
+        runTest {
+            presenter(flowOf(FourPorts)).test {
+                awaitMatching { it.inputs == FourPorts }
+                events.send(HomeEvent.TileMenu("pkg.2", held = true))
+                awaitMatching { it.menu != null }
+                events.send(HomeEvent.MenuPick(MenuRow.Move))
+                awaitMatching { it.reorder?.carried == "pkg.2" }
+                events.send(HomeEvent.ReorderMove(Arrow.Right))
+                awaitMatching { it.dock.getOrNull(2)?.key == "pkg.2" }
+
+                events.send(HomeEvent.OpenInputs)
+
+                val state = awaitMatching { it.inputsOpen }
+                assertNull(state.reorder)
+                assertEquals(listOf(listOf("pkg.1", "pkg.3", "pkg.2", "pkg.4", "pkg.5", "pkg.6", "pkg.7", "pkg.8", "pkg.9") to -1), saves)
+                assertEquals(listOf("pkg.1", "pkg.3", "pkg.2", "pkg.4", "pkg.5", "pkg.6"), state.dock.map { it.key })
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun a_request_from_the_system_leaves_an_open_list_open() =
+        runTest {
+            presenter(flowOf(FourPorts)).test {
+                awaitMatching { it.inputs == FourPorts }
+                events.send(HomeEvent.OpenInputs)
+                awaitMatching { it.inputsOpen }
+
+                events.send(HomeEvent.OpenInputs)
+
+                assertTrue(stateAfterAnotherChange().inputsOpen)
+                assertTrue(effects.tryReceive().isFailure)
                 cancelAndIgnoreRemainingEvents()
             }
         }
