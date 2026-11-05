@@ -17,7 +17,7 @@ internal const val TARGET_PACKAGE = "dev.niltsiar.tvhome"
 
 private const val HOME_READY_TIMEOUT_MS = 10_000L
 private const val FOCUS_TIMEOUT_MS = 2_000L
-private const val IMAGES_SETTLE_MS = 2_000L
+private const val IMAGES_TIMEOUT_MS = 10_000L
 private const val DOCK_STEPS = 5
 private const val GRID_ROWS = 4
 private const val GRID_COLUMNS_SWEPT = 3
@@ -25,6 +25,9 @@ private const val TOP_BAR_STEPS = 2
 
 /** Every app tile, in the dock and in the grid: HomeScreen tags each one `tile:<component key>`. */
 private val TILE_TAG = Pattern.compile("tile:.+")
+
+/** An image tile describes itself with the app's label; a tile still waiting for its art shows the label as text only. */
+private val ANY_DESCRIPTION = Pattern.compile(".+")
 
 /** BySelector is a mutable builder, so each use needs a new one. */
 private fun anyTile() = By.res(TILE_TAG)
@@ -38,8 +41,25 @@ internal fun MacrobenchmarkScope.launchHome() {
     check(device.wait(Until.hasObject(anyTile()), HOME_READY_TIMEOUT_MS)) { "No app tile appeared" }
 }
 
-/** Tile images arrive in a second emission; this lets them land so the sweep draws the real tiles. */
-internal fun awaitTileImages() = Thread.sleep(IMAGES_SETTLE_MS)
+/**
+ * Tile images arrive in a second emission, all together; this waits until a tile shows one, so the sweep draws the
+ * real tiles. A tile with art carries a content description, one without shows its label as text only.
+ */
+internal fun MacrobenchmarkScope.awaitTileImages() {
+    val shown =
+        device.wait(
+            Condition<UiDevice, Boolean> {
+                // Home recomposes while images land and can replace a node between the find and the read.
+                try {
+                    it.findObjects(anyTile()).any { tile -> tile.contentDescription != null || tile.hasObject(By.desc(ANY_DESCRIPTION)) }
+                } catch (_: StaleObjectException) {
+                    false
+                }
+            },
+            IMAGES_TIMEOUT_MS,
+        )
+    check(shown == true) { "No tile showed an image within $IMAGES_TIMEOUT_MS ms" }
+}
 
 /**
  * The scripted journey: right across the dock, down into the grid, right and left, back up and left, then one
