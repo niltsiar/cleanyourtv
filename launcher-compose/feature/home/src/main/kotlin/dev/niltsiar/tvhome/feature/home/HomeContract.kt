@@ -91,6 +91,9 @@ public sealed interface HomeEffect {
     /** The network button was pressed: open the VPN app or Wi-Fi settings. */
     public data object OpenNetwork : HomeEffect
 
+    /** The network button was held: open Wi-Fi settings, even when a VPN app is set. */
+    public data object OpenWifiSettings : HomeEffect
+
     /** Open the TV's App info page for a package. */
     public data class OpenAppInfo(
         val packageName: String,
@@ -98,6 +101,9 @@ public sealed interface HomeEffect {
 
     /** Open the vendor settings app the Settings menu offers. */
     public data object OpenNativeSettings : HomeEffect
+
+    /** Open the system power menu through the key service. */
+    public data object OpenPowerMenu : HomeEffect
 
     /** Switch to what an Inputs row stands for: a TV input, a Coocaa source, the source panel or Live TV. */
     public data class OpenInput(
@@ -145,6 +151,8 @@ public class HomeSources(
     public val hasAppInfo: (String) -> Boolean = { false },
     /** Whether a vendor settings app is installed, for the Settings menu's "Native settings". */
     public val hasNativeSettings: () -> Boolean = { false },
+    /** Whether the key service is bound and can open the system power menu, for the Settings menu's "Restart". */
+    public val powerMenuAvailable: () -> Boolean = { false },
     /** The Inputs button and its list; never emits for a TV that cannot say, which leaves the button showing. */
     public val inputs: Flow<InputsMenu> = emptyFlow(),
     /** Where focus was last, kept across the activity being created again. */
@@ -163,6 +171,8 @@ internal sealed interface HomeEvent {
     data object OpenSettings : HomeEvent
 
     data object OpenNetwork : HomeEvent
+
+    data object OpenWifiSettings : HomeEvent
 
     /** A held OK or the MENU key on a tile. */
     data class TileMenu(

@@ -1,11 +1,15 @@
 package dev.niltsiar.tvhome.feature.home
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.requestFocus
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
@@ -60,6 +64,7 @@ class TopBarTest {
 
     private var settingsOpened = 0
     private var networkOpened = 0
+    private var wifiSettingsOpened = 0
     private var clicked: String? = null
 
     private fun show(
@@ -78,6 +83,7 @@ class TopBarTest {
                     topBar = config.topBarLayout(),
                     onOpenSettings = { settingsOpened++ },
                     onOpenNetwork = { networkOpened++ },
+                    onOpenWifiSettings = { wifiSettingsOpened++ },
                 )
             }
         }
@@ -92,6 +98,33 @@ class TopBarTest {
         compose.onNodeWithContentDescription("Home").performClick()
 
         assertEquals(1 to 1, settingsOpened to networkOpened)
+    }
+
+    private fun pressOkOnNetworkButton(holdMillis: Long) {
+        compose.onNodeWithContentDescription("Home").requestFocus()
+        compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
+        compose.mainClock.advanceTimeBy(holdMillis)
+        compose.waitForIdle()
+        compose.onRoot().performKeyInput { keyUp(Key.DirectionCenter) }
+        compose.waitForIdle()
+    }
+
+    @Test
+    fun holding_ok_on_the_network_button_opens_wifi_settings_and_not_what_a_press_opens() {
+        show()
+
+        pressOkOnNetworkButton(holdMillis = 600)
+
+        assertEquals(0 to 1, networkOpened to wifiSettingsOpened)
+    }
+
+    @Test
+    fun a_short_ok_on_the_network_button_still_opens_what_it_opened_before() {
+        show()
+
+        pressOkOnNetworkButton(holdMillis = 100)
+
+        assertEquals(1 to 0, networkOpened to wifiSettingsOpened)
     }
 
     @Test

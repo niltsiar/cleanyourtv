@@ -59,6 +59,7 @@ public class KeyService : AccessibilityService() {
     }
 
     internal fun connected() {
+        PowerMenu.bind(this)
         // The service is directBootAware: Android 11 skips a service that is not while the user is still locked at boot,
         // writes accessibility_enabled=0 and, on TCL G03 firmware, never binds it after the unlock. The theme lives in
         // credential-protected storage, so wait for the unlock before reading it.
@@ -273,6 +274,7 @@ public class KeyService : AccessibilityService() {
     }
 
     override fun onDestroy() {
+        PowerMenu.unbind(this)
         stopWaitingForUnlock()
         tearDown()
         super.onDestroy()

@@ -430,4 +430,33 @@ class KeyServiceTest {
         assertTrue(tap(190))
         assertEquals("com.netflix.ninja", started()?.component?.packageName)
     }
+
+    @Test
+    fun the_power_menu_opens_through_the_bound_service_and_is_gone_once_it_is_destroyed() {
+        service.connected()
+
+        assertTrue(PowerMenu.available())
+        PowerMenu.open()
+        assertEquals(listOf(AccessibilityService.GLOBAL_ACTION_POWER_DIALOG), shadowOf(service).globalActionsPerformed)
+
+        service.onDestroy()
+
+        assertFalse(PowerMenu.available())
+        PowerMenu.open()
+        assertEquals(listOf(AccessibilityService.GLOBAL_ACTION_POWER_DIALOG), shadowOf(service).globalActionsPerformed)
+    }
+
+    @Test
+    fun the_destroy_of_an_earlier_service_does_not_unbind_the_one_that_replaced_it() {
+        val replacement = Robolectric.setupService(KeyService::class.java)
+        service.connected()
+        replacement.connected()
+
+        service.onDestroy()
+
+        assertTrue(PowerMenu.available())
+        PowerMenu.open()
+        assertEquals(listOf(AccessibilityService.GLOBAL_ACTION_POWER_DIALOG), shadowOf(replacement).globalActionsPerformed)
+        replacement.onDestroy()
+    }
 }

@@ -114,6 +114,8 @@ class HomePresenterTest {
                 assertEquals(HomeEffect.OpenSettings, effects.receive())
                 events.send(HomeEvent.OpenNetwork)
                 assertEquals(HomeEffect.OpenNetwork, effects.receive())
+                events.send(HomeEvent.OpenWifiSettings)
+                assertEquals(HomeEffect.OpenWifiSettings, effects.receive())
                 cancelAndIgnoreRemainingEvents()
             }
         }

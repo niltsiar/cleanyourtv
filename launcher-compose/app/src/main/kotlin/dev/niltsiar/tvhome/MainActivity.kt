@@ -30,6 +30,7 @@ import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.core.model.startActivitySafely
 import dev.niltsiar.tvhome.data.apps.LaunchResult
 import dev.niltsiar.tvhome.feature.library.MoleculeLibraryViewModel
+import dev.niltsiar.tvhome.service.keys.PowerMenu
 import dev.niltsiar.tvhome.service.keys.VendorKeys
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -83,8 +84,10 @@ class MainActivity : ComponentActivity() {
                         onLaunchApp = ::launchApp,
                         onOpenSettings = ::openSettings,
                         onOpenNetwork = ::openNetwork,
+                        onOpenWifiSettings = ::openWifiSettings,
                         onOpenAppInfo = ::openAppInfo,
                         onOpenNativeSettings = ::openNativeSettings,
+                        onOpenPowerMenu = PowerMenu::open,
                         onOrderNotSaved = ::orderNotSaved,
                         onLibrarySaveFailed = ::librarySaveFailed,
                         onOpenInput = ::openInput,
@@ -255,6 +258,10 @@ class MainActivity : ComponentActivity() {
 
     private fun openNetwork() {
         if (!graph.systemSettings.openNetwork()) cantOpen(getString(FeatureR.string.wifi))
+    }
+
+    private fun openWifiSettings() {
+        if (!graph.systemSettings.openWifiSettings()) cantOpen(getString(FeatureR.string.wifi))
     }
 
     private fun openAppInfo(packageName: String) {

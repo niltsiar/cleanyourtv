@@ -24,6 +24,7 @@
   <string name="library_save_failed">Verknüpfung konnte nicht gespeichert werden</string>
   <string name="dock_edit">Dock bearbeiten</string>
   <string name="reorder">Apps anordnen</string>
+  <string name="power_menu">Neu starten…</string>
   <string name="reorder_hint">OK hebt eine App an, Pfeiltasten verschieben sie, Zurück legt sie ab. Nochmals Zurück zum Beenden.</string>
   <string name="dock_edit_hint">Wähle den Dock-Platz, den du ändern willst, und drücke OK. Zurück zum Beenden.</string>
   <string name="dock_edit_pick_app">Wähle jetzt die App für diesen Platz und drücke OK. Zurück, um einen anderen Platz zu wählen.</string>

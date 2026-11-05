@@ -54,6 +54,8 @@ class MoleculeHomeViewModelTest {
                 assertEquals(HomeEffect.OpenSettings, awaitItem())
                 viewModel.onOpenNetwork()
                 assertEquals(HomeEffect.OpenNetwork, awaitItem())
+                viewModel.onOpenWifiSettings()
+                assertEquals(HomeEffect.OpenWifiSettings, awaitItem())
             }
         }
 

@@ -168,6 +168,7 @@ public fun HomeScreen(
     heroArt: suspend (String) -> ImageBitmap? = { null },
     onOpenSettings: () -> Unit = {},
     onOpenNetwork: () -> Unit = {},
+    onOpenWifiSettings: () -> Unit = {},
     actions: HomeMenuActions = HomeMenuActions(),
     menuAnchor: Rect = Rect.Zero,
     glass: GlassState = rememberGlassState(),
@@ -249,6 +250,7 @@ public fun HomeScreen(
             onAppClick = onClick,
             onOpenSettings = onOpenSettings,
             onOpenNetwork = onOpenNetwork,
+            onOpenWifiSettings = onOpenWifiSettings,
             onOpenLibrary = {
                 input.fromTopBar = true
                 onOpenLibrary()

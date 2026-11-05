@@ -44,6 +44,7 @@ class HomeInteractionTest {
         apps: MutableStateFlow<AppList> = MutableStateFlow(AppList(NineApps)),
         appInfo: Boolean = true,
         nativeSettings: Boolean = false,
+        powerMenu: Boolean = false,
         focusMemory: FocusMemory = FocusMemory(),
     ): Flow<HomeUiState> {
         val sources =
@@ -51,6 +52,7 @@ class HomeInteractionTest {
                 apps = apps,
                 hasAppInfo = { appInfo },
                 hasNativeSettings = { nativeSettings },
+                powerMenuAvailable = { powerMenu },
                 saveOrder = ::saveOrder,
                 removeFromHome = ::removeFromHome,
                 focusMemory = focusMemory,
@@ -160,6 +162,35 @@ class HomeInteractionTest {
                 events.send(HomeEvent.SettingsMenu)
                 val menu = awaitMatching { it.menu != null }.menu
                 assertEquals(HomeMenu(null, listOf(MenuRow.NativeSettings, MenuRow.EditDock, MenuRow.Reorder)), menu)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun the_settings_menu_ends_with_restart_while_the_key_service_is_bound() =
+        runTest {
+            presenter(powerMenu = true).test {
+                awaitMatching { it.dock.isNotEmpty() }
+                events.send(HomeEvent.SettingsMenu)
+                val menu = awaitMatching { it.menu != null }.menu
+                assertEquals(HomeMenu(null, listOf(MenuRow.EditDock, MenuRow.Reorder, MenuRow.PowerMenu)), menu)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun picking_restart_asks_the_host_for_the_power_menu_and_hands_focus_back_to_settings() =
+        runTest {
+            presenter(powerMenu = true).test {
+                awaitMatching { it.dock.isNotEmpty() }
+                events.send(HomeEvent.SettingsMenu)
+                awaitMatching { it.menu != null }
+                events.send(HomeEvent.MenuPick(MenuRow.PowerMenu))
+
+                val state = awaitMatching { it.menu == null && it.focusRequest != null }
+
+                assertEquals(HomeEffect.OpenPowerMenu, effects.receive())
+                assertEquals(SETTINGS_FOCUS, state.focusRequest?.target)
                 cancelAndIgnoreRemainingEvents()
             }
         }

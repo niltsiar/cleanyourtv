@@ -73,6 +73,10 @@ public class MoleculeHomeViewModel(
         events.trySend(HomeEvent.OpenNetwork)
     }
 
+    public fun onOpenWifiSettings() {
+        events.trySend(HomeEvent.OpenWifiSettings)
+    }
+
     /** The menus and the reorder and edit-dock modes. */
     public val actions: HomeMenuActions =
         HomeMenuActions(

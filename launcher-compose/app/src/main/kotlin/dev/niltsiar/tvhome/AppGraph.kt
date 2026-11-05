@@ -20,6 +20,7 @@ import dev.niltsiar.tvhome.data.wallpaper.WallpaperProvider
 import dev.niltsiar.tvhome.feature.home.FocusMemory
 import dev.niltsiar.tvhome.feature.home.HomeSources
 import dev.niltsiar.tvhome.feature.library.LibrarySources
+import dev.niltsiar.tvhome.service.keys.PowerMenu
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
@@ -164,6 +165,7 @@ interface AppGraph {
             heroArt = appsProvider::heroArt,
             hasAppInfo = systemSettings::hasAppInfo,
             hasNativeSettings = systemSettings::hasNativeSettings,
+            powerMenuAvailable = PowerMenu::available,
             saveOrder = appsProvider::saveOrder,
             removeFromHome = { libraryCatalog.setOnHome(it, false) },
             inputs = inputsProvider.menu,

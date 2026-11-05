@@ -143,6 +143,10 @@ internal class HomeInteraction(
             HomeEvent.OpenNetwork -> {
                 effect(HomeEffect.OpenNetwork)
             }
+
+            HomeEvent.OpenWifiSettings -> {
+                effect(HomeEffect.OpenWifiSettings)
+            }
         }
     }
 
@@ -233,7 +237,7 @@ internal class HomeInteraction(
 
     private fun openSettingsMenu() {
         if (session != null || menu != null) return
-        menu = HomeMenu(null, settingsMenuRows(config.dockRow, sources.hasNativeSettings()))
+        menu = HomeMenu(null, settingsMenuRows(config.dockRow, sources.hasNativeSettings(), sources.powerMenuAvailable()))
     }
 
     /** The dock row's tiles: the first [TvConfig.columns] with a single row, else the tiles the dock shows. */
@@ -281,6 +285,11 @@ internal class HomeInteraction(
 
             MenuRow.Reorder -> {
                 if (!startReorder(carry = null)) focus(SETTINGS_FOCUS)
+            }
+
+            MenuRow.PowerMenu -> {
+                effect(HomeEffect.OpenPowerMenu)
+                focus(SETTINGS_FOCUS)
             }
         }
     }

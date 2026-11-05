@@ -29,8 +29,10 @@ internal fun HomeHost(
     onLaunchApp: (AppEntry) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenNetwork: () -> Unit,
+    onOpenWifiSettings: () -> Unit,
     onOpenAppInfo: (String) -> Unit,
     onOpenNativeSettings: () -> Unit,
+    onOpenPowerMenu: () -> Unit,
     onOrderNotSaved: () -> Unit,
     onLibrarySaveFailed: () -> Unit,
     onOpenInput: (InputTarget) -> Unit,
@@ -51,8 +53,10 @@ internal fun HomeHost(
                 is HomeEffect.LaunchApp -> onLaunchApp(effect.app)
                 HomeEffect.OpenSettings -> onOpenSettings()
                 HomeEffect.OpenNetwork -> onOpenNetwork()
+                HomeEffect.OpenWifiSettings -> onOpenWifiSettings()
                 is HomeEffect.OpenAppInfo -> onOpenAppInfo(effect.packageName)
                 HomeEffect.OpenNativeSettings -> onOpenNativeSettings()
+                HomeEffect.OpenPowerMenu -> onOpenPowerMenu()
                 HomeEffect.OrderNotSaved -> onOrderNotSaved()
                 HomeEffect.LibrarySaveFailed -> onLibrarySaveFailed()
                 is HomeEffect.OpenInput -> onOpenInput(effect.target)
@@ -78,6 +82,7 @@ internal fun HomeHost(
         heroArt = graph.homeSources.heroArt,
         onOpenSettings = viewModel::onOpenSettings,
         onOpenNetwork = viewModel::onOpenNetwork,
+        onOpenWifiSettings = viewModel::onOpenWifiSettings,
         actions = viewModel.actions,
         glass = glass,
         libraryOpen = libraryOpen,

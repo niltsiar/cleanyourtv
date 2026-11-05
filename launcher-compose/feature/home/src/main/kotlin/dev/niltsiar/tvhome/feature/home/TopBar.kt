@@ -63,6 +63,7 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.GlassIconButton
 import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.designsystem.GlassSurface
+import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.glassContainer
 import dev.niltsiar.tvhome.core.designsystem.holdOk
@@ -158,6 +159,7 @@ internal fun TopBar(
     onAppClick: (String) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenNetwork: () -> Unit,
+    onOpenWifiSettings: () -> Unit,
     onOpenLibrary: () -> Unit,
     input: HomeInput,
     modifier: Modifier = Modifier,
@@ -197,7 +199,7 @@ internal fun TopBar(
             }
         }
         TopBarApps(glass, state, onAppClick)
-        if (layout.showNetworkPill) NetworkButton(glass, state, layout, ink, onOpenNetwork)
+        if (layout.showNetworkPill) NetworkButton(glass, state, layout, ink, input.hold, onOpenNetwork, onOpenWifiSettings)
         if (layout.reorderButton) ReorderButton(glass, input, ink)
         if (layout.libraryButton) {
             GlassIconButton(
@@ -400,7 +402,8 @@ private fun TopBarApps(
 
 /**
  * The network button: Wi-Fi arcs, an Ethernet plug or a struck-through Wi-Fi, by the link. A change of link fades
- * one icon out while the other fades in and rises; a change of colour fades too. Both run in the draw phase.
+ * one icon out while the other fades in and rises; a change of colour fades too. Both run in the draw phase. A held OK
+ * calls [onHold], which opens Wi-Fi settings where [onClick] may open the VPN app.
  */
 @Composable
 private fun NetworkButton(
@@ -408,7 +411,9 @@ private fun NetworkButton(
     state: () -> HomeUiState,
     layout: TopBarLayout,
     ink: State<Color>,
+    hold: OkHold,
     onClick: () -> Unit,
+    onHold: () -> Unit,
 ) {
     val network by remember(state) { derivedStateOf { state().network } }
     val tint = animateColorAsState(networkTint(network, layout, ink.value), tween(NETWORK_FADE_MS), label = "networkTint")
@@ -425,7 +430,7 @@ private fun NetworkButton(
         glass = glass,
         contentDescription = listOfNotNull(name, badge?.first).joinToString(" "),
         onClick = onClick,
-        modifier = if (showLabel) Modifier.widthIn(max = maxWidth.dp) else Modifier,
+        modifier = (if (showLabel) Modifier.widthIn(max = maxWidth.dp) else Modifier).holdOk(hold, onHold = { onHold() }),
         interactionSource = interactionSource,
         label =
             if (showLabel) {

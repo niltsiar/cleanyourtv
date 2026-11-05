@@ -51,4 +51,16 @@ class TileMenuRowsTest {
         assertEquals(listOf(MenuRow.EditDock, MenuRow.Reorder), settingsMenuRows(dockRow = true, nativeSettings = false))
         assertEquals(listOf(MenuRow.Reorder), settingsMenuRows(dockRow = false, nativeSettings = false))
     }
+
+    @Test
+    fun restart_comes_last_and_only_while_the_key_service_is_bound() {
+        assertEquals(
+            listOf(MenuRow.EditDock, MenuRow.Reorder, MenuRow.PowerMenu),
+            settingsMenuRows(dockRow = true, nativeSettings = false, powerMenu = true),
+        )
+        assertEquals(
+            listOf(MenuRow.Reorder),
+            settingsMenuRows(dockRow = false, nativeSettings = false, powerMenu = false),
+        )
+    }
 }

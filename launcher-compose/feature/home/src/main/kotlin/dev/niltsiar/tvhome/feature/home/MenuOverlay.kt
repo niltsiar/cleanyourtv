@@ -35,6 +35,7 @@ private fun MenuRow.label(): Int =
         MenuRow.NativeSettings -> R.string.native_settings
         MenuRow.EditDock -> R.string.dock_edit
         MenuRow.Reorder -> R.string.reorder
+        MenuRow.PowerMenu -> R.string.power_menu
     }
 
 /** The tile menu or the Settings menu: [rows] hanging from [anchor], each tagged `menu:<row name>`. */
