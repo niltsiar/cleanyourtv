@@ -2,6 +2,7 @@ package dev.niltsiar.tvhome.feature.library
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,17 +38,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.designsystem.FocusSurface
-import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.holdOk
@@ -55,12 +59,17 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-internal val CardHeight = 170.dp
-private val CardShape = RoundedCornerShape(18.dp)
-private val ArtShape = RoundedCornerShape(10.dp)
+internal val CardHeight = 113.dp
+private val CardShape = RoundedCornerShape(16.dp)
+private val ArtShape = RoundedCornerShape(8.dp)
 private const val ART_ASPECT = 16f / 9f
-private val CardSidePadding = 10.dp
-private val CardTopBottomPadding = 12.dp
+private val CardSide = 6.dp
+private val ArtInset = 8.dp
+private val CardTop = 8.dp
+private val CardBottom = 8.dp
+private val NameGap = 4.dp
+private val NameHeight = 32.dp
+private const val NAME_LINES = 2
 private val EnterRise = 28.dp
 private const val POP_SCALE = 0.12f
 private const val FOCUSED_SCALE = 1.08f
@@ -69,25 +78,25 @@ private const val RIM_ALPHA = 0.09f
 private val RecentGreen = Color(0xFF70D9A0)
 
 /**
- * One card of the row, [width] wide: the app's art on a small tile, its name in a box of two lines and, on one line at
- * the bottom, where it stands. An idle card is opaque, so nothing of Home shows through it; a focused one lets the
- * highlight behind it show. It rises in once per opening, with the delay [CardEntrance] gives it, and pops a little
- * when its Home shortcut changes. Both run in the layer lambda. Its name and status draw at [labelAlpha] of [visible],
- * the share of the card that shows in the row, so a card that peeks at an edge shows no clipped word.
+ * One card of the grid: the app's art on a small tile, its name in a box of [NAME_LINES] lines and, right under it, where
+ * the app stands. An idle card is opaque, so nothing of Home shows through it; a focused one lets the highlight behind it
+ * show. It rises in once per opening, with the delay [CardEntrance] gives it, and pops a little when its Home shortcut
+ * changes. Both run in the layer lambda. The status line keeps its place while the card grows, so it stays level with
+ * the cards beside it. [widthPx] is the narrowest the card can be.
  */
 @Composable
 internal fun LibraryCardView(
     card: LibraryCard,
     index: Int,
-    width: Dp,
+    widthPx: Int,
     layout: LibraryLayout,
     art: suspend (String) -> LibraryArt?,
+    measurer: TextMeasurer,
     entrance: CardEntrance,
     actions: LibraryActions,
     hold: OkHold,
     anchor: (Rect) -> Unit,
     requester: FocusRequester,
-    visible: () -> Float,
     modifier: Modifier = Modifier,
 ) {
     val key = card.app.key
@@ -115,11 +124,13 @@ internal fun LibraryCardView(
     val fill = TvTheme.surfaces.card
     val tint = animateColorAsState(if (card.onHome) OnHomeTint else Color.Transparent, tween(CARD_TINT_MS), label = "cardTint")
     val motion = TvTheme.motion
-    val idle = remember { Animatable(1f) }
+    val density = LocalDensity.current
+    val focus = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
+    val ring = remember(artwork, layout) { layout.ringColour(artwork?.accent ?: Color.Unspecified) }
     Box(
         modifier =
-            modifier.size(width, CardHeight).graphicsLayer {
+            modifier.fillMaxWidth().height(CardHeight).graphicsLayer {
                 compositingStrategy = CompositingStrategy.ModulateAlpha
                 alpha = enter.value.coerceIn(0f, 1f)
                 translationY = (1f - enter.value) * EnterRise.toPx()
@@ -134,15 +145,16 @@ internal fun LibraryCardView(
             shape = CardShape,
             glow = false,
             focusedScale = FOCUSED_SCALE,
+            ring = { ring },
             modifier =
                 Modifier
                     .fillMaxSize()
                     .testTag("card:$key")
                     .focusRequester(requester)
                     .onFocusChanged {
-                        val target = if (it.isFocused) 0f else 1f
-                        if (idle.targetValue != target) {
-                            scope.launch(start = CoroutineStart.UNDISPATCHED) { idle.animateTo(target, motion.tweenSpec(Motion.FOCUS_MS)) }
+                        val target = if (it.isFocused) 1f else 0f
+                        if (focus.targetValue != target) {
+                            scope.launch(start = CoroutineStart.UNDISPATCHED) { focus.animateTo(target, motion.focusSpec) }
                         }
                     }.then(
                         if (layout.selection) {
@@ -159,26 +171,25 @@ internal fun LibraryCardView(
                 Modifier
                     .fillMaxSize()
                     .drawBehind {
-                        drawRect(fill, alpha = idle.value)
+                        drawRect(fill, alpha = (1f - focus.value).coerceIn(0f, 1f))
                         drawRect(tint.value)
                     }.border(1.dp, ink.copy(alpha = RIM_ALPHA), CardShape)
                     .semantics { contentDescription = card.app.label },
             ) {
                 Column(
-                    modifier = Modifier.fillMaxSize().padding(start = CardSidePadding, top = CardTopBottomPadding, end = CardSidePadding),
+                    modifier = Modifier.fillMaxSize().padding(start = CardSide, top = CardTop, end = CardSide),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Art(card, artwork)
-                    Name(card.app.label, Modifier.labelAt(visible))
+                    Art(card, artwork, Modifier.padding(horizontal = ArtInset))
+                    Name(card.app.label, measurer, widthPx - with(density) { CardSide.roundToPx() * 2 })
                 }
                 Status(
                     card,
                     layout,
                     Modifier
-                        .align(
-                            Alignment.BottomCenter,
-                        ).padding(start = CardSidePadding, end = CardSidePadding, bottom = CardTopBottomPadding)
-                        .labelAt(visible),
+                        .align(Alignment.BottomCenter)
+                        .padding(start = CardSide, end = CardSide, bottom = CardBottom)
+                        .holdingStill(focus, motion.focusScale(FOCUSED_SCALE)),
                 )
                 if (card.recent && !card.onHome) RecentDot(Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp))
             }
@@ -192,10 +203,11 @@ private const val CARD_TINT_MS = 300
 private fun Art(
     card: LibraryCard,
     artwork: LibraryArt?,
+    modifier: Modifier = Modifier,
 ) {
     Box(
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
                 .aspectRatio(ART_ASPECT)
                 .clip(ArtShape)
@@ -216,44 +228,50 @@ private fun Art(
     }
 }
 
-/** The alpha of a card's name and status: 0 while under half of the card shows, 1 from three quarters, linear between. */
-internal fun labelAlpha(visible: Float): Float = ((visible - LABEL_HIDDEN_BELOW) / (LABEL_SHOWN_FROM - LABEL_HIDDEN_BELOW)).coerceIn(0f, 1f)
-
-private const val LABEL_HIDDEN_BELOW = 0.5f
-private const val LABEL_SHOWN_FROM = 0.75f
-
-/** The share of a card of [size] pixels at [offset] that lies between [start] and [end]. */
-internal fun visibleShare(
-    offset: Int,
-    size: Int,
-    start: Int,
-    end: Int,
-): Float = (minOf(offset + size, end) - maxOf(offset, start)).coerceAtLeast(0).toFloat() / size
-
-private fun Modifier.labelAt(visible: () -> Float): Modifier =
-    graphicsLayer {
-        compositingStrategy = CompositingStrategy.ModulateAlpha
-        alpha = labelAlpha(visible())
-    }
-
 /** The first character, whole: a letter outside the Basic Multilingual Plane is two chars. */
 internal fun String.firstCodePoint(): String = if (isEmpty()) this else take(Character.charCount(codePointAt(0)))
 
 @Composable
 private fun Name(
     label: String,
-    modifier: Modifier = Modifier,
+    measurer: TextMeasurer,
+    widthPx: Int,
 ) {
     val typography = TvTheme.typography
-    val style = remember(typography) { typography.pillLabel.copy(fontSize = 14.sp, textAlign = TextAlign.Center) }
+    val style = remember(typography) { typography.pillLabel.copy(fontSize = 13.sp, lineHeight = 16.sp, textAlign = TextAlign.Center) }
+    val shown = remember(label, style, widthPx) { shownName(label, measurer, style, widthPx) }
     BasicText(
-        text = label,
+        text = shown,
         style = style,
-        minLines = 2,
-        maxLines = 2,
+        maxLines = NAME_LINES,
         overflow = TextOverflow.Ellipsis,
-        modifier = modifier.padding(top = 10.dp).fillMaxWidth(),
+        modifier = Modifier.padding(top = NameGap).fillMaxWidth().height(NameHeight),
     )
+}
+
+private val Ellipsis = Char(0x2026).toString()
+
+/**
+ * [label] as it shows in [NAME_LINES] lines of [widthPx]: whole, or cut where the last line ends with the ellipsis right
+ * after its last character, where a plain ellipsis can follow a space.
+ */
+internal fun shownName(
+    label: String,
+    measurer: TextMeasurer,
+    style: TextStyle,
+    widthPx: Int,
+): String {
+    val laidOut =
+        measurer.measure(
+            label,
+            style,
+            TextOverflow.Ellipsis,
+            maxLines = NAME_LINES,
+            constraints = Constraints(maxWidth = widthPx),
+        )
+    val last = laidOut.lineCount - 1
+    if (!laidOut.isLineEllipsized(last)) return label
+    return label.substring(0, laidOut.getLineEnd(last, visibleEnd = true)).trimEnd() + Ellipsis
 }
 
 @Composable
@@ -263,7 +281,7 @@ private fun Status(
     modifier: Modifier = Modifier,
 ) {
     val typography = TvTheme.typography
-    val style = remember(typography) { typography.date.copy(fontSize = 11.sp, textAlign = TextAlign.Center) }
+    val style = remember(typography) { typography.date.copy(fontSize = 11.sp, lineHeight = 13.sp, textAlign = TextAlign.Center) }
     val text =
         when {
             card.onHome -> stringResource(R.string.library_on_home)
@@ -273,6 +291,19 @@ private fun Status(
         }
     BasicText(text, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = modifier.fillMaxWidth())
 }
+
+/**
+ * Undoes, for the line's place, the growth [FocusSurface] draws about the card's centre: [focus] is the card's own
+ * copy of that animation, so the line stays where it was while the card grows.
+ */
+private fun Modifier.holdingStill(
+    focus: Animatable<Float, AnimationVector1D>,
+    grownScale: Float,
+): Modifier =
+    graphicsLayer {
+        val fromCentre = CardHeight.toPx() / 2f - CardBottom.toPx() - size.height / 2f
+        translationY = -fromCentre * (grownScale - 1f) * focus.value
+    }
 
 /** A small green dot for a recent install that is not on Home. */
 @Composable

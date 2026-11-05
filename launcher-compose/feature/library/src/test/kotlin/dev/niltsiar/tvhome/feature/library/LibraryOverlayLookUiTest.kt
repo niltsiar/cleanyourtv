@@ -18,13 +18,16 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
@@ -51,6 +54,7 @@ import org.robolectric.annotation.GraphicsMode
 import java.util.Locale
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /** The library in Home's overlay host, read from the rendered pixels and the laid-out cards. */
 @RunWith(RobolectricTestRunner::class)
@@ -70,11 +74,16 @@ class LibraryOverlayLookUiTest {
     /** Nine apps off Home, in this order: App 1 to App 9. */
     private val nineApps = (1..9).map { libraryApp("App $it") }
 
+    /** 23 apps off Home, in this order: App 01 to App 23. */
+    private val twentyThree = (1..23).map { libraryApp(app(it)) }
+
+    private fun app(number: Int) = "App %02d".format(number)
+
     private fun showLibrary(
         apps: List<LibraryApp>,
         art: LibraryArt? = null,
+        config: TvConfig = TvConfig(appLibrary = true),
     ) {
-        val config = TvConfig(appLibrary = true)
         val library = FakeLibrary(apps)
         lateinit var viewModel: MoleculeLibraryViewModel
         compose.setContent {
@@ -184,12 +193,35 @@ class LibraryOverlayLookUiTest {
     }
 
     @Test
-    fun five_cards_show_whole_and_the_sixth_peeks_40_dp() {
-        showLibrary(nineApps)
+    fun three_rows_of_six_cards_show_whole_and_the_fourth_row_waits_below() {
+        showLibrary(twentyThree)
 
-        val row = bounds("library:cards")
-        assertTrue("${card("App 5")} in $row", card("App 5").right <= row.right)
-        assertNear(row.right - 40.dp, card("App 6").left)
+        val grid = bounds("library:cards")
+        val shown = (1..18).map { card(app(it)) }
+        assertTrue(
+            "$shown in $grid",
+            shown.all {
+                it.left >= grid.left && it.right <= grid.right && it.top >= grid.top &&
+                    it.bottom <= grid.bottom
+            },
+        )
+        assertEquals(3, shown.map { it.top.value.roundToInt() }.distinct().size)
+        assertEquals(6, shown.map { it.left.value.roundToInt() }.distinct().size)
+        val fourth = compose.onAllNodesWithTag("card:${key(app(19))}").fetchSemanticsNodes()
+        assertTrue(fourth.isEmpty() || card(app(19)).top >= grid.bottom)
+    }
+
+    @Test
+    fun the_fourth_row_scrolls_in_with_its_ring_whole_and_the_first_row_comes_back_the_same_way() {
+        showLibrary(twentyThree)
+        val grid = bounds("library:cards")
+        val reach = 7.dp * FOCUSED_SCALE
+
+        press(Key.DirectionDown, times = 3)
+        assertTrue("${grownCard(app(19))} in $grid", grownCard(app(19)).bottom + reach <= grid.bottom + 1.dp)
+
+        press(Key.DirectionUp, times = 3)
+        assertTrue("${grownCard(app(1))} in $grid", grownCard(app(1)).top - reach >= grid.top - 1.dp)
     }
 
     @Test
@@ -204,61 +236,46 @@ class LibraryOverlayLookUiTest {
         assertTrue(redAt((grown.left + grown.right) / 2, grown.top - out) >= WHITE)
     }
 
-    @Test
-    fun past_the_fifth_card_the_row_scrolls_one_card_and_the_next_one_peeks_40_dp() {
-        showLibrary(nineApps)
-
-        press(Key.DirectionRight, times = 5)
-
-        val row = bounds("library:cards")
-        assertNear(row.right - 56.dp, focusedCard("App 6").right)
-        assertNear(row.right - 40.dp, card("App 7").left)
-    }
+    /** The names of the apps whose cards have focus: one, when the focus is in the grid. */
+    private fun focusedApps(): List<String> =
+        compose.onAllNodes(isFocused()).fetchSemanticsNodes().map { it.config[SemanticsProperties.ContentDescription].single() }
 
     @Test
-    fun the_last_card_ends_the_row_and_coming_back_the_card_before_peeks_40_dp() {
-        showLibrary(nineApps)
-        val row = bounds("library:cards")
-        val start = focusedCard("App 1").left
+    fun the_23rd_app_is_seven_presses_from_the_first_and_no_key_goes_past_an_edge() {
+        showLibrary(twentyThree)
 
-        press(Key.DirectionRight, times = 8)
-        assertNear(row.right - (start - row.left), focusedCard("App 9").right)
-
-        press(Key.DirectionLeft, times = 7)
-        assertNear(row.left + 56.dp, focusedCard("App 2").left)
-        assertNear(row.left + 40.dp, card("App 1").right)
-
+        press(Key.DirectionUp)
         press(Key.DirectionLeft)
-        assertNear(start, focusedCard("App 1").left)
+        assertEquals(listOf(app(1)), focusedApps())
+        press(Key.DirectionDown, times = 3)
+        assertEquals(listOf(app(19)), focusedApps())
+        press(Key.DirectionRight, times = 4)
+        assertEquals(listOf(app(23)), focusedApps())
+        press(Key.DirectionDown)
+        press(Key.DirectionRight)
+        assertEquals(listOf(app(23)), focusedApps())
     }
 
     @Test
-    @Config(qualifiers = "+night")
-    fun the_right_edge_fades_out_and_the_left_edge_fades_only_once_the_row_has_scrolled() {
-        showLibrary(nineApps, art = LibraryArt(white, Color.White))
-        val row = bounds("library:cards")
-        val artMiddle = card("App 2").top + 42.dp
-
-        assertTrue(redAt(card("App 5").right - 20.dp, artMiddle) >= WHITE)
-        assertTrue(redAt(row.right - 4.dp, artMiddle) < FADED)
-        assertTrue(redAt(card("App 1").left + 12.dp, artMiddle) >= WHITE)
+    fun down_from_the_sixth_column_lands_on_the_last_card_of_the_short_last_row() {
+        showLibrary(twentyThree)
 
         press(Key.DirectionRight, times = 5)
+        press(Key.DirectionDown, times = 3)
 
-        val nearLeft = card("App 2").left + 12.dp
-        assertTrue("$nearLeft in $row", nearLeft < row.left + 48.dp)
-        assertTrue(redAt(nearLeft, artMiddle) < WHITE - 40)
+        assertEquals(listOf(app(23)), focusedApps())
     }
 
     @Test
-    @Config(qualifiers = "+night")
-    fun the_last_page_has_no_right_fade() {
-        showLibrary(nineApps, art = LibraryArt(white, Color.White))
+    fun down_into_the_fourth_row_keeps_the_column() {
+        showLibrary(twentyThree)
 
-        press(Key.DirectionRight, times = 8)
+        press(Key.DirectionRight, times = 2)
+        press(Key.DirectionDown, times = 3)
 
-        val last = card("App 9")
-        assertTrue(redAt(last.right - 12.dp, last.top + 42.dp) >= WHITE)
+        assertEquals(listOf(app(21)), focusedApps())
+        press(Key.DirectionUp)
+        assertEquals(listOf(app(15)), focusedApps())
     }
 
     @Test
@@ -272,15 +289,15 @@ class LibraryOverlayLookUiTest {
             name: String,
         ): DpRect =
             compose
-                .onNode(hasText(text) and hasAnyAncestor(hasTestTag("card:${key(name)}")), useUnmergedTree = true)
+                .onNode(hasText(text, substring = true) and hasAnyAncestor(hasTestTag("card:${key(name)}")), useUnmergedTree = true)
                 .getBoundsInRoot()
 
         compose.onNodeWithTag("card:${key("Aaa")}").assertIsFocused()
-        val bottom = card("Beta").bottom - 12.dp
+        val bottom = card("Beta").bottom - 8.dp
         assertNear(bottom, text("Add to Home", "Beta").bottom)
         assertNear(bottom, text("Add to Home", long).bottom)
         assertNear(bottom, text("On Home", "Gamma").bottom)
-        assertEquals(text("Beta", "Beta").height, text(long, long).height)
+        assertEquals(text("Beta", "Beta").height, text("Long enough", long).height)
     }
 
     @Test
@@ -327,49 +344,143 @@ class LibraryOverlayLookUiTest {
         assertTrue("red $red, green $green", green - red < 20)
     }
 
-    @Test
-    @Config(qualifiers = "+night")
-    fun the_right_fade_starts_at_the_peeking_card_and_leaves_more_of_it_showing() {
-        showLibrary(nineApps, art = LibraryArt(white, Color.White))
-        val row = bounds("library:cards")
-        val peek = card("App 6")
-        val panel = redAt(peek.left - 8.dp, peek.top - 4.dp)
+    /** The layout bounds of the status line of the card of [name]. */
+    private fun status(name: String): DpRect =
+        compose
+            .onNode(hasText("Add to Home") and hasAnyAncestor(hasTestTag("card:${key(name)}")), useUnmergedTree = true)
+            .getBoundsInRoot()
 
-        val x = peek.left + 12.dp
-        val expected = panel + Math.round((255 - panel) * ((row.right - x) / 40.dp))
-        val actual = redAt(x, peek.top + 42.dp)
-        assertTrue("expected $expected, got $actual", abs(actual - expected) <= 8)
+    /** The middle row, in pixels, of what is drawn like text in the card of [name] from [above] to [below] its status line. */
+    private fun statusMiddle(
+        name: String,
+        above: Dp,
+        below: Dp,
+    ): Float {
+        val card = card(name)
+        val line = status(name)
+        val density = compose.activity.resources.displayMetrics.density
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val left = ((card.left + 6.dp).value * density).toInt()
+        val right = ((card.right - 6.dp).value * density).toInt()
+        val top = ((line.top - above).value * density).toInt()
+        val bottom = ((line.bottom + below).value * density).toInt()
+        val ground = pixels[left, (top + bottom) / 2].red
+        val rows = (top until bottom).filter { y -> (left until right).any { x -> (pixels[x, y].red - ground) * 255 > TEXT_OVER_GROUND } }
+        assertTrue("no text in $card between $top and $bottom", rows.isNotEmpty())
+        return (rows.first() + rows.last()) / 2f
     }
 
     @Test
     @Config(qualifiers = "+night")
-    fun the_name_of_the_peeking_card_is_not_drawn_while_under_half_of_the_card_shows() {
-        val long = "App 6 Recorded Title List For The Peek"
-        showLibrary(nineApps.take(5) + libraryApp(long) + nineApps.drop(6))
-        val row = bounds("library:cards")
-        val peek = card(long)
-        val name =
-            compose
-                .onNode(
-                    hasText(long) and hasAnyAncestor(hasTestTag("card:${key(long)}")),
-                    useUnmergedTree = true,
-                ).getBoundsInRoot()
+    fun the_status_line_of_the_focused_card_stays_on_the_line_of_its_neighbours() {
+        showLibrary(nineApps)
+        focusedCard("App 1")
 
-        var brightest = 0
-        var x = peek.left + 2.dp
-        while (x < row.right - 2.dp) {
-            brightest = maxOf(brightest, redAt(x, name.top + 8.dp), redAt(x, name.bottom - 8.dp))
-            x += 2.dp
-        }
-        assertTrue("brightest $brightest over the peeking card's name", brightest <= FADED)
+        assertEquals(statusMiddle("App 2", 6.dp, 6.dp), statusMiddle("App 1", 6.dp, 6.dp), 1f)
+    }
+
+    /** The last index from [from] up to [to] whose [pixel] is as white as the ring; [from] when none is. */
+    private fun lastWhite(
+        from: Float,
+        to: Float,
+        pixel: (Int) -> Float,
+    ): Float {
+        var edge = from
+        for (i in from.toInt() until to.toInt()) if (pixel(i) * 255 >= WHITE) edge = i.toFloat()
+        return edge
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_ring_of_a_focused_card_stays_16_px_from_the_cards_beside_and_below_it() {
+        showLibrary(nineApps)
+        val focused = focusedCard("App 1")
+        val beside = card("App 2")
+        val below = card("App 7")
+        val density = compose.activity.resources.displayMetrics.density
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+
+        fun px(dp: Dp) = dp.value * density
+        val midY = px((focused.top + focused.bottom) / 2).toInt()
+        val midX = px((focused.left + focused.right) / 2).toInt()
+        val across = px(beside.left) - lastWhite(px(focused.right), px(beside.left)) { pixels[it, midY].red }
+        val down = px(below.top) - lastWhite(px(focused.bottom), px(below.top)) { pixels[midX, it].red }
+
+        assertTrue("beside: $across px", across >= 16)
+        assertTrue("below: $down px", down >= 16)
+    }
+
+    private fun ringAtTop(name: String): List<Int> {
+        val grown = grownCard(name)
+        return rgbAt((grown.left + grown.right) / 2, grown.top - 4.5.dp * FOCUSED_SCALE)
+    }
+
+    private fun assertRing(
+        expected: List<Int>,
+        actual: List<Int>,
+    ) = assertTrue("expected $expected, got $actual", expected.zip(actual).all { (want, got) -> abs(want - got) <= 4 })
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_ring_of_a_card_whose_art_is_coloured_takes_that_colour_lightened() {
+        showLibrary(nineApps, art = LibraryArt(white, Color(0xFFE53935)))
+
+        assertRing(listOf(255, 160, 150), ringAtTop("App 1"))
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_ring_of_a_card_whose_art_is_near_grey_is_the_neutral_ring() {
+        showLibrary(nineApps, art = LibraryArt(white, Color(0xFF808080)))
+
+        assertRing(listOf(242, 244, 248), ringAtTop("App 1"))
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun without_app_glow_the_ring_is_white_whatever_the_art() {
+        showLibrary(nineApps, art = LibraryArt(white, Color(0xFFE53935)), config = TvConfig(appLibrary = true, appGlow = false))
+
+        assertRing(listOf(255, 255, 255), ringAtTop("App 1"))
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun with_cinematic_white_focus_the_ring_is_white_whatever_the_art() {
+        showLibrary(nineApps, art = LibraryArt(white, Color(0xFFE53935)), config = TvConfig(appLibrary = true, cinematicWhiteFocus = true))
+
+        assertRing(listOf(255, 255, 255), ringAtTop("App 1"))
+    }
+
+    @Test
+    fun a_name_cut_to_two_lines_ends_in_an_ellipsis_with_no_space_before_it() {
+        val labels = (6..14).map { words -> NAME_WORDS.take(words).joinToString(" ") }
+        showLibrary(labels.map { libraryApp(it) })
+
+        val shown =
+            labels.map { label ->
+                compose
+                    .onNode(
+                        hasText("Control", substring = true) and hasAnyAncestor(hasTestTag("card:${key(label)}")),
+                        useUnmergedTree = true,
+                    ).fetchSemanticsNode()
+                    .config[SemanticsProperties.Text]
+                    .joinToString("") { it.text }
+            }
+
+        val cut = shown.filter { it.endsWith(ELLIPSIS) }
+        assertTrue("$shown", cut.size >= 3)
+        assertTrue("$cut", cut.none { it.endsWith(" " + ELLIPSIS) })
     }
 
     private companion object {
         const val PANEL_X = 960
-        const val PANEL_HEADER_Y = 304
+        const val PANEL_HEADER_Y = 103
         const val MAX_BLEED = 10
         const val WHITE = 230
-        const val FADED = 90
         const val FOCUSED_SCALE = 1.08f
+        const val TEXT_OVER_GROUND = 60
+        val ELLIPSIS = Char(0x2026).toString()
+        val NAME_WORDS = "Control de TV con altavoces inteligentes para el salon principal de la casa de Maria Luisa".split(" ")
     }
 }

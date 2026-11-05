@@ -24,6 +24,7 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.DpRect
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.designsystem.ringColor
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
 import kotlinx.coroutines.flow.Flow

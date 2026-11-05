@@ -1,7 +1,9 @@
 package dev.niltsiar.tvhome.feature.library
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.graphics.Color
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.designsystem.focusRingColour
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.LibraryApp
 import dev.niltsiar.tvhome.core.model.LibraryArt
@@ -9,20 +11,28 @@ import kotlinx.coroutines.flow.Flow
 
 /**
  * How the library behaves, from the theme. [selection] is app_library_selection: OK changes an app's Home shortcut and
- * a held OK opens nothing. [okOpens] is library_ok_opens, which selection overrides. [animated] is false for a theme
- * without animations or with reduced motion.
+ * a held OK opens nothing. [okOpens] is library_ok_opens, which selection overrides. [appGlow] and [whiteFocus] decide the
+ * colour of a focused card's ring as they do in Home's grid. [animated] is false for a theme without animations or with
+ * reduced motion.
  */
 @Immutable
 public data class LibraryLayout(
     val selection: Boolean = false,
     val okOpens: Boolean = false,
+    val appGlow: Boolean = false,
+    val whiteFocus: Boolean = false,
     val animated: Boolean = true,
 )
+
+/** The ring of a focused card whose art gives [art]. */
+internal fun LibraryLayout.ringColour(art: Color): Color = focusRingColour(art, coloured = appGlow, whiteFocus = whiteFocus)
 
 public fun TvConfig.libraryLayout(): LibraryLayout =
     LibraryLayout(
         selection = appLibrarySelection,
         okOpens = libraryOkOpens && !appLibrarySelection,
+        appGlow = appGlow,
+        whiteFocus = cinematicWhiteFocus,
         animated = animations && !reducedMotion,
     )
 

@@ -3,6 +3,7 @@ package dev.niltsiar.tvhome.feature.home
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.designsystem.focusRingColour
 
 /**
  * The theme's cinematic shelf: whether it is [cinematic], the [artAlpha] of the focused app's art and the [scrimAlpha]
@@ -59,4 +60,4 @@ internal fun ShelfLayout.focusAccent(
 internal fun ShelfLayout.ringColour(
     art: Color,
     inDock: Boolean,
-): Color = if (whiteFocus || !(inDock || appGlow)) Color.White else ringColor(art)
+): Color = focusRingColour(art, coloured = inDock || appGlow, whiteFocus = whiteFocus)

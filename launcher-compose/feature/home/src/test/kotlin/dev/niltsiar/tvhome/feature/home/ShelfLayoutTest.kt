@@ -2,6 +2,7 @@ package dev.niltsiar.tvhome.feature.home
 
 import androidx.compose.ui.graphics.Color
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.designsystem.ringColor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

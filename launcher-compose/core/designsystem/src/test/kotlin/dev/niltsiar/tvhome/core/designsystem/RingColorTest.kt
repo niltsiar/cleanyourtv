@@ -1,4 +1,4 @@
-package dev.niltsiar.tvhome.feature.home
+package dev.niltsiar.tvhome.core.designsystem
 
 import androidx.compose.ui.graphics.Color
 import org.junit.Assert.assertEquals

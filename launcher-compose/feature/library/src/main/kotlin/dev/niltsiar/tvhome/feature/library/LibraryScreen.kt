@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -11,6 +12,7 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,13 +22,15 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -36,6 +40,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
@@ -48,6 +53,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
@@ -58,12 +64,19 @@ import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -75,28 +88,36 @@ import dev.niltsiar.tvhome.core.designsystem.OverlaySurface
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.eatsOkUp
 import dev.niltsiar.tvhome.core.model.LibraryArt
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 private val PanelMaxWidth = 800.dp
 private val PanelMargin = 32.dp
-private val PanelHeight = 282.dp
+private val PanelEdge = 16.dp
+private val EmptyPanelHeight = 282.dp
 private val PanelSide = 12.dp
+private val PanelTop = 8.dp
+private val PanelBottom = 12.dp
+private val HeaderTitleHeight = 48.dp
+private val HeaderHintHeight = 28.dp
 private val PanelRise = 56.dp
 private const val PANEL_START_SCALE = 0.92f
 
-/** A focused card's growth and ring reach 13 dp past its sides, and the row clips at its sides. */
-private val RowPadding = PaddingValues(horizontal = 13.dp, vertical = 8.dp)
-private val CardGap = 16.dp
-private const val WHOLE_CARDS = 5
+/** The grid: [COLUMNS] cards across and [ROWS] rows in view, [CardGap] apart. */
+private const val COLUMNS = 6
+private const val ROWS = 3
+private val CardGap = 20.dp
 
-/** How much of the next card shows at an edge of the row, under that edge's fade. */
-private val Peek = 40.dp
-private val EdgeFade = 48.dp
+/** A focused card's growth and ring reach 13 dp past its sides, and the grid clips at its edges. */
+private val GridEdge = 13.dp
 
-/** The right edge's fade is narrower, so it fades only the outer part of the next card's peek. */
-private val RightFade = 40.dp
+private val PanelHeight =
+    PanelTop + HeaderTitleHeight + HeaderHintHeight + GridEdge * 2 + CardHeight * ROWS + CardGap * (ROWS - 1) + PanelBottom
 private val MenuEdge = 48.dp
 private val HighlightGrow = 6.dp
 private val HighlightRadius = 20.dp
@@ -157,10 +178,11 @@ internal fun LibraryScreen(
         OverlaySurface(
             modifier =
                 Modifier
-                    .padding(horizontal = PanelMargin)
+                    .padding(horizontal = PanelMargin, vertical = PanelEdge)
                     .widthIn(max = PanelMaxWidth)
                     .fillMaxWidth()
-                    .height(PanelHeight)
+                    .heightIn(max = if (empty) EmptyPanelHeight else PanelHeight)
+                    .fillMaxHeight()
                     .graphicsLayer {
                         compositingStrategy = CompositingStrategy.ModulateAlpha
                         alpha = reveal.value.coerceIn(0f, 1f)
@@ -174,7 +196,7 @@ internal fun LibraryScreen(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .padding(start = PanelSide, top = 8.dp, end = PanelSide, bottom = 12.dp),
+                        .padding(start = PanelSide, top = PanelTop, end = PanelSide, bottom = PanelBottom),
             ) {
                 Header(state, showHint = !empty)
                 if (empty) Empty() else Cards(state, layout, actions, art, entrance, hold) { anchor.value = it }
@@ -215,11 +237,11 @@ private fun Header(
     val countStyle = remember(typography) { typography.date.copy(fontSize = 18.sp) }
     val muted = remember(typography) { typography.date.copy(fontSize = 14.sp) }
     Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-        Row(Modifier.height(48.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.height(HeaderTitleHeight), verticalAlignment = Alignment.CenterVertically) {
             BasicText(stringResource(R.string.app_library), style = title, maxLines = 1, modifier = Modifier.weight(1f))
             BasicText(pluralStringResource(R.plurals.library_app_count, count, count), style = countStyle, maxLines = 1)
         }
-        if (showHint) BasicText(hintText(hint), style = muted, maxLines = 1, modifier = Modifier.height(28.dp))
+        if (showHint) BasicText(hintText(hint), style = muted, maxLines = 1, modifier = Modifier.height(HeaderHintHeight))
     }
 }
 
@@ -275,47 +297,73 @@ private fun Cards(
     hold: OkHold,
     anchor: (Rect) -> Unit,
 ) {
-    val listState = rememberLazyListState()
+    val gridState = rememberLazyGridState()
     val focus = remember { CardFocus() }
     val density = LocalDensity.current
     val windowWidth = LocalWindowInfo.current.containerSize.width
-    val window = with(density) { windowWidth.toDp() }
-    val rowWidth = minOf(PanelMaxWidth, window - PanelMargin * 2) - PanelSide * 2
-    val cardWidth = (rowWidth - RowPadding.calculateLeftPadding(LayoutDirection.Ltr) - Peek) / WHOLE_CARDS - CardGap
-    val bringIntoView = remember(listState, density) { PeekBringIntoViewSpec(listState, with(density) { (Peek + CardGap).toPx() }) }
-    LaunchedEffect(listState) {
+    // The narrowest a column comes out: the grid shares what is left of its width in whole pixels.
+    val cardWidthPx =
+        with(density) {
+            val panel = minOf(PanelMaxWidth.roundToPx(), windowWidth - PanelMargin.roundToPx() * 2)
+            (panel - PanelSide.roundToPx() * 2 - GridEdge.roundToPx() * 2 - CardGap.roundToPx() * (COLUMNS - 1)) / COLUMNS
+        }
+    val measurer = rememberTextMeasurer()
+    val scope = rememberCoroutineScope()
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val pitch = with(density) { (CardHeight + CardGap).toPx() }
+    val bringIntoView = remember(gridState, density) { RowBringIntoViewSpec(gridState, with(density) { GridEdge.toPx() }) }
+    // Read here, not in the grid's content, so a focus move does not rebuild what the grid lists.
+    val cards = remember(state) { derivedStateOf { state().cards } }.value
+    LaunchedEffect(gridState) {
         snapshotFlow { state().focusRequest }.filterNotNull().collect { request ->
             val index = state().cards.indexOfFirst { it.app.key == request.key }
             if (index < 0) return@collect
-            if (listState.layoutInfo.visibleItemsInfo.none { it.index == index }) listState.scrollToItem(index)
+            if (gridState.layoutInfo.visibleItemsInfo.none { it.index == index }) gridState.scrollToItem(index)
             withFrameNanos { }
             withFrameNanos { }
             focus.request(request.key)
         }
     }
     Box(Modifier.fillMaxWidth().fillMaxHeight()) {
-        Highlight(listState, layout, cardWidth, focusedIndex = { state().let { s -> s.cards.indexOfFirst { it.app.key == s.focusedKey } } })
+        Highlight(
+            gridState,
+            layout,
+            with(density) { cardWidthPx.toDp() },
+            focusedIndex = { state().let { s -> s.cards.indexOfFirst { it.app.key == s.focusedKey } } },
+        )
         CompositionLocalProvider(LocalBringIntoViewSpec provides bringIntoView) {
-            LazyRow(
-                state = listState,
-                contentPadding = RowPadding,
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(COLUMNS),
+                state = gridState,
+                contentPadding = PaddingValues(GridEdge),
                 horizontalArrangement = Arrangement.spacedBy(CardGap),
-                modifier = Modifier.fillMaxSize().rowEdges(listState).testTag("library:cards"),
+                verticalArrangement = Arrangement.spacedBy(CardGap),
+                modifier =
+                    Modifier.fillMaxSize().testTag("library:cards").onPreviewKeyEvent { event ->
+                        val move = event.gridMove(rtl) ?: return@onPreviewKeyEvent false
+                        if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                        val from = cards.indexOfFirst { it.app.key == state().focusedKey }
+                        val to = if (from < 0) null else gridNeighbour(from, move, cards.size, COLUMNS)
+                        if (to != null) {
+                            val sign = if (to > from) 1f else -1f
+                            scope.launch { focus.moveTo(gridState, to, cards[to].app.key, sign * pitch) }
+                        }
+                        true
+                    },
             ) {
-                val cards = state().cards
                 itemsIndexed(cards, key = { _, card -> card.app.key }) { index, card ->
                     LibraryCardView(
                         card = card,
                         index = index,
-                        width = cardWidth,
+                        widthPx = cardWidthPx,
                         layout = layout,
                         art = art,
+                        measurer = measurer,
                         entrance = entrance,
                         actions = actions,
                         hold = hold,
                         anchor = anchor,
                         requester = focus.requester(card.app.key),
-                        visible = { listState.visibleShareOf(index) },
                         modifier =
                             Modifier.animateItem(
                                 fadeInSpec = null,
@@ -329,13 +377,42 @@ private fun Cards(
     }
 }
 
+/** The grid's move for an arrow key, null for any other key. Left and right swap in a right-to-left layout. */
+private fun KeyEvent.gridMove(rtl: Boolean): GridMove? =
+    when (key) {
+        Key.DirectionUp -> GridMove.Up
+        Key.DirectionDown -> GridMove.Down
+        Key.DirectionLeft -> if (rtl) GridMove.Right else GridMove.Left
+        Key.DirectionRight -> if (rtl) GridMove.Left else GridMove.Right
+        else -> null
+    }
+
 /**
- * Keeps the focused card [margin] pixels inside both ends of the row, so a whole neighbour never hides under an edge
- * fade and the next card peeks. Where less than [margin] of the row is left to scroll, it scrolls to the row's end.
+ * Focuses the card at [index], whose key is [key]. A card in a row that is not laid out yet waits for the grid to scroll
+ * [scroll] pixels, so the focus moves to a card the grid has attached.
+ */
+private suspend fun CardFocus.moveTo(
+    grid: LazyGridState,
+    index: Int,
+    key: String,
+    scroll: Float,
+) {
+    coroutineScope {
+        if (grid.layoutInfo.visibleItemsInfo.none { it.index == index }) {
+            launch { grid.animateScrollBy(scroll) }
+            snapshotFlow { grid.layoutInfo.visibleItemsInfo.any { it.index == index } }.first { it }
+        }
+        request(key)
+    }
+}
+
+/**
+ * Keeps the focused card [margin] pixels inside the top and bottom of the grid, so its ring shows whole: the grid scrolls
+ * the one row that brings it there and no more.
  */
 @OptIn(ExperimentalFoundationApi::class)
-private class PeekBringIntoViewSpec(
-    private val list: LazyListState,
+private class RowBringIntoViewSpec(
+    private val grid: LazyGridState,
     private val margin: Float,
 ) : BringIntoViewSpec {
     override fun calculateScrollDistance(
@@ -343,149 +420,61 @@ private class PeekBringIntoViewSpec(
         size: Float,
         containerSize: Float,
     ): Float {
-        // The offset comes with the focused card's growth in it, the size without; the card's slot in the row has neither.
-        val info = list.layoutInfo
+        // The offset comes with the focused card's growth in it, the size without; the card's slot in the grid has neither.
+        val info = grid.layoutInfo
         val center = offset + size / 2f
-        val slot = info.visibleItemsInfo.firstOrNull { center - (it.offset - info.viewportStartOffset) in 0f..it.size.toFloat() }
-        val start = slot?.let { (it.offset - info.viewportStartOffset).toFloat() } ?: offset
-        val end = slot?.let { start + it.size } ?: (offset + size)
-        val trailing = end - (containerSize - margin)
-        val leading = start - margin
+        val slot = info.visibleItemsInfo.firstOrNull { center - (it.offset.y - info.viewportStartOffset) in 0f..it.size.height.toFloat() }
+        val start = slot?.let { (it.offset.y - info.viewportStartOffset).toFloat() } ?: offset
+        val end = slot?.let { start + it.size.height } ?: (offset + size)
         return when {
-            trailing > 0f -> list.aheadRoom().let { room -> if (room - trailing < margin) room else trailing }
-            leading < 0f -> list.backRoom().let { room -> if (room + leading < margin) -room else leading }
+            end > containerSize - margin -> end - (containerSize - margin)
+            start < margin -> start - margin
             else -> 0f
         }
     }
 }
 
-/** The share of the card at [index] that shows in the row; 1 while the card is not laid out. */
-private fun LazyListState.visibleShareOf(index: Int): Float {
-    val info = layoutInfo
-    val item = info.visibleItemsInfo.firstOrNull { it.index == index } ?: return 1f
-    return visibleShare(item.offset, item.size, info.viewportStartOffset, info.viewportEndOffset)
-}
-
-/** How far the row can still scroll back, in pixels: infinite while its first card is not laid out. */
-private fun LazyListState.backRoom(): Float {
-    val info = layoutInfo
-    val first = info.visibleItemsInfo.firstOrNull() ?: return 0f
-    if (first.index != 0) return Float.POSITIVE_INFINITY
-    return (info.viewportStartOffset + info.beforeContentPadding - first.offset).toFloat()
-}
-
-/** How far the row can still scroll on, in pixels: infinite while its last card is not laid out, 0 for a row that fits. */
-private fun LazyListState.aheadRoom(): Float {
-    val info = layoutInfo
-    val last = info.visibleItemsInfo.lastOrNull() ?: return 0f
-    if (last.index != info.totalItemsCount - 1) return Float.POSITIVE_INFINITY
-    return (last.offset + last.size - (info.viewportEndOffset - info.afterContentPadding)).toFloat().coerceAtLeast(0f)
-}
-
-/**
- * The row's ends, drawn as masks in the draw phase: an [EdgeFade] on the left and a [RightFade] on the right, at each
- * end the row can scroll towards, coming in over the first [EdgeFade] of scrolling. The cards' rings reach above and
- * below the row, so only the sides are cut.
- */
-private fun Modifier.rowEdges(list: LazyListState): Modifier =
-    drawWithCache {
-        val fade = EdgeFade.toPx()
-        val rightFade = RightFade.toPx()
-        val layerPaint = Paint()
-        onDrawWithContent {
-            val left = (list.backRoom() / fade).coerceIn(0f, 1f)
-            val right = (list.aheadRoom() / fade).coerceIn(0f, 1f)
-            val bodyLeft =
-                if (left > 0f) {
-                    val mask =
-                        Brush.horizontalGradient(
-                            0f to Color.Black.copy(alpha = 1f - left),
-                            1f to Color.Black,
-                            startX = 0f,
-                            endX = fade,
-                        )
-                    drawMasked(0f, fade, mask, layerPaint)
-                    fade
-                } else {
-                    0f
-                }
-            val rightStart = size.width - rightFade
-            val bodyRight =
-                if (right > 0f) {
-                    val mask =
-                        Brush.horizontalGradient(
-                            0f to Color.Black,
-                            1f to Color.Black.copy(alpha = 1f - right),
-                            startX = rightStart,
-                            endX = size.width,
-                        )
-                    drawMasked(rightStart, size.width, mask, layerPaint)
-                    rightStart
-                } else {
-                    size.width
-                }
-            clipRect(left = bodyLeft, top = -size.height, right = bodyRight, bottom = size.height * 2) {
-                this@onDrawWithContent.drawContent()
-            }
-        }
-    }
-
-/** The content between [left] and [right], its alpha multiplied by [mask]'s in a layer of that strip only. */
-private fun ContentDrawScope.drawMasked(
-    left: Float,
-    right: Float,
-    mask: Brush,
-    paint: Paint,
-) {
-    if (right <= left) return
-    val strip = Rect(left, -size.height, right, size.height * 2)
-    val canvas = drawContext.canvas
-    canvas.saveLayer(strip, paint)
-    clipRect(strip.left, strip.top, strip.right, strip.bottom) { this@drawMasked.drawContent() }
-    drawRect(mask, topLeft = strip.topLeft, size = strip.size, blendMode = BlendMode.DstIn)
-    canvas.restore()
-}
-
 /**
  * A rounded square in the surface's text colour behind the focused card. It slides to the next card on a spring that
- * overshoots a little and is kept in the row's own coordinates, so scrolling carries it along. Its position is read in
- * the layer lambda.
+ * overshoots a little: it sits where the focused card is, and the slide is the distance it still has to cover, so
+ * scrolling carries it along. Its position is read in the layer lambda.
  */
 @Composable
 private fun Highlight(
-    listState: LazyListState,
+    gridState: LazyGridState,
     layout: LibraryLayout,
     cardWidth: Dp,
     focusedIndex: () -> Int,
 ) {
     val density = LocalDensity.current
-    // The row lays its cards out at whole pixels.
-    val stride = with(density) { (cardWidth.roundToPx() + CardGap.roundToPx()).toFloat() }
-    val start = with(density) { RowPadding.calculateLeftPadding(LayoutDirection.Ltr).roundToPx().toFloat() }
     val ink = TvTheme.colors.onSurface
     val grow = with(density) { HighlightGrow.toPx() }
-    val left = remember { Animatable(0f) }
+    val edge = with(density) { GridEdge.toPx() }
+    val slide = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
     val visible = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
-        snapshotFlow(focusedIndex).filter { it >= 0 }.collect { index ->
-            val target = start + index * stride - grow
-            if (visible.value == 0f || !layout.animated) {
-                left.snapTo(target)
+        var previous = -1
+        snapshotFlow(focusedIndex).filter { it >= 0 }.collectLatest { index ->
+            val from = gridState.placeOf(previous, edge)?.let { it + slide.value }
+            previous = index
+            val to = snapshotFlow { gridState.placeOf(index, edge) }.filterNotNull().first()
+            if (visible.value == 0f || from == null || !layout.animated) {
+                slide.snapTo(Offset.Zero)
                 if (layout.animated) visible.animateTo(1f, tween(HIGHLIGHT_FADE_MS)) else visible.snapTo(1f)
             } else {
-                left.animateTo(target, spring(dampingRatio = HIGHLIGHT_DAMPING, stiffness = HIGHLIGHT_STIFFNESS))
+                slide.snapTo(from - to)
+                slide.animateTo(Offset.Zero, spring(dampingRatio = HIGHLIGHT_DAMPING, stiffness = HIGHLIGHT_STIFFNESS))
             }
         }
     }
-    val width = cardWidth + HighlightGrow * 2
-    val height = CardHeight + HighlightGrow * 2
     Box(
         Modifier
-            .padding(top = RowPadding.calculateTopPadding() - HighlightGrow)
-            .size(width, height)
+            .size(cardWidth + HighlightGrow * 2, CardHeight + HighlightGrow * 2)
             .graphicsLayer {
-                alpha = visible.value.coerceIn(0f, 1f)
-                translationX = left.value - (listState.firstVisibleItemIndex * stride + listState.firstVisibleItemScrollOffset)
+                val place = gridState.placeOf(focusedIndex(), edge)
+                alpha = if (place == null) 0f else visible.value.coerceIn(0f, 1f)
+                translationX = (place?.x ?: 0f) + slide.value.x - grow
+                translationY = (place?.y ?: 0f) + slide.value.y - grow
             }.drawBehind {
                 drawRoundRect(
                     Brush.verticalGradient(listOf(ink.copy(alpha = 0.22f), ink.copy(alpha = 0.06f))),
@@ -499,6 +488,16 @@ private fun Highlight(
             },
     )
 }
+
+/** Where the card at [index] is in the grid now, null while it is not laid out. A card's offset leaves out the grid's [edge]. */
+private fun LazyGridState.placeOf(
+    index: Int,
+    edge: Float,
+): Offset? =
+    layoutInfo.visibleItemsInfo
+        .firstOrNull { it.index == index }
+        ?.offset
+        ?.let { Offset(it.x + edge, it.y + edge) }
 
 private const val HIGHLIGHT_FADE_MS = 160
 

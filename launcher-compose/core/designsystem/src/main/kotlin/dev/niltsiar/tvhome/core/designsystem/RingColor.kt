@@ -1,16 +1,7 @@
-package dev.niltsiar.tvhome.feature.home
+package dev.niltsiar.tvhome.core.designsystem
 
-import androidx.compose.animation.core.animate
-import androidx.compose.runtime.Stable
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.isUnspecified
-import androidx.compose.ui.graphics.lerp
-import dev.niltsiar.tvhome.core.designsystem.Motion
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 import kotlin.math.atan2
 import kotlin.math.cbrt
 import kotlin.math.cos
@@ -20,7 +11,7 @@ import kotlin.math.pow
 import kotlin.math.sin
 
 /** A colour as OKLCH: lightness [l] 0 to 1, chroma [c] and hue [h] in degrees. */
-internal data class Oklch(
+public data class Oklch(
     val l: Float,
     val c: Float,
     val h: Float,
@@ -33,18 +24,28 @@ private const val NEUTRAL_BELOW_C = 0.04f
 private val NeutralRing = Color(0xFFF2F4F8)
 
 /**
+ * The ring of a focused tile for an app whose art gives [art]: white with [whiteFocus] or when the tile is not [coloured],
+ * else the app's [ringColor].
+ */
+public fun focusRingColour(
+    art: Color,
+    coloured: Boolean,
+    whiteFocus: Boolean,
+): Color = if (whiteFocus || !coloured) Color.White else ringColor(art)
+
+/**
  * The focus ring of an app whose art gives [brand]: the brand's hue at a lightness of 0.80 to 0.92 and a chroma of at
  * most 0.14, so it reads on dark and on white tiles. A brand with almost no chroma (white, black, grey) gets the neutral
  * ring; one not known yet keeps white. Where the hue cannot hold that chroma on a screen, the chroma gives way.
  */
-internal fun ringColor(brand: Color): Color {
+public fun ringColor(brand: Color): Color {
     if (brand.isUnspecified) return Color.White
     val lch = oklch(brand)
     if (lch.c < NEUTRAL_BELOW_C) return NeutralRing
     return fromOklch(lch.l.coerceIn(RING_MIN_L, RING_MAX_L), min(lch.c, RING_MAX_C), lch.h)
 }
 
-internal fun oklch(color: Color): Oklch {
+public fun oklch(color: Color): Oklch {
     val r = toLinear(color.red)
     val g = toLinear(color.green)
     val b = toLinear(color.blue)
@@ -104,75 +105,4 @@ private fun toLinear(channel: Float): Float = if (channel <= 0.04045f) channel /
 private fun fromLinear(channel: Float): Float {
     val c = channel.coerceIn(0f, 1f)
     return if (c <= 0.0031308f) c * 12.92f else 1.055f * c.pow(1f / 2.4f) - 0.055f
-}
-
-private const val RING_TRAVEL_MS = 220
-
-/**
- * The colour the focus ring shows while it moves from one tile to the next. A tile that takes focus straight from
- * another one starts at the colour the old ring had and blends to its own in OKLab over [RING_TRAVEL_MS]; one that takes
- * it from anywhere else ([reset]: the top bar, a menu, the App library, another app) starts at its own. The ring of a
- * tile that loses focus mid-blend fades out in the colour it had reached. Only the ring's draw reads [colourFor], so a
- * move recomposes nothing.
- */
-@Stable
-internal class RingTravel {
-    private var key: String? = null
-    private var from = Color.White
-    private var to = Color.White
-    private var job: Job? = null
-    private val progress = mutableFloatStateOf(1f)
-    private var leaving: String? = null
-    private var leavingColour = Color.White
-
-    /** The ring of tile [key], whose own colour is [own]: its colour now, blended while it travels. */
-    fun colourFor(
-        key: String,
-        own: Color,
-    ): Color =
-        when (key) {
-            this.key -> blend(own)
-            leaving -> leavingColour
-            else -> own
-        }
-
-    private fun blend(own: Color): Color = progress.floatValue.let { if (it >= 1f) own else lerp(from, own, it) }
-
-    /** Tile [key] took focus; its ring is [own]. The blend runs in [scope]. */
-    fun arrive(
-        key: String,
-        own: Color,
-        motion: Motion,
-        scope: CoroutineScope,
-    ) {
-        val start = if (this.key != null) blend(to) else own
-        if (this.key != null && this.key != key) holdLeaving(start)
-        job?.cancel()
-        this.key = key
-        from = start
-        to = own
-        if (start == own || !motion.animations) {
-            progress.floatValue = 1f
-            return
-        }
-        progress.floatValue = 0f
-        job =
-            scope.launch(start = CoroutineStart.UNDISPATCHED) {
-                animate(0f, 1f, animationSpec = motion.tweenSpec(RING_TRAVEL_MS)) { value, _ -> progress.floatValue = value }
-            }
-    }
-
-    /** Focus left the tiles: the next ring starts at its own colour. */
-    fun reset() {
-        if (key != null) holdLeaving(blend(to))
-        job?.cancel()
-        key = null
-        progress.floatValue = 1f
-    }
-
-    /** The tile that has the ring now keeps [colour] when it loses it, if it has not reached its own yet. */
-    private fun holdLeaving(colour: Color) {
-        leaving = key.takeIf { progress.floatValue < 1f }
-        leavingColour = colour
-    }
 }
