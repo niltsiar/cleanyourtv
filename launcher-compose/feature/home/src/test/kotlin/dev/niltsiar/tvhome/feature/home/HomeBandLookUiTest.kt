@@ -182,8 +182,7 @@ class HomeBandLookUiTest {
         press(Key.DirectionUp)
 
         assertTrue(brightest(titleArea("shelf:title")) >= 230)
-        // The meta ink is the title's at 0.85.
-        assertNear(Math.round(0xF2 * 0.85f), brightest(detailArea("shelf:title-meta")), 8)
+        assertTrue(brightest(detailArea("shelf:title-meta")) >= 230)
         val dots = bounds("shelf:title-meta").let { DpRect(it.left, it.bottom + 16.dp, it.left + 300.dp, it.bottom + 22.dp) }
         assertNear(0, brightest(dots), 2)
 

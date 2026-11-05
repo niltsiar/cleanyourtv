@@ -84,7 +84,8 @@ internal val ShelfDetailHeight = MetaGap + MetaSlot + DotsGap + DotSize
 
 /** The cinematic title line (its ascent and descent at the default font scale) and [ShelfDetailHeight]. */
 internal val CinematicTextHeight = 66.dp + ShelfDetailHeight
-private val HeroShadow = Color(0x80000000)
+private val TitleShadow = Color.Black.copy(alpha = 0.45f)
+private val SubtitleShadow = Color.Black.copy(alpha = 0.6f)
 private val DotWide = 20.dp
 private val DotSpacing = 6.dp
 private val DotRest = Color(0x4DFFFFFF)
@@ -122,8 +123,8 @@ internal fun CinematicShelf(
     }
     val shown = held.shelf ?: return
     val rise = with(LocalDensity.current) { TitleRise.roundToPx() }
-    val titleStyle = TvTheme.typography.cinematicTitle.withHeroShadow()
-    val metaStyle = TvTheme.typography.cinematicMeta.withHeroShadow()
+    val titleStyle = TvTheme.typography.cinematicTitle.withTitleShadow()
+    val metaStyle = TvTheme.typography.cinematicMeta.withSubtitleShadow()
     Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.BottomStart) {
         Column(
             modifier =
@@ -283,11 +284,18 @@ internal fun Modifier.drawnAt(alpha: () -> Float): Modifier =
         this.alpha = alpha()
     }
 
-/** This style with the shadow that keeps the band's text readable on a bright picture. */
+/** This style with the shadow that keeps a title readable on a bright picture. */
 @Composable
-internal fun TextStyle.withHeroShadow(): TextStyle {
+internal fun TextStyle.withTitleShadow(): TextStyle {
     val density = LocalDensity.current.density
-    return remember(this, density) { copy(shadow = Shadow(HeroShadow, Offset(0f, 2 * density), 8 * density)) }
+    return remember(this, density) { copy(shadow = Shadow(TitleShadow, Offset(0f, 2 * density), 16 * density)) }
+}
+
+/** This style with the shadow that keeps a subtitle readable on a bright picture. */
+@Composable
+internal fun TextStyle.withSubtitleShadow(): TextStyle {
+    val density = LocalDensity.current.density
+    return remember(this, density) { copy(shadow = Shadow(SubtitleShadow, Offset(0f, 2 * density), 12 * density)) }
 }
 
 /** "Last opened <time>" with the time in white; a space when there is none, which keeps the line's height. */

@@ -319,7 +319,12 @@ public fun HomeScreen(
                     }
                 }.focusGroup(),
     ) {
-        WallpaperBackdrop(wallpaper = { state().wallpaper }, layout = wallpaperLayout, cinematic = backdrop)
+        WallpaperBackdrop(
+            wallpaper = { state().wallpaper },
+            layout = wallpaperLayout,
+            cinematic = backdrop,
+            headerLightness = { glass.headerLightness },
+        )
         ChromeFrostEffect(glass, wallpaper = { state().wallpaper }, skyIntensity = wallpaperLayout.skyIntensity, dock = dim.band)
         HomeContent(
             glass,
@@ -1040,6 +1045,8 @@ private data class HeroLine(
     val opened: OpenedAt? = null,
     val hint: ReorderHint? = null,
     val quick: Boolean = false,
+    /** The title names a chrome control (a top-bar button or the library pill), which gets a smaller title than an app. */
+    val chrome: Boolean = false,
 )
 
 /**
@@ -1072,14 +1079,15 @@ private fun HeroTitle(
     val line =
         when {
             mode != null -> HeroLine(stringResource(if (mode == ReorderHint.Reorder) R.string.reorder else R.string.dock_edit), hint = mode)
-            input.pillFocused -> HeroLine(stringResource(R.string.library_entry), libraryCountText(count), quick = true)
-            bar != null -> barLine(bar, inputs, link)
+            input.pillFocused -> HeroLine(stringResource(R.string.library_entry), libraryCountText(count), quick = true, chrome = true)
+            bar != null -> barLine(bar, inputs, link).copy(chrome = true)
             else -> tile
         }
     val animated = TvTheme.motion.animated
     val rise = with(LocalDensity.current) { TitleRise.roundToPx() }
-    val titleStyle = TvTheme.typography.heroTitle.withHeroShadow()
-    val metaStyle = TvTheme.typography.cinematicMeta.withHeroShadow()
+    val titleStyle = TvTheme.typography.heroTitle.withTitleShadow()
+    val chromeTitleStyle = TvTheme.typography.chromeTitle.withTitleShadow()
+    val metaStyle = TvTheme.typography.cinematicMeta.withSubtitleShadow()
     val detail = (if (cinematic) ShelfDetailHeight else MetaGap + ChipHeight) - MetaGap
     Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.BottomStart) {
         TitleSlots(
@@ -1093,7 +1101,7 @@ private fun HeroTitle(
             Column {
                 BasicText(
                     text = if (live) shown.title else "",
-                    style = titleStyle,
+                    style = if (shown.chrome) chromeTitleStyle else titleStyle,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier =

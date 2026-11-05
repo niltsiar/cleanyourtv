@@ -29,10 +29,34 @@ private const val BRIGHTNESS = 1.08f
 private const val OPAQUE = 0xFF shl 24
 private const val CHANNEL = 0xFF
 
+private const val LIGHTNESS_PERCENTILE = 0.9f
+private const val DESIGN_WIDTH_DP = 960f
+private const val DESIGN_HEIGHT_DP = 540f
+
+/** Every place the header's title and subtitle can stand, from the dock position to the grid position, as fractions of the screen. */
+private val HeaderBand = Rect(80f / 1920f, 160f / 1080f, 1100f / 1920f, 640f / 1080f)
+
+/** The right half of the top bar, where its buttons are. */
+private val TopBarButtonsBand =
+    Rect(
+        left = 0.5f,
+        top = TopBarTop.value / DESIGN_HEIGHT_DP,
+        right = 1f - ScreenMargin.value / DESIGN_WIDTH_DP,
+        bottom = (TopBarTop + TopBarHeight).value / DESIGN_HEIGHT_DP,
+    )
+
+private class Baked(
+    val frost: ImageBitmap,
+    val dockLightness: Float,
+    val headerLightness: Float,
+    val topBarLightness: Float,
+)
+
 /**
  * Keeps [glass]'s frost on the wallpaper's [Wallpaper.thumbnail] and sky, baked off the main thread each time either
- * changes, and [GlassState.dockLightness] on the part of it under the [dock] (as fractions of the screen). No
- * thumbnail, no frost and a lightness of 0, which gives the base tint.
+ * changes, and [GlassState.dockLightness] on the part of it under the [dock] (as fractions of the screen). It also keeps
+ * [GlassState.headerLightness] and [GlassState.topBarLightness], measured on the thumbnail and sky before the scrim. No
+ * thumbnail, no frost and a lightness of 0, which gives the base tint and the fixed scrims.
  */
 @Composable
 internal fun ChromeFrostEffect(
@@ -48,11 +72,19 @@ internal fun ChromeFrostEffect(
                     withContext(Dispatchers.Default) {
                         val frost = bakeFrost(it, sky, skyIntensity / 100f)
                         val pixels = IntArray(frost.width * frost.height).also { buffer -> frost.readPixels(buffer) }
-                        frost to meanLightness(pixels, frost.width, frost.height, dock)
+                        val base = unscrimmedPixels(it, sky, skyIntensity / 100f)
+                        Baked(
+                            frost,
+                            dockLightness = meanLightness(pixels, frost.width, frost.height, dock),
+                            headerLightness = lightnessPercentile(base, it.width, it.height, HeaderBand, LIGHTNESS_PERCENTILE),
+                            topBarLightness = lightnessPercentile(base, it.width, it.height, TopBarButtonsBand, LIGHTNESS_PERCENTILE),
+                        )
                     }
                 }
-            glass.frost = baked?.first
-            glass.dockLightness = baked?.second ?: 0f
+            glass.frost = baked?.frost
+            glass.dockLightness = baked?.dockLightness ?: 0f
+            glass.headerLightness = baked?.headerLightness ?: 0f
+            glass.topBarLightness = baked?.topBarLightness ?: 0f
         }
     }
 }
@@ -68,12 +100,7 @@ internal fun bakeFrost(
 ): ImageBitmap {
     val width = thumbnail.width
     val height = thumbnail.height
-    val frost = ImageBitmap(width, height)
-    CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(frost), Size(width.toFloat(), height.toFloat())) {
-        drawImage(thumbnail)
-        if (sky != null && skyAlpha > 0f) drawSky(sky, skyAlpha)
-        drawHomeScrim()
-    }
+    val frost = paint(thumbnail, sky, skyAlpha, scrim = true)
     val pixels = IntArray(width * height)
     frost.readPixels(pixels)
     blur(pixels, width, height)
@@ -82,6 +109,29 @@ internal fun bakeFrost(
     frost.asAndroidBitmap().setPixels(pixels, 0, width, 0, 0, width, height)
     return frost
 }
+
+/** The [thumbnail] under the [sky] at [skyAlpha], and under Home's fixed scrim when [scrim] is true. */
+private fun paint(
+    thumbnail: ImageBitmap,
+    sky: SkyPalette?,
+    skyAlpha: Float,
+    scrim: Boolean,
+): ImageBitmap {
+    val image = ImageBitmap(thumbnail.width, thumbnail.height)
+    CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(image), Size(thumbnail.width.toFloat(), thumbnail.height.toFloat())) {
+        drawImage(thumbnail)
+        if (sky != null && skyAlpha > 0f) drawSky(sky, skyAlpha)
+        if (scrim) drawHomeScrim()
+    }
+    return image
+}
+
+/** The opaque pixels of the [thumbnail] under the [sky], as the wallpaper looks before any scrim. */
+private fun unscrimmedPixels(
+    thumbnail: ImageBitmap,
+    sky: SkyPalette?,
+    skyAlpha: Float,
+): IntArray = IntArray(thumbnail.width * thumbnail.height).also { paint(thumbnail, sky, skyAlpha, scrim = false).readPixels(it) }
 
 /** [BLUR_PASSES] box blurs of [BLUR_RADIUS] across and down the opaque [pixels] of a [width] by [height] image, in place. */
 internal fun blur(
@@ -158,20 +208,74 @@ internal fun meanLightness(
     height: Int,
     band: Rect,
 ): Float {
+    var sum = 0f
+    var count = 0
+    forEachLightness(pixels, width, height, band) {
+        sum += it
+        count++
+    }
+    return sum / count
+}
+
+/** The CIE L* below which [percentile] (0 to 1) of the pixels inside [band] lie; [meanLightness] has the rest of the contract. */
+internal fun lightnessPercentile(
+    pixels: IntArray,
+    width: Int,
+    height: Int,
+    band: Rect,
+    percentile: Float,
+): Float {
+    val values = FloatArray(bandPixelCount(width, height, band))
+    var next = 0
+    forEachLightness(pixels, width, height, band) { values[next++] = it }
+    values.sort()
+    return values[((values.size - 1) * percentile).roundToInt()]
+}
+
+private fun bandPixelCount(
+    width: Int,
+    height: Int,
+    band: Rect,
+): Int {
+    val x = bandColumns(width, band)
+    val y = bandRows(height, band)
+    return (x.last - x.first + 1) * (y.last - y.first + 1)
+}
+
+private fun bandColumns(
+    width: Int,
+    band: Rect,
+): IntRange {
     val left = (band.left * width).roundToInt().coerceIn(0, width - 1)
     val right = (band.right * width).roundToInt().coerceIn(left + 1, width)
+    return left until right
+}
+
+private fun bandRows(
+    height: Int,
+    band: Rect,
+): IntRange {
     val top = (band.top * height).roundToInt().coerceIn(0, height - 1)
     val bottom = (band.bottom * height).roundToInt().coerceIn(top + 1, height)
-    var sum = 0f
-    for (y in top until bottom) {
-        for (x in left until right) {
-            val pixel = pixels[y * width + x]
-            val luminance =
-                0.2126f * linear(pixel shr 16 and CHANNEL) + 0.7152f * linear(pixel shr 8 and CHANNEL) + 0.0722f * linear(pixel and CHANNEL)
-            sum += if (luminance > LAB_EPSILON) 116f * cbrt(luminance) - 16f else LAB_KAPPA * luminance
-        }
+    return top until bottom
+}
+
+private inline fun forEachLightness(
+    pixels: IntArray,
+    width: Int,
+    height: Int,
+    band: Rect,
+    action: (Float) -> Unit,
+) {
+    for (y in bandRows(height, band)) {
+        for (x in bandColumns(width, band)) action(lightnessOf(pixels[y * width + x]))
     }
-    return sum / ((right - left) * (bottom - top))
+}
+
+private fun lightnessOf(pixel: Int): Float {
+    val luminance =
+        0.2126f * linear(pixel shr 16 and CHANNEL) + 0.7152f * linear(pixel shr 8 and CHANNEL) + 0.0722f * linear(pixel and CHANNEL)
+    return if (luminance > LAB_EPSILON) 116f * cbrt(luminance) - 16f else LAB_KAPPA * luminance
 }
 
 private const val LAB_EPSILON = 216f / 24389f

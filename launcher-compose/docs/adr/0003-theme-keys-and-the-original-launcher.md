@@ -26,6 +26,7 @@ Behaviour that differs:
 Keys that this launcher adds:
 
 - `dock_edge_light` (default true): the focused dock tile lights the dock's top rim and floor in its colour. It is off with `dock_band: false`, `animations: false` or `reduced_motion: true`.
+- `header_scrim` (default `auto`): `auto` scales the dark scrims behind the title and the top bar to how bright the wallpaper is there, up to 0.70 at the top and 0.60 at the left; `off` keeps the fixed 0.55 and 0.40.
 - `capture_input_keys` (default false): see ADR 0001.
 - `latitude` and `longitude`: both together, in degrees. The Java launcher reads them from `config.xml` only.
 - `settings_key_scancodes`: raw scancodes that open Settings. The Java launcher reads them from `config.xml` only.

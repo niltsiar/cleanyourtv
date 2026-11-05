@@ -519,7 +519,7 @@ private fun NetworkButton(
                         style = TvTheme.typography.pillLabel,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        color = ink.content,
+                        color = { ink.content().let { it.copy(alpha = it.alpha * unfocusedLabelAlpha(ink.progress())) } },
                         modifier = Modifier.weight(1f, fill = false),
                     )
                     if (badge != null) {
@@ -554,6 +554,10 @@ private fun NetworkButton(
 }
 
 private const val NETWORK_FADE_MS = 320
+private const val UNFOCUSED_LABEL_ALPHA = 0.75f
+
+/** The network label's alpha at a button focus [progress] of 0 to 1: three quarters while idle, full once focused. */
+private fun unfocusedLabelAlpha(progress: Float): Float = UNFOCUSED_LABEL_ALPHA + (1f - UNFOCUSED_LABEL_ALPHA) * progress
 
 /** An icon that fades in as [shown] goes to 1 and rises into place, and fades out and sinks as it goes to 0. */
 private fun GraphicsLayerScope.fade(shown: Float) {

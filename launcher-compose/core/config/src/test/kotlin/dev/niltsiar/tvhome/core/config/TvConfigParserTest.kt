@@ -296,6 +296,22 @@ class TvConfigParserTest {
     }
 
     @Test
+    fun header_scrim_is_auto_unless_a_theme_says_off_and_any_other_value_keeps_auto() {
+        assertEquals(HeaderScrim.Auto, parseTvConfig("""{}""").config.headerScrim)
+        assertEquals(HeaderScrim.Auto, parseTvConfig("""{"header_scrim": "auto"}""").config.headerScrim)
+
+        val off = parseTvConfig("""{"header_scrim": " off "}""")
+        assertEquals(HeaderScrim.Off, off.config.headerScrim)
+        assertEquals(emptyList<String>(), off.rejectedKeys + off.unknownKeys)
+
+        for (bad in listOf("\"strong\"", "false", "0")) {
+            val parsed = parseTvConfig("""{"header_scrim": $bad}""")
+            assertEquals(bad, HeaderScrim.Auto, parsed.config.headerScrim)
+            assertEquals(bad, listOf("header_scrim"), parsed.rejectedKeys)
+        }
+    }
+
+    @Test
     fun dock_opacity_takes_30_to_100_and_anything_else_keeps_the_guarded_default() {
         assertEquals(30, parseTvConfig("""{"dock_opacity": 30}""").config.dockOpacity)
         assertEquals(100, parseTvConfig("""{"dock_opacity": 100.9}""").config.dockOpacity)
@@ -453,6 +469,7 @@ class TvConfigParserTest {
             "dock_band" to ("false" to defaults.copy(dockBand = false)),
             "dock_edge_light" to ("false" to defaults.copy(dockEdgeLight = false)),
             "background_color" to (""""#112233"""" to defaults.copy(backgroundColor = 0xFF112233.toInt())),
+            "header_scrim" to (""""off"""" to defaults.copy(headerScrim = HeaderScrim.Off)),
             "wallpaper" to ("false" to defaults.copy(wallpaper = false)),
             "wallpaper_rotation_minutes" to ("30" to defaults.copy(wallpaperRotationMinutes = 30)),
             "wallpaper_dim" to ("40" to defaults.copy(wallpaperDim = 40)),

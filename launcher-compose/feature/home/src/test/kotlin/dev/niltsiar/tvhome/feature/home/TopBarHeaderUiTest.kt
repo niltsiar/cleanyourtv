@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsFocused
@@ -16,6 +17,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.InputConnection
 import dev.niltsiar.tvhome.core.model.InputsMenu
@@ -78,6 +82,15 @@ class TopBarHeaderUiTest {
             .getOrNull(SemanticsProperties.Text)
             ?.joinToString("")
             .orEmpty()
+
+    private fun titleSize(): TextUnit {
+        val results = mutableListOf<TextLayoutResult>()
+        val node = compose.onNodeWithTag("shelf:title").fetchSemanticsNode()
+        node.config[SemanticsActions.GetTextLayoutResult].action!!(results)
+        return results
+            .single()
+            .layoutInput.style.fontSize
+    }
 
     private fun ports(vararg connections: InputConnection) =
         InputsMenu(available = true, rows = connections.mapIndexed { i, c -> port(i + 1, c) })
@@ -186,5 +199,32 @@ class TopBarHeaderUiTest {
         compose.onNodeWithTag("menu").assertExists()
         assertEquals("Inputs", textOf("shelf:title"))
         assertEquals("2 inputs connected", textOf("shelf:title-meta"))
+    }
+
+    @Test
+    fun a_button_in_the_top_bar_gets_a_title_of_32_sp_where_a_tile_gets_48() {
+        showHome()
+        assertEquals(48.sp, titleSize())
+
+        press(Key.DirectionUp)
+        assertEquals(32.sp, titleSize())
+        press(Key.DirectionRight)
+        assertEquals(32.sp, titleSize())
+
+        press(Key.DirectionDown)
+        assertEquals(48.sp, titleSize())
+    }
+
+    @Test
+    fun the_library_pill_gets_the_chrome_title_size_too() {
+        showHome()
+
+        press(Key.DirectionDown)
+        press(Key.DirectionRight)
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("library:pill").assertIsFocused()
+
+        assertEquals("App library", textOf("shelf:title"))
+        assertEquals(32.sp, titleSize())
     }
 }

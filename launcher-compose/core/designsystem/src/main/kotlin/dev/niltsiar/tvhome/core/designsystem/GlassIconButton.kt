@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.graphicsLayer
@@ -41,6 +42,9 @@ private val IconInset = (ButtonSize - IconSize) / 2
 private val LabelGap = 8.dp
 private val LabelPadding = 16.dp
 private const val FOCUSED_SCALE = 1.08f
+private const val BRIGHT_BAR_FROM_LIGHTNESS = 70f
+private const val BRIGHT_BAR_FULL_LIGHTNESS = 90f
+private const val BRIGHT_BAR_FILL = 0.75f
 private val GrownMargin = 1.dp
 
 /**
@@ -50,6 +54,8 @@ private val GrownMargin = 1.dp
  * watches [interactionSource] instead. With a [label] the button is a pill: the label follows the icon and the pill is
  * as wide as both, or as the incoming width limit allows. With a [focusLabel] instead it grows from a circle into such
  * a pill while focused, and lays out on the width it draws at, its focus growth included, plus [GrownMargin] a side.
+ * A button with a [label] has no rim. Over a wallpaper brighter than L* 70 under the top bar
+ * ([GlassState.topBarLightness]) its tint thickens, up to a total alpha of 0.75 from L* 90.
  */
 @Composable
 public fun GlassIconButton(
@@ -96,7 +102,16 @@ public fun GlassIconButton(
                     glass = glass,
                     modifier = Modifier.matchParentSize(),
                     shape = CircleShape,
-                ) {}
+                    rim = label == null,
+                ) {
+                    val tint = TvTheme.surfaces.chromeTint
+                    Spacer(
+                        Modifier.matchParentSize().drawBehind {
+                            val extra = brightBarTint(glass.topBarLightness, tint.alpha)
+                            if (extra > 0f) drawRect(tint.copy(alpha = extra))
+                        },
+                    )
+                }
             },
         ) { ink ->
             val focus = { progress.value }
@@ -139,6 +154,15 @@ public fun GlassIconButton(
             }
         }
     }
+}
+
+/** The alpha of a second layer of a tint of [base] alpha that brings the pair to [BRIGHT_BAR_FILL] at L* 90, and to nothing at L* 70. */
+private fun brightBarTint(
+    lightness: Float,
+    base: Float,
+): Float {
+    val t = ((lightness - BRIGHT_BAR_FROM_LIGHTNESS) / (BRIGHT_BAR_FULL_LIGHTNESS - BRIGHT_BAR_FROM_LIGHTNESS)).coerceIn(0f, 1f)
+    return t * (BRIGHT_BAR_FILL - base) / (1f - base)
 }
 
 /**

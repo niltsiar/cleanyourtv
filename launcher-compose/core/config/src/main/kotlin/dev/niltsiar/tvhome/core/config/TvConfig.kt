@@ -25,6 +25,14 @@ public enum class WallpaperOrder(
     Sequential("sequential"),
 }
 
+/** header_scrim: how dark the scrim behind the header is: scaled to how bright the wallpaper is there, or always the fixed one. */
+public enum class HeaderScrim(
+    internal val jsonValue: String,
+) {
+    Auto("auto"),
+    Off("off"),
+}
+
 /** The time-of-day groups of wallpaper_moods. */
 public enum class WallpaperMood(
     internal val jsonValue: String,
@@ -96,6 +104,7 @@ public data class TvConfig(
     val dockEdgeLight: Boolean = true,
     /** Opaque ARGB. */
     val backgroundColor: Int = OPAQUE_BLACK,
+    val headerScrim: HeaderScrim = HeaderScrim.Auto,
     /** Whether the theme may show a wallpaper at all. */
     val wallpaper: Boolean = true,
     /** 0 to 1440; 0 shows one picture. */

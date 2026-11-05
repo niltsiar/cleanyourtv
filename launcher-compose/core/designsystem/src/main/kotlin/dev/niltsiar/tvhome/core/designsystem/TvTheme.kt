@@ -35,6 +35,7 @@ public class TvTypography(
     public val pillLabel: TextStyle,
     public val shelfTitle: TextStyle,
     public val heroTitle: TextStyle,
+    public val chromeTitle: TextStyle,
     public val cinematicTitle: TextStyle,
     public val cinematicMeta: TextStyle,
     public val tileLabel: TextStyle,
@@ -138,6 +139,7 @@ private fun typographyFor(colors: TvColors): TvTypography {
     val pillLabelSize = 16.sp
     val shelfTitleSize = 40.sp
     val heroTitleSize = 48.sp
+    val chromeTitleSize = 32.sp
     val cinematicTitleSize = 68.sp
     val cinematicMetaSize = 15.sp
     val tileLabelSize = 16.sp
@@ -201,6 +203,14 @@ private fun typographyFor(colors: TvColors): TvTypography {
                 letterSpacing = (-0.025).em,
                 fontFamily = googleSansFlex(FontWeight.Normal, heroTitleSize, width = 112f, roundness = 100f),
             ),
+        chromeTitle =
+            TextStyle(
+                color = colors.onSurface,
+                fontSize = chromeTitleSize,
+                fontWeight = FontWeight.Normal,
+                letterSpacing = (-0.025).em,
+                fontFamily = googleSansFlex(FontWeight.Normal, chromeTitleSize, width = 112f, roundness = 100f),
+            ),
         cinematicTitle =
             TextStyle(
                 color = colors.onSurface,
@@ -211,10 +221,10 @@ private fun typographyFor(colors: TvColors): TvTypography {
             ),
         cinematicMeta =
             TextStyle(
-                color = colors.onSurface.copy(alpha = 0.85f),
+                color = colors.onSurface,
                 fontSize = cinematicMetaSize,
-                fontWeight = FontWeight.Normal,
-                fontFamily = googleSansFlex(FontWeight.Normal, cinematicMetaSize, width = 100f, roundness = 0f),
+                fontWeight = FontWeight.Medium,
+                fontFamily = googleSansFlex(FontWeight.Medium, cinematicMetaSize, width = 100f, roundness = 0f),
             ),
         tileLabel =
             TextStyle(

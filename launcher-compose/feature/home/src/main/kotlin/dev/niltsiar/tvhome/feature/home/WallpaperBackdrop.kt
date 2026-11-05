@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import dev.niltsiar.tvhome.core.config.HeaderScrim
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.SkyPalette
 import dev.niltsiar.tvhome.core.model.Wallpaper
@@ -44,12 +45,13 @@ private const val SKY_GLOW_Y = 0.80f
 private const val SKY_GLOW_RADIUS = 0.55f
 private const val MAX_ALPHA = 255f
 private val CaptionMaxWidth = 520.dp
-private val TopScrim = Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.55f), 0.45f to Color.Transparent)
-private val LeftScrim = Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.40f), 0.55f to Color.Transparent)
+private const val TOP_SCRIM_REACH = 0.45f
+private const val LEFT_SCRIM_REACH = 0.55f
 
 /**
  * What is behind Home, drawn in the draw phase only: the picture, the time-of-day sky, then the scrim that keeps the
- * white text readable on any picture ([drawHomeScrim], which the chrome's frost bakes too). A new picture cross-fades
+ * white text readable on any picture ([drawHomeScrim], which the chrome's frost bakes too, with the fixed strength). The
+ * scrim's strength follows [headerLightness] unless the theme says header_scrim off. A new picture cross-fades
  * in over the old one with no recomposition per frame. These parts sit in one offscreen layer that the GPU redraws only
  * when they change, so a frame costs one full-screen fill for them instead of one per part. The [cinematic] shelf's art,
  * glow and scrim come last, outside that layer, as they animate on each dock move.
@@ -60,6 +62,7 @@ internal fun WallpaperBackdrop(
     layout: WallpaperLayout,
     modifier: Modifier = Modifier,
     cinematic: CinematicBackdrop? = null,
+    headerLightness: () -> Float = { 0f },
 ) {
     val picture by remember(wallpaper) { derivedStateOf { wallpaper().picture } }
     val sky by remember(wallpaper) { derivedStateOf { wallpaper().sky } }
@@ -82,7 +85,7 @@ internal fun WallpaperBackdrop(
                 .drawBehind {
                     fade.draw(this)
                     if (skyAlpha > 0f) sky?.let { drawSky(it, skyAlpha) }
-                    fade.drawScrim(this)
+                    fade.drawScrim(this, if (layout.headerScrim == HeaderScrim.Auto) scrimFor(headerLightness()) else ScrimStrength.Fixed)
                 },
         )
     }
@@ -119,10 +122,13 @@ private class PictureFade(
             if (next != null) drawCover(next, t)
         }
 
-    fun drawScrim(scope: DrawScope) {
+    fun drawScrim(
+        scope: DrawScope,
+        strength: ScrimStrength,
+    ) {
         if (to == null) return
         val t = progress.value
-        scope.drawHomeScrim(alpha = if (from == null || t >= 1f) t else 1f)
+        scope.drawHomeScrim(strength, alpha = if (from == null || t >= 1f) t else 1f)
     }
 }
 
@@ -144,9 +150,12 @@ private fun DrawScope.drawCover(
 }
 
 /** Darkens the top and the left of the picture, where the top bar and the titles sit. */
-internal fun DrawScope.drawHomeScrim(alpha: Float = 1f) {
-    drawRect(TopScrim, alpha = alpha)
-    drawRect(LeftScrim, alpha = alpha)
+internal fun DrawScope.drawHomeScrim(
+    strength: ScrimStrength = ScrimStrength.Fixed,
+    alpha: Float = 1f,
+) {
+    drawRect(Brush.verticalGradient(0f to Color.Black.copy(alpha = strength.top), TOP_SCRIM_REACH to Color.Transparent), alpha = alpha)
+    drawRect(Brush.horizontalGradient(0f to Color.Black.copy(alpha = strength.left), LEFT_SCRIM_REACH to Color.Transparent), alpha = alpha)
 }
 
 /** Night blues to a warm horizon, with a glow that travels with the sun, over everything drawn before it. */

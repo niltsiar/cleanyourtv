@@ -1,6 +1,7 @@
 package dev.niltsiar.tvhome.feature.home
 
 import androidx.compose.ui.graphics.toArgb
+import dev.niltsiar.tvhome.core.config.HeaderScrim
 import dev.niltsiar.tvhome.core.config.TvConfig
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -20,5 +21,11 @@ class WallpaperLayoutTest {
         assertTrue(TvConfig().wallpaperLayout().crossfade)
         assertFalse(TvConfig(animations = false).wallpaperLayout().crossfade)
         assertFalse(TvConfig(reducedMotion = true).wallpaperLayout().crossfade)
+    }
+
+    @Test
+    fun the_header_scrim_follows_the_wallpaper_unless_the_theme_turns_it_off() {
+        assertEquals(HeaderScrim.Auto, TvConfig().wallpaperLayout().headerScrim)
+        assertEquals(HeaderScrim.Off, TvConfig(headerScrim = HeaderScrim.Off).wallpaperLayout().headerScrim)
     }
 }

@@ -118,6 +118,7 @@ public fun parseTvConfig(json: String): ParsedConfig {
             dockBand = o.bool("dock_band", d.dockBand),
             dockEdgeLight = o.bool("dock_edge_light", d.dockEdgeLight),
             backgroundColor = o.color("background_color", d.backgroundColor),
+            headerScrim = o.enum("header_scrim", d.headerScrim, HeaderScrim.entries) { it.jsonValue },
             wallpaper = o.bool("wallpaper", d.wallpaper),
             wallpaperRotationMinutes = o.int("wallpaper_rotation_minutes", d.wallpaperRotationMinutes, 0..1440),
             wallpaperDim = o.int("wallpaper_dim", d.wallpaperDim, 0..90),
