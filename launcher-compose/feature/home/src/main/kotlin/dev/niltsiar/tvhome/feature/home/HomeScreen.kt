@@ -182,8 +182,9 @@ private const val TILE_ASPECT = 16f / 9f
 private const val GRID_ITEMS_BEFORE = 2
 
 /**
- * The Home screen. [state] is read lazily, inside the items that show each field. The grid reads the dock and grid
- * lists through states that ignore equal lists, so a focus move composes no tile again while the shelf label updates.
+ * The Home screen. [state] is read lazily, inside the parts that show each field. The grid reads the dock and grid
+ * lists through states that ignore equal lists, outside its items, so a focus move recomposes no grid item while the
+ * shelf label updates.
  * The wallpaper and the scrolling content are both glass sources, so the top bar and the dock glass what is behind them.
  * The top bar's surfaces sit in one glass container and merge when they come near each other.
  * The shelf title stays under the top bar; rows fade out as they scroll up to it.
@@ -385,9 +386,11 @@ private fun HomeContent(
     val rowTileWidth = (gridWidth - TileGap * (layout.columns - 1)) / layout.columns
     val firstDockTile = remember { FocusRequester() }
     val dockRow = rememberLazyListState()
-    // Equal lists keep the grid's item provider, so a focus move or a clock tick does not compose the items again.
-    val dock by remember(state) { derivedStateOf(structuralEqualityPolicy()) { state().dock } }
-    val grid by remember(state) { derivedStateOf(structuralEqualityPolicy()) { state().grid } }
+    // Read here and not in the grid's content: a state the items read, even one that ignores equal lists, recomposes
+    // every visible item on any HomeUiState change. Equal lists also keep the grid's item provider.
+    val dock = remember(state) { derivedStateOf(structuralEqualityPolicy()) { state().dock } }.value
+    val grid = remember(state) { derivedStateOf(structuralEqualityPolicy()) { state().grid } }.value
+    val reordering = input.reordering.value
     val focusRow = rememberFocusRow(state, input, layout)
     LaunchedEffect(gridState) {
         snapshotFlow { state().focusRequest }.filterNotNull().collect { request ->
@@ -453,6 +456,7 @@ private fun HomeContent(
                     input = input,
                     dock = dock,
                     grid = grid,
+                    reordering = reordering,
                     layout = layout,
                     shelfLayout = shelfLayout,
                     rowTileWidth = rowTileWidth,
@@ -482,6 +486,7 @@ private fun HomeContent(
                     onFocus = onFocus,
                     onClick = onClick,
                     input = input,
+                    reordering = reordering,
                     tileMenu = layout.tileMenu,
                     modifier =
                         Modifier
@@ -835,6 +840,7 @@ private fun Dock(
     input: HomeInput,
     dock: List<AppEntry>,
     grid: List<AppEntry>,
+    reordering: Boolean,
     layout: HomeLayout,
     shelfLayout: ShelfLayout,
     rowTileWidth: Dp,
@@ -870,6 +876,7 @@ private fun Dock(
                             onFocus = onFocus,
                             onClick = onClick,
                             input = input,
+                            reordering = reordering,
                             tileMenu = layout.tileMenu,
                             modifier =
                                 Modifier
@@ -921,6 +928,7 @@ private fun Dock(
                             onFocus = onFocus,
                             onClick = onClick,
                             input = input,
+                            reordering = reordering,
                             tileMenu = layout.tileMenu,
                             modifier =
                                 Modifier
@@ -1004,11 +1012,11 @@ private fun AppTile(
     onFocus: (String) -> Unit,
     onClick: (String) -> Unit,
     input: HomeInput,
+    reordering: Boolean,
     tileMenu: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val key = app.key
-    val reordering by input.reordering
     val requester = remember(input, key) { input.requester(key) }
     val ring = remember(input, key) { ColorProducer { if (input.carried.value == key) ReorderRing else Color.White } }
     FocusSurface(

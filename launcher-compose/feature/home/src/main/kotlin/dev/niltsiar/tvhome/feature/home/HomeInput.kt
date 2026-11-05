@@ -18,7 +18,7 @@ import dev.niltsiar.tvhome.core.designsystem.isOk
 
 /**
  * The things the tiles and the top bar share for menus and reorder mode. Only [reordering] is read in composition, by the
- * tiles and the reorder button, and [pillFocused] by the band over the grid.
+ * grid outside its items and by the reorder button, and [pillFocused] by the band over the grid.
  */
 @Stable
 internal class HomeInput(

@@ -2,8 +2,15 @@ package dev.niltsiar.tvhome.feature.home
 
 import androidx.compose.runtime.Composer
 import androidx.compose.runtime.CompositionTracer
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.ExperimentalComposeRuntimeApi
 import androidx.compose.runtime.InternalComposeTracingApi
+import androidx.compose.runtime.RecomposeScope
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.currentComposer
+import androidx.compose.runtime.tooling.CompositionObserver
+import androidx.compose.runtime.tooling.ObservableComposition
+import androidx.compose.runtime.tooling.setObserver
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -27,8 +34,11 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** A focus move changes the shelf and the focused tile's look, and composes no tile again. */
-@OptIn(InternalComposeTracingApi::class)
+/**
+ * A focus move changes the shelf and the focused tile's look, composes no tile again and recomposes no grid item: each
+ * grid item is a composition of its own, and one that recomposes costs the frame even when all it holds skips.
+ */
+@OptIn(InternalComposeTracingApi::class, ExperimentalComposeRuntimeApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
 class TileRecompositionTest {
@@ -54,12 +64,47 @@ class TileRecompositionTest {
             override fun traceEventEnd() = Unit
         }
 
+    /** Counts the recompositions of the grid's items: every composition under Home's but Home's own. */
+    private val items =
+        object : CompositionObserver {
+            var home: Any? = null
+            var count = 0
+
+            override fun onBeginComposition(composition: ObservableComposition) {
+                if (composition !== home) count++
+            }
+
+            override fun onScopeEnter(scope: RecomposeScope) = Unit
+
+            override fun onReadInScope(
+                scope: RecomposeScope,
+                value: Any,
+            ) = Unit
+
+            override fun onScopeExit(scope: RecomposeScope) = Unit
+
+            override fun onEndComposition(composition: ObservableComposition) = Unit
+
+            override fun onScopeInvalidated(
+                scope: RecomposeScope,
+                value: Any?,
+            ) = Unit
+
+            override fun onScopeDisposed(scope: RecomposeScope) = Unit
+        }
+
     @Before
     fun showHome() {
         Composer.setTracer(tiles)
         val apps = (1..12).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") }
         val config = TvConfig(columns = 6, cinematicHome = true, appLibrary = true, focusOvershoot = false)
         compose.setContent {
+            val home = currentComposer.composition
+            DisposableEffect(home) {
+                items.home = home
+                val observing = home.setObserver(items)
+                onDispose { observing?.dispose() }
+            }
             TvTheme(glassKind = GlassKind.Flat) {
                 val viewModel = rememberHomeViewModel(sources(apps = flowOf(AppList(apps))), config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
@@ -78,6 +123,7 @@ class TileRecompositionTest {
         compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
         assertTrue("tiles composed at first: ${tiles.count}", tiles.count >= 12)
         tiles.count = 0
+        items.count = 0
     }
 
     @After
@@ -106,6 +152,26 @@ class TileRecompositionTest {
 
         compose.onNodeWithTag("tile:pkg.8").assertIsFocused()
         assertEquals(0, tiles.count)
+    }
+
+    @Test
+    fun a_focus_move_along_the_dock_recomposes_no_grid_item() {
+        press(Key.DirectionRight)
+        press(Key.DirectionRight)
+
+        compose.onNodeWithTag("tile:pkg.3").assertIsFocused()
+        assertEquals(0, items.count)
+    }
+
+    @Test
+    fun a_focus_move_along_the_grid_recomposes_no_grid_item() {
+        press(Key.DirectionDown)
+        items.count = 0
+        press(Key.DirectionRight)
+        press(Key.DirectionRight)
+
+        compose.onNodeWithTag("tile:pkg.9").assertIsFocused()
+        assertEquals(0, items.count)
     }
 }
 
