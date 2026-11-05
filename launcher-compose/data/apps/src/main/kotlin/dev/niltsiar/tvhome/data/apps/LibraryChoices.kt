@@ -83,7 +83,7 @@ internal fun isValidPackage(pkg: String?): Boolean {
     return !first
 }
 
-/** The two choice files in the app's private files. Reads and writes run on one thread at a time. */
+/** The two choice files in the app's private files. Saves run one at a time: each reads both files and writes back. */
 internal class LibraryStore(
     private val dir: File,
 ) {
@@ -98,6 +98,7 @@ internal class LibraryStore(
      * writes the removed file and then drops an earlier addition. False when a file could not be read or written; an
      * unreadable file is left as it is, so the owner's choices are never replaced by an empty list.
      */
+    @Synchronized
     fun save(
         pkg: String,
         onHome: Boolean,

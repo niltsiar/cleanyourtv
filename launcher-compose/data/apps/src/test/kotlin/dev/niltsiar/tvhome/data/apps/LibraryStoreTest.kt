@@ -1,5 +1,10 @@
 package dev.niltsiar.tvhome.data.apps
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -75,5 +80,20 @@ class LibraryStoreTest {
         assertFalse(store.save("../escape", onHome = true))
 
         assertEquals(MAX_ADDED, store.load().added.size)
+    }
+
+    @Test
+    fun saves_at_the_same_moment_all_persist() {
+        val shared = store
+        val packages = (1..32).map { "com.app$it" }
+
+        runBlocking {
+            val go = CompletableDeferred<Unit>()
+            val saves = packages.map { pkg -> async(Dispatchers.IO) { go.await().let { shared.save(pkg, onHome = true) } } }
+            go.complete(Unit)
+            assertTrue(saves.awaitAll().all { it })
+        }
+
+        assertEquals(packages.toSet(), shared.load().added)
     }
 }

@@ -129,12 +129,15 @@ public class PackageManagerAppsProvider(
 
     /**
      * Keeps the owner's tile order: [keys] first to last. [docked] says how many lead the dock when fill_dock is off,
-     * else it is -1. The next load sorts by it. False, with a log line, when the file could not be written.
+     * else it is -1. Loads the tiles again, sorted by it. False, with a log line, when the file could not be written.
      */
     public suspend fun saveOrder(
         keys: List<String>,
         docked: Int,
-    ): Boolean = withContext(Dispatchers.IO) { writeOrder(orderFile, Order(Order.dockKey(config.dockApps), keys, docked)) }
+    ): Boolean =
+        withContext(Dispatchers.IO) {
+            writeOrder(orderFile, Order(Order.dockKey(config.dockApps), keys, docked)).also { if (it) requestRefresh() }
+        }
 
     /** Counts the loads asked for: package changes and [libraryChanged]. A collector starts at the current count. */
     internal val changes: Flow<Int> get() = refreshes

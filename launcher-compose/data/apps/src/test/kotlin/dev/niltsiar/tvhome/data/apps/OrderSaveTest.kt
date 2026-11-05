@@ -1,13 +1,24 @@
 package dev.niltsiar.tvhome.data.apps
 
+import android.content.ComponentName
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.ActivityInfo
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
 import dev.niltsiar.tvhome.core.config.TvConfig
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
 import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
@@ -23,4 +34,51 @@ class OrderSaveTest {
         assertTrue(saved)
         assertEquals(Order("a.dock,b.dock", listOf("x/.X", "y/.Y"), docked = 1), readOrder(file))
     }
+
+    @Test
+    @Config(sdk = [31])
+    fun saving_an_order_makes_the_apps_flow_emit_the_tiles_in_that_order() {
+        for (pkg in listOf("a.tv", "b.tv", "c.tv")) installTvApp(pkg)
+        val provider = PackageManagerAppsProvider(context, config)
+
+        val next =
+            runBlocking {
+                val lists = Channel<List<String>>(Channel.UNLIMITED)
+                val collecting = launch { provider.apps.collect { list -> lists.send(list.apps.map { it.key }) } }
+                withTimeout(LOAD_TIMEOUT_MS) {
+                    lists.receive()
+                    val keys = lists.receive()
+                    assertEquals(listOf("a.tv/.Main", "b.tv/.Main", "c.tv/.Main"), keys)
+                    provider.saveOrder(keys.reversed(), docked = -1)
+                    lists.receive()
+                }.also { collecting.cancel() }
+            }
+
+        assertEquals(listOf("c.tv/.Main", "b.tv/.Main", "a.tv/.Main"), next)
+    }
+
+    private fun installTvApp(pkg: String) {
+        val component = ComponentName(pkg, "$pkg.Main")
+        val application = ApplicationInfo().apply { packageName = pkg }
+        val activity =
+            ActivityInfo().apply {
+                packageName = pkg
+                name = component.className
+                exported = true
+                applicationInfo = application
+                nonLocalizedLabel = pkg
+            }
+        shadowOf(context.packageManager).apply {
+            installPackage(
+                PackageInfo().apply {
+                    packageName = pkg
+                    applicationInfo = application
+                },
+            )
+            addOrUpdateActivity(activity)
+            addIntentFilterForActivity(component, IntentFilter(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER) })
+        }
+    }
 }
+
+private const val LOAD_TIMEOUT_MS = 10_000L
