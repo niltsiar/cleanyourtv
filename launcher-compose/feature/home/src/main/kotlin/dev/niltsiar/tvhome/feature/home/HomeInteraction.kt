@@ -46,8 +46,12 @@ internal class HomeInteraction(
         private set
     private var inputsAsked = false
 
-    var focusedKey by mutableStateOf<String?>(null)
+    private val memory = sources.focusMemory
+
+    /** The tile that had focus last. It starts as the remembered one, which the first list of apps may replace. */
+    var focusedKey by mutableStateOf(memory.key)
         private set
+    private var restoring = memory.key != null
     var menu by mutableStateOf<HomeMenu?>(null)
         private set
     var session by mutableStateOf<ReorderState?>(null)
@@ -115,14 +119,16 @@ internal class HomeInteraction(
             }
 
             is HomeEvent.Focus -> {
-                focusedKey = event.key
+                remember(event.key)
             }
 
-            HomeEvent.Stopped, HomeEvent.HomePressed -> {
-                menu = null
-                inputsOpen = false
-                inputsAsked = false
-                end()
+            HomeEvent.Stopped -> {
+                closeAll()
+            }
+
+            HomeEvent.HomePressed -> {
+                closeAll()
+                shown.all.firstOrNull()?.let { remember(it.key, slot = 0) }
             }
 
             is HomeEvent.Click -> {
@@ -147,7 +153,28 @@ internal class HomeInteraction(
     /** An app came or went under a session: keep the order so far. */
     suspend fun listLoaded(loaded: AppList) {
         list = loaded
+        if (restoring && loaded.apps.isNotEmpty()) {
+            restoring = false
+            focusedKey =
+                (loaded.apps.firstOrNull { it.key == focusedKey } ?: loaded.apps[memory.slot.coerceIn(0, loaded.apps.lastIndex)]).key
+        }
         end()
+    }
+
+    private suspend fun closeAll() {
+        menu = null
+        inputsOpen = false
+        inputsAsked = false
+        end()
+    }
+
+    private fun remember(
+        key: String,
+        slot: Int = shown.all.indexOfFirst { it.key == key },
+    ) {
+        focusedKey = key
+        memory.key = key
+        if (slot >= 0) memory.slot = slot
     }
 
     /** A menu or a session in the way gives place to the list, as the Home key would clear them; an open list stays. */

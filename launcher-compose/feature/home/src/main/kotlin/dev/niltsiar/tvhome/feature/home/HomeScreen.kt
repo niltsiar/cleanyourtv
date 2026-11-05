@@ -106,7 +106,9 @@ import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.Wallpaper
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -311,6 +313,15 @@ private fun HomeContent(
         }
     }
     LaunchedEffect(gridState) {
+        snapshotFlow { state().dock.isNotEmpty() }.distinctUntilChanged().filter { it }.collect {
+            // The grid attaches its items during layout, after this effect starts.
+            withFrameNanos { }
+            val shown = state()
+            val target = shown.focusedKey?.takeIf { key -> (shown.dock + shown.grid).any { it.key == key } } ?: shown.dock.first().key
+            focusOn(target, gridState, dockRow, layout.singleRow, state, input)
+        }
+    }
+    LaunchedEffect(gridState) {
         var wasOpen = false
         snapshotFlow(libraryOpen).collect { open ->
             if (wasOpen && !open) {
@@ -421,10 +432,16 @@ private suspend fun focusOn(
     val grid = state().grid
     val inGrid = grid.indexOfFirst { it.key == target }
     val shown = gridState.layoutInfo.visibleItemsInfo
+    val inDock = state().dock.indexOfFirst { it.key == target }
     val pillInRow = target == LIBRARY_FOCUS && singleRow
     when {
         inGrid >= 0 -> {
             if (shown.none { it.key == target }) gridState.scrollToItem(inGrid + GRID_ITEMS_BEFORE)
+        }
+
+        singleRow && inDock >= 0 -> {
+            if (shown.none { it.key == "dock" }) gridState.scrollToItem(0)
+            if (dockRow.layoutInfo.visibleItemsInfo.none { it.key == target }) dockRow.scrollToItem(inDock)
         }
 
         pillInRow -> {
@@ -577,15 +594,6 @@ private fun Dock(
     onOpenLibrary: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LaunchedEffect(dock.isNotEmpty()) {
-        if (dock.isNotEmpty()) {
-            // The row held only the library pill until now, and a lazy row keeps its visible item in place.
-            if (layout.singleRow) row.scrollToItem(0)
-            // The grid attaches its items during layout, after this effect starts.
-            withFrameNanos { }
-            firstTile.requestFocus()
-        }
-    }
     GlassSurface(glass = glass, modifier = modifier.fillMaxWidth().testTag("dock")) {
         if (layout.singleRow) {
             // The grid's pivot scroll is vertical; this row scrolls sideways the usual way.

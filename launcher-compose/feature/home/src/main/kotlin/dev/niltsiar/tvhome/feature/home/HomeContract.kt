@@ -114,6 +114,15 @@ public sealed interface HomeEffect {
     public data object LibrarySaveFailed : HomeEffect
 }
 
+/**
+ * The tile that had focus last and its place in the list. The host keeps one for the life of the process, so a Home that
+ * is created again returns to that tile, or to its place when the app is gone.
+ */
+public class FocusMemory {
+    internal var key: String? = null
+    internal var slot: Int = 0
+}
+
 /** What the host feeds Home besides the theme: its data sources and the TV's 12/24-hour setting. */
 public class HomeSources(
     public val apps: Flow<AppList>,
@@ -138,6 +147,8 @@ public class HomeSources(
     public val hasNativeSettings: () -> Boolean = { false },
     /** The Inputs button and its list; never emits for a TV that cannot say, which leaves the button showing. */
     public val inputs: Flow<InputsMenu> = emptyFlow(),
+    /** Where focus was last, kept across the activity being created again. */
+    public val focusMemory: FocusMemory = FocusMemory(),
 )
 
 internal sealed interface HomeEvent {

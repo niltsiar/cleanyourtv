@@ -43,11 +43,17 @@ class HomeInteractionTest {
         apps: MutableStateFlow<AppList> = MutableStateFlow(AppList(NineApps)),
         appInfo: Boolean = true,
         nativeSettings: Boolean = false,
+        focusMemory: FocusMemory = FocusMemory(),
     ): Flow<HomeUiState> {
         val sources =
-            sources(apps = apps, hasAppInfo = {
-                appInfo
-            }, hasNativeSettings = { nativeSettings }, saveOrder = ::saveOrder, removeFromHome = ::removeFromHome)
+            sources(
+                apps = apps,
+                hasAppInfo = { appInfo },
+                hasNativeSettings = { nativeSettings },
+                saveOrder = ::saveOrder,
+                removeFromHome = ::removeFromHome,
+                focusMemory = focusMemory,
+            )
         return moleculeFlow(RecompositionMode.Immediate) {
             homePresenter(eventFlow, sources, config, effects::trySend, Locale.ENGLISH, "EEEE d MMMM")
         }
@@ -490,6 +496,83 @@ class HomeInteractionTest {
                 events.send(HomeEvent.TileMenu("gone", held = true))
                 events.send(HomeEvent.Focus("pkg.4"))
                 assertNull(awaitMatching { it.focusedLabel == "App 4" }.menu)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun a_home_created_again_returns_to_the_tile_that_had_focus() =
+        runTest {
+            val memory = FocusMemory()
+            presenter(focusMemory = memory).test {
+                awaitMatching { it.dock.isNotEmpty() }
+                events.send(HomeEvent.Focus("pkg.8"))
+                awaitMatching { it.focusedKey == "pkg.8" }
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            presenter(focusMemory = memory).test {
+                assertEquals("pkg.8", awaitMatching { it.dock.isNotEmpty() }.focusedKey)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun a_home_created_again_without_that_app_takes_the_tile_at_its_place_or_the_last_one() =
+        runTest {
+            val memory = FocusMemory()
+            presenter(focusMemory = memory).test {
+                awaitMatching { it.dock.isNotEmpty() }
+                events.send(HomeEvent.Focus("pkg.8"))
+                awaitMatching { it.focusedKey == "pkg.8" }
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            presenter(apps = MutableStateFlow(AppList(NineApps.filterNot { it.key == "pkg.8" })), focusMemory = memory).test {
+                assertEquals("pkg.9", awaitMatching { it.dock.isNotEmpty() }.focusedKey)
+                cancelAndIgnoreRemainingEvents()
+            }
+            presenter(apps = MutableStateFlow(AppList(NineApps.take(3))), focusMemory = memory).test {
+                assertEquals("pkg.3", awaitMatching { it.dock.isNotEmpty() }.focusedKey)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun the_home_key_sends_the_memory_back_to_the_first_tile() =
+        runTest {
+            val memory = FocusMemory()
+            presenter(focusMemory = memory).test {
+                awaitMatching { it.dock.isNotEmpty() }
+                events.send(HomeEvent.Focus("pkg.8"))
+                awaitMatching { it.focusedKey == "pkg.8" }
+
+                events.send(HomeEvent.HomePressed)
+
+                assertEquals("pkg.1", awaitMatching { it.focusedKey == "pkg.1" }.focusedKey)
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            presenter(focusMemory = memory).test {
+                assertEquals("pkg.1", awaitMatching { it.dock.isNotEmpty() }.focusedKey)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun home_stopping_keeps_the_memory() =
+        runTest {
+            val memory = FocusMemory()
+            presenter(focusMemory = memory).test {
+                awaitMatching { it.dock.isNotEmpty() }
+                events.send(HomeEvent.Focus("pkg.8"))
+                awaitMatching { it.focusedKey == "pkg.8" }
+                events.send(HomeEvent.Stopped)
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            presenter(focusMemory = memory).test {
+                assertEquals("pkg.8", awaitMatching { it.dock.isNotEmpty() }.focusedKey)
                 cancelAndIgnoreRemainingEvents()
             }
         }

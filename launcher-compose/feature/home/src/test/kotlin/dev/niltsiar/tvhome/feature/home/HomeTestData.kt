@@ -47,6 +47,7 @@ internal fun sources(
     saveOrder: suspend (List<String>, Int) -> Boolean = { _, _ -> true },
     removeFromHome: suspend (String) -> Boolean = { true },
     inputs: Flow<InputsMenu> = emptyFlow(),
+    focusMemory: FocusMemory = FocusMemory(),
 ) = HomeSources(
     apps,
     clock,
@@ -60,6 +61,7 @@ internal fun sources(
     saveOrder = saveOrder,
     removeFromHome = removeFromHome,
     inputs = inputs,
+    focusMemory = focusMemory,
 )
 
 internal fun port(

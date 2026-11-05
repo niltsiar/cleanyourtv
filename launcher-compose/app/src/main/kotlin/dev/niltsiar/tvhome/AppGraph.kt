@@ -17,6 +17,7 @@ import dev.niltsiar.tvhome.data.system.SystemSettings
 import dev.niltsiar.tvhome.data.system.TimeChanges
 import dev.niltsiar.tvhome.data.wallpaper.ScreensaverWallpaper
 import dev.niltsiar.tvhome.data.wallpaper.WallpaperProvider
+import dev.niltsiar.tvhome.feature.home.FocusMemory
 import dev.niltsiar.tvhome.feature.home.HomeSources
 import dev.niltsiar.tvhome.feature.library.LibrarySources
 import dev.zacsweers.metro.AppScope
@@ -133,6 +134,11 @@ interface AppGraph {
         config: TvConfig,
     ): ScreensaverWallpaper = ScreensaverWallpaper(application, config, ThemeDirectory(application))
 
+    /** Lives as long as the process, so an activity created again returns to the tile it left. */
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideFocusMemory(): FocusMemory = FocusMemory()
+
     @Provides
     @SingleIn(AppScope::class)
     fun provideHomeSources(
@@ -145,6 +151,7 @@ interface AppGraph {
         systemSettings: SystemSettings,
         libraryCatalog: LibraryCatalog,
         inputsProvider: InputsProvider,
+        focusMemory: FocusMemory,
     ): HomeSources =
         HomeSources(
             apps = appsProvider.apps,
@@ -160,6 +167,7 @@ interface AppGraph {
             saveOrder = appsProvider::saveOrder,
             removeFromHome = { libraryCatalog.setOnHome(it, false) },
             inputs = inputsProvider.menu,
+            focusMemory = focusMemory,
         )
 
     @Provides
