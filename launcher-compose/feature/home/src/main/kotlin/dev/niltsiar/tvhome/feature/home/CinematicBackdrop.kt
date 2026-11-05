@@ -1,5 +1,6 @@
 package dev.niltsiar.tvhome.feature.home
 
+import androidx.compose.animation.VectorConverter
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
@@ -34,14 +35,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
-private const val ART_OUT_MS = 140
 private const val ART_IN_MS = 420
 private const val ART_FIRST_IN_MS = 600
 private const val HIDE_MS = 300
 private const val GLOW_FIRST_IN_MS = 600
-private const val GLOW_DIP_MS = 200
-private const val GLOW_DIP_ALPHA = 0.35f
-private const val GLOW_IN_MS = 500
 private const val SCRIM_W = 480
 private const val SCRIM_H = 270
 private val ScrimColor = Color(0xFF060406)
@@ -51,7 +48,8 @@ private val NoArtGlow = Color(0xFF444444)
  * The cinematic shelf's part of the backdrop, drawn between the picture and the UI by [draw] in the draw phase:
  * the focused app's softened art stretched over the screen, the glow in its colour from the top corner away from the
  * text, and the scrim that keeps the text and the dock readable. Alpha is applied while drawing, never through a layer.
- * [show] and [hide] run the fades; one coroutine at a time may call them, and a new call continues from the alpha on screen.
+ * From one app to the next the art cross-fades and the glow changes colour, both in one [cinematicTween].
+ * [show] and [hide] run the fades; one coroutine at a time may call them, and a new call continues from what is on screen.
  */
 @Stable
 internal class CinematicBackdrop(
@@ -60,9 +58,13 @@ internal class CinematicBackdrop(
 ) {
     private var art by mutableStateOf<ImageBitmap?>(null)
     private var artKey: String? = null
+
+    /** The art that fades out under [art] while [artMix] goes to 1. */
+    private var fromArt by mutableStateOf<ImageBitmap?>(null)
+    private var fromKey: String? = null
     private val artAlpha = Animatable(0f)
-    private var glowColor by mutableStateOf(Color.Unspecified)
-    private var glowVisible = false
+    private val artMix = Animatable(1f)
+    private val glowColor = Animatable(NoArtGlow, Color.VectorConverter(NoArtGlow.colorSpace))
     private val glowAlpha = Animatable(0f)
     private var scrim by mutableStateOf<ImageBitmap?>(null)
     private var glowBrush: Brush? = null
@@ -76,20 +78,27 @@ internal class CinematicBackdrop(
 
     fun draw(scope: DrawScope) =
         with(scope) {
-            val image = art
             val alpha = artAlpha.value
-            if (image != null && alpha > 0f) {
-                drawImage(
-                    image,
-                    dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
-                    alpha = alpha,
-                    filterQuality = FilterQuality.Low,
-                )
+            if (alpha > 0f) {
+                val mix = artMix.value
+                val from = fromArt
+                if (from != null && mix < 1f) drawArt(from, alpha * (1f - mix))
+                art?.let { if (mix > 0f) drawArt(it, alpha * mix) }
             }
             val glow = glowAlpha.value
-            if (glow > 0f && glowColor.isSpecified) drawRect(glowBrush(glowColor, size), alpha = glow)
+            if (glow > 0f) drawRect(glowBrush(glowColor.value, size), alpha = glow)
             scrim?.let { drawImage(it, dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()), alpha = layout.scrimAlpha) }
         }
+
+    private fun DrawScope.drawArt(
+        image: ImageBitmap,
+        alpha: Float,
+    ) = drawImage(
+        image,
+        dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
+        alpha = alpha,
+        filterQuality = FilterQuality.Low,
+    )
 
     /** Focus is on the dock tile [key]: its [accent] colours the glow, and [loadArt] gives the art to fade in. */
     suspend fun show(
@@ -105,7 +114,6 @@ internal class CinematicBackdrop(
 
     /** Focus left the dock: the art and the glow fade out. */
     suspend fun hide() {
-        glowVisible = false
         coroutineScope {
             launch { fadeTo(glowAlpha, 0f, HIDE_MS) }
             launch { fadeTo(artAlpha, 0f, HIDE_MS) }
@@ -116,40 +124,36 @@ internal class CinematicBackdrop(
         key: String,
         loadArt: suspend () -> ImageBitmap?,
     ) {
-        if (key == artKey) {
-            fadeTo(artAlpha, layout.artAlpha, ART_IN_MS)
-            return
+        val back = key == artKey
+        if (!back && key == fromKey && artMix.value < 1f) {
+            // Back to the art still fading out: the mix runs the other way from where it is.
+            fromArt = art.also { art = fromArt }
+            fromKey = artKey.also { artKey = fromKey }
+            artMix.snapTo(1f - artMix.value)
+        } else if (!back) {
+            val next = loadArt()
+            val blend = layout.animated && artAlpha.value > 0f && art != null
+            fromArt = if (blend) art else null
+            fromKey = if (blend) artKey else null
+            art = next
+            artKey = key
+            artMix.snapTo(if (blend) 0f else 1f)
         }
-        val next = loadArt()
-        val replacing = layout.animated && artAlpha.value > 0f
-        if (replacing) fadeTo(artAlpha, 0f, ART_OUT_MS)
-        art = next
-        artKey = key
-        fadeTo(artAlpha, layout.artAlpha, if (replacing) ART_IN_MS else ART_FIRST_IN_MS)
+        coroutineScope {
+            if (artAlpha.value < layout.artAlpha) launch { fadeTo(artAlpha, layout.artAlpha, if (back) ART_IN_MS else ART_FIRST_IN_MS) }
+            if (artMix.value < 1f) {
+                artMix.animateTo(1f, cinematicTween())
+                fromArt = null
+                fromKey = null
+            }
+        }
     }
 
     private suspend fun showGlow(color: Color) {
-        when {
-            !glowVisible -> {
-                glowColor = color
-                glowVisible = true
-                fadeTo(glowAlpha, 1f, GLOW_FIRST_IN_MS)
-            }
-
-            color != glowColor && layout.glowSnap -> {
-                glowColor = color
-                glowAlpha.snapTo(1f)
-            }
-
-            color != glowColor -> {
-                fadeTo(glowAlpha, GLOW_DIP_ALPHA, GLOW_DIP_MS)
-                glowColor = color
-                fadeTo(glowAlpha, 1f, GLOW_IN_MS)
-            }
-
-            glowAlpha.value < 1f -> {
-                fadeTo(glowAlpha, 1f, GLOW_FIRST_IN_MS)
-            }
+        coroutineScope {
+            val shown = glowAlpha.value > 0f
+            if (glowAlpha.value < 1f) launch { fadeTo(glowAlpha, 1f, GLOW_FIRST_IN_MS) }
+            if (shown && layout.animated && !layout.glowSnap) glowColor.animateTo(color, cinematicTween()) else glowColor.snapTo(color)
         }
     }
 

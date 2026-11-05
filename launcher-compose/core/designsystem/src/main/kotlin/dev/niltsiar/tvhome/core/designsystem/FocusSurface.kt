@@ -1,16 +1,14 @@
 package dev.niltsiar.tvhome.core.designsystem
 
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
@@ -27,6 +25,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.launch
 
 private const val FOCUSED_SCALE = 1.1f
 private val RingWidth = 2.dp
@@ -41,8 +41,8 @@ private val Gloss = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f
  * [onFocused] fires on gaining focus. [interactionSource] receives the press and focus events, for content
  * that reacts to them. [accent] colours the ring and the glow; unspecified takes the theme's. [glow] turns the accent
  * glow off: the elevation shadow also shows through a translucent surface, as a dark patch, so glass has none. The
- * animation is read in the layer and draw lambdas, so a focus change never relays out. [focusedScale] is the size
- * it grows to; a surface that fills its parent grows less than a tile.
+ * animation starts in the focus callback and is read in the layer and draw lambdas, so a focus change neither recomposes
+ * nor relays out. [focusedScale] is the size it grows to; a surface that fills its parent grows less than a tile.
  */
 @Composable
 public fun FocusSurface(
@@ -56,9 +56,9 @@ public fun FocusSurface(
     focusedScale: Float = FOCUSED_SCALE,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    var focused by remember { mutableStateOf(false) }
     val motion = TvTheme.motion
-    val focus = animateFloatAsState(if (focused) 1f else 0f, motion.focusSpec, label = "focus")
+    val focus = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
     val grownScale = motion.focusScale(focusedScale)
     val ringColor = accent.takeOrElse { TvTheme.colors.accent }
     Box(
@@ -83,7 +83,11 @@ public fun FocusSurface(
                     }
                 }.clip(shape)
                 .onFocusChanged {
-                    focused = it.isFocused
+                    val target = if (it.isFocused) 1f else 0f
+                    if (focus.targetValue != target) {
+                        // Undispatched, its first frame is the one that shows the new focus, not the frame after.
+                        scope.launch(start = CoroutineStart.UNDISPATCHED) { focus.animateTo(target, motion.focusSpec) }
+                    }
                     if (it.isFocused) onFocused()
                 }.clickable(interactionSource = interactionSource, indication = null, role = Role.Button, onClick = onClick),
         content = content,

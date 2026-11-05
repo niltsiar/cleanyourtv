@@ -55,6 +55,7 @@ import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -265,7 +266,7 @@ internal fun ClockPill(
     val clockStyle =
         remember(typography, dateBelowClock) { if (dateBelowClock) typography.clock.copy(fontSize = 28.sp) else typography.clock }
     val dateStyle = remember(typography, dateBelowClock) { if (dateBelowClock) typography.date.copy(fontSize = 14.sp) else typography.date }
-    GlassSurface(glass = glass, modifier = Modifier.fillMaxHeight().testTag("clock"), shape = CircleShape) {
+    GlassSurface(glass = glass, modifier = Modifier.fillMaxHeight().testTag("clock").clearAndSetSemantics {}, shape = CircleShape) {
         Row(
             modifier = Modifier.fillMaxHeight().padding(horizontal = ClockPillPadding),
             verticalAlignment = Alignment.CenterVertically,

@@ -79,4 +79,25 @@ class FocusSurfaceMotionTest {
         assertEquals(110f, widths[9], 0.1f)
         assertTrue("peaked at ${widths.max()}", widths.max() <= 110.1f)
     }
+
+    @Test
+    fun a_focused_tile_is_already_growing_in_the_second_frame_after_focus() {
+        compose.mainClock.autoAdvance = false
+        compose.setContent {
+            TvTheme(glassKind = GlassKind.Flat, motion = Motion(focusOvershoot = false)) {
+                FocusSurface(onClick = {}, modifier = Modifier.size(100.dp).focusRequester(requester).testTag("tile")) {}
+            }
+        }
+        compose.mainClock.advanceTimeByFrame()
+        compose.runOnUiThread { requester.requestFocus() }
+        repeat(2) { compose.mainClock.advanceTimeByFrame() }
+
+        val width =
+            compose
+                .onNodeWithTag("tile")
+                .getBoundsInRoot()
+                .let { it.right - it.left }
+                .value
+        assertTrue("width $width", width > 100f)
+    }
 }

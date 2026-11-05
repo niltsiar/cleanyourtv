@@ -1,10 +1,17 @@
 package dev.niltsiar.tvhome.feature.home
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -30,6 +37,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -43,7 +51,18 @@ import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import kotlin.math.abs
 
 internal val CinematicShelfHeight = 144.dp
-private val ShelfRise = 14.dp
+
+/** How far a new shelf title rises into place as it fades in. */
+internal val TitleRise = 8.dp
+
+/** The one duration and easing of the cinematic shelf's moves from one app to the next: title, meta line, glow, art and dots. */
+private const val CINEMATIC_MS = 280
+private val CinematicEasing: Easing = FastOutSlowInEasing
+
+/** How long the old title takes to fade out under the new one. */
+private const val TITLE_OUT_MS = 120
+
+internal fun <T> cinematicTween(): TweenSpec<T> = tween(CINEMATIC_MS, easing = CinematicEasing)
 
 private val TitleAscent = 50.sp
 private val TitleDescent = 16.sp
@@ -56,8 +75,6 @@ private val DotSpacing = 6.dp
 private val DotRest = Color(0x4DFFFFFF)
 private const val SHOW_MS = 260
 private const val HIDE_MS = 160
-private const val DOTS_MS = 220
-private const val MIN_ALPHA = 0.3f
 
 private class HeldShelf {
     var shelf: Shelf? = null
@@ -65,8 +82,9 @@ private class HeldShelf {
 
 /**
  * The cinematic shelf above the dock: the focused dock app's name, when Home last opened it, and one dot per dock app.
- * It fades in with the first dock focus and out when [shelf] is null, keeping the last app's text meanwhile. A new app
- * rises into place; the dots slide. Every animated value is read in a layer or draw lambda.
+ * It fades in with the first dock focus and out when [shelf] is null, keeping the last app's text meanwhile. A new app's
+ * name and time cross-fade with the old ones ([titleSwap]); the dots stay and only their long dot slides. Every animated
+ * value is read in a layer, placement or draw lambda.
  */
 @Composable
 internal fun CinematicShelf(
@@ -84,42 +102,66 @@ internal fun CinematicShelf(
         if (layout.animated) alpha.animateTo(target, tween(if (visible) SHOW_MS else HIDE_MS)) else alpha.snapTo(target)
     }
     val shown = held.shelf ?: return
-    val reveal = remember(shown.key) { Animatable(0f) }
-    LaunchedEffect(reveal, layout.animated) {
-        if (layout.animated) reveal.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)) else reveal.snapTo(1f)
-    }
+    val rise = with(LocalDensity.current) { TitleRise.roundToPx() }
     Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.BottomStart) {
         Column(
             modifier =
                 Modifier.graphicsLayer {
                     compositingStrategy = CompositingStrategy.ModulateAlpha
-                    this.alpha = alpha.value * (MIN_ALPHA + (1f - MIN_ALPHA) * reveal.value).coerceIn(0f, 1f)
-                    translationY = (1f - reveal.value) * ShelfRise.toPx()
+                    this.alpha = alpha.value
                 },
         ) {
-            BasicText(
-                text = shown.label,
-                style = TvTheme.typography.cinematicTitle,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.testTag("shelf:name").lineBetween(TitleAscent, TitleDescent),
-            )
-            BasicText(
-                text = lastOpenedLine(shown.lastOpened),
-                style = TvTheme.typography.cinematicMeta,
-                maxLines = 1,
-                modifier = Modifier.padding(start = MetaIndent, top = MetaGap),
-            )
+            AnimatedContent(
+                targetState = shown,
+                transitionSpec = { titleSwap(layout.animated, rise) },
+                contentKey = { it.key },
+                label = "shelfTitle",
+            ) { app ->
+                Column {
+                    BasicText(
+                        text = app.label,
+                        style = TvTheme.typography.cinematicTitle,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.testTag("shelf:name").lineBetween(TitleAscent, TitleDescent),
+                    )
+                    BasicText(
+                        text = lastOpenedLine(app.lastOpened),
+                        style = TvTheme.typography.cinematicMeta,
+                        maxLines = 1,
+                        modifier = Modifier.padding(start = MetaIndent, top = MetaGap),
+                    )
+                }
+            }
             if (layout.dots) {
                 PositionDots(
                     position = shown.position,
                     count = shown.count,
+                    animated = layout.animated,
                     modifier = Modifier.padding(start = MetaIndent, top = DotsGap),
                 )
             }
         }
     }
 }
+
+/**
+ * How a shelf title gives way to the next: the old one fades out in [TITLE_OUT_MS] while the new one fades in from
+ * nothing and rises [risePx] into place. Both keep their place in the layout, so nothing below them moves.
+ */
+internal fun titleSwap(
+    animated: Boolean,
+    risePx: Int,
+): ContentTransform =
+    if (animated) {
+        ContentTransform(
+            fadeIn(cinematicTween()) + slideInVertically(cinematicTween()) { risePx },
+            fadeOut(tween(TITLE_OUT_MS, easing = CinematicEasing)),
+            sizeTransform = null,
+        )
+    } else {
+        ContentTransform(EnterTransition.None, ExitTransition.None, sizeTransform = null)
+    }
 
 /** "Last opened <time>" with the time in white; a space when there is none, which keeps the line's height. */
 @Composable
@@ -142,10 +184,13 @@ private fun lastOpenedLine(opened: OpenedAt?): AnnotatedString {
 private fun PositionDots(
     position: Int,
     count: Int,
+    animated: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val focus = remember { Animatable(position.toFloat()) }
-    LaunchedEffect(position) { focus.animateTo(position.toFloat(), tween(DOTS_MS, easing = FastOutSlowInEasing)) }
+    LaunchedEffect(position, animated) {
+        if (animated) focus.animateTo(position.toFloat(), cinematicTween()) else focus.snapTo(position.toFloat())
+    }
     val width = (DotSize + DotSpacing) * (count - 1).coerceAtLeast(0) + DotWide
     Spacer(
         modifier =

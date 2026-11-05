@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -58,7 +59,7 @@ public fun GlassIconButton(
     ) {
         GlassSurface(glass = glass, modifier = Modifier.matchParentSize(), shape = CircleShape, interactionSource = interactionSource) {
             if (label == null) {
-                Box(Modifier.align(Alignment.Center).size(22.dp).semantics { this.contentDescription = contentDescription }) {
+                Box(Modifier.align(Alignment.Center).size(22.dp).clearAndSetSemantics { this.contentDescription = contentDescription }) {
                     icon { progress.value }
                 }
             }
@@ -72,7 +73,7 @@ public fun GlassIconButton(
                     },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(Modifier.size(22.dp)) { icon { progress.value } }
+                Box(Modifier.size(22.dp).clearAndSetSemantics {}) { icon { progress.value } }
                 Spacer(Modifier.width(8.dp))
                 label()
             }

@@ -3,8 +3,7 @@ package dev.niltsiar.tvhome.feature.home
 import android.text.format.DateFormat
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -46,9 +45,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -65,7 +66,6 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Measurable
@@ -80,6 +80,7 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.style.TextOverflow
@@ -127,7 +128,6 @@ private val ShelfHeight = 72.dp
 private val ShelfTitleGap = 12.dp
 private val ShelfFade = 40.dp
 private val ShelfFullyShownInset = 4.dp
-private val ShelfRise = 14.dp
 private val GridBottom = 48.dp
 private val HintBottom = 28.dp
 private val HintGap = 16.dp
@@ -138,8 +138,8 @@ private const val TILE_ASPECT = 16f / 9f
 private const val GRID_ITEMS_BEFORE = 2
 
 /**
- * The Home screen. [state] is read lazily, inside the items that show each field. A focus change keeps the dock and
- * grid list instances, so the dock and the tiles skip while the shelf label updates.
+ * The Home screen. [state] is read lazily, inside the items that show each field. The grid reads the dock and grid
+ * lists through states that ignore equal lists, so a focus move composes no tile again while the shelf label updates.
  * The wallpaper and the scrolling content are both glass sources, so the top bar and the dock glass what is behind them.
  * The top bar's surfaces sit in one glass container and merge when they come near each other.
  * The shelf title stays under the top bar; rows fade out as they scroll up to it.
@@ -326,6 +326,9 @@ private fun HomeContent(
     val rowTileWidth = (gridWidth - TileGap * (layout.columns + 1)) / layout.columns
     val firstDockTile = remember { FocusRequester() }
     val dockRow = rememberLazyListState()
+    // Equal lists keep the grid's item provider, so a focus move or a clock tick does not compose the items again.
+    val dock by remember(state) { derivedStateOf(structuralEqualityPolicy()) { state().dock } }
+    val grid by remember(state) { derivedStateOf(structuralEqualityPolicy()) { state().grid } }
     LaunchedEffect(gridState) {
         snapshotFlow { state().focusRequest }.filterNotNull().collect { request ->
             focusOn(request.target, gridState, dockRow, layout.singleRow, state, input)
@@ -376,7 +379,6 @@ private fun HomeContent(
                     .onFocusChanged { input.gridFocused = it.hasFocus }
                     .semantics { testTagsAsResourceId = true },
         ) {
-            val grid = state().grid
             item(key = "shelf", span = { GridItemSpan(maxLineSpan) }, contentType = "shelf") {
                 Spacer(Modifier.fillMaxWidth().height(shelfBottom - ContentTop))
             }
@@ -387,7 +389,7 @@ private fun HomeContent(
                     firstTile = firstDockTile,
                     row = dockRow,
                     input = input,
-                    dock = state().dock,
+                    dock = dock,
                     grid = grid,
                     layout = layout,
                     shelfLayout = shelfLayout,
@@ -399,6 +401,17 @@ private fun HomeContent(
                 )
             }
             itemsIndexed(grid, key = { _, app -> app.key }, contentType = { _, _ -> "tile" }) { index, app ->
+                val toward =
+                    remember(input, layout, grid, index) {
+                        Modifier.towardLibrary(
+                            input,
+                            layout,
+                            grid,
+                            last = index == grid.lastIndex,
+                            row = index / layout.columns,
+                            column = index % layout.columns,
+                        )
+                    }
                 AppTile(
                     app = app,
                     accent = shelfLayout.focusAccent(app.accent, inDock = false),
@@ -410,15 +423,7 @@ private fun HomeContent(
                         Modifier
                             .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = TvTheme.motion.placementSpec)
                             .fadeUnderShelf(gridState, app.key, shelfBottom)
-                            .towardLibrary(
-                                input,
-                                layout,
-                                grid,
-                                last = index == grid.lastIndex,
-                                row = index / layout.columns,
-                                column =
-                                    index % layout.columns,
-                            ),
+                            .then(toward),
                 )
             }
             if (layout.libraryPill && !layout.singleRow) {
@@ -569,29 +574,25 @@ private class FadeUnderShelfNode(
     }
 }
 
-/** The focused app's name. It rises into place and fades in again each time the label changes. */
+/** The focused app's name. A new name cross-fades with the old one as the cinematic shelf's does ([titleSwap]). */
 @Composable
 private fun ShelfTitle(
     label: () -> String,
     modifier: Modifier = Modifier,
 ) {
-    val text = label()
-    val motion = TvTheme.motion
-    val reveal = remember(text) { Animatable(if (motion.animations) 0f else 1f) }
-    LaunchedEffect(reveal) { reveal.animateTo(1f, motion.springSpec(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)) }
+    val text by remember(label) { derivedStateOf(label) }
+    val animated = TvTheme.motion.animated
+    val rise = with(LocalDensity.current) { TitleRise.roundToPx() }
     Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.BottomStart) {
-        BasicText(
-            text = text,
-            style = TvTheme.typography.shelfTitle,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier =
-                Modifier.testTag("shelf:title").graphicsLayer {
-                    compositingStrategy = CompositingStrategy.ModulateAlpha
-                    alpha = (0.3f + 0.7f * reveal.value).coerceIn(0f, 1f)
-                    translationY = (1f - reveal.value) * ShelfRise.toPx()
-                },
-        )
+        AnimatedContent(targetState = text, transitionSpec = { titleSwap(animated, rise) }, label = "shelfTitle") { shown ->
+            BasicText(
+                text = shown,
+                style = TvTheme.typography.shelfTitle,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.testTag("shelf:title"),
+            )
+        }
     }
 }
 
@@ -624,6 +625,10 @@ private fun Dock(
                     horizontalArrangement = Arrangement.spacedBy(TileGap),
                 ) {
                     itemsIndexed(dock, key = { _, app -> app.key }) { index, app ->
+                        val toward =
+                            remember(input, layout, grid, index, dock.lastIndex) {
+                                Modifier.towardLibrary(input, layout, grid, last = index == dock.lastIndex, row = -1, column = index)
+                            }
                         AppTile(
                             app = app,
                             accent = shelfLayout.focusAccent(app.accent, inDock = true),
@@ -636,7 +641,7 @@ private fun Dock(
                                     .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = TvTheme.motion.placementSpec)
                                     .width(rowTileWidth)
                                     .then(if (index == 0) Modifier.focusRequester(firstTile) else Modifier)
-                                    .towardLibrary(input, layout, grid, last = index == dock.lastIndex, row = -1, column = index),
+                                    .then(toward),
                         )
                     }
                     if (layout.libraryPill) {
@@ -664,6 +669,17 @@ private fun Dock(
             ) {
                 dock.forEachIndexed { index, app ->
                     key(app.key) {
+                        val ends =
+                            remember(input, layout, grid, index, dock.lastIndex) {
+                                Modifier.stopAtDockEnds(
+                                    first = index == 0,
+                                    last = index == dock.lastIndex,
+                                    input,
+                                    layout,
+                                    grid,
+                                    column = index,
+                                )
+                            }
                         AppTile(
                             app = app,
                             accent = shelfLayout.focusAccent(app.accent, inDock = true),
@@ -676,14 +692,7 @@ private fun Dock(
                                     .weight(1f)
                                     .slideToIndex(index, TileGap)
                                     .then(if (index == 0) Modifier.focusRequester(firstTile) else Modifier)
-                                    .stopAtDockEnds(
-                                        first = index == 0,
-                                        last = index == dock.lastIndex,
-                                        input,
-                                        layout,
-                                        grid,
-                                        column = index,
-                                    ),
+                                    .then(ends),
                         )
                     }
                 }
@@ -776,6 +785,7 @@ private fun AppTile(
                 .then(if (reordering) Modifier.reorderLook(key, input) else Modifier)
                 .aspectRatio(TILE_ASPECT)
                 .testTag("tile:$key")
+                .then(if (app.image != null) Modifier.semantics { contentDescription = app.label } else Modifier)
                 .focusRequester(requester)
                 .holdOk(
                     input.hold,
@@ -794,15 +804,13 @@ private fun AppTile(
                         },
                 ),
     ) {
-        Box(Modifier.fillMaxSize().background(TvTheme.colors.surface, TileShape), contentAlignment = Alignment.Center) {
+        // An image tile is one semantics node, which the benchmark reads as "art has landed"; a text tile adds its label.
+        // The surface clips this box, so its fill is drawn: a shaped background would add a node.
+        val surface = TvTheme.colors.surface
+        Box(Modifier.fillMaxSize().drawBehind { drawRect(surface) }, contentAlignment = Alignment.Center) {
             val image = app.image
             if (image != null) {
-                Image(
-                    bitmap = image,
-                    contentDescription = app.label,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
+                Image(bitmap = image, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
             } else {
                 BasicText(text = app.label, style = TvTheme.typography.tileLabel, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
