@@ -1,7 +1,7 @@
 package dev.niltsiar.tvhome.feature.home
 
 import androidx.activity.ComponentActivity
-import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasAnyAncestor
@@ -14,15 +14,12 @@ import androidx.compose.ui.test.pressKey
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.receiveAsFlow
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import java.util.Locale
 
 /** Home on the real presenter: keys go in at the screen, the menus and modes come out of the state. */
 @RunWith(RobolectricTestRunner::class)
@@ -31,7 +28,6 @@ class HomeMenuUiTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
 
-    private val events = Channel<HomeEvent>(Channel.UNLIMITED)
     private val effects = mutableListOf<HomeEffect>()
     private val saved = mutableListOf<Pair<List<String>, Int>>()
     private val clicked = mutableListOf<String>()
@@ -46,14 +42,15 @@ class HomeMenuUiTest {
             )
         compose.setContent {
             TvTheme(glassKind = GlassKind.Flat) {
-                val state = rememberUpdatedState(homePresenter(events.receiveAsFlow(), sources, config, { effects += it }, Locale.ENGLISH))
+                val viewModel = rememberHomeViewModel(sources, config, effects)
+                val state = viewModel.uiState.collectAsState()
                 HomeScreen(
                     state = { state.value },
                     layout = config.homeLayout(),
-                    onFocus = { events.trySend(HomeEvent.Focus(it)) },
+                    onFocus = viewModel::onFocus,
                     onClick = { clicked += it },
                     topBar = config.topBarLayout(),
-                    actions = actionsTo(events),
+                    actions = viewModel.actions,
                 )
             }
         }
@@ -195,16 +192,3 @@ class HomeMenuUiTest {
         compose.onNode(hasTestTag("menu:Reorder") and hasAnyAncestor(hasTestTag("menu"))).assertExists()
     }
 }
-
-internal fun actionsTo(events: Channel<HomeEvent>) =
-    HomeActions(
-        onTileMenu = { key, held -> events.trySend(HomeEvent.TileMenu(key, held)) },
-        onSettingsMenu = { events.trySend(HomeEvent.SettingsMenu) },
-        onInputs = { events.trySend(HomeEvent.OpenInputs) },
-        onInputPick = { events.trySend(HomeEvent.PickInput(it)) },
-        onMenuPick = { events.trySend(HomeEvent.MenuPick(it)) },
-        onBack = { events.trySend(HomeEvent.Back) },
-        onToggleReorder = { events.trySend(HomeEvent.ToggleReorder) },
-        onReorderMove = { events.trySend(HomeEvent.ReorderMove(it)) },
-        onReorderOk = { events.trySend(HomeEvent.ReorderOk) },
-    )

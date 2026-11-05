@@ -64,6 +64,7 @@ public class MoleculeHomeViewModel(
             onToggleReorder = { events.trySend(HomeEvent.ToggleReorder) },
             onReorderMove = { events.trySend(HomeEvent.ReorderMove(it)) },
             onReorderOk = { events.trySend(HomeEvent.ReorderOk) },
+            onHomePressed = { events.trySend(HomeEvent.HomePressed) },
         )
 
     /** Home left the screen: a reorder ends and saves, a menu closes. */

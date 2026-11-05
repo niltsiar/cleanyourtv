@@ -1,5 +1,10 @@
 package dev.niltsiar.tvhome.feature.home
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import app.cash.molecule.RecompositionMode
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
@@ -14,6 +19,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import java.time.LocalDateTime
+import java.util.Locale
+import kotlin.coroutines.EmptyCoroutineContext
 
 internal val NineApps = (1..9).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") }
 
@@ -76,3 +83,17 @@ internal val FourPorts =
                 InputRow.LiveTv,
             ),
     )
+
+/** The real view model on the composition's scope, its effects collected into [effects]. */
+@Composable
+internal fun rememberHomeViewModel(
+    sources: HomeSources,
+    config: TvConfig,
+    effects: MutableList<HomeEffect>,
+): MoleculeHomeViewModel {
+    val scope = rememberCoroutineScope()
+    val viewModel =
+        remember { MoleculeHomeViewModel(sources, config, Locale.ENGLISH, scope, RecompositionMode.Immediate, EmptyCoroutineContext) }
+    LaunchedEffect(viewModel) { viewModel.effects.collect { effects += it } }
+    return viewModel
+}

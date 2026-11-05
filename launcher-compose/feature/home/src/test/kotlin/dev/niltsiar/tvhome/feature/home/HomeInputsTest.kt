@@ -134,4 +134,19 @@ class HomeInputsTest {
                 cancelAndIgnoreRemainingEvents()
             }
         }
+
+    @Test
+    fun the_home_key_closes_an_open_inputs_list() =
+        runTest {
+            presenter(flowOf(FourPorts)).test {
+                awaitMatching { it.inputs == FourPorts }
+                events.send(HomeEvent.OpenInputs)
+                awaitMatching { it.inputsOpen }
+
+                events.send(HomeEvent.HomePressed)
+
+                assertFalse(awaitMatching { !it.inputsOpen }.inputsOpen)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
 }

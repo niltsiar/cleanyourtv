@@ -1,9 +1,11 @@
 package dev.niltsiar.tvhome.feature.home
 
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
 import dev.niltsiar.tvhome.core.model.InputRow
 import dev.niltsiar.tvhome.core.model.InputTarget
@@ -16,20 +18,28 @@ internal class SavedOrder(
 )
 
 /**
- * The tile menu, the Settings menu, reorder mode and edit-dock mode: what they show, and what each event does to them.
- * [list] is the app list as loaded and [shown] the dock and grid on screen, both set by the presenter on each
- * composition. A session works on the tiles' keys and saves them when it ends, only if they changed.
+ * Home's state owner: the app list as loaded, what the TV lists as inputs, the focused tile, the tile menu, the Settings
+ * menu, reorder mode and edit-dock mode, and what each event does to them. [shown] is the dock and grid on screen. A
+ * session works on the tiles' keys and saves them when it ends, only if they changed.
  */
 internal class HomeInteraction(
     private val sources: HomeSources,
     private val config: TvConfig,
     private val effect: (HomeEffect) -> Unit,
 ) {
-    var list = AppList()
-    var shown = HomeApps(list, config.homeLayout())
+    private val layout = config.homeLayout()
 
-    /** What the TV lists as inputs, null until it has said. Set by the presenter on each change. */
-    var inputs: InputsMenu? = null
+    /** The app list as loaded. */
+    var list by mutableStateOf(AppList())
+        private set
+
+    /** The top_bar_apps that can be opened. */
+    var topBarApps by mutableStateOf(emptyList<AppEntry>())
+        private set
+
+    /** What the TV lists as inputs, null until it has said. */
+    var inputs by mutableStateOf<InputsMenu?>(null)
+        private set
 
     /** The list is open, or was asked for before the TV said what it lists. */
     var inputsOpen by mutableStateOf(false)
@@ -37,6 +47,7 @@ internal class HomeInteraction(
     private var inputsAsked = false
 
     var focusedKey by mutableStateOf<String?>(null)
+        private set
     var menu by mutableStateOf<HomeMenu?>(null)
         private set
     var session by mutableStateOf<ReorderState?>(null)
@@ -46,6 +57,24 @@ internal class HomeInteraction(
     var focusRequest by mutableStateOf<FocusRequest?>(null)
         private set
     private var focusToken = 0
+
+    private val sessionKeys by derivedStateOf { session?.keys }
+
+    /**
+     * The dock and grid on screen: [list] in the saved or session order. A session shows every dock slot filled, so that
+     * each place holds a tile that can move. A new instance only when one of those changes, so the screen can skip it.
+     */
+    val shown by derivedStateOf {
+        val keys = sessionKeys
+        val kept = saved?.takeIf { it.base === list }
+        val arranged =
+            when {
+                keys != null -> list.arranged(keys, 0)
+                kept != null -> list.arranged(kept.change.keys, kept.change.docked)
+                else -> list
+            }
+        HomeApps(arranged, if (keys != null) layout.copy(fillDock = true) else layout)
+    }
 
     suspend fun handle(event: HomeEvent) {
         when (event) {
@@ -86,27 +115,52 @@ internal class HomeInteraction(
                 ok()
             }
 
-            HomeEvent.Stopped -> {
+            is HomeEvent.Focus -> {
+                focusedKey = event.key
+            }
+
+            HomeEvent.Stopped, HomeEvent.HomePressed -> {
                 menu = null
                 inputsOpen = false
                 inputsAsked = false
                 end()
             }
 
-            else -> {
-                Unit
+            is HomeEvent.Click -> {
+                val app = list.apps.firstOrNull { it.key == event.key } ?: topBarApps.firstOrNull { it.key == event.key }
+                if (app != null) effect(HomeEffect.LaunchApp(app))
+            }
+
+            HomeEvent.OpenSettings -> {
+                effect(HomeEffect.OpenSettings)
+            }
+
+            HomeEvent.OpenNetwork -> {
+                effect(HomeEffect.OpenNetwork)
             }
         }
     }
 
+    fun topBarAppsLoaded(loaded: List<AppEntry>) {
+        topBarApps = loaded
+    }
+
     /** An app came or went under a session: keep the order so far. */
-    suspend fun listChanged() = end()
+    suspend fun listLoaded(loaded: AppList) {
+        list = loaded
+        end()
+    }
+
+    fun inputsLoaded(loaded: InputsMenu) {
+        inputs = loaded
+        inputsChanged()
+    }
 
     /**
      * The Inputs button was pressed. With a source panel and no Live TV row the button opens the panel; with nothing to
      * list it says so; else the list opens. A press before the TV has said what it lists waits for it.
      */
-    fun inputsChanged() {
+    private fun inputsChanged() {
         val listed = inputs ?: return
         if (!inputsAsked) return
         inputsAsked = false

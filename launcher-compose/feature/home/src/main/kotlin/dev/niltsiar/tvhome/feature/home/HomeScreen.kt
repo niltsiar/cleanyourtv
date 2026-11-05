@@ -321,6 +321,7 @@ private fun HomeContent(
     }
     LaunchedEffect(gridState) {
         snapshotFlow(homePresses).drop(1).collect {
+            input.actions.onHomePressed()
             gridState.scrollToItem(0)
             if (state().dock.isNotEmpty()) {
                 // The dock attaches during the layout that follows the scroll.
@@ -456,7 +457,7 @@ private fun pillUp(
     state: HomeUiState,
     layout: HomeLayout,
 ): FocusRequester? {
-    val key = pillUpKey(state.dock, state.grid, layout.columns, layout.singleRow, input.focusedKey) ?: return null
+    val key = pillUpKey(state.dock, state.grid, layout.columns, layout.singleRow, state.focusedKey) ?: return null
     return input.requester(key)
 }
 
@@ -697,10 +698,7 @@ private fun AppTile(
     val requester = remember(input, key) { input.requester(key) }
     FocusSurface(
         onClick = { onClick(key) },
-        onFocused = {
-            input.focusedKey = key
-            onFocus(key)
-        },
+        onFocused = { onFocus(key) },
         shape = TileShape,
         accent = accent,
         modifier =

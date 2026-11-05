@@ -20,7 +20,7 @@ import java.util.Locale
 /**
  * What the screen shows. [clock], [amPm], [date] and [greeting] are empty or null until the TV's time is valid.
  * [topBarApps] are the top_bar_apps that can be opened. [wallpaper] is the picture behind Home and its caption.
- * [shelf] is the cinematic shelf's app while focus is on a dock tile, null otherwise and without cinematic_home.
+ * [focusedKey] is the tile that had focus last. [shelf] is the cinematic shelf's app while focus is on a dock tile, null otherwise and without cinematic_home.
  * [menu] is the open tile or Settings menu, [reorder] a reorder or edit-dock session, and [focusRequest] asks the
  * screen to move focus to a tile or the Settings button. [inputs] is what the Inputs button and its list show, which
  * is [inputsOpen] while the list hangs under the button; the button shows until the TV says it has nothing to list.
@@ -35,6 +35,7 @@ public data class HomeUiState(
     val topBarApps: List<AppEntry> = emptyList(),
     val dock: List<AppEntry> = emptyList(),
     val grid: List<AppEntry> = emptyList(),
+    val focusedKey: String? = null,
     val focusedLabel: String = "",
     val wallpaper: Wallpaper = Wallpaper(),
     val shelf: Shelf? = null,
@@ -125,6 +126,10 @@ public class HomeSources(
     public val datePattern: String,
     /** Whether the TV is set to the 24-hour clock; read when the clock_format is system. */
     public val systemHour24: () -> Boolean,
+    /** Keeps the tile order: keys first to last, and with fill_dock off how many lead the dock (else -1). False when it was not written. */
+    public val saveOrder: suspend (List<String>, Int) -> Boolean,
+    /** Takes a package off Home, where the library keeps that choice. False when it was not written. */
+    public val removeFromHome: suspend (String) -> Boolean,
     /** Tile key to the milliseconds since the epoch of the last time Home opened it. */
     public val lastOpened: Flow<Map<String, Long>> = flowOf(emptyMap()),
     /** The softened art of a tile for the cinematic shelf; null for a tile without art. */
@@ -133,10 +138,6 @@ public class HomeSources(
     public val hasAppInfo: (String) -> Boolean = { false },
     /** Whether a vendor settings app is installed, for the Settings menu's "Native settings". */
     public val hasNativeSettings: () -> Boolean = { false },
-    /** Keeps the tile order: keys first to last, and with fill_dock off how many lead the dock (else -1). False when it was not written. */
-    public val saveOrder: suspend (List<String>, Int) -> Boolean = { _, _ -> true },
-    /** Takes a package off Home, where the library keeps that choice. False when it was not written. */
-    public val removeFromHome: suspend (String) -> Boolean = { true },
     /** The Inputs button and its list; never emits for a TV that cannot say, which leaves the button showing. */
     public val inputs: Flow<InputsMenu> = emptyFlow(),
 )
@@ -185,6 +186,9 @@ internal sealed interface HomeEvent {
 
     /** Home left the screen. */
     data object Stopped : HomeEvent
+
+    /** The Home key was pressed while Home shows. */
+    data object HomePressed : HomeEvent
 }
 
 /**
@@ -260,6 +264,7 @@ internal fun homeUiState(
         topBarApps = topBarApps,
         dock = apps.dock,
         grid = apps.grid,
+        focusedKey = focusedKey,
         focusedLabel = (apps.all.firstOrNull { it.key == focusedKey } ?: apps.all.firstOrNull())?.label.orEmpty(),
         wallpaper = wallpaper,
         shelf = if (cinematic) shelfFor(apps, focusedKey, lastOpened, now, header.hour24, zone) else null,

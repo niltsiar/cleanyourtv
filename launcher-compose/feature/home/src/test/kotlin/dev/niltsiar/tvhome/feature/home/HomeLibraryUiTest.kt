@@ -1,5 +1,8 @@
 package dev.niltsiar.tvhome.feature.home
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -27,26 +30,21 @@ class HomeLibraryUiTest {
     val compose = createComposeRule()
 
     private var opened = 0
+    private var focusedKey by mutableStateOf<String?>(null)
     private val toggles = mutableListOf<String>()
 
     private fun showHome(
         config: TvConfig = SixColumns.copy(appLibrary = true),
         reordering: Boolean = false,
     ) {
-        val state =
-            homeUiState(
-                homeApps(config = config),
-                Evening,
-                null,
-                Locale.ENGLISH,
-                reorder = if (reordering) ReorderView(carried = null, dimmed = emptySet(), hint = ReorderHint.Reorder) else null,
-            )
+        val apps = homeApps(config = config)
+        val reorder = if (reordering) ReorderView(carried = null, dimmed = emptySet(), hint = ReorderHint.Reorder) else null
         compose.setContent {
             TvTheme(glassKind = GlassKind.Flat) {
                 HomeScreen(
-                    state = { state },
+                    state = { homeUiState(apps, Evening, focusedKey, Locale.ENGLISH, reorder = reorder) },
                     layout = config.homeLayout(),
-                    onFocus = {},
+                    onFocus = { focusedKey = it },
                     onClick = {},
                     topBar = config.topBarLayout(),
                     actions = HomeActions(onToggleReorder = { toggles += "toggle" }),

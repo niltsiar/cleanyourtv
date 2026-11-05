@@ -67,6 +67,8 @@ class LibraryFlowTest {
                                 wallpaper = flowOf(Wallpaper()),
                                 datePattern = "EEEE d MMMM",
                                 systemHour24 = { true },
+                                saveOrder = { _, _ -> true },
+                                removeFromHome = { true },
                             )
                         MoleculeHomeViewModel(sources, config, Locale.ENGLISH, scope, RecompositionMode.Immediate, EmptyCoroutineContext)
                     }

@@ -40,6 +40,8 @@ public class HomeActions(
     public val onToggleReorder: () -> Unit = {},
     public val onReorderMove: (Arrow) -> Unit = {},
     public val onReorderOk: () -> Unit = {},
+    /** The Home key was pressed while Home shows: close the menu, the Inputs list and any mode. */
+    public val onHomePressed: () -> Unit = {},
 )
 
 /**

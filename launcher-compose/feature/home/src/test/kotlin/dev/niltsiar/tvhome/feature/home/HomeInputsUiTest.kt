@@ -1,9 +1,9 @@
 package dev.niltsiar.tvhome.feature.home
 
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
@@ -25,9 +25,7 @@ import dev.niltsiar.tvhome.core.model.InputIcon
 import dev.niltsiar.tvhome.core.model.InputRow
 import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.core.model.InputsMenu
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.receiveAsFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -35,7 +33,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import java.util.Locale
 
 /** The Inputs button on the real presenter: keys go in at the screen, the list comes out of the state. */
 @RunWith(RobolectricTestRunner::class)
@@ -44,7 +41,6 @@ class HomeInputsUiTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
 
-    private val events = Channel<HomeEvent>(Channel.UNLIMITED)
     private val effects = mutableListOf<HomeEffect>()
     private var inputsRequests by mutableIntStateOf(0)
 
@@ -52,15 +48,15 @@ class HomeInputsUiTest {
         val sources = sources(inputs = flowOf(inputs))
         compose.setContent {
             TvTheme(glassKind = GlassKind.Flat) {
-                val state =
-                    rememberUpdatedState(homePresenter(events.receiveAsFlow(), sources, SixColumns, { effects += it }, Locale.ENGLISH))
+                val viewModel = rememberHomeViewModel(sources, SixColumns, effects)
+                val state = viewModel.uiState.collectAsState()
                 HomeScreen(
                     state = { state.value },
                     layout = SixColumns.homeLayout(),
-                    onFocus = { events.trySend(HomeEvent.Focus(it)) },
+                    onFocus = viewModel::onFocus,
                     onClick = {},
                     topBar = SixColumns.topBarLayout(),
-                    actions = actionsTo(events),
+                    actions = viewModel.actions,
                     inputsRequests = { inputsRequests },
                 )
             }

@@ -1,7 +1,10 @@
 package dev.niltsiar.tvhome.feature.library
 
 import androidx.activity.ComponentActivity
-import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -9,12 +12,11 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import app.cash.molecule.RecompositionMode
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.receiveAsFlow
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -22,6 +24,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.util.Locale
+import kotlin.coroutines.EmptyCoroutineContext
 
 /** The library on the real presenter: keys go in at the panel, the choices come out of the fake host. */
 @RunWith(RobolectricTestRunner::class)
@@ -30,7 +33,7 @@ class LibraryOverlayUiTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
 
-    private val events = Channel<LibraryEvent>(Channel.UNLIMITED)
+    private lateinit var viewModel: MoleculeLibraryViewModel
     private val effects = mutableListOf<LibraryEffect>()
     private val library =
         FakeLibrary(
@@ -46,27 +49,30 @@ class LibraryOverlayUiTest {
         compose.setContent {
             TvTheme(glassKind = GlassKind.Flat) {
                 val glass = rememberGlassState()
-                val state =
-                    rememberUpdatedState(
-                        libraryPresenter(events.receiveAsFlow(), library.sources, config, { effects += it }, Locale.ENGLISH),
-                    )
+                val scope = rememberCoroutineScope()
+                viewModel =
+                    remember {
+                        MoleculeLibraryViewModel(
+                            library.sources,
+                            config,
+                            Locale.ENGLISH,
+                            scope,
+                            RecompositionMode.Immediate,
+                            EmptyCoroutineContext,
+                        )
+                    }
+                LaunchedEffect(viewModel) { viewModel.effects.collect { effects += it } }
+                val state = viewModel.uiState.collectAsState()
                 LibraryOverlay(
                     state = { state.value },
                     layout = config.libraryLayout(),
-                    actions =
-                        LibraryActions(
-                            onFocus = { events.trySend(LibraryEvent.Focus(it)) },
-                            onClick = { events.trySend(LibraryEvent.Click(it)) },
-                            onHold = { events.trySend(LibraryEvent.Hold(it)) },
-                            onPick = { events.trySend(LibraryEvent.Pick(it)) },
-                            onBack = { events.trySend(LibraryEvent.Back) },
-                        ),
+                    actions = viewModel.actions,
                     glass = glass,
                     art = { null },
                 )
             }
         }
-        events.trySend(LibraryEvent.Open)
+        viewModel.onOpen()
         compose.waitForIdle()
         compose.mainClock.advanceTimeBy(1_000)
         compose.waitForIdle()

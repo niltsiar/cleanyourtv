@@ -44,9 +44,6 @@ internal class HomeInput(
     /** The library was opened from the top bar button, so closing it returns there. */
     var fromTopBar = false
 
-    /** The key of the tile that had focus last, for the column the pill's Up returns to. */
-    var focusedKey: String? = null
-
     /** OK on the Inputs button: its list hangs from the button. */
     fun openInputs() {
         anchor.value = inputsBounds

@@ -275,6 +275,59 @@ class HomeInteractionTest {
         }
 
     @Test
+    fun the_home_key_closes_an_open_tile_menu() =
+        runTest {
+            presenter().test {
+                awaitMatching { it.dock.isNotEmpty() }
+                events.send(HomeEvent.TileMenu("pkg.2", held = true))
+                awaitMatching { it.menu != null }
+
+                events.send(HomeEvent.HomePressed)
+
+                assertNull(awaitMatching { it.menu == null }.menu)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun the_home_key_ends_a_reorder_that_moved_nothing_without_saving() =
+        runTest {
+            presenter().test {
+                awaitMatching { it.dock.isNotEmpty() }
+                events.send(HomeEvent.TileMenu("pkg.2", held = true))
+                awaitMatching { it.menu != null }
+                events.send(HomeEvent.MenuPick(MenuRow.Move))
+                awaitMatching { it.reorder?.carried == "pkg.2" }
+
+                events.send(HomeEvent.HomePressed)
+
+                assertNull(awaitMatching { it.reorder == null }.reorder)
+                assertEquals(emptyList<Pair<List<String>, Int>>(), saves)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun the_home_key_ends_a_reorder_and_keeps_the_order_so_far() =
+        runTest {
+            presenter().test {
+                awaitMatching { it.dock.isNotEmpty() }
+                events.send(HomeEvent.TileMenu("pkg.2", held = true))
+                awaitMatching { it.menu != null }
+                events.send(HomeEvent.MenuPick(MenuRow.Move))
+                awaitMatching { it.reorder?.carried == "pkg.2" }
+                events.send(HomeEvent.ReorderMove(Arrow.Right))
+                awaitMatching { it.dock.getOrNull(2)?.key == "pkg.2" }
+
+                events.send(HomeEvent.HomePressed)
+
+                assertNull(awaitMatching { it.reorder == null }.reorder)
+                assertEquals(listOf(keys(1, 3, 2, 4, 5, 6, 7, 8, 9) to -1), saves)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
     fun an_app_installed_during_the_mode_ends_it_and_keeps_the_order_so_far() =
         runTest {
             val apps = MutableStateFlow(AppList(NineApps))
