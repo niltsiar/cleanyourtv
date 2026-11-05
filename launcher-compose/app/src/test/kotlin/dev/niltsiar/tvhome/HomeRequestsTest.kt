@@ -27,6 +27,18 @@ class HomeRequestsTest {
     }
 
     @Test
+    fun an_intent_the_system_replays_from_history_asks_for_nothing() {
+        val fromHistory = Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY
+
+        assertEquals(HomeRequest.None, homeRequestOf(Intent(LauncherIntents.APP_LIBRARY).addFlags(fromHistory)))
+        assertEquals(HomeRequest.None, homeRequestOf(Intent(LauncherIntents.VIEW_INPUTS).addFlags(fromHistory)))
+        assertEquals(
+            HomeRequest.HomeKey,
+            homeRequestOf(Intent(LauncherIntents.VIEW_INPUTS).addCategory(Intent.CATEGORY_HOME).addFlags(fromHistory)),
+        )
+    }
+
+    @Test
     fun the_home_key_is_the_home_category_alone() {
         assertEquals(HomeRequest.HomeKey, homeRequestOf(home))
         assertEquals(HomeRequest.None, homeRequestOf(Intent(Intent.ACTION_MAIN)))

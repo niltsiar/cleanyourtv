@@ -17,14 +17,19 @@ internal enum class HomeRequest {
     None,
 }
 
-/** The action wins over the category: the key service sends its actions through the Home intent. */
-internal fun homeRequestOf(intent: Intent?): HomeRequest =
-    when {
-        intent?.action == LauncherIntents.APP_LIBRARY -> HomeRequest.OpenLibrary
-        intent?.action == LauncherIntents.VIEW_INPUTS -> HomeRequest.ShowInputs
+/**
+ * The action wins over the category: the key service sends its actions through the Home intent. An intent the system
+ * re-delivers from history (after process death, stateNotNeeded gives no saved state) carries no new request.
+ */
+internal fun homeRequestOf(intent: Intent?): HomeRequest {
+    val replayed = intent != null && intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
+    return when {
+        !replayed && intent?.action == LauncherIntents.APP_LIBRARY -> HomeRequest.OpenLibrary
+        !replayed && intent?.action == LauncherIntents.VIEW_INPUTS -> HomeRequest.ShowInputs
         intent?.hasCategory(Intent.CATEGORY_HOME) == true -> HomeRequest.HomeKey
         else -> HomeRequest.None
     }
+}
 
 /**
  * The state to write for InputsRequestActivity when handle_view_inputs is [on], or null when [current] already is it.
