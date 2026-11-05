@@ -114,13 +114,10 @@ import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.designsystem.ChromeShadow
 import dev.niltsiar.tvhome.core.designsystem.FocusSurface
 import dev.niltsiar.tvhome.core.designsystem.GlassIconButton
-import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.designsystem.GlassSurface
 import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
-import dev.niltsiar.tvhome.core.designsystem.glassContainer
-import dev.niltsiar.tvhome.core.designsystem.glassSource
 import dev.niltsiar.tvhome.core.designsystem.holdOk
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
@@ -200,8 +197,6 @@ private const val GRID_ITEMS_BEFORE = 2
  * The Home screen. [state] is read lazily, inside the parts that show each field. The grid reads the dock and grid
  * lists through states that ignore equal lists, outside its items, so a focus move recomposes no grid item while the
  * shelf label updates.
- * The wallpaper and the scrolling content are both glass sources, so the top bar and the dock glass what is behind them.
- * The top bar's surfaces sit in one glass container and merge when they come near each other.
  * The shelf title stays under the top bar; rows fade out as they scroll up to it.
  * [homePresses] counts Home key presses that reach Home while it shows; each one scrolls to the top and focuses the first dock tile.
  * [layout] is the theme's: dock size and grid columns, rows that must fit below the dock, one sideways row.
@@ -298,7 +293,7 @@ public fun HomeScreen(
                     }
                 }.focusGroup(),
     ) {
-        WallpaperBackdrop(glass, wallpaper = { state().wallpaper }, layout = wallpaperLayout, cinematic = backdrop)
+        WallpaperBackdrop(wallpaper = { state().wallpaper }, layout = wallpaperLayout, cinematic = backdrop)
         ChromeFrostEffect(glass, wallpaper = { state().wallpaper }, skyIntensity = wallpaperLayout.skyIntensity)
         HomeContent(
             glass,
@@ -463,7 +458,6 @@ private fun HomeContent(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .glassSource(glass, zIndex = 1f)
                     .gridEdges(gridState, fadeStart = shelfBottom - ShelfToFade, gate = ShelfToFade)
                     .onFocusChanged { input.gridFocused = it.hasFocus }
                     .semantics { testTagsAsResourceId = true },
@@ -1220,20 +1214,19 @@ private val IconTileShade = Brush.verticalGradient(0.4f to Color.Transparent, 1f
 @Preview(name = "Home 1080p glass", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
 @Composable
 private fun HomeScreenGlassPreview() {
-    HomePreview(GlassKind.Refractive)
+    HomePreview()
 }
 
 @Preview(name = "Home 1080p glass 4 columns", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
 @Composable
 private fun HomeScreenFourColumnsPreview() {
-    HomePreview(GlassKind.Refractive, columns = 4)
+    HomePreview(columns = 4)
 }
 
 @Preview(name = "Home 1080p tile menu", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
 @Composable
 private fun HomeScreenTileMenuPreview() {
     HomePreview(
-        GlassKind.Refractive,
         menu = HomeMenu("example.movies", listOf(MenuRow.ReplaceInDock, MenuRow.Move, MenuRow.AppInfo)),
         menuAnchor = Rect(left = 110f, top = 520f, right = 380f, bottom = 672f),
     )
@@ -1243,7 +1236,6 @@ private fun HomeScreenTileMenuPreview() {
 @Composable
 private fun HomeScreenInputsPreview() {
     HomePreview(
-        GlassKind.Refractive,
         inputs = PreviewInputs,
         inputsOpen = true,
     )
@@ -1254,7 +1246,6 @@ private fun HomeScreenInputsPreview() {
 private fun HomeScreenReorderPreview() {
     val others = PreviewNames.map { "example.${it.lowercase()}" } - "example.music"
     HomePreview(
-        GlassKind.Refractive,
         reorder = ReorderView(carried = "example.music", dimmed = others.toSet(), hint = ReorderHint.Reorder),
         focused = "example.music",
     )
@@ -1263,13 +1254,13 @@ private fun HomeScreenReorderPreview() {
 @Preview(name = "Home 1080p library pill", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
 @Composable
 private fun HomeScreenLibraryPillPreview() {
-    HomePreview(GlassKind.Refractive, focused = LIBRARY_FOCUS, appCount = 9, libraryPill = true)
+    HomePreview(focused = LIBRARY_FOCUS, appCount = 9, libraryPill = true)
 }
 
 @Preview(name = "Home 1080p Spanish", device = "spec:width=1920px,height=1080px,dpi=320", locale = "es-rES", showBackground = true)
 @Composable
 private fun HomeScreenSpanishPreview() {
-    HomePreview(GlassKind.Refractive)
+    HomePreview()
 }
 
 @Preview(name = "Home 1080p reorder Spanish", device = "spec:width=1920px,height=1080px,dpi=320", locale = "es-rES", showBackground = true)
@@ -1277,16 +1268,9 @@ private fun HomeScreenSpanishPreview() {
 private fun HomeScreenReorderSpanishPreview() {
     val others = PreviewNames.map { "example.${it.lowercase()}" } - "example.music"
     HomePreview(
-        GlassKind.Refractive,
         reorder = ReorderView(carried = "example.music", dimmed = others.toSet(), hint = ReorderHint.DockChooseApp),
         focused = "example.music",
     )
-}
-
-@Preview(name = "Home 1080p flat", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
-@Composable
-private fun HomeScreenFlatPreview() {
-    HomePreview(GlassKind.Flat)
 }
 
 private val PreviewNames =
@@ -1320,7 +1304,6 @@ private fun previewArt(accent: Color): ImageBitmap {
 /** Home as the owner sees it: the cinematic shelf, with the first dock tile focused (the dock takes focus when it shows). */
 @Composable
 private fun HomePreview(
-    glassKind: GlassKind,
     menu: HomeMenu? = null,
     menuAnchor: Rect = Rect.Zero,
     reorder: ReorderView? = null,
@@ -1331,7 +1314,7 @@ private fun HomePreview(
     inputsOpen: Boolean = false,
     columns: Int = 6,
 ) {
-    TvTheme(glassKind = glassKind) {
+    TvTheme {
         val apps =
             PreviewNames.take(appCount).mapIndexed { i, name ->
                 val id = "example.${name.lowercase()}"

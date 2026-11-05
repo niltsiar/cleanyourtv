@@ -293,9 +293,6 @@ private val LocalTvSurfaces = staticCompositionLocalOf { DarkSurfaces }
 
 private val OnLightTypography by lazy { typographyFor(OnLightColors) }
 
-@Suppress("CompositionLocalAllowlist")
-internal val LocalGlassKind = staticCompositionLocalOf { GlassKind.Refractive }
-
 public object TvTheme {
     public val colors: TvColors
         @Composable
@@ -320,11 +317,10 @@ public object TvTheme {
 
 /**
  * The TV theme. Text over the wallpaper is always light; the [TvTheme.surfaces] are light or dark with [darkTheme].
- * [glassKind] picks how glass surfaces draw, [motion] how anything moves.
+ * [motion] says how anything moves.
  */
 @Composable
 public fun TvTheme(
-    glassKind: GlassKind = GlassKind.Refractive,
     motion: Motion = Motion(),
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
@@ -332,20 +328,16 @@ public fun TvTheme(
     CompositionLocalProvider(
         LocalTvColors provides DarkColors,
         LocalTvTypography provides typographyFor(DarkColors),
-        LocalGlassKind provides glassKind,
         LocalMotion provides motion,
         LocalTvSurfaces provides if (darkTheme) DarkSurfaces else LightSurfaces,
         content = content,
     )
 }
 
-/** [content] on a surface drawn in [TvTheme.surfaces]: on a light one ([light] and night mode off) its text turns dark. */
+/** [content] on a surface drawn in [TvTheme.surfaces]: on a light one (night mode off) its text turns dark. */
 @Composable
-internal fun SurfaceContent(
-    light: Boolean = true,
-    content: @Composable () -> Unit,
-) {
-    if (!light || LocalTvSurfaces.current.dark) {
+internal fun SurfaceContent(content: @Composable () -> Unit) {
+    if (LocalTvSurfaces.current.dark) {
         content()
     } else {
         CompositionLocalProvider(LocalTvColors provides OnLightColors, LocalTvTypography provides OnLightTypography, content = content)

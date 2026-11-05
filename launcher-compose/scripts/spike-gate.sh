@@ -6,7 +6,6 @@
 # Env:     TV_SERIAL   adb serial of the TV, such as <tv ip>:5555 (required)
 #          ADB         adb binary (default: adb on PATH)
 #          PYTHON      python3 binary (default: python3 on PATH)
-#          GLASS       refractive (default) or flat: the glass kind to build, so two builds can be compared
 #          IDLE_WAIT_SECONDS   how long Home idles before its memory is read (default 10)
 #          THEME_DIR   the theme folder (with config.json) to measure with; required below API 34, see below
 #
@@ -31,23 +30,13 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: [GLASS=refractive|flat] TV_SERIAL=<tv ip>:5555 $0" >&2
+  echo "usage: TV_SERIAL=<tv ip>:5555 $0" >&2
 }
 
 if [ "$#" -ne 0 ]; then
   usage
   exit 2
 fi
-
-GLASS="${GLASS:-refractive}"
-case "$GLASS" in
-  refractive | flat) ;;
-  *)
-    echo "GLASS must be refractive or flat, not '$GLASS'" >&2
-    usage
-    exit 2
-    ;;
-esac
 
 TV_SERIAL="${TV_SERIAL:?set TV_SERIAL to the TV adb serial, such as <tv ip>:5555}"
 ADB="${ADB:-adb}"
@@ -69,7 +58,7 @@ MAX_COLD_START_MS=1500
 MAX_APK_BYTES=$((6 * 1024 * 1024))
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-GRADLE=("$ROOT/gradlew" --console=plain "-Ptvhome.glass=$GLASS" -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true)
+GRADLE=("$ROOT/gradlew" --console=plain -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true)
 
 # The files tools/theme.sh pushes, one path per line. The names go into a shell script, so they stay plain.
 theme_files() {
@@ -302,7 +291,7 @@ JSON="$(find "$RESULTS_DIR" -name '*benchmarkData.json' -exec ls -t {} + 2> /dev
   echo "no benchmarkData.json under $RESULTS_DIR" >&2
   exit 1
 }
-KEPT="$ROOT/build/spike-gate/$GLASS-$(date -u +%Y%m%dT%H%M%SZ)/benchmarkData.json"
+KEPT="$ROOT/build/spike-gate/$(date -u +%Y%m%dT%H%M%SZ)/benchmarkData.json"
 mkdir -p "$(dirname "$KEPT")"
 cp "$JSON" "$KEPT"
 echo "results kept at $KEPT"
@@ -314,7 +303,7 @@ fi
 
 echo
 "$PYTHON" "$ROOT/scripts/spike-gate-report.py" "$KEPT" \
-  --build "$GLASS @ $COMMIT" \
+  --build "$COMMIT" \
   --compilation "$COMPILATION" \
   --apps "$APP_COUNT" \
   --apk-bytes "$APK_BYTES" \

@@ -84,19 +84,18 @@ public fun GlassIconButton(
             focusLabel != null -> follow.growToLabel(grow.asState(), grownScale).height(ButtonSize)
             else -> follow.size(ButtonSize)
         }
-    SurfaceContent(light = glass.kind == GlassKind.Flat) {
+    SurfaceContent {
         FocusPill(
             onClick = onClick,
             modifier = size,
             interactionSource = interactionSource,
             focusedScale = FOCUSED_SCALE,
-            shadowElevation = if (glass.kind == GlassKind.Flat) ChromeShadow.Pill.elevation else 0.dp,
+            shadowElevation = ChromeShadow.Pill.elevation,
             background = {
                 GlassSurface(
                     glass = glass,
                     modifier = Modifier.matchParentSize(),
                     shape = CircleShape,
-                    interactionSource = interactionSource,
                 ) {}
             },
         ) { ink ->

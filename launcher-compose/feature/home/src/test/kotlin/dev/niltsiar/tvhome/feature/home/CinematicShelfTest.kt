@@ -10,7 +10,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
-import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -33,7 +32,7 @@ class CinematicShelfTest {
     @Before
     fun showHome() {
         compose.setContent {
-            TvTheme(glassKind = GlassKind.Flat) {
+            TvTheme {
                 HomeScreen(
                     state = { homeUiState(homeApps(), Evening, focusedKey, Locale.ENGLISH, cinematic = true) },
                     layout = SixColumns.homeLayout(),

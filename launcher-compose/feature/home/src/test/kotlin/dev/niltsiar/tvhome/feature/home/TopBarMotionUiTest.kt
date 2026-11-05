@@ -15,7 +15,6 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
-import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
@@ -43,7 +42,7 @@ class TopBarMotionUiTest {
         val network = NetworkState(NetworkLink.Wifi, ssid = "Home", validated = true)
         val state = homeUiState(homeApps(config = config), Evening, null, Locale.ENGLISH, network = network, inputs = FourPorts)
         compose.setContent {
-            TvTheme(glassKind = GlassKind.Flat) {
+            TvTheme {
                 HomeScreen(
                     state = { state },
                     layout = config.homeLayout(),

@@ -14,7 +14,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
-import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import org.junit.Before
@@ -37,7 +36,7 @@ class HomeFocusTest {
     fun showHome() {
         val state = homeUiState(homeApps(), Evening, null, Locale.ENGLISH, inputs = InputsMenu(available = true))
         compose.setContent {
-            TvTheme(glassKind = GlassKind.Flat) {
+            TvTheme {
                 HomeScreen(state = { state }, layout = SixColumns.homeLayout(), onFocus = {}, onClick = {}, homePresses = { homePresses })
             }
         }

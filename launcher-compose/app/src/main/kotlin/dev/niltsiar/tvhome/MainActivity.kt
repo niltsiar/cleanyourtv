@@ -19,7 +19,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
@@ -71,7 +70,7 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) homeRequestOf(intent).takeIf { it != HomeRequest.HomeKey }?.let(::handle)
         applyViewInputsHandler(graph.config.handleViewInputs)
         setContent {
-            TvTheme(glassKind = GlassKind.valueOf(BuildConfig.GLASS_KIND), motion = graph.config.motion()) {
+            TvTheme(motion = graph.config.motion()) {
                 val glass = rememberGlassState()
                 val libraryOpen = if (graph.config.appLibrary) library.uiState.collectAsStateWithLifecycle() else null
                 HomeHost(

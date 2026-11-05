@@ -20,7 +20,6 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.designsystem.FocusSurface
-import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import org.junit.Assert.assertEquals
@@ -48,7 +47,7 @@ class FocusSurfaceMotionTest {
     private fun showTile(motion: Motion) {
         compose.setContent {
             view = LocalView.current
-            TvTheme(glassKind = GlassKind.Flat, motion = motion) {
+            TvTheme(motion = motion) {
                 Box(Modifier.size(140.dp).background(Color.Black).testTag("frame"), contentAlignment = Alignment.Center) {
                     Box(Modifier.align(Alignment.TopStart).size(1.dp).focusable())
                     FocusSurface(onClick = {}, glow = false, modifier = Modifier.size(100.dp).focusRequester(requester).testTag("tile")) {

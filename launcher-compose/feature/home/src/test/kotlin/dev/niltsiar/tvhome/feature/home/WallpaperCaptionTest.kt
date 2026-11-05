@@ -3,7 +3,6 @@ package dev.niltsiar.tvhome.feature.home
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.Wallpaper
 import org.junit.Rule
@@ -22,7 +21,7 @@ class WallpaperCaptionTest {
     private fun show(wallpaper: Wallpaper) {
         val state = homeUiState(homeApps(), Evening, null, Locale.ENGLISH, wallpaper = wallpaper)
         compose.setContent {
-            TvTheme(glassKind = GlassKind.Flat) {
+            TvTheme {
                 HomeScreen(state = { state }, layout = SixColumns.homeLayout(), onFocus = {}, onClick = {})
             }
         }

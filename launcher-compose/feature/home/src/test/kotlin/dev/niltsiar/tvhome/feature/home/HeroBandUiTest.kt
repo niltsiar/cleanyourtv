@@ -20,7 +20,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.config.TvConfig
-import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
@@ -61,7 +60,7 @@ class HeroBandUiTest {
                 lastOpened = flowOf(lastOpened),
             )
         compose.setContent {
-            TvTheme(glassKind = GlassKind.Flat) {
+            TvTheme {
                 val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(
@@ -202,7 +201,7 @@ class HeroBandUiTest {
         compose.mainClock.autoAdvance = false
         val sources = sources()
         compose.setContent {
-            TvTheme(glassKind = GlassKind.Flat) {
+            TvTheme {
                 val viewModel = rememberHomeViewModel(sources, cinematic, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(

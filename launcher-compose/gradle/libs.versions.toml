@@ -7,7 +7,6 @@ lifecycle = "2.11.0"
 coreKtx = "1.19.1"
 coroutines = "1.11.0"
 serialization = "1.12.0"
-haze = "2.1.0"
 metro = "1.5.2"
 molecule = "2.2.0"
 turbine = "1.2.1"
@@ -54,11 +53,6 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
-
-# Glass
-haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
-haze-glass = { module = "dev.chrisbanes.haze:haze-glass", version.ref = "haze" }
-haze-glass-material3 = { module = "dev.chrisbanes.haze:haze-glass-material3", version.ref = "haze" }
 
 # Presenters
 molecule-runtime = { module = "app.cash.molecule:molecule-runtime", version.ref = "molecule" }

@@ -9,9 +9,5 @@ android {
 }
 
 dependencies {
-    implementation(libs.haze)
-    implementation(libs.haze.glass)
-    implementation(libs.haze.glass.material3)
-
     testImplementation(libs.junit)
 }

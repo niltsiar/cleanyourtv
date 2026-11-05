@@ -18,7 +18,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.width
 import app.cash.molecule.RecompositionMode
 import dev.niltsiar.tvhome.core.config.TvConfig
-import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -51,7 +50,7 @@ class LibraryOverlayUiTest {
 
     private fun showLibrary(config: TvConfig = TvConfig(appLibrary = true)) {
         compose.setContent {
-            TvTheme(glassKind = GlassKind.Flat) {
+            TvTheme {
                 val scope = rememberCoroutineScope()
                 viewModel =
                     remember {

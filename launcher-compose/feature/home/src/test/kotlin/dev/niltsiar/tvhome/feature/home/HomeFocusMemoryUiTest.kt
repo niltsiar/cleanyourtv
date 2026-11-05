@@ -6,7 +6,6 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import dev.niltsiar.tvhome.core.config.TvConfig
-import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import org.junit.Rule
 import org.junit.Test
@@ -32,7 +31,7 @@ class HomeFocusMemoryUiTest {
                 it.slot = slot
             }
         compose.setContent {
-            TvTheme(glassKind = GlassKind.Flat) {
+            TvTheme {
                 val viewModel = rememberHomeViewModel(sources(focusMemory = memory), config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(

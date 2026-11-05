@@ -36,7 +36,6 @@ import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
 import app.cash.molecule.RecompositionMode
 import dev.niltsiar.tvhome.core.config.TvConfig
-import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.LibraryApp
@@ -73,14 +72,13 @@ class LibraryOverlayLookUiTest {
 
     private fun showLibrary(
         apps: List<LibraryApp>,
-        kind: GlassKind = GlassKind.Flat,
         art: LibraryArt? = null,
     ) {
         val config = TvConfig(appLibrary = true)
         val library = FakeLibrary(apps)
         lateinit var viewModel: MoleculeLibraryViewModel
         compose.setContent {
-            TvTheme(glassKind = kind) {
+            TvTheme {
                 val scope = rememberCoroutineScope()
                 viewModel =
                     remember {
@@ -164,8 +162,8 @@ class LibraryOverlayLookUiTest {
     ) = assertTrue("expected $expected, got $actual", abs(actual.value - expected.value) <= 1f)
 
     /** How much of 255 the panel's inside changes when Home behind it goes from black to white. */
-    private fun bleedThrough(kind: GlassKind): Int {
-        showLibrary(listOf(libraryApp("Alpha"), libraryApp("Beta")), kind)
+    private fun bleedThrough(): Int {
+        showLibrary(listOf(libraryApp("Alpha"), libraryApp("Beta")))
         // The gap between the title and the count, in the panel's header row.
         val inside = {
             compose
@@ -181,13 +179,8 @@ class LibraryOverlayLookUiTest {
     }
 
     @Test
-    fun a_bright_home_does_not_show_through_the_panel_with_flat_glass() {
-        assertTrue(bleedThrough(GlassKind.Flat) <= MAX_BLEED)
-    }
-
-    @Test
-    fun a_bright_home_does_not_show_through_the_panel_with_refractive_glass() {
-        assertTrue(bleedThrough(GlassKind.Refractive) <= MAX_BLEED)
+    fun a_bright_home_does_not_show_through_the_panel() {
+        assertTrue(bleedThrough() <= MAX_BLEED)
     }
 
     @Test

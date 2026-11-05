@@ -70,7 +70,6 @@ import dev.niltsiar.tvhome.core.designsystem.GlassSurface
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
-import dev.niltsiar.tvhome.core.designsystem.glassContainer
 import dev.niltsiar.tvhome.core.designsystem.holdOk
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
@@ -176,8 +175,7 @@ internal fun TopBar(
                 .fillMaxWidth()
                 .height(TopBarHeight)
                 .focusProperties { down = dockFocus }
-                .onFocusChanged { input.topBarFocused = it.hasFocus }
-                .glassContainer(glass),
+                .onFocusChanged { input.topBarFocused = it.hasFocus },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {

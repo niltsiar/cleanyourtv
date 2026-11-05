@@ -19,7 +19,6 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import dev.niltsiar.tvhome.core.config.TvConfig
-import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
@@ -105,7 +104,7 @@ class TileRecompositionTest {
                 val observing = home.setObserver(items)
                 onDispose { observing?.dispose() }
             }
-            TvTheme(glassKind = GlassKind.Flat) {
+            TvTheme {
                 val viewModel = rememberHomeViewModel(sources(apps = flowOf(AppList(apps))), config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(

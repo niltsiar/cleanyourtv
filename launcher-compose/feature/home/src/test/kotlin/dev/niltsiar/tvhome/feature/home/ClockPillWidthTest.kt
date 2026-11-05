@@ -5,7 +5,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import org.junit.Assert.assertEquals
@@ -45,7 +44,7 @@ class ClockPillWidthTest {
     private fun start(hour24: Boolean) {
         state = homeUiState(homeApps(), LocalDateTime.of(2026, 11, 5, 12, 0), null, Locale.ENGLISH, HeaderStyle(hour24 = hour24))
         compose.setContent {
-            TvTheme(glassKind = GlassKind.Flat) { ClockPill(rememberGlassState(), { state }, dateBelowClock = false) }
+            TvTheme { ClockPill(rememberGlassState(), { state }, dateBelowClock = false) }
         }
     }
 

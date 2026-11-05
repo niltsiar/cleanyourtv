@@ -4,24 +4,13 @@ plugins {
     alias(libs.plugins.baselineprofile)
 }
 
-// -Ptvhome.glass=flat builds the flat scrim instead of the refractive glass, for comparing the two on the TV.
-val glassKind =
-    when (val glass = providers.gradleProperty("tvhome.glass").getOrElse("refractive")) {
-        "refractive" -> "Refractive"
-        "flat" -> "Flat"
-        else -> throw GradleException("tvhome.glass must be 'refractive' or 'flat', not '$glass'")
-    }
-
 android {
     namespace = "dev.niltsiar.tvhome"
-
-    buildFeatures.buildConfig = true
 
     defaultConfig {
         applicationId = "dev.niltsiar.tvhome"
         versionCode = 1
         versionName = "0.1.0"
-        buildConfigField("String", "GLASS_KIND", "\"$glassKind\"")
     }
 
     testOptions {

@@ -19,7 +19,6 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
-import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.InputConnection
 import dev.niltsiar.tvhome.core.model.InputIcon
@@ -52,7 +51,7 @@ class HomeInputsUiTest {
     private fun showHome(inputs: Flow<InputsMenu>) {
         val sources = sources(inputs = inputs)
         compose.setContent {
-            TvTheme(glassKind = GlassKind.Flat) {
+            TvTheme {
                 val viewModel = rememberHomeViewModel(sources, SixColumns, effects)
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(

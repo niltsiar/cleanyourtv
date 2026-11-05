@@ -19,7 +19,6 @@ import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import dev.niltsiar.tvhome.core.config.TvConfig
-import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import org.junit.Assert.assertEquals
@@ -50,7 +49,7 @@ class HomeLibraryUiTest {
         val apps = homeApps(config = config)
         val reorder = if (reordering) ReorderView(carried = null, dimmed = emptySet(), hint = ReorderHint.Reorder) else null
         compose.setContent {
-            TvTheme(glassKind = GlassKind.Flat) {
+            TvTheme {
                 HomeScreen(
                     state = { homeUiState(apps, Evening, focusedKey, Locale.ENGLISH, reorder = reorder, inputs = inputs) },
                     layout = config.homeLayout(),
@@ -161,7 +160,7 @@ class HomeLibraryUiTest {
     private fun showSingleRowHome() {
         val config = SixColumns.copy(singleRow = true, appLibrary = true)
         compose.setContent {
-            TvTheme(glassKind = GlassKind.Flat) {
+            TvTheme {
                 val viewModel = rememberHomeViewModel(sources(), config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(

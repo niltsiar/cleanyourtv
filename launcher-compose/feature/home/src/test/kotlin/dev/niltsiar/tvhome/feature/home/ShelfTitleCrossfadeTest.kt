@@ -15,7 +15,6 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
-import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -36,7 +35,7 @@ class ShelfTitleCrossfadeTest {
 
     private fun showHome(cinematic: Boolean) {
         compose.setContent {
-            TvTheme(glassKind = GlassKind.Flat) {
+            TvTheme {
                 HomeScreen(
                     state = { homeUiState(homeApps(), Evening, focusedKey, Locale.ENGLISH, cinematic = cinematic) },
                     layout = SixColumns.homeLayout(),

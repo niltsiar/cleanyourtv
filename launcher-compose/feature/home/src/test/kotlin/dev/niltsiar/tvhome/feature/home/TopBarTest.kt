@@ -11,7 +11,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.requestFocus
 import dev.niltsiar.tvhome.core.config.TvConfig
-import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.NetworkLink
@@ -74,7 +73,7 @@ class TopBarTest {
     ) {
         val state = homeUiState(homeApps(config = config), Evening, null, Locale.ENGLISH, network = network, topBarApps = topBarApps)
         compose.setContent {
-            TvTheme(glassKind = GlassKind.Flat) {
+            TvTheme {
                 HomeScreen(
                     state = { state },
                     layout = config.homeLayout(),

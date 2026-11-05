@@ -30,9 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
-import dev.niltsiar.tvhome.core.designsystem.glassSource
 import dev.niltsiar.tvhome.core.model.SkyPalette
 import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlin.math.max
@@ -54,12 +52,10 @@ private val LeftScrim = Brush.horizontalGradient(0f to Color.Black.copy(alpha = 
  * white text readable on any picture ([drawHomeScrim], which the chrome's frost bakes too). A new picture cross-fades
  * in over the old one with no recomposition per frame. These parts sit in one offscreen layer that the GPU redraws only
  * when they change, so a frame costs one full-screen fill for them instead of one per part. The [cinematic] shelf's art,
- * glow and scrim come last, outside that layer, as they animate on each dock move. It is a glass source, so the panels
- * above it sample what it draws.
+ * glow and scrim come last, outside that layer, as they animate on each dock move.
  */
 @Composable
 internal fun WallpaperBackdrop(
-    glass: GlassState,
     wallpaper: () -> Wallpaper,
     layout: WallpaperLayout,
     modifier: Modifier = Modifier,
@@ -74,7 +70,6 @@ internal fun WallpaperBackdrop(
         modifier =
             modifier
                 .fillMaxSize()
-                .glassSource(glass)
                 .drawWithContent {
                     drawContent()
                     cinematic?.draw(this)

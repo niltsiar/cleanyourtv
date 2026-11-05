@@ -10,7 +10,6 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
-import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.model.SkyPalette
 import dev.niltsiar.tvhome.core.model.Wallpaper
@@ -28,7 +27,7 @@ private const val CHANNEL = 0xFF
 
 /**
  * Keeps [glass]'s frost on the wallpaper's [Wallpaper.thumbnail] and sky, baked off the main thread each time either
- * changes. No thumbnail, no frost. Refractive glass draws from the content itself and gets none.
+ * changes. No thumbnail, no frost.
  */
 @Composable
 internal fun ChromeFrostEffect(
@@ -37,7 +36,6 @@ internal fun ChromeFrostEffect(
     skyIntensity: Int,
 ) {
     LaunchedEffect(glass, skyIntensity) {
-        if (glass.kind != GlassKind.Flat) return@LaunchedEffect
         snapshotFlow { wallpaper().let { it.thumbnail to it.sky } }.distinctUntilChanged().collectLatest { (thumbnail, sky) ->
             glass.frost = thumbnail?.let { withContext(Dispatchers.Default) { bakeFrost(it, sky, skyIntensity / 100f) } }
         }

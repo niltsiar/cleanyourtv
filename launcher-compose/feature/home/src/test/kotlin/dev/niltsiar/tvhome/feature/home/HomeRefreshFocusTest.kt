@@ -11,7 +11,6 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import dev.niltsiar.tvhome.core.config.TvConfig
-import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import org.junit.Rule
 import org.junit.Test
@@ -31,7 +30,7 @@ class HomeRefreshFocusTest {
 
     private fun showHome(config: TvConfig) {
         compose.setContent {
-            TvTheme(glassKind = GlassKind.Flat) {
+            TvTheme {
                 HomeScreen(
                     state = { homeUiState(homeApps(apps, config = config), Evening, focused, Locale.ENGLISH) },
                     layout = config.homeLayout(),
