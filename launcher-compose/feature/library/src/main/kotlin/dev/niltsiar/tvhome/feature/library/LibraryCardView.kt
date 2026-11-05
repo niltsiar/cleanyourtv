@@ -79,9 +79,9 @@ private val RecentGreen = Color(0xFF70D9A0)
 
 /**
  * One card of the grid: the app's art on a small tile, its name in a box of [NAME_LINES] lines and, right under it, where
- * the app stands. An idle card is opaque, so nothing of Home shows through it; a focused one lets the highlight behind it
- * show. It rises in once per opening, with the delay [CardEntrance] gives it, and pops a little when its Home shortcut
- * changes. Both run in the layer lambda. The status line keeps its place while the card grows, so it stays level with
+ * the app stands. An idle card is opaque, so nothing of Home shows through it; a focused one lets the plate [FocusSurface]
+ * draws behind it show. It rises in once per opening, with the delay [CardEntrance] gives it, and pops a little when its
+ * Home shortcut changes. Both run in the layer lambda. The status line keeps its place while the card grows, so it stays level with
  * the cards beside it. [widthPx] is the narrowest the card can be.
  */
 @Composable
@@ -146,6 +146,7 @@ internal fun LibraryCardView(
             glow = false,
             focusedScale = FOCUSED_SCALE,
             ring = { ring },
+            plate = ink,
             modifier =
                 Modifier
                     .fillMaxSize()

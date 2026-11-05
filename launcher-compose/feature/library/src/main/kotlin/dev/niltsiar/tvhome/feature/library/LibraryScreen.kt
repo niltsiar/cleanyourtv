@@ -4,9 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
@@ -52,11 +50,8 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Paint
@@ -81,7 +76,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -94,8 +88,6 @@ import dev.niltsiar.tvhome.core.designsystem.eatsOkUp
 import dev.niltsiar.tvhome.core.model.LibraryArt
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -123,10 +115,6 @@ private val GridEdge = 13.dp
 private val PanelHeight =
     PanelTop + HeaderTitleHeight + HeaderHintHeight + GridEdge * 2 + CardHeight * ROWS + CardGap * (ROWS - 1) + PanelBottom
 private val MenuEdge = 48.dp
-private val HighlightGrow = 6.dp
-private val HighlightRadius = 20.dp
-private const val HIGHLIGHT_STIFFNESS = 260f
-private const val HIGHLIGHT_DAMPING = 0.58f
 
 /**
  * The App library over Home, for Home's overlay host, which dims what is behind it. It is composed whenever the
@@ -329,12 +317,6 @@ private fun Cards(
         }
     }
     Box(Modifier.fillMaxWidth().fillMaxHeight()) {
-        Highlight(
-            gridState,
-            layout,
-            with(density) { cardWidthPx.toDp() },
-            focusedIndex = { state().let { s -> s.cards.indexOfFirst { it.app.key == s.focusedKey } } },
-        )
         CompositionLocalProvider(LocalBringIntoViewSpec provides bringIntoView) {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(COLUMNS),
@@ -475,73 +457,6 @@ private class RowBringIntoViewSpec(
         }
     }
 }
-
-/**
- * A rounded square in the surface's text colour behind the focused card. It slides to the next card on a spring that
- * overshoots a little: it sits where the focused card is, and the slide is the distance it still has to cover, so
- * scrolling carries it along. Its position is read in the layer lambda.
- */
-@Composable
-private fun Highlight(
-    gridState: LazyGridState,
-    layout: LibraryLayout,
-    cardWidth: Dp,
-    focusedIndex: () -> Int,
-) {
-    val density = LocalDensity.current
-    val ink = TvTheme.colors.onSurface
-    val grow = with(density) { HighlightGrow.toPx() }
-    val edge = with(density) { GridEdge.toPx() }
-    val slide = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
-    val visible = remember { Animatable(0f) }
-    LaunchedEffect(Unit) {
-        var previous = -1
-        snapshotFlow(focusedIndex).filter { it >= 0 }.collectLatest { index ->
-            val from = gridState.placeOf(previous, edge)?.let { it + slide.value }
-            previous = index
-            val to = snapshotFlow { gridState.placeOf(index, edge) }.filterNotNull().first()
-            if (visible.value == 0f || from == null || !layout.animated) {
-                slide.snapTo(Offset.Zero)
-                if (layout.animated) visible.animateTo(1f, tween(HIGHLIGHT_FADE_MS)) else visible.snapTo(1f)
-            } else {
-                slide.snapTo(from - to)
-                slide.animateTo(Offset.Zero, spring(dampingRatio = HIGHLIGHT_DAMPING, stiffness = HIGHLIGHT_STIFFNESS))
-            }
-        }
-    }
-    Box(
-        Modifier
-            .size(cardWidth + HighlightGrow * 2, CardHeight + HighlightGrow * 2)
-            .graphicsLayer {
-                val place = gridState.placeOf(focusedIndex(), edge)
-                alpha = if (place == null) 0f else visible.value.coerceIn(0f, 1f)
-                translationX = (place?.x ?: 0f) + slide.value.x - grow
-                translationY = (place?.y ?: 0f) + slide.value.y - grow
-            }.drawBehind {
-                drawRoundRect(
-                    Brush.verticalGradient(listOf(ink.copy(alpha = 0.22f), ink.copy(alpha = 0.06f))),
-                    cornerRadius = CornerRadius(HighlightRadius.toPx()),
-                )
-                drawRoundRect(
-                    ink.copy(alpha = 0.3f),
-                    cornerRadius = CornerRadius(HighlightRadius.toPx()),
-                    style = Stroke(1.dp.toPx()),
-                )
-            },
-    )
-}
-
-/** Where the card at [index] is in the grid now, null while it is not laid out. A card's offset leaves out the grid's [edge]. */
-private fun LazyGridState.placeOf(
-    index: Int,
-    edge: Float,
-): Offset? =
-    layoutInfo.visibleItemsInfo
-        .firstOrNull { it.index == index }
-        ?.offset
-        ?.let { Offset(it.x + edge, it.y + edge) }
-
-private const val HIGHLIGHT_FADE_MS = 160
 
 /** The focus requesters of the cards, by key. */
 private class CardFocus {

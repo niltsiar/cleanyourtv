@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.isUnspecified
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Density
@@ -45,6 +46,9 @@ private val OuterStrokeWidth = 1.dp
 private val OuterStroke = Color.Black.copy(alpha = 0.35f)
 private val GlowElevation = 16.dp
 private val Gloss = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f), Color.Transparent))
+private const val PLATE_TOP_ALPHA = 0.22f
+private const val PLATE_BOTTOM_ALPHA = 0.06f
+private const val PLATE_STROKE_ALPHA = 0.3f
 
 /**
  * A D-pad target, for tiles and cards: scales up and gets a lit top, a white ring with a dark hairline outside it and a
@@ -53,7 +57,9 @@ private val Gloss = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f
  * concentric to the shape's, so a parent must leave the grown surface plus 8dp times [focusedScale] free around it or it
  * clips the ring. [onFocused] fires on gaining focus. [interactionSource] receives
  * the press and focus events, for content that reacts to them. [accent] colours the glow; unspecified takes the
- * theme's. [ring] colours the ring instead of white. [glow] turns the glow off: the elevation shadow also shows through
+ * theme's. [ring] colours the ring instead of white. [plate], when specified, is the colour of a plate behind the surface,
+ * out to the ring's inner edge with corners concentric to the shape's: it fades and grows with the ring, as one cue, and a
+ * translucent surface shows it. [glow] turns the glow off: the elevation shadow also shows through
  * a translucent surface, as a dark patch. The animation starts in the focus callback and is read in the layer and draw
  * lambdas, so a focus change neither recomposes nor relays out. [focusedScale] is the size it grows to. The growth is
  * drawn, not a layer scale, so the surface's bounds stay put while it grows and accessibility has nothing to update.
@@ -69,6 +75,7 @@ public fun FocusSurface(
     accent: Color = Color.Unspecified,
     focusedScale: Float = FOCUSED_SCALE,
     ring: ColorProducer? = null,
+    plate: Color = Color.Unspecified,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val motion = TvTheme.motion
@@ -76,6 +83,14 @@ public fun FocusSurface(
     val scope = rememberCoroutineScope()
     val grownScale = motion.focusScale(focusedScale)
     val glowColor = accent.takeOrElse { TvTheme.colors.accent }
+    val plateFill =
+        remember(plate) {
+            if (plate.isUnspecified) {
+                null
+            } else {
+                Brush.verticalGradient(listOf(plate.copy(alpha = PLATE_TOP_ALPHA), plate.copy(alpha = PLATE_BOTTOM_ALPHA)))
+            }
+        }
     Box(
         modifier =
             modifier
@@ -86,13 +101,18 @@ public fun FocusSurface(
                     spotShadowColor = glowColor
                 }.drawWithContent {
                     scale(1f + (grownScale - 1f) * focus.value) {
-                        this@drawWithContent.drawContent()
                         val progress = focus.value.coerceIn(0f, 1f)
-                        if (progress > 0f) {
-                            val outline = shape.createOutline(size, layoutDirection, this)
+                        val outline = if (progress > 0f) shape.createOutline(size, layoutDirection, this) else null
+                        val width = RingWidth.toPx()
+                        val gap = RingGap.toPx()
+                        if (outline != null && plateFill != null) {
+                            val behind = outline.grownBy(gap)
+                            drawOutline(behind, plateFill, alpha = progress)
+                            drawOutline(behind, plate, alpha = progress * PLATE_STROKE_ALPHA, style = Stroke(HairlineWidth.toPx()))
+                        }
+                        this@drawWithContent.drawContent()
+                        if (outline != null) {
                             drawOutline(outline, Gloss, alpha = progress)
-                            val width = RingWidth.toPx()
-                            val gap = RingGap.toPx()
                             drawOutline(
                                 outline.grownBy(gap + width / 2f),
                                 ring?.invoke() ?: Color.White,

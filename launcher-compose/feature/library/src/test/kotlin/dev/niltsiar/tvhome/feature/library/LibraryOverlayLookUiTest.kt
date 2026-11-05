@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.PixelMap
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
 import app.cash.molecule.RecompositionMode
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.LibraryApp
@@ -83,11 +85,12 @@ class LibraryOverlayLookUiTest {
         apps: List<LibraryApp>,
         art: LibraryArt? = null,
         config: TvConfig = TvConfig(appLibrary = true),
+        motion: Motion = Motion(),
     ) {
         val library = FakeLibrary(apps)
         lateinit var viewModel: MoleculeLibraryViewModel
         compose.setContent {
-            TvTheme {
+            TvTheme(motion = motion) {
                 val scope = rememberCoroutineScope()
                 viewModel =
                     remember {
@@ -432,6 +435,124 @@ class LibraryOverlayLookUiTest {
         assertTrue("below: $down px", down >= 16)
     }
 
+    private enum class Side { Top, Bottom, Left, Right }
+
+    /** How far the ring of [FOCUSED_SCALE] reaches from the card, in dp, with room to spare. */
+    private val scanReach = 12.dp
+
+    /**
+     * Walks in from [scanReach] outside the middle of [side] of the card [name] towards it, and reads the ring as the run of
+     * pixels that differ by at least [strong] from the same walk beside an idle card ("App 5"). Null while there is no such run.
+     */
+    private fun scanRing(
+        pixels: PixelMap,
+        name: String,
+        side: Side,
+        strong: Int = RING_STRONG,
+    ): RingScan? {
+        val density = compose.activity.resources.displayMetrics.density
+        val card = card(name)
+        val idle = card("App 5")
+
+        fun px(dp: Dp) = (dp.value * density).toInt()
+        val dx = px(idle.left) - px(card.left)
+        val dy = px(idle.top) - px(card.top)
+        val (x0, y0, stepX, stepY) =
+            when (side) {
+                Side.Top -> listOf(px((card.left + card.right) / 2), px(card.top) - px(scanReach), 0, 1)
+                Side.Bottom -> listOf(px((card.left + card.right) / 2), px(card.bottom) + px(scanReach), 0, -1)
+                Side.Left -> listOf(px(card.left) - px(scanReach), px((card.top + card.bottom) / 2), 1, 0)
+                Side.Right -> listOf(px(card.right) + px(scanReach), px((card.top + card.bottom) / 2), -1, 0)
+            }
+
+        fun differs(step: Int): Int {
+            val at = pixels[x0 + stepX * step, y0 + stepY * step]
+            val ground = pixels[x0 + stepX * step + dx, y0 + stepY * step + dy]
+            return Math.round((abs(at.red - ground.red) + abs(at.green - ground.green) + abs(at.blue - ground.blue)) * 255)
+        }
+        val steps = px(scanReach)
+        val outer = (0 until steps).firstOrNull { differs(it) >= strong } ?: return null
+        val inner = (outer until steps).firstOrNull { differs(it) < strong } ?: return null
+        return RingScan(outer = outer, inner = inner, inside = differs(inner + 3))
+    }
+
+    /** Where the ring is along a walk in: [outer] and [inner] steps in, and how much the pixel [inside] it differs from the ground. */
+    private data class RingScan(
+        val outer: Int,
+        val inner: Int,
+        val inside: Int,
+    )
+
+    /** Moves focus from "App 1" to "App 2" frame by frame and fails on the first frame where a ring has no highlight inside it. */
+    private fun assertEveryFrameOfAMoveHasTheHighlightInsideTheRing() {
+        compose.mainClock.autoAdvance = false
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
+        var seen = 0
+        repeat(FRAMES) { frame ->
+            compose.mainClock.advanceTimeByFrame()
+            val pixels = compose.onRoot().captureToImage().toPixelMap()
+            for (name in listOf("App 1", "App 2")) {
+                for (side in listOf(Side.Top, Side.Bottom)) {
+                    val ring = scanRing(pixels, name, side) ?: continue
+                    seen++
+                    assertTrue("frame $frame, $name, $side: $ring", ring.inside >= HALO_MIN)
+                }
+            }
+        }
+        assertTrue("rings seen on $seen scans", seen >= FRAMES)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun on_every_frame_of_a_focus_move_the_highlight_sits_inside_the_ring_of_the_card_that_gains_focus_and_the_one_that_loses_it() {
+        showLibrary(nineApps)
+
+        assertEveryFrameOfAMoveHasTheHighlightInsideTheRing()
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun with_reduced_motion_the_highlight_is_inside_the_ring_on_every_frame_too() {
+        showLibrary(
+            nineApps,
+            config = TvConfig(appLibrary = true, reducedMotion = true),
+            motion = Motion(reducedMotion = true),
+        )
+
+        assertEveryFrameOfAMoveHasTheHighlightInsideTheRing()
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_ring_of_a_focused_card_is_as_far_from_it_on_all_four_sides() {
+        showLibrary(nineApps)
+        val grown = grownCard("App 1")
+        val density = compose.activity.resources.displayMetrics.density
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+
+        // The walk starts 12 dp outside the card's own edge. Walking down or right, the pixel it stops at lies one further out.
+        fun gap(
+            side: Side,
+            grownBy: Dp,
+        ): Float {
+            val ring = scanRing(pixels, "App 1", side, strong = RING_CORE)!!
+            val farSide = if (side == Side.Bottom || side == Side.Right) 1 else 0
+            return (scanReach.value - grownBy.value) * density - ring.inner + farSide
+        }
+
+        val card = card("App 1")
+        val gaps =
+            listOf(
+                Side.Top to gap(Side.Top, card.top - grown.top),
+                Side.Bottom to gap(Side.Bottom, grown.bottom - card.bottom),
+                Side.Left to gap(Side.Left, card.left - grown.left),
+                Side.Right to gap(Side.Right, grown.right - card.right),
+            )
+        val wanted = 3f * FOCUSED_SCALE * density
+        assertTrue("gaps in px $gaps, wanted $wanted", gaps.all { (_, gap) -> abs(gap - wanted) <= 1.5f })
+        assertTrue("gaps in px $gaps", gaps.maxOf { it.second } - gaps.minOf { it.second } <= 1f)
+    }
+
     private fun ringAtTop(name: String): List<Int> {
         val grown = grownCard(name)
         return rgbAt((grown.left + grown.right) / 2, grown.top - 4.5.dp * FOCUSED_SCALE)
@@ -500,6 +621,10 @@ class LibraryOverlayLookUiTest {
         const val PANEL_HEADER_Y = 103
         const val MAX_BLEED = 10
         const val WHITE = 230
+        const val FRAMES = 24
+        const val RING_STRONG = 200
+        const val RING_CORE = 300
+        const val HALO_MIN = 4
         const val FOCUSED_SCALE = 1.08f
         const val TEXT_OVER_GROUND = 60
         val ELLIPSIS = Char(0x2026).toString()
