@@ -10,7 +10,6 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.interaction.FocusInteraction
@@ -322,8 +321,9 @@ private fun ClockDigit(
     char: Char,
     style: TextStyle,
 ) {
-    val reveal = remember(char) { Animatable(0f) }
-    LaunchedEffect(reveal) { reveal.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)) }
+    val motion = TvTheme.motion
+    val reveal = remember(char) { Animatable(if (motion.animations) 0f else 1f) }
+    LaunchedEffect(reveal) { reveal.animateTo(1f, motion.springSpec(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)) }
     val blank = char == ' '
     BasicText(
         text = if (blank) "0" else char.toString(),

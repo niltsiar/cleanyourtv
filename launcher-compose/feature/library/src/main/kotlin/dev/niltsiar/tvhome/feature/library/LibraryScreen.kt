@@ -289,7 +289,7 @@ private fun Cards(
                     hold = hold,
                     anchor = anchor,
                     requester = focus.requester(card.app.key),
-                    modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null),
+                    modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = TvTheme.motion.placementSpec),
                 )
             }
         }

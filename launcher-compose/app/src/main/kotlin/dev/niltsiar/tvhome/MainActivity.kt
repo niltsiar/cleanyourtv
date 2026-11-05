@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null && !openLibraryIfAsked(intent)) openInputsIfAsked(intent)
         applyViewInputsHandler(graph.config.handleViewInputs)
         setContent {
-            TvTheme(glassKind = GlassKind.valueOf(BuildConfig.GLASS_KIND)) {
+            TvTheme(glassKind = GlassKind.valueOf(BuildConfig.GLASS_KIND), motion = graph.config.motion()) {
                 // Home and the library both draw glass from what Home shows, so they share one state.
                 val glass = rememberGlassState()
                 Box(Modifier.fillMaxSize()) {

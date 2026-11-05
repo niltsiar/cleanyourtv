@@ -1,8 +1,6 @@
 package dev.niltsiar.tvhome.core.designsystem
 
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -31,16 +29,15 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 
 private const val FOCUSED_SCALE = 1.1f
-private val FocusSpring = spring<Float>(dampingRatio = 0.5f, stiffness = Spring.StiffnessMedium)
 private val RingWidth = 2.dp
 private val RingGap = 3.dp
 private val GlowElevation = 12.dp
 private val Gloss = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f), Color.Transparent))
 
 /**
- * A D-pad target: scales up with a small overshoot and gets a lit top, an accent ring and an accent glow while
- * focused. Only the content is clipped to [shape]; the ring floats outside it and its corners are concentric to the
- * shape's, so a parent must leave the grown surface plus 5dp times [focusedScale] free around it or it clips the ring.
+ * A D-pad target: scales up and gets a lit top, an accent ring and an accent glow while focused; how it moves is the
+ * theme's [Motion] (a small overshoot by default). Only the content is clipped to [shape]; the ring floats outside it
+ * and its corners are concentric to the shape's, so a parent must leave the grown surface plus 5dp times [focusedScale] free around it or it clips the ring.
  * [onFocused] fires on gaining focus. [interactionSource] receives the press and focus events, for content
  * that reacts to them. [accent] colours the ring and the glow; unspecified takes the theme's. [glow] turns the accent
  * glow off: the elevation shadow also shows through a translucent surface, as a dark patch, so glass has none. The
@@ -60,13 +57,15 @@ public fun FocusSurface(
     content: @Composable BoxScope.() -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
-    val focus = animateFloatAsState(if (focused) 1f else 0f, FocusSpring, label = "focus")
+    val motion = TvTheme.motion
+    val focus = animateFloatAsState(if (focused) 1f else 0f, motion.focusSpec, label = "focus")
+    val grownScale = motion.focusScale(focusedScale)
     val ringColor = accent.takeOrElse { TvTheme.colors.accent }
     Box(
         modifier =
             modifier
                 .graphicsLayer {
-                    val scale = 1f + (focusedScale - 1f) * focus.value
+                    val scale = 1f + (grownScale - 1f) * focus.value
                     scaleX = scale
                     scaleY = scale
                     shadowElevation = if (glow) GlowElevation.toPx() * focus.value.coerceIn(0f, 1f) else 0f

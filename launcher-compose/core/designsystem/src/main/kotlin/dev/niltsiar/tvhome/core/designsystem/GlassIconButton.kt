@@ -2,7 +2,6 @@ package dev.niltsiar.tvhome.core.designsystem
 
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
@@ -47,7 +46,7 @@ public fun GlassIconButton(
     val progress =
         animateFloatAsState(
             if (focused) 1f else 0f,
-            spring(dampingRatio = 0.55f, stiffness = Spring.StiffnessLow),
+            TvTheme.motion.springSpec(dampingRatio = 0.55f, stiffness = Spring.StiffnessLow),
             label = "iconFocus",
         )
     FocusSurface(

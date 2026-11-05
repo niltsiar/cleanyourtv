@@ -41,7 +41,7 @@ internal fun powerOnRedirect(
 
 /**
  * What the power-on keys ask for. [liveTv] is the Live TV package to send back to Home (power_on_home), empty when off.
- * Both are off with boot_to_live_tv, or when the Open on start app ([openOnStart], empty for none) is the point of the boot.
+ * Both are off with boot_to_live_tv.
  */
 internal data class PowerOnPlan(
     val liveTv: String,
@@ -50,16 +50,11 @@ internal data class PowerOnPlan(
     val enabled: Boolean get() = liveTv.isNotEmpty() || always
 }
 
-internal fun powerOnPlan(
-    config: TvConfig,
-    openOnStart: String,
-): PowerOnPlan {
-    val liveTv = config.liveTvPackage.orEmpty()
-    return PowerOnPlan(
-        liveTv = if (config.powerOnHome && !config.bootToLiveTv && liveTv != openOnStart) liveTv else "",
-        always = config.powerOnHomeAlways && !config.bootToLiveTv && openOnStart.isEmpty(),
+internal fun powerOnPlan(config: TvConfig): PowerOnPlan =
+    PowerOnPlan(
+        liveTv = if (config.powerOnHome && !config.bootToLiveTv) config.liveTvPackage.orEmpty() else "",
+        always = config.powerOnHomeAlways && !config.bootToLiveTv,
     )
-}
 
 /**
  * power_on_home and power_on_home_always. A Live TV window the firmware opens by itself at power-on goes back to Home until

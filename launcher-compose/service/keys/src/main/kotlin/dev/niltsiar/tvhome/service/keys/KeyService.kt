@@ -105,7 +105,7 @@ public class KeyService : AccessibilityService() {
         }
         stockHome = stockHomeActivities(this, config.stockHomeRedirect)
         homeOpener = HomeOpener(this, config.stockHomeRedirect, stockHome)
-        val plan = powerOnPlan(config, openOnStart = "")
+        val plan = powerOnPlan(config)
         if (plan.enabled) armPowerOnHome(plan)
         // The service XML subscribes to no events, so the redirects ask for window changes only when one is on.
         val windowEvents = stockHome.isNotEmpty() || plan.liveTv.isNotEmpty() || keys.watchesFront

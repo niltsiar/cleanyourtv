@@ -17,6 +17,7 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -128,15 +129,20 @@ private fun ClockText(
     }
 }
 
-/** The colon's opacity, from full to [COLON_LOW] and back, as a state that only draw lambdas read. */
+/**
+ * The colon's opacity, from full to [COLON_LOW] and back, as a state that only draw lambdas read. It stays at full
+ * when the theme's motion does not run endless loops.
+ */
 @Composable
-private fun rememberColonBreath(): State<Float> =
-    rememberInfiniteTransition(label = "colon").animateFloat(
+internal fun rememberColonBreath(): State<Float> {
+    if (!TvTheme.motion.animated) return remember { mutableStateOf(1f) }
+    return rememberInfiniteTransition(label = "colon").animateFloat(
         initialValue = 1f,
         targetValue = COLON_LOW,
         animationSpec = infiniteRepeatable(tween(BREATH_MS, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "breath",
     )
+}
 
 /** Text whose opacity follows the scene's fade, and [breath] where given, in the draw phase. */
 @Composable

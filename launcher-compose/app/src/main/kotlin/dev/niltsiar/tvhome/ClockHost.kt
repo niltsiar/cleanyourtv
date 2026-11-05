@@ -28,7 +28,7 @@ internal fun ClockHost(graph: AppGraph) {
     val picture by produceState<ImageBitmap?>(initialValue = null) {
         if (graph.config.clockWallpaper) value = graph.screensaverWallpaper.current()
     }
-    TvTheme {
+    TvTheme(motion = graph.config.motion()) {
         ClockScene(face = face, glow = graph.config.clockGlow, picture = picture)
     }
 }

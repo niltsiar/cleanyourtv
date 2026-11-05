@@ -3,7 +3,6 @@ package dev.niltsiar.tvhome.core.designsystem
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -85,12 +84,13 @@ public fun GlassDropdown(
     edgeMargin: Dp = 0.dp,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val reveal = remember { Animatable(0f) }
+    val motion = TvTheme.motion
+    val reveal = remember { Animatable(if (motion.animations) 0f else 1f) }
     LaunchedEffect(Unit) {
         withFrameNanos { }
         firstFocus.requestFocus()
     }
-    LaunchedEffect(Unit) { reveal.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)) }
+    LaunchedEffect(Unit) { reveal.animateTo(1f, motion.springSpec(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)) }
     Layout(
         content = {
             GlassSurface(

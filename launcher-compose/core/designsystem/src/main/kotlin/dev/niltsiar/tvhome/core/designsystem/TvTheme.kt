@@ -200,6 +200,9 @@ private val LocalTvColors = staticCompositionLocalOf { DarkColors }
 private val LocalTvTypography = staticCompositionLocalOf { typographyFor(DarkColors) }
 
 @Suppress("CompositionLocalAllowlist")
+private val LocalMotion = staticCompositionLocalOf { Motion() }
+
+@Suppress("CompositionLocalAllowlist")
 internal val LocalGlassKind = staticCompositionLocalOf { GlassKind.Refractive }
 
 public object TvTheme {
@@ -212,18 +215,25 @@ public object TvTheme {
         @Composable
         @ReadOnlyComposable
         get() = LocalTvTypography.current
+
+    public val motion: Motion
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalMotion.current
 }
 
-/** Dark-only TV theme. [glassKind] picks how glass surfaces draw. */
+/** Dark-only TV theme. [glassKind] picks how glass surfaces draw, [motion] how anything moves. */
 @Composable
 public fun TvTheme(
     glassKind: GlassKind = GlassKind.Refractive,
+    motion: Motion = Motion(),
     content: @Composable () -> Unit,
 ) {
     CompositionLocalProvider(
         LocalTvColors provides DarkColors,
         LocalTvTypography provides typographyFor(DarkColors),
         LocalGlassKind provides glassKind,
+        LocalMotion provides motion,
         content = content,
     )
 }

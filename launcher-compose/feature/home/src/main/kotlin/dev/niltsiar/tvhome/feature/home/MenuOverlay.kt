@@ -3,7 +3,6 @@ package dev.niltsiar.tvhome.feature.home
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -67,8 +66,9 @@ internal fun ReorderHintPill(
     hint: ReorderHint,
     modifier: Modifier = Modifier,
 ) {
-    val reveal = remember { Animatable(0f) }
-    LaunchedEffect(Unit) { reveal.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)) }
+    val motion = TvTheme.motion
+    val reveal = remember { Animatable(if (motion.animations) 0f else 1f) }
+    LaunchedEffect(Unit) { reveal.animateTo(1f, motion.springSpec(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)) }
     GlassSurface(
         glass = glass,
         shape = RoundedCornerShape(28.dp),

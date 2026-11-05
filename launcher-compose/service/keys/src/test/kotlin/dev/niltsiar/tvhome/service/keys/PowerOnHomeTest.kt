@@ -56,15 +56,12 @@ class PowerOnHomeTest {
     }
 
     @Test
-    fun boot_to_live_tv_and_an_open_on_start_app_switch_the_power_on_keys_off() {
+    fun boot_to_live_tv_switches_the_power_on_keys_off() {
         val both = TvConfig(powerOnHome = true, powerOnHomeAlways = true)
-        assertEquals(PowerOnPlan(tv, always = true), powerOnPlan(both, openOnStart = ""))
-        assertEquals(PowerOnPlan("", always = false), powerOnPlan(both.copy(bootToLiveTv = true), openOnStart = ""))
-        // Live TV as the Open on start app is meant to open at boot; any other app turns off only "always".
-        assertEquals(PowerOnPlan("", always = false), powerOnPlan(both, openOnStart = tv))
-        assertEquals(PowerOnPlan(tv, always = false), powerOnPlan(both, openOnStart = "org.xbmc.kodi"))
-        assertFalse(powerOnPlan(TvConfig(), openOnStart = "").enabled)
-        assertFalse(powerOnPlan(both.copy(liveTvPackage = null, powerOnHomeAlways = false), openOnStart = "").enabled)
+        assertEquals(PowerOnPlan(tv, always = true), powerOnPlan(both))
+        assertEquals(PowerOnPlan("", always = false), powerOnPlan(both.copy(bootToLiveTv = true)))
+        assertFalse(powerOnPlan(TvConfig()).enabled)
+        assertFalse(powerOnPlan(both.copy(liveTvPackage = null, powerOnHomeAlways = false)).enabled)
     }
 
     /** The unit on a clock and a timer that move together. */

@@ -5,7 +5,6 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -374,7 +373,7 @@ private fun HomeContent(
                     tileMenu = layout.tileMenu,
                     modifier =
                         Modifier
-                            .animateItem(fadeInSpec = null, fadeOutSpec = null)
+                            .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = TvTheme.motion.placementSpec)
                             .fadeUnderShelf(gridState, app.key, shelfBottom)
                             .towardLibrary(
                                 input,
@@ -513,8 +512,9 @@ private fun ShelfTitle(
     modifier: Modifier = Modifier,
 ) {
     val text = label()
-    val reveal = remember(text) { Animatable(0f) }
-    LaunchedEffect(reveal) { reveal.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)) }
+    val motion = TvTheme.motion
+    val reveal = remember(text) { Animatable(if (motion.animations) 0f else 1f) }
+    LaunchedEffect(reveal) { reveal.animateTo(1f, motion.springSpec(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)) }
     Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.BottomStart) {
         BasicText(
             text = text,
@@ -573,7 +573,7 @@ private fun Dock(
                             tileMenu = layout.tileMenu,
                             modifier =
                                 Modifier
-                                    .animateItem(fadeInSpec = null, fadeOutSpec = null)
+                                    .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = TvTheme.motion.placementSpec)
                                     .width(rowTileWidth)
                                     .then(if (index == 0) Modifier.focusRequester(firstTile) else Modifier)
                                     .towardLibrary(input, layout, grid, last = index == dock.lastIndex, row = -1, column = index),
