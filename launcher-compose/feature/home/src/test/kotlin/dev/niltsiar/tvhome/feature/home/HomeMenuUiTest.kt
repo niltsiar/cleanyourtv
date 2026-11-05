@@ -2,6 +2,9 @@ package dev.niltsiar.tvhome.feature.home
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -10,6 +13,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
@@ -20,6 +24,9 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
+import dev.niltsiar.tvhome.core.model.InputRow
+import dev.niltsiar.tvhome.core.model.InputsMenu
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -39,14 +46,19 @@ class HomeMenuUiTest {
     private val effects = mutableListOf<HomeEffect>()
     private val saved = mutableListOf<Pair<List<String>, Int>>()
     private val clicked = mutableListOf<String>()
+    private val installed = MutableStateFlow(AppList(NineApps))
+    private var homePresses by mutableIntStateOf(0)
+    private var inputsRequests by mutableIntStateOf(0)
 
     private fun showHome(
         config: TvConfig = SixColumns,
         apps: List<AppEntry> = NineApps,
     ) {
+        installed.value = AppList(apps)
         val sources =
             sources(
-                apps = flowOf(AppList(apps)),
+                apps = installed,
+                inputs = flowOf(InputsMenu(available = true, rows = listOf(InputRow.Panel), panelOnly = true)),
                 saveOrder = { keys, docked ->
                     saved += keys to docked
                     true
@@ -63,6 +75,8 @@ class HomeMenuUiTest {
                     onClick = { clicked += it },
                     topBar = config.topBarLayout(),
                     actions = viewModel.actions,
+                    homePresses = { homePresses },
+                    inputsRequests = { inputsRequests },
                 )
             }
         }
@@ -256,4 +270,86 @@ class HomeMenuUiTest {
     private fun topBarBottom() = with(compose.density) { (TopBarTop + TopBarHeight).toPx() }
 
     private fun screenMargin() = with(compose.density) { 20.dp.toPx() }
+
+    /** The focused tile goes away, so focus comes back into Home from outside, as when the window regains it. */
+    private fun removeTheFocusedTile() {
+        installed.value = AppList(installed.value.apps.filterNot { it.key == "pkg.1" })
+        compose.waitForIdle()
+    }
+
+    private fun assertFocusInTheDock() = compose.onNode(isFocused() and hasAnyAncestor(hasTestTag("dock"))).assertIsFocused()
+
+    private fun openSettingsMenu() {
+        press(Key.DirectionUp)
+        repeat(2) { press(Key.DirectionRight) }
+        holdOk()
+        releaseOk()
+        compose.onNodeWithTag("menu").assertExists()
+    }
+
+    @Test
+    fun focus_coming_back_into_home_goes_to_the_dock_after_the_home_key_closed_a_grid_tile_menu() {
+        showHome()
+        press(Key.DirectionDown)
+        repeat(2) { press(Key.DirectionRight) }
+        compose.onNodeWithTag("tile:pkg.9").assertIsFocused()
+        holdOk()
+        releaseOk()
+        compose.onNodeWithTag("menu").assertExists()
+        homePresses++
+        compose.waitForIdle()
+        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+
+        removeTheFocusedTile()
+
+        assertFocusInTheDock()
+    }
+
+    @Test
+    fun focus_coming_back_into_home_goes_to_the_dock_after_the_home_key_closed_the_settings_menu() {
+        showHome()
+        openSettingsMenu()
+        homePresses++
+        compose.waitForIdle()
+        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+
+        removeTheFocusedTile()
+
+        assertFocusInTheDock()
+    }
+
+    @Test
+    fun focus_coming_back_into_home_goes_to_the_dock_after_the_inputs_key_closed_the_settings_menu_for_a_source_panel() {
+        showHome()
+        openSettingsMenu()
+        inputsRequests++
+        compose.waitForIdle()
+        compose.onNodeWithTag("menu").assertDoesNotExist()
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+
+        removeTheFocusedTile()
+
+        assertFocusInTheDock()
+    }
+
+    @Test
+    fun focus_coming_back_into_home_goes_to_the_dock_after_the_inputs_key_closed_a_grid_tile_menu_for_a_source_panel() {
+        showHome()
+        press(Key.DirectionDown)
+        repeat(2) { press(Key.DirectionRight) }
+        compose.onNodeWithTag("tile:pkg.9").assertIsFocused()
+        holdOk()
+        releaseOk()
+        compose.onNodeWithTag("menu").assertExists()
+        inputsRequests++
+        compose.waitForIdle()
+        compose.onNodeWithTag("menu").assertDoesNotExist()
+        press(Key.DirectionUp)
+        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+
+        removeTheFocusedTile()
+
+        assertFocusInTheDock()
+    }
 }

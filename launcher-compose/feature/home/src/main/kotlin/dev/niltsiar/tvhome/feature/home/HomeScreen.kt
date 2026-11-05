@@ -309,7 +309,9 @@ public fun HomeScreen(
                     onEnter = {
                         if (requestedFocusDirection != FocusDirection.Enter) {
                             try {
-                                dockFocus.requestFocus()
+                                // An overlay that just closed gives focus back to what it hung from, not to the dock on the way.
+                                val owner = input.overlayOwner
+                                if (owner == null || !input.focus(owner)) dockFocus.requestFocus()
                             } catch (e: IllegalStateException) {
                                 // The dock is scrolled out of the grid: the search goes on as usual.
                             }
@@ -455,6 +457,16 @@ private fun HomeContent(
             val shown = state()
             val target = shown.focusedKey?.takeIf { key -> (shown.dock + shown.grid).any { it.key == key } } ?: shown.dock.first().key
             focusOn(target, gridState, dockRow, layout.singleRow, state, input)
+        }
+    }
+    LaunchedEffect(gridState) {
+        snapshotFlow { overlayOwnerOf(state(), input, libraryOpen()) }.collectLatest { owner ->
+            if (owner == null) {
+                // Same wait as focusOn: the redirect runs before then. An overlay that opens meanwhile cancels the clear.
+                withFrameNanos { }
+                withFrameNanos { }
+            }
+            input.overlayOwner = owner
         }
     }
     LaunchedEffect(gridState) {
@@ -609,6 +621,19 @@ private suspend fun focusOn(
     withFrameNanos { }
     input.focus(target)
 }
+
+/** The focus target the open overlay hangs from, or null while none is open. */
+private fun overlayOwnerOf(
+    state: HomeUiState,
+    input: HomeInput,
+    libraryOpen: Boolean,
+): String? =
+    when {
+        state.menu != null -> state.menu.tileKey ?: SETTINGS_FOCUS
+        state.inputsOpen -> INPUTS_FOCUS
+        libraryOpen -> if (input.fromTopBar) LIBRARY_BUTTON_FOCUS else LIBRARY_FOCUS
+        else -> null
+    }
 
 /**
  * The App library pill, centred in [modifier]'s box: after the last row, where only Up leaves it, to the tile [up] names;

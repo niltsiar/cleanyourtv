@@ -84,14 +84,17 @@ internal class HomeInput(
 
     fun requester(target: String): FocusRequester = requesters.getOrPut(target) { FocusRequester() }
 
-    /** Moves focus to [target] when something with that key is composed. */
-    fun focus(target: String) {
+    /** The focus target the open menu, input list or library hangs from, which focus goes back to when it closes. */
+    var overlayOwner: String? = null
+
+    /** Moves focus to [target] when something with that key is composed; whether it did. */
+    fun focus(target: String): Boolean =
         try {
-            requesters[target]?.requestFocus()
+            requesters[target]?.requestFocus() == true
         } catch (e: IllegalStateException) {
             // The tile is gone or not built yet.
+            false
         }
-    }
 
     /**
      * Keys that act before the focused item sees them. The UP of a hold that opened a menu goes nowhere, wherever

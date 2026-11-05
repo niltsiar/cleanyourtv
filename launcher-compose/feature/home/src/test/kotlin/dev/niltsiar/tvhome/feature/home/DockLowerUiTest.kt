@@ -1,11 +1,19 @@
 package dev.niltsiar.tvhome.feature.home
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
@@ -13,6 +21,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getBoundsInRoot
@@ -58,6 +67,7 @@ class DockLowerUiTest {
     private val apps = (1..18).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it", image = white) }
     private val cinematic = SixColumns.copy(cinematicHome = true, appLibrary = true)
     private var inputsRequests by mutableIntStateOf(0)
+    private var libraryOpen by mutableStateOf(false)
 
     private fun showHome(
         motion: Motion = Motion(),
@@ -78,6 +88,9 @@ class DockLowerUiTest {
                     shelfLayout = config.shelfLayout().copy(scrimAlpha = 0f),
                     actions = viewModel.actions,
                     inputsRequests = { inputsRequests },
+                    libraryOpen = { libraryOpen },
+                    onOpenLibrary = { libraryOpen = true },
+                    overlays = { if (libraryOpen) LibraryStandIn() },
                 )
             }
         }
@@ -88,6 +101,14 @@ class DockLowerUiTest {
         }
         compose.waitForIdle()
         compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+    }
+
+    /** An overlay that takes focus when it opens, as the App library does. */
+    @Composable
+    private fun LibraryStandIn() {
+        val focus = remember { FocusRequester() }
+        Box(Modifier.testTag("library").focusRequester(focus).focusable())
+        LaunchedEffect(Unit) { focus.requestFocus() }
     }
 
     private fun press(key: Key) {
@@ -368,5 +389,36 @@ class DockLowerUiTest {
 
         compose.onNodeWithTag("menu").assertExists()
         assertNear(dock, top("dock"))
+    }
+
+    @Test
+    fun closing_the_menu_of_a_grid_tile_leaves_the_grid_where_it_was() {
+        showHome()
+        focusGridTile()
+        val before = top("tile:pkg.7")
+        holdOk()
+        compose.onNodeWithTag("menu").assertExists()
+
+        strayOf("tile:pkg.7") { back() }
+
+        compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+        assertNear(before, top("tile:pkg.7"))
+    }
+
+    @Test
+    fun closing_the_library_back_to_the_pill_leaves_the_grid_where_it_was() {
+        showHome()
+        repeat(3) { press(Key.DirectionDown) }
+        compose.onNodeWithTag("library:pill").assertIsFocused()
+        val before = top("tile:pkg.7")
+        press(Key.DirectionCenter)
+        compose.onNodeWithTag("library").assertExists()
+        compose.mainClock.advanceTimeBy(1_000)
+
+        val stray = strayOf("tile:pkg.7") { libraryOpen = false }
+
+        compose.onNodeWithTag("library:pill").assertIsFocused()
+        assertNear(before, top("tile:pkg.7"))
+        assertTrue("the grid strayed $stray dp", stray <= 1f)
     }
 }
