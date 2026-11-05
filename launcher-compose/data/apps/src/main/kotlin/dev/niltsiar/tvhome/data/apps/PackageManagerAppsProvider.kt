@@ -57,6 +57,7 @@ public class PackageManagerAppsProvider(
     /** Set by [trimImages], cleared when a list with images goes out: the next start loads the images again. */
     @Volatile
     private var imagesDropped = false
+    private val versions = refreshes.combine(trims, ::Pair)
     private val packageFilter =
         IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
@@ -95,7 +96,7 @@ public class PackageManagerAppsProvider(
             emit(loaded.toAppList(withImages = true))
             imagesDropped = false
             // A refresh shows no bare labels first: that would blank every banner for a frame.
-            refreshes.combine(trims) { version, trim -> version to trim }.collect { (version, trim) ->
+            versions.collect { (version, trim) ->
                 if (version != seen) {
                     seen = version
                     trimmed = trim
@@ -116,7 +117,7 @@ public class PackageManagerAppsProvider(
             var trimmed = trims.value
             var bar = loadTopBarApps()
             emit(bar)
-            refreshes.combine(trims) { version, trim -> version to trim }.collect { (version, trim) ->
+            versions.collect { (version, trim) ->
                 if (version != seen) {
                     seen = version
                     trimmed = trim

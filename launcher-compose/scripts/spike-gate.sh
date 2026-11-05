@@ -93,8 +93,8 @@ case "$HOME_ACTIVITY" in
     ;;
 esac
 
-# Kept until a TV run shows the benchmark build leaves the real package alone: a reinstall of dev.niltsiar.tvhome would drop
-# our key service from the enabled list, which strands the remote on a TV that still names it.
+# A reinstall of dev.niltsiar.tvhome would drop our key service from the enabled list, which strands the remote on a TV
+# that still names it.
 SERVICES="$(adb_tv shell settings get secure enabled_accessibility_services 2> /dev/null | tr -d '\r')" || SERVICES=""
 case ":$SERVICES:" in
   *":$PACKAGE/.service.keys.KeyService:"* | *":$PACKAGE/$PACKAGE.service.keys.KeyService:"*)

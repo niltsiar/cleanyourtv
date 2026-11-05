@@ -119,7 +119,7 @@ internal class HomeInteraction(
             }
 
             is HomeEvent.Focus -> {
-                remember(event.key)
+                rememberFocus(event.key)
             }
 
             HomeEvent.Stopped -> {
@@ -128,7 +128,7 @@ internal class HomeInteraction(
 
             HomeEvent.HomePressed -> {
                 closeAll()
-                shown.all.firstOrNull()?.let { remember(it.key, slot = 0) }
+                shown.all.firstOrNull()?.let { rememberFocus(it.key, slot = 0) }
             }
 
             is HomeEvent.Click -> {
@@ -172,7 +172,7 @@ internal class HomeInteraction(
         end()
     }
 
-    private fun remember(
+    private fun rememberFocus(
         key: String,
         slot: Int = shown.all.indexOfFirst { it.key == key },
     ) {

@@ -152,7 +152,7 @@ private const val GRID_ITEMS_BEFORE = 2
  * after the last row ([HomeLayout.libraryPill]) and the top bar's library button call [onOpenLibrary]; when
  * [libraryOpen] goes false again, focus returns to the one that opened it (the pill for any other way in).
  * OK on the Inputs button hangs the TV's input list under it; Back closes the list and returns focus to the button.
- * Each rise of [inputsRequests] (the system asked for the input list) opens the list once the button is laid out.
+ * Each rise of [inputsRequests] (the system asked for the input list) opens the list.
  */
 @Composable
 public fun HomeScreen(
@@ -822,7 +822,6 @@ private fun HomeScreenInputsPreview() {
         GlassKind.Refractive,
         inputs = PreviewInputs,
         inputsOpen = true,
-        menuAnchor = Rect(left = 1358f, top = 56f, right = 1438f, bottom = 136f),
     )
 }
 
