@@ -14,6 +14,7 @@ import androidx.compose.ui.test.pressKey
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.GlassKind
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.model.InputsMenu
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -36,13 +37,14 @@ class HomeLibraryUiTest {
     private fun showHome(
         config: TvConfig = SixColumns.copy(appLibrary = true),
         reordering: Boolean = false,
+        inputs: InputsMenu = InputsMenu(),
     ) {
         val apps = homeApps(config = config)
         val reorder = if (reordering) ReorderView(carried = null, dimmed = emptySet(), hint = ReorderHint.Reorder) else null
         compose.setContent {
             TvTheme(glassKind = GlassKind.Flat) {
                 HomeScreen(
-                    state = { homeUiState(apps, Evening, focusedKey, Locale.ENGLISH, reorder = reorder) },
+                    state = { homeUiState(apps, Evening, focusedKey, Locale.ENGLISH, reorder = reorder, inputs = inputs) },
                     layout = config.homeLayout(),
                     onFocus = { focusedKey = it },
                     onClick = {},
@@ -121,7 +123,7 @@ class HomeLibraryUiTest {
 
     @Test
     fun a_top_bar_button_with_library_button_opens_the_library() {
-        showHome(SixColumns.copy(appLibrary = true, libraryButton = true, showLibraryPill = false))
+        showHome(SixColumns.copy(appLibrary = true, libraryButton = true, showLibraryPill = false), inputs = InputsMenu(available = true))
         press(Key.DirectionUp)
         press(Key.DirectionRight)
         press(Key.DirectionRight)

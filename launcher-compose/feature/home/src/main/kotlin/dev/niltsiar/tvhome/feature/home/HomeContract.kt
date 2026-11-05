@@ -42,7 +42,7 @@ public data class HomeUiState(
     val menu: HomeMenu? = null,
     val reorder: ReorderView? = null,
     val focusRequest: FocusRequest? = null,
-    val inputs: InputsMenu = InputsMenu(available = true),
+    val inputs: InputsMenu = InputsMenu(available = false),
     val inputsOpen: Boolean = false,
 )
 
@@ -250,7 +250,7 @@ internal fun homeUiState(
     menu: HomeMenu? = null,
     reorder: ReorderView? = null,
     focusRequest: FocusRequest? = null,
-    inputs: InputsMenu = InputsMenu(available = true),
+    inputs: InputsMenu = InputsMenu(available = false),
     inputsOpen: Boolean = false,
 ): HomeUiState =
     HomeUiState(
