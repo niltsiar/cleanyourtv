@@ -5,7 +5,6 @@ import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import dev.niltsiar.tvhome.core.designsystem.Motion
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -51,11 +50,25 @@ class WifiLightTest {
     }
 
     @Test
-    fun the_inputs_arrow_slides_out_and_back_once() {
-        assertEquals(0f, inputsArrowSlide(0f), 1e-6f)
-        assertEquals(1f, inputsArrowSlide(0.5f), 1e-6f)
-        assertEquals(0f, inputsArrowSlide(1f), 1e-6f)
-        assertTrue(inputsArrowSlide(0.25f) in 0.1f..0.9f)
+    fun the_inputs_arrow_starts_7_units_before_its_place_and_invisible() {
+        assertEquals(-7f, inputsArrowOffset(0f), 1e-4f)
+        assertEquals(0f, inputsArrowAlpha(0f), 0f)
+    }
+
+    @Test
+    fun the_inputs_arrow_passes_its_place_by_one_unit_and_rests_there_at_the_end() {
+        val offsets = (0..100).map { inputsArrowOffset(it / 100f) }
+
+        assertEquals(1f, offsets.max(), 0.05f)
+        assertTrue(offsets.indexOf(offsets.max()) in 50..90)
+        assertEquals(0f, inputsArrowOffset(1f), 1e-4f)
+    }
+
+    @Test
+    fun the_inputs_arrow_fades_in_over_the_first_30_percent_and_stays_opaque() {
+        assertEquals(0.5f, inputsArrowAlpha(0.15f), 1e-4f)
+        assertEquals(1f, inputsArrowAlpha(0.3f), 0f)
+        assertEquals(1f, inputsArrowAlpha(1f), 0f)
     }
 }
 
@@ -84,15 +97,18 @@ class FocusTimelineTest {
     }
 
     @Test
-    fun it_rests_at_one_and_runs_from_zero_to_one_in_the_shared_icon_time_when_focus_arrives() {
+    fun it_rests_at_one_and_runs_from_zero_to_one_in_750_ms_when_focus_arrives() {
         show()
         assertEquals(1f, value(), 0f)
 
         emit(focus)
         compose.mainClock.advanceTimeBy(160)
-        assertTrue(value() in 0.2f..0.95f)
+        assertTrue(value() in 0.1f..0.6f)
 
-        compose.mainClock.advanceTimeBy(Motion.ICON_MS - 160L + 20)
+        compose.mainClock.advanceTimeBy(500)
+        assertTrue(value() < 1f)
+
+        compose.mainClock.advanceTimeBy(750 - 660L + 20)
         assertEquals(1f, value(), 0f)
     }
 
@@ -119,7 +135,7 @@ class FocusTimelineTest {
     fun losing_focus_after_the_run_replays_nothing() {
         show()
         emit(focus)
-        compose.mainClock.advanceTimeBy(Motion.ICON_MS + 50L)
+        compose.mainClock.advanceTimeBy(750 + 50L)
 
         emit(FocusInteraction.Unfocus(focus))
         compose.mainClock.advanceTimeBy(300)

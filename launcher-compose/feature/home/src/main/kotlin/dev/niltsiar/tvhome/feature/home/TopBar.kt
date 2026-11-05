@@ -75,11 +75,11 @@ import dev.niltsiar.tvhome.core.model.InputRow
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
 import kotlinx.coroutines.flow.collectLatest
-import kotlin.math.PI
-import kotlin.math.sin
 
 private const val ICON_VIEWPORT = 24f
-private const val INPUTS_ARROW_SLIDE = 2.5f
+private const val INPUTS_ARROW_ENTRY = 7f
+private const val INPUTS_ARROW_OVERSHOOT = 2.1f
+private const val INPUTS_ARROW_FADE = 0.3f
 private const val SETTINGS_TURN = 90f
 private const val TIMELINE_SETTLE_MS = 250
 private const val ARC_DIM = 0.2f
@@ -244,7 +244,8 @@ internal fun TopBar(
             ) { _, ink ->
                 IconPart(R.drawable.ic_inputs_frame, ink)
                 IconPart(R.drawable.ic_inputs_arrow, ink) {
-                    translationX = inputsArrowSlide(slide.value) * INPUTS_ARROW_SLIDE * size.width / ICON_VIEWPORT
+                    translationX = inputsArrowOffset(slide.value) * size.width / ICON_VIEWPORT
+                    alpha = inputsArrowAlpha(slide.value)
                 }
             }
         }
@@ -632,8 +633,18 @@ internal fun wifiLight(
     return ARC_DIM + (1f - ARC_DIM) * EaseOutCubic.transform(((t - start) / ARC_RELIGHT).coerceIn(0f, 1f))
 }
 
-/** How far the Inputs arrow has slid on a [timeline] from 0 to 1: out and back once, 0 at both ends and 1 at the middle. */
-internal fun inputsArrowSlide(timeline: Float): Float = sin(PI.toFloat() * timeline.coerceIn(0f, 1f))
+/**
+ * Where the Inputs arrow stands, in icon viewport units from its rest place, on a [timeline] from 0 to 1: [INPUTS_ARROW_ENTRY]
+ * units before it at 0, a unit past it near the end of the run (an ease-out back), and at rest at 1.
+ */
+internal fun inputsArrowOffset(timeline: Float): Float {
+    val behind = timeline.coerceIn(0f, 1f) - 1f
+    val reached = 1f + (INPUTS_ARROW_OVERSHOOT + 1f) * behind * behind * behind + INPUTS_ARROW_OVERSHOOT * behind * behind
+    return -INPUTS_ARROW_ENTRY * (1f - reached)
+}
+
+/** The Inputs arrow's alpha on a [timeline] from 0 to 1: it fades in over the first [INPUTS_ARROW_FADE] of it. */
+internal fun inputsArrowAlpha(timeline: Float): Float = (timeline / INPUTS_ARROW_FADE).coerceIn(0f, 1f)
 
 /**
  * A value that sits at 1 and runs from 0 to 1 over [Motion.ICON_MS] each time the button behind [interactionSource]
