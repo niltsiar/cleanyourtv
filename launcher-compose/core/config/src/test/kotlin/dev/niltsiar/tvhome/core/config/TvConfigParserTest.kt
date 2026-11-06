@@ -328,6 +328,20 @@ class TvConfigParserTest {
     }
 
     @Test
+    fun icon_only_buttons_tells_an_absent_key_from_true_and_from_false() {
+        assertEquals(null, parseTvConfig("""{"columns": 6}""").config.iconOnlyButtons)
+        assertEquals(true, parseTvConfig("""{"icon_only_buttons": true}""").config.iconOnlyButtons)
+        assertEquals(false, parseTvConfig("""{"icon_only_buttons": false}""").config.iconOnlyButtons)
+    }
+
+    @Test
+    fun icon_only_buttons_of_the_wrong_type_is_rejected_and_stays_absent() {
+        val parsed = parseTvConfig("""{"icon_only_buttons": "false"}""")
+        assertEquals(null, parsed.config.iconOnlyButtons)
+        assertEquals(listOf("icon_only_buttons"), parsed.rejectedKeys)
+    }
+
+    @Test
     fun the_network_button_keys_are_read_and_a_blank_vpn_app_is_none() {
         val parsed =
             parseTvConfig(
@@ -335,7 +349,8 @@ class TvConfigParserTest {
                    "wifi_status_warnings": true, "vpn_app": " com.vpn.app "}""",
             )
         val config = parsed.config
-        assertTrue(config.iconOnlyButtons && config.wifiStatusColor && config.wifiStatusWarnings)
+        assertTrue(config.wifiStatusColor && config.wifiStatusWarnings)
+        assertEquals(true, config.iconOnlyButtons)
         assertEquals(120, config.wifiLabelWidth)
         assertEquals("com.vpn.app", config.vpnApp)
         assertEquals(emptyList<String>(), parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys)

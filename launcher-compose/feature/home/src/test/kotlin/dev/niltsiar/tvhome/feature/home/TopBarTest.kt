@@ -33,6 +33,7 @@ private val Green = Color(0xFF34C759)
 private val Orange = Color(0xFFFF9F0A)
 private val Red = Color(0xFFFF453A)
 private val Wifi = NetworkState(NetworkLink.Wifi, ssid = "Home", validated = true)
+private val LongWifi = Wifi.copy(ssid = "guest network ".repeat(40))
 
 class NetworkTintTest {
     private fun tint(
@@ -150,6 +151,36 @@ class TopBarTest {
     fun a_wifi_label_width_keeps_the_network_name_beside_the_icon_at_rest() {
         show(TvConfig(columns = 6, wifiLabelWidth = 120))
         compose.onNodeWithText("Home").assertIsDisplayed()
+    }
+
+    @Test
+    fun icon_only_buttons_true_leaves_the_network_button_an_icon_at_rest() {
+        show(TvConfig(columns = 6, iconOnlyButtons = true))
+        compose.onNodeWithText("Home").assertDoesNotExist()
+    }
+
+    @Test
+    fun icon_only_buttons_true_with_a_wifi_label_width_keeps_the_network_name_at_rest() {
+        show(TvConfig(columns = 6, iconOnlyButtons = true, wifiLabelWidth = 120))
+        compose.onNodeWithText("Home").assertIsDisplayed()
+    }
+
+    @Test
+    fun icon_only_buttons_false_shows_the_network_name_at_rest() {
+        show(TvConfig(columns = 6, iconOnlyButtons = false))
+        compose.onNodeWithText("Home").assertIsDisplayed()
+    }
+
+    @Test
+    fun icon_only_buttons_false_caps_a_long_network_name_at_180_dp() {
+        show(TvConfig(columns = 6, iconOnlyButtons = false), network = LongWifi)
+        assertEquals(180.dp, compose.onNodeWithContentDescription(LongWifi.ssid!!).getBoundsInRoot().width)
+    }
+
+    @Test
+    fun icon_only_buttons_false_with_a_wifi_label_width_caps_the_network_name_at_that_width() {
+        show(TvConfig(columns = 6, iconOnlyButtons = false, wifiLabelWidth = 120), network = LongWifi)
+        assertEquals(120.dp, compose.onNodeWithContentDescription(LongWifi.ssid!!).getBoundsInRoot().width)
     }
 
     @Test

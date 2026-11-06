@@ -89,6 +89,7 @@ private const val ARC_STAGGER = 0.2f
 private const val ARC_RELIGHT = 0.34f
 private const val APP_ICON_ZOOM = 0.12f
 private const val APPS_ICON_GROWTH = 0.18f
+private const val DEFAULT_NETWORK_WIDTH_DP = 180
 private const val CLOCK_SLOTS = 5
 private const val DIVIDER_ALPHA = 0.2f
 private val NetworkIconRise = 6.dp
@@ -101,7 +102,8 @@ private val OfflineRed = Color(0xFFFF453A)
 /**
  * The theme's say over the top bar: [showNetworkPill] and [showInputsPill] hide those buttons. Every button is a round
  * icon at rest and the focused one grows into its labelled pill; a [wifiLabelWidth] over 0 keeps the network name beside
- * the icon, capping the button at that many dp. [wifiStatusColor] tints the icon by the connection ([wifiStatusWarnings] adds orange
+ * the icon, capping the button at that many dp, and [wifiLabelAtRest] (the theme's icon_only_buttons false) keeps it
+ * too, capped at 180 dp when [wifiLabelWidth] is 0. [wifiStatusColor] tints the icon by the connection ([wifiStatusWarnings] adds orange
  * and red). [vpnApp] says a VPN app is set, so a VPN that is down is worth a badge. [dateBelowClock] stacks the date under the clock.
  * [reorderButton] adds a button that turns reorder mode on and off, [libraryButton] one that opens the App library.
  * [animated] is false with animations off or reduced_motion.
@@ -111,6 +113,7 @@ public data class TopBarLayout(
     val showNetworkPill: Boolean = true,
     val showInputsPill: Boolean = true,
     val wifiLabelWidth: Int = 0,
+    val wifiLabelAtRest: Boolean = false,
     val wifiStatusColor: Boolean = false,
     val wifiStatusWarnings: Boolean = false,
     val vpnApp: Boolean = false,
@@ -126,6 +129,7 @@ public fun TvConfig.topBarLayout(): TopBarLayout =
         showNetworkPill = showNetworkPill,
         showInputsPill = showInputsPill,
         wifiLabelWidth = wifiLabelWidth,
+        wifiLabelAtRest = iconOnlyButtons == false,
         wifiStatusColor = wifiStatusColor,
         wifiStatusWarnings = wifiStatusWarnings,
         vpnApp = vpnApp != null,
@@ -502,7 +506,8 @@ private fun NetworkButton(
     val offline = animateFloatAsState(if (network.link == NetworkLink.Offline) 1f else 0f, tween(NETWORK_FADE_MS), label = "offline")
     val name = networkName(network)
     val badge = vpnBadge(network, layout)
-    val showLabel = layout.wifiLabelWidth > 0
+    val showLabel = layout.wifiLabelAtRest || layout.wifiLabelWidth > 0
+    val maxWidth = if (layout.wifiLabelWidth > 0) layout.wifiLabelWidth else DEFAULT_NETWORK_WIDTH_DP
     val interactionSource = remember { MutableInteractionSource() }
     val light = rememberFocusTimeline(interactionSource, layout.animated)
     GlassIconButton(
@@ -510,7 +515,7 @@ private fun NetworkButton(
         contentDescription = listOfNotNull(name, badge?.first).joinToString(" "),
         onClick = onClick,
         modifier =
-            (if (showLabel) Modifier.widthIn(max = layout.wifiLabelWidth.dp) else Modifier)
+            (if (showLabel) Modifier.widthIn(max = maxWidth.dp) else Modifier)
                 .nameInBand(input, BarControl.Network)
                 .holdOk(input.hold, onHold = { onHold() }),
         interactionSource = interactionSource,
