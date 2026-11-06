@@ -10,7 +10,7 @@ import androidx.compose.ui.graphics.ImageBitmap
  * [accent] is the vivid colour of the art, which the focus highlight and the cinematic shelf take; unspecified while
  * the art is not loaded. [leanback] is true when the package has a LEANBACK_LAUNCHER activity, so its tile launches like
  * the TV's own. [iconArt] is true when [image] is the app's icon drawn in the middle of the tile, which names nothing,
- * rather than a banner.
+ * rather than a banner. [lightArt] is true when the banner is light enough to need an edge on a light surface.
  */
 @Immutable
 public data class AppEntry(
@@ -21,6 +21,7 @@ public data class AppEntry(
     val accent: Color = Color.Unspecified,
     val leanback: Boolean = false,
     val iconArt: Boolean = false,
+    val lightArt: Boolean = false,
 )
 
 /** The tiles in Home's order, and how many of the leading ones are dock apps (the rest follow in the grid). */

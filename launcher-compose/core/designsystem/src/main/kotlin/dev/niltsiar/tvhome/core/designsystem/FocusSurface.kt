@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.isUnspecified
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineStart
@@ -52,6 +53,9 @@ private val Gloss = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f
 private const val PLATE_TOP_ALPHA = 0.22f
 private const val PLATE_BOTTOM_ALPHA = 0.06f
 private const val PLATE_STROKE_ALPHA = 0.3f
+
+/** How far the ring, with its hairline and dark stroke, reaches past a focused surface's edge, before the surface grows. */
+public val FocusRingReach: Dp = RingGap + RingWidth + HairlineWidth + OuterStrokeWidth
 
 /**
  * A D-pad target, for tiles and cards: scales up and gets a lit top, a white ring with a dark hairline outside it and a

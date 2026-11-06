@@ -204,11 +204,11 @@ class HeroBandUiTest {
         compose.mainClock.advanceTimeBy(1_000)
 
         assertEquals("Reorder apps", textOf("shelf:title"))
-        // Move picks the tile up, so the legend is the held step's: OK and Back both drop it.
+        // Move picks the tile up, so the legend is the held step's: one chip says OK and Back both drop it.
         for (chip in listOf("OK", "Arrows", "move", "Back")) {
             compose.onNode(hasText(chip) and hasAnyAncestor(hasTestTag("reorder:hint"))).assertExists()
         }
-        compose.onAllNodes(hasText("drop") and hasAnyAncestor(hasTestTag("reorder:hint"))).assertCountEquals(2)
+        compose.onAllNodes(hasText("drop") and hasAnyAncestor(hasTestTag("reorder:hint"))).assertCountEquals(1)
         assertTrue(bounds("reorder:hint").bottom <= bounds("dock").top)
     }
 

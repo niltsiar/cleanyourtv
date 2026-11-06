@@ -51,13 +51,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -103,7 +101,6 @@ import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.node.LayoutModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.platform.LocalConfiguration
@@ -160,7 +157,6 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.ZoneId
-import kotlin.math.max
 
 internal val ScreenMargin = 40.dp
 internal val TileGap = 24.dp
@@ -189,8 +185,11 @@ internal val ContentTop = TopBarTop + TopBarHeight + 20.dp
 private val CaptionTop = TopBarTop + TopBarHeight + 8.dp
 private val TileCorner = 12.dp
 private val TileShape = RoundedCornerShape(TileCorner)
-private val GlassTileStrokeWidth = 1.dp
-private val GlassTileStroke = Color.Black.copy(alpha = 0.28f)
+private val LightTileEdgeWidth = 1.dp
+private val LightTileEdge = Color.Black.copy(alpha = 0.28f)
+
+/** The mean L* of the frost from which the wallpaper counts as bright under a tile: the mark where the top-bar buttons thicken their tint. */
+private const val BRIGHT_WALLPAPER_LIGHTNESS = 70f
 private val DockShape = RoundedCornerShape(32.dp)
 private val GridBottom = 48.dp
 
@@ -298,6 +297,12 @@ public fun HomeScreen(
             LocalWindowInfo.current.containerSize.height
                 .toDp()
         }
+    val windowWidth =
+        with(LocalDensity.current) {
+            LocalWindowInfo.current.containerSize.width
+                .toDp()
+        }
+    val gridBand = remember(windowWidth, windowHeight, shelfBottom) { gridBand(windowWidth, windowHeight, shelfBottom) }
     val input =
         remember {
             HomeInput(
@@ -308,6 +313,7 @@ public fun HomeScreen(
                 reordering = derivedStateOf { currentState.value().reorder != null },
                 canMoveLeft = derivedStateOf { currentState.value().reorder?.canMoveLeft == true },
                 canMoveRight = derivedStateOf { currentState.value().reorder?.canMoveRight == true },
+                apart = derivedStateOf { currentState.value().reorder?.apart ?: emptyMap() },
                 openLibrary = currentOpenLibrary,
                 inputOffered = derivedStateOf { currentState.value().inputOffer != null },
                 habit = if (layout.habitMark) derivedStateOf { currentState.value().habit } else null,
@@ -344,8 +350,8 @@ public fun HomeScreen(
     val backdrop = rememberCinematicBackdrop(shelfLayout, shelf = { state().shelf }, heroArt = heroArt, reordering = reordering)
     val titleShift: GraphicsLayerScope.() -> Float = { dim.titleShiftPx(TitleGridDrop.toPx()) }
     val heroScrimOn = rememberHeroScrimOn(glass, wallpaperLayout.headerScrim)
-    val shelfTextWidth = remember { mutableIntStateOf(0) }
-    val bandTextWidth = remember { mutableIntStateOf(0) }
+    val shelfExtent = remember { TitleExtent() }
+    val bandExtent = remember { TitleExtent() }
     val shelfModifier =
         Modifier
             .padding(top = ContentTop, start = ScreenMargin)
@@ -390,6 +396,7 @@ public fun HomeScreen(
             wallpaper = { state().wallpaper },
             skyIntensity = wallpaperLayout.skyIntensity,
             dock = dim.band,
+            grid = gridBand,
             hero = dim.hero,
             dockGlass = dockLook.band && dockLook.glass,
         )
@@ -403,7 +410,8 @@ public fun HomeScreen(
             HeroScrim(
                 on = heroScrimOn,
                 boxHeight = shelfHeight - TitleToShelfBottom,
-                blockWidth = { max(shelfTextWidth.intValue, bandTextWidth.intValue) },
+                shelf = shelfExtent,
+                band = bandExtent,
                 shift = titleShift,
             )
             HomeContent(
@@ -432,7 +440,7 @@ public fun HomeScreen(
                     titleAlpha = { band.title.value },
                     detailAlpha = { band.detail.value },
                     pill = { heroScrimOn.value },
-                    onTextWidth = { shelfTextWidth.intValue = it },
+                    extent = shelfExtent,
                 )
             }
             HeroTitle(
@@ -442,7 +450,7 @@ public fun HomeScreen(
                 band,
                 shelfModifier,
                 pill = { heroScrimOn.value },
-                onTextWidth = { bandTextWidth.intValue = it },
+                extent = bandExtent,
             )
             WallpaperCaption(
                 caption = { state().wallpaper.caption },
@@ -543,6 +551,7 @@ private fun HomeContent(
     val dock = remember(state) { derivedStateOf(structuralEqualityPolicy()) { state().dock } }.value
     val grid = remember(state) { derivedStateOf(structuralEqualityPolicy()) { state().grid } }.value
     val reordering = input.reordering.value
+    val onBrightWallpaper = remember(glass) { { glass.gridLightness >= BRIGHT_WALLPAPER_LIGHTNESS } }
     LaunchedEffect(gridState) {
         snapshotFlow { state().focusRequest }.filterNotNull().collect { request ->
             focusOn(request.target, gridState, dockRow, layout.singleRow, state, input)
@@ -656,6 +665,7 @@ private fun HomeContent(
                     tileMenu = layout.tileMenu,
                     showName = layout.showNames,
                     fadeUnused = true,
+                    lightEdge = onBrightWallpaper.takeIf { app.lightArt },
                     modifier =
                         Modifier
                             .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = TvTheme.motion.placementSpec)
@@ -828,6 +838,13 @@ private class FocusDim(
 /** How long the group takes to move, and the damping of its spring when focus_overshoot is on. */
 private const val GROUP_MS = 320
 private const val GROUP_OVERSHOOT_DAMPING = 0.7f
+
+/** The window under the grid's tiles, as fractions of it: from the shelf's bottom edge to the grid's bottom margin. */
+private fun gridBand(
+    width: Dp,
+    height: Dp,
+    shelfBottom: Dp,
+): Rect = Rect(ScreenMargin / width, shelfBottom / height, 1f - ScreenMargin / width, (height - GridBottom) / height)
 
 @Composable
 private fun rememberFocusDim(
@@ -1162,11 +1179,8 @@ private fun HeroTitle(
     band: BandFade,
     modifier: Modifier = Modifier,
     pill: () -> Boolean = { false },
-    onTextWidth: (Int) -> Unit = {},
+    extent: TitleExtent = TitleExtent(),
 ) {
-    val textWidth = remember { mutableIntStateOf(0) }
-    val reportedWidth = textWidth.intValue
-    SideEffect { onTextWidth(reportedWidth) }
     val hint by remember(state) { derivedStateOf { state().reorder?.hint } }
     val count by remember(state) { derivedStateOf { state().libraryCount } }
     val control by remember(state, input) { derivedStateOf { input.headerControl(state()) } }
@@ -1213,7 +1227,7 @@ private fun HeroTitle(
             // A new time for the same tile, as the clock moves on, replaces the old one without a cross-fade.
             key = { it.copy(opened = null, never = false, usual = false) },
             inMillis = { from, to -> if (from.quick || to.quick) LIBRARY_SWAP_MS else CINEMATIC_MS },
-            modifier = Modifier.onSizeChanged { textWidth.intValue = it.width },
+            extent = extent,
         ) { shown, live ->
             Column {
                 BasicText(
@@ -1307,8 +1321,8 @@ private fun barLine(
 private fun libraryCountText(count: Int?): String = count?.let { pluralStringResource(R.plurals.library_app_count, it, it) } ?: " "
 
 /**
- * The keys of reorder mode that do something now, one chip each. With nothing [carried], OK picks a tile up and Back
- * finishes the mode. With one carried, the arrows move it and OK and Back both put it down.
+ * The keys of reorder mode that do something now, one chip per action. With nothing [carried], OK picks a tile up and Back
+ * finishes the mode. With one carried, the arrows move it and OK and Back, on one chip, put it down.
  */
 @Composable
 private fun KeyChips(carried: State<String?>) {
@@ -1320,8 +1334,11 @@ private fun KeyChips(carried: State<String?>) {
                 stringResource(R.string.reorder_move),
                 Modifier.testTag("reorder:chip:arrows"),
             )
-            KeyChip(stringResource(R.string.reorder_key_ok), stringResource(R.string.reorder_drop), Modifier.testTag("reorder:chip:ok"))
-            KeyChip(stringResource(R.string.reorder_key_back), stringResource(R.string.reorder_drop), Modifier.testTag("reorder:chip:back"))
+            KeyChip(
+                listOf(stringResource(R.string.reorder_key_ok), stringResource(R.string.reorder_key_back)),
+                stringResource(R.string.reorder_drop),
+                Modifier.testTag("reorder:chip:drop"),
+            )
         } else {
             KeyChip(stringResource(R.string.reorder_key_ok), stringResource(R.string.reorder_pick_up), Modifier.testTag("reorder:chip:ok"))
             KeyChip(
@@ -1367,6 +1384,8 @@ private fun Dock(
     // tiles than the row holds the panel is as wide as they are, centred.
     val shrunk = look.band && !layout.singleRow && dock.size < layout.columns
     val width = if (shrunk) Modifier.wrapContentWidth() else Modifier.fillMaxWidth()
+    val darkSurfaces = TvTheme.surfaces.dark
+    val onLight = remember(look, darkSurfaces, glass) { dockOnLight(look, darkSurfaces, glass) }
     DockPanel(glass, look, edge, modifier.outset(TileGap).then(width).testTag("dock")) {
         if (layout.singleRow) {
             // The grid's pivot scroll is vertical; this row scrolls sideways the usual way.
@@ -1393,7 +1412,7 @@ private fun Dock(
                             tileMenu = layout.tileMenu,
                             showName = layout.showNames,
                             edge = edge,
-                            glassStroke = look.band && look.glass,
+                            lightEdge = onLight.takeIf { app.lightArt },
                             modifier =
                                 Modifier
                                     .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = TvTheme.motion.placementSpec)
@@ -1450,7 +1469,7 @@ private fun Dock(
                             tileMenu = layout.tileMenu,
                             showName = layout.showNames,
                             edge = edge,
-                            glassStroke = look.band && look.glass,
+                            lightEdge = onLight.takeIf { app.lightArt },
                             modifier =
                                 (if (shrunk) Modifier.width(rowTileWidth) else Modifier.weight(1f))
                                     .slideToIndex(index, TileGap)
@@ -1464,6 +1483,17 @@ private fun Dock(
             }
         }
     }
+}
+
+/** Whether the surface under a dock tile is light: its tray, or with no tray the wallpaper. Read it in a draw lambda. */
+private fun dockOnLight(
+    look: DockLook,
+    darkSurfaces: Boolean,
+    glass: GlassState,
+): () -> Boolean {
+    if (!look.band) return { glass.dockLightness >= BRIGHT_WALLPAPER_LIGHTNESS }
+    val light = look.light(darkSurfaces)
+    return { light }
 }
 
 /** With input_arrival, Up from a dock tile goes to the Inputs button while it offers a device. Read when focus moves. */
@@ -1577,7 +1607,7 @@ private fun AppTile(
     habitMark: Boolean = true,
     fadeUnused: Boolean = false,
     edge: DockEdgeLight? = null,
-    glassStroke: Boolean = false,
+    lightEdge: (() -> Boolean)? = null,
 ) {
     val marked = if (habitMark) modifier.habitMark(input.habit, app.packageName) else modifier
     if (showName) {
@@ -1595,7 +1625,7 @@ private fun AppTile(
                 habitMark = false,
                 fadeUnused = fadeUnused,
                 edge = edge,
-                glassStroke = glassStroke,
+                lightEdge = lightEdge,
             )
         }
         return
@@ -1668,10 +1698,10 @@ private fun AppTile(
                 .fillMaxSize()
                 .drawBehind { drawRect(surface) }
                 .then(
-                    if (glassStroke) {
+                    if (lightEdge != null) {
                         Modifier.drawWithContent {
                             drawContent()
-                            drawGlassStroke()
+                            if (lightEdge()) drawLightTileEdge()
                         }
                     } else {
                         Modifier
@@ -1733,11 +1763,11 @@ private fun NameUnder(
     }
 }
 
-/** A 1 dp edge drawn inside the tile's shape over its art, so a light tile holds on glass. */
-private fun ContentDrawScope.drawGlassStroke() {
-    val width = GlassTileStrokeWidth.toPx()
+/** A 1 dp edge drawn inside the tile's shape over its art, so a light tile holds on a light surface. */
+private fun ContentDrawScope.drawLightTileEdge() {
+    val width = LightTileEdgeWidth.toPx()
     drawRoundRect(
-        GlassTileStroke,
+        LightTileEdge,
         topLeft = Offset(width / 2f, width / 2f),
         size = Size(size.width - width, size.height - width),
         cornerRadius = CornerRadius(TileCorner.toPx() - width / 2f),

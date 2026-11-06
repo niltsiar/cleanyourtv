@@ -6,7 +6,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -19,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
@@ -30,11 +30,14 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.constrain
 import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.config.HeaderScrim
 import dev.niltsiar.tvhome.core.designsystem.GlassState
@@ -57,13 +60,16 @@ private const val LEFT_SCRIM_REACH = 0.55f
 
 /**
  * The hero block's scrim: [HERO_SCRIM_ALPHA] black from the screen's left edge to the end of the block's longest line, gone
- * [HeroScrimReach] past it; feathered [HeroScrimFeather] above and below the block, and held [HeroScrimBelow] past its
- * bottom: the subtitle line ends 12 dp above that edge (22 dp with the cinematic shelf), so 24 dp of full strength lie under it.
+ * [HeroScrimReach] past it; [HeroScrimAbove] above the block, and held [HeroScrimBelow] past its bottom, then gone over
+ * [HeroScrimFall]: the subtitle line ends 12 dp above that edge (22 dp with the cinematic shelf), so 24 dp of full strength
+ * lie under it. Every edge falls off as a smoothstep, so none shows as a line.
  */
-private val HeroScrimReach = 120.dp
-private val HeroScrimFeather = 48.dp
+private val HeroScrimReach = 240.dp
+private val HeroScrimAbove = 96.dp
 private val HeroScrimBelow = 12.dp
+private val HeroScrimFall = 120.dp
 private const val HERO_SCRIM_ALPHA = 0.60f
+private const val FALL_STEPS = 16
 
 /** The width of the hero block's box, from the screen margin, whose picture the scrim's brightness is read from. */
 internal val HeroSampleWidth = 480.dp
@@ -185,38 +191,76 @@ internal fun rememberHeroScrimOn(
     remember(glass, headerScrim) { derivedStateOf { headerScrim == HeaderScrim.Auto && glass.heroBrightShare >= HERO_BRIGHT_SHARE } }
 
 /**
- * A soft scrim behind the hero block while [on], over the [boxHeight] of the block, [HeroScrimBelow] more, and a feather
- * above and below it. It runs from the screen's left edge over [ScreenMargin] and the block's text, [blockWidth] pixels
- * wide, and fades out [HeroScrimReach] past it.
- * It sits in one cached offscreen layer that [shift] moves in the layer phase, so a move draws nothing again.
+ * A soft scrim behind the hero block while [on], over the [boxHeight] of the block, [HeroScrimBelow] more, and the falls above and
+ * below it. It runs from the screen's left edge over [ScreenMargin] and the block's text, as wide as [shelf] and [band] say
+ * they are drawn now, and fades out [HeroScrimReach] past it. That width is read in the draw phase, so it follows a title's
+ * cross-fade without recomposing. It sits in one cached offscreen layer, as wide as the widest the text can be, that [shift]
+ * moves in the layer phase, so a move draws nothing again.
  */
 @Composable
 internal fun HeroScrim(
     on: State<Boolean>,
     boxHeight: Dp,
-    blockWidth: () -> Int,
+    shelf: TitleExtent,
+    band: TitleExtent,
     shift: GraphicsLayerScope.() -> Float,
 ) {
     if (!on.value) return
-    val width = with(LocalDensity.current) { ScreenMargin + blockWidth().toDp() + HeroScrimReach }
+    val height = HeroScrimAbove + boxHeight + HeroScrimBelow + HeroScrimFall
     Box(
         Modifier
-            .padding(top = ContentTop - HeroScrimFeather)
-            .size(width, boxHeight + HeroScrimBelow + HeroScrimFeather * 2)
-            .graphicsLayer {
+            .padding(top = ContentTop - HeroScrimAbove)
+            .layout { measurable, constraints ->
+                val wide = ScreenMargin.roundToPx() + max(shelf.ceiling(), band.ceiling()) + HeroScrimReach.roundToPx()
+                val size = constraints.constrain(IntSize(wide, height.roundToPx()))
+                val placeable = measurable.measure(Constraints.fixed(size.width, size.height))
+                layout(size.width, size.height) { placeable.place(0, 0) }
+            }.graphicsLayer {
                 compositingStrategy = CompositingStrategy.Offscreen
                 translationY = shift()
-            }.drawBehind {
-                val edge = HeroScrimFeather.toPx() / size.height
-                val strong = Color.Black.copy(alpha = HERO_SCRIM_ALPHA)
-                drawRect(Brush.horizontalGradient(0f to strong, 1f - HeroScrimReach.toPx() / size.width to strong, 1f to Color.Transparent))
-                drawRect(
-                    Brush.verticalGradient(0f to Color.Transparent, edge to Color.Black, 1f - edge to Color.Black, 1f to Color.Transparent),
-                    blendMode = BlendMode.DstIn,
-                )
+            }.drawWithCache {
+                val above = HeroScrimAbove.toPx()
+                val reach = HeroScrimReach.toPx()
+                val bottom = above + boxHeight.toPx() + HeroScrimBelow.toPx()
+                val mask =
+                    Brush.verticalGradient(
+                        *
+                            smoothStops(0f, above / size.height, rising = true, Color.Black) +
+                                smoothStops(bottom / size.height, 1f, rising = false, Color.Black),
+                    )
+                onDrawBehind {
+                    val solid = ScreenMargin.toPx() + max(shelf.px(), band.px())
+                    val strong = Color.Black.copy(alpha = HERO_SCRIM_ALPHA)
+                    val end = solid + reach
+                    drawRect(
+                        Brush.horizontalGradient(
+                            0f to strong,
+                            *smoothStops(solid / end, 1f, rising = false, strong),
+                            startX = 0f,
+                            endX = end,
+                        ),
+                    )
+                    drawRect(mask, blendMode = BlendMode.DstIn)
+                }
             },
     )
 }
+
+/**
+ * The colour stops of a smoothstep between [from] and [to] (fractions of a gradient), from clear up to [color] or, with
+ * [rising] false, from [color] down to clear. A gradient is linear between stops, so [FALL_STEPS] of them follow the curve.
+ */
+private fun smoothStops(
+    from: Float,
+    to: Float,
+    rising: Boolean,
+    color: Color,
+): Array<Pair<Float, Color>> =
+    Array(FALL_STEPS + 1) { step ->
+        val t = step / FALL_STEPS.toFloat()
+        val smooth = t * t * (3f - 2f * t)
+        from + (to - from) * t to color.copy(alpha = color.alpha * if (rising) smooth else 1f - smooth)
+    }
 
 /** Darkens the top and the left of the picture, where the top bar and the titles sit. */
 internal fun DrawScope.drawHomeScrim(

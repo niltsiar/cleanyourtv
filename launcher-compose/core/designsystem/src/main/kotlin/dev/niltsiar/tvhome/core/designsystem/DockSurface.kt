@@ -41,7 +41,7 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-private val DockRim = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.30f), Color.White.copy(alpha = 0.10f)))
+private val DockRim = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.40f), Color.White.copy(alpha = 0.08f)))
 private val DockRimWidth = 1.5.dp
 private val DockSheen = Brush.verticalGradient(0f to Color.White.copy(alpha = 0.16f), 0.35f to Color.Transparent)
 private val BottomEdge = Color.Black.copy(alpha = 0.25f)
@@ -53,8 +53,8 @@ private val DockElevation = 20.dp
 private val DockShadowDrop = 6.dp
 
 /**
- * The dock's panel: the frost under a [tint] (read in the draw phase), a sheen over its top, a 1.5 dp rim that is white 0.30
- * at the top and fades down the sides, a 1 dp black 0.25 edge along its bottom half, and a shadow that falls 6 dp lower
+ * The dock's panel: the frost under a [tint] (read in the draw phase), a sheen over its top, a 1.5 dp rim that is white 0.40
+ * at the top and fades to 0.08 at the bottom, a 1 dp black 0.25 edge along its bottom half, and a shadow that falls 6 dp lower
  * than the panel. With an [edgeLight] the focused tile lights the rim and the floor. With [outerHairline] a 1 dp black 0.30 line
  * runs round the outside of the panel, so a light panel keeps its edge on a bright picture.
  */

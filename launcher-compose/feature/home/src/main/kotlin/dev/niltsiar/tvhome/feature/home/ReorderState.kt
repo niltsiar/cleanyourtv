@@ -22,7 +22,8 @@ public enum class ReorderHint {
 
 /**
  * What the screen shows of a reorder or edit-dock session: the [carried] tile, the tiles to draw [dimmed], and the [hint].
- * [canMoveLeft] and [canMoveRight] say which way the carried tile can still go along the list.
+ * [canMoveLeft] and [canMoveRight] say which way the carried tile can still go along the list. [apart] maps each other tile
+ * of the carried tile's row to -1 before it and +1 after it: they make room for its chevrons.
  */
 @Immutable
 public data class ReorderView(
@@ -31,6 +32,7 @@ public data class ReorderView(
     val hint: ReorderHint,
     val canMoveLeft: Boolean = false,
     val canMoveRight: Boolean = false,
+    val apart: Map<String, Int> = emptyMap(),
 )
 
 /** The order to keep: tile [keys] first to last and, with fill_dock off, how many lead the dock (else -1). */
@@ -147,7 +149,14 @@ internal data class ReorderState(
 
     fun view(): ReorderView {
         val at = keys.indexOf(carried)
-        return ReorderView(carried, dimmed(), hint(), canMoveLeft = at > 0, canMoveRight = at in 0 until keys.lastIndex)
+        return ReorderView(carried, dimmed(), hint(), canMoveLeft = at > 0, canMoveRight = at in 0 until keys.lastIndex, apart = apart(at))
+    }
+
+    /** The tiles in the row of the tile at [at], by the side of it they lie on; none without one. */
+    private fun apart(at: Int): Map<String, Int> {
+        if (at < 0) return emptyMap()
+        val row = if (singleRow) keys.indices else (at / columns * columns).let { it until minOf(it + columns, keys.size) }
+        return row.filter { it != at }.associate { keys[it] to if (it < at) -1 else 1 }
     }
 
     companion object {

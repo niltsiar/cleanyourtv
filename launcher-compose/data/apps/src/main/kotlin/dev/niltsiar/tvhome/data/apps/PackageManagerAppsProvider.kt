@@ -255,6 +255,7 @@ public class PackageManagerAppsProvider(
                     accent = art?.let { Color(it.accent) } ?: Color.Unspecified,
                     leanback = tile.candidate.packageName in tvPackages,
                     iconArt = art?.fromIcon == true,
+                    lightArt = art?.light == true,
                 )
             }
         return AppList(apps, arrangement.docked)

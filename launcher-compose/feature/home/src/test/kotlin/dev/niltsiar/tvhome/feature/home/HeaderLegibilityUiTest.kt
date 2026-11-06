@@ -166,10 +166,10 @@ class HeaderLegibilityUiTest {
         return Math.round(level * (1f - fromTop) * (1f - fromLeft))
     }
 
-    /** Above the title, out of reach of its shadow and of the local scrim's 48 dp feather, at the title's left. */
+    /** Above the title, out of reach of its shadow and of the local scrim's 96 dp rise, at the title's left. */
     private fun aboveTheTitle(): Offset {
         val title = compose.onNodeWithTag("shelf:title").getBoundsInRoot()
-        return Offset(title.left.value + 20f, title.top.value - 60f)
+        return Offset(title.left.value + 20f, title.top.value - 100f)
     }
 
     /** Left of the subtitle's text, 4 dp inside where its pill starts: the picture there under the page scrim, the local one and the pill. */
@@ -226,6 +226,44 @@ class HeaderLegibilityUiTest {
         val at = besideTheSubtitle()
 
         assertNear(pilled(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at))), redAt(at))
+    }
+
+    /** The picture over [at] under the page scrim and the local one: 14 dp left of the subtitle, outside its pill. */
+    private fun outsideThePill(): Int {
+        val subtitle = compose.onNodeWithTag("shelf:title-meta").getBoundsInRoot()
+        return redAt(Offset(subtitle.left.value - 14f, (subtitle.top.value + subtitle.bottom.value) / 2f))
+    }
+
+    @Test
+    fun the_subtitle_pill_reaches_10_dp_left_of_its_text() {
+        showHome(level = 1f)
+        val subtitle = compose.onNodeWithTag("shelf:title-meta").getBoundsInRoot()
+
+        // 8.5 dp out lies inside a pill with 10 dp across, and past the end of one with 8.
+        assertNear(
+            pilled(outsideThePill()),
+            redAt(Offset(subtitle.left.value - 8.5f, (subtitle.top.value + subtitle.bottom.value) / 2f)),
+        )
+    }
+
+    @Test
+    fun the_subtitle_pill_ends_in_half_circles_so_its_corners_stay_clear() {
+        showHome(level = 1f)
+        val subtitle = compose.onNodeWithTag("shelf:title-meta").getBoundsInRoot()
+
+        // The pill is 26 dp high, 3 dp over the text's box: 3 dp in from each corner of its box is outside a radius of 13 and inside one of 8.
+        assertNoPill(outsideThePill(), redAt(Offset(subtitle.left.value - 7f, subtitle.top.value)))
+    }
+
+    @Test
+    fun the_subtitle_pill_has_a_white_012_stroke_1_dp_wide_inside_its_edge() {
+        showHome(level = 1f)
+        val subtitle = compose.onNodeWithTag("shelf:title-meta").getBoundsInRoot()
+        val middle = (subtitle.top.value + subtitle.bottom.value) / 2f
+        val fill = pilled(outsideThePill())
+
+        assertNear(Math.round(fill * 0.88f + 255 * 0.12f), redAt(Offset(subtitle.left.value - 9.5f, middle)))
+        assertNear(fill, redAt(Offset(subtitle.left.value - 6f, middle)))
     }
 
     @Test
@@ -433,16 +471,18 @@ class HeaderLegibilityUiTest {
     }
 
     @Test
-    fun the_local_scrim_holds_to_the_end_of_the_title_and_fades_out_over_the_next_120_dp() {
-        showHome(level = 1f, apps = namedApps)
+    fun the_local_scrim_holds_to_the_end_of_the_title_and_fades_out_as_a_smoothstep_over_the_next_240_dp() {
+        showHome(level = 1f, apps = listOf(AppEntry(key = "pkg.1", packageName = "pkg.1", label = "Prime Video")) + NineApps.drop(1))
         val title = compose.onNodeWithTag("shelf:title").getBoundsInRoot()
         val y = title.bottom.value + 3f
 
         fun at(beyond: Float) = Offset(title.right.value + beyond, y)
 
         assertNear(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at(-20f))), redAt(at(-20f)))
-        assertNear(Math.round(scrimmed(255, top = 0.70f, left = 0.60f, at(60f)) * (1f - 0.30f)), redAt(at(60f)))
-        assertNear(scrimmed(255, top = 0.70f, left = 0.60f, at(130f)), redAt(at(130f)))
+        // Half way the smoothstep has taken half of the black 0.60; a quarter of the way it has taken 0.156 of it.
+        assertNear(Math.round(scrimmed(255, top = 0.70f, left = 0.60f, at(120f)) * (1f - 0.30f)), redAt(at(120f)))
+        assertNear(Math.round(scrimmed(255, top = 0.70f, left = 0.60f, at(60f)) * (1f - 0.60f * (1f - 0.15625f))), redAt(at(60f)))
+        assertNear(scrimmed(255, top = 0.70f, left = 0.60f, at(250f)), redAt(at(250f)))
     }
 
     @Test

@@ -40,6 +40,17 @@ public fun KeyChip(
     modifier: Modifier = Modifier,
     look: KeyChipLook = KeyChipOverWallpaper,
 ) {
+    KeyChip(listOf(key), action, modifier, look)
+}
+
+/** Keys that do the same thing, as a pill: each of [keys] on its own fill, then [action]. */
+@Composable
+public fun KeyChip(
+    keys: List<String>,
+    action: String,
+    modifier: Modifier = Modifier,
+    look: KeyChipLook = KeyChipOverWallpaper,
+) {
     val typography = TvTheme.typography
     Row(
         modifier =
@@ -51,12 +62,14 @@ public fun KeyChip(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        BasicText(
-            key,
-            style = typography.chipKey,
-            maxLines = 1,
-            modifier = Modifier.background(look.keyFill, CircleShape).padding(horizontal = 8.dp, vertical = 2.dp),
-        )
+        keys.forEach { key ->
+            BasicText(
+                key,
+                style = typography.chipKey,
+                maxLines = 1,
+                modifier = Modifier.background(look.keyFill, CircleShape).padding(horizontal = 8.dp, vertical = 2.dp),
+            )
+        }
         BasicText(action, style = typography.chipLabel, maxLines = 1)
     }
 }

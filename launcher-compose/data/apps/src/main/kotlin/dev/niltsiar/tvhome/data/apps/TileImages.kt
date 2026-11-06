@@ -48,12 +48,14 @@ internal fun isBannerShaped(
 
 /**
  * What one tile shows: its [image] (null when the app has no art) and the [accent] colour picked from the art, as ARGB.
- * [fromIcon] is true when the image is the app's icon in the middle of the tile, not a banner.
+ * [fromIcon] is true when the image is the app's icon in the middle of the tile, not a banner. [light] is true for a banner
+ * that [isLightArt] finds light.
  */
 internal class TileArt(
     val image: ImageBitmap?,
     val accent: Int,
     val fromIcon: Boolean = false,
+    val light: Boolean = false,
 )
 
 /** Draws the artwork of one tile: the app's banner, or its icon. */
@@ -68,10 +70,15 @@ internal class TileImages(
     ): TileArt {
         val banner = banner(activity)
         if (banner != null) {
-            return TileArt(banner.toBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888).asImageBitmap(), accentOf(banner))
+            val pixels = reduced(banner)
+            return TileArt(
+                banner.toBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888).asImageBitmap(),
+                vividColor(pixels),
+                light = isLightArt(pixels),
+            )
         }
         val drawable = icon() ?: return TileArt(null, NO_ART_ACCENT)
-        return TileArt(drawable.centeredOnTile().asImageBitmap(), accentOf(drawable), fromIcon = true)
+        return TileArt(drawable.centeredOnTile().asImageBitmap(), vividColor(reduced(drawable)), fromIcon = true)
     }
 
     /** The art the cinematic shelf softens: the tile's banner, else its icon. */
@@ -80,10 +87,10 @@ internal class TileImages(
         icon: () -> Drawable?,
     ): Drawable? = banner(activity) ?: icon()
 
-    private fun accentOf(art: Drawable): Int {
+    private fun reduced(art: Drawable): IntArray {
         val pixels = IntArray(VIVID_SIDE * VIVID_SIDE)
         art.toBitmap(VIVID_SIDE, VIVID_SIDE, Bitmap.Config.ARGB_8888).getPixels(pixels, 0, VIVID_SIDE, 0, 0, VIVID_SIDE, VIVID_SIDE)
-        return vividColor(pixels)
+        return pixels
     }
 
     private fun banner(activity: ActivityInfo): Drawable? {

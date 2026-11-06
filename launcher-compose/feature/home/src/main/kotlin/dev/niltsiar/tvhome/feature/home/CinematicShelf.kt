@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -35,6 +36,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
@@ -59,6 +61,7 @@ import dev.niltsiar.tvhome.core.model.describeLastOpened
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.math.max
 
 /** How far a new shelf title rises into place as it fades in. */
 internal val TitleRise = 8.dp
@@ -90,14 +93,28 @@ internal val CinematicTextHeight = 66.dp + ShelfDetailHeight
 private val TitleShadow = Color.Black.copy(alpha = 0.55f)
 private val SubtitleShadow = Color.Black.copy(alpha = 0.75f)
 private val SubtitlePillColor = Color.Black.copy(alpha = 0.45f)
-private val SubtitlePillRadius = 8.dp
-private val SubtitlePillAcross = 8.dp
+private val SubtitlePillStroke = Color.White.copy(alpha = 0.12f)
+private val SubtitlePillStrokeWidth = 1.dp
+private val SubtitlePillAcross = 10.dp
 private val SubtitlePillDown = 3.dp
 private val DotWide = 20.dp
 private val DotSpacing = 6.dp
 private val DotRest = Color(0x4DFFFFFF)
 private const val SHOW_MS = 260
 private const val HIDE_MS = 160
+
+/**
+ * What a title block tells the hero scrim: [width] is how wide the block is drawn now, [shown] how much of it is visible and
+ * [ceiling] the widest it can be drawn without a new layout. Read [width] and [shown] in draw lambdas, [ceiling] in layout ones.
+ */
+@Stable
+internal class TitleExtent {
+    var width: () -> Float = { 0f }
+    var shown: () -> Float = { 1f }
+    var ceiling: () -> Int = { 0 }
+
+    fun px(): Float = width() * shown()
+}
 
 private class HeldShelf {
     var shelf: Shelf? = null
@@ -109,8 +126,8 @@ private class HeldShelf {
  * It fades in with the first dock focus and out when [shelf] is null, keeping the last app's text meanwhile. A new app's
  * name and time cross-fade with the old ones ([TitleSlots]); the dots stay and only their long dot slides. The name
  * draws at [titleAlpha], the time and the dots at [detailAlpha]. Every animated value is read in a layer, placement or
- * draw lambda. The time sits on a pill while [pill] says so, and [onTextWidth] gets the width of the text block, 0 while
- * the shelf is hidden.
+ * draw lambda. The time sits on a pill while [pill] says so, and [extent] gets the width of the text block, as drawn: it follows
+ * the swap of the names and the fade of the shelf.
  */
 @Composable
 internal fun CinematicShelf(
@@ -120,7 +137,7 @@ internal fun CinematicShelf(
     titleAlpha: () -> Float = { 1f },
     detailAlpha: () -> Float = { 1f },
     pill: () -> Boolean = { false },
-    onTextWidth: (Int) -> Unit = {},
+    extent: TitleExtent = TitleExtent(),
 ) {
     val current by remember(shelf) { derivedStateOf(shelf) }
     val held = remember { HeldShelf() }
@@ -131,10 +148,8 @@ internal fun CinematicShelf(
         val target = if (visible) 1f else 0f
         if (layout.animated) alpha.animateTo(target, tween(if (visible) SHOW_MS else HIDE_MS)) else alpha.snapTo(target)
     }
+    extent.shown = { alpha.value }
     val shown = held.shelf ?: return
-    val textWidth = remember { mutableIntStateOf(0) }
-    val reportedWidth = if (visible) textWidth.intValue else 0
-    SideEffect { onTextWidth(reportedWidth) }
     val rise = with(LocalDensity.current) { TitleRise.roundToPx() }
     val titleStyle = TvTheme.typography.cinematicTitle.withTitleShadow()
     val metaStyle = TvTheme.typography.cinematicMeta.withSubtitleShadow()
@@ -151,7 +166,7 @@ internal fun CinematicShelf(
                 layout.animated,
                 rise,
                 key = { it.key },
-                modifier = Modifier.onSizeChanged { textWidth.intValue = it.width },
+                extent = extent,
             ) { app, live ->
                 Column {
                     BasicText(
@@ -200,6 +215,8 @@ internal fun CinematicShelf(
  * [risePx] into place, and the shown one fades out in [TITLE_OUT_MS]; a value of the same key replaces the shown one.
  * The fade is a layer's alpha and the rise a draw translation, so no node moves and nothing below them moves either.
  * [content] shows one slot's value; `live` is false for a slot that has faded out, which shows nothing and has no tags.
+ * [extent], when given, is told how wide the block is drawn: it moves from the old value's width to the new one's with the new
+ * value's fade.
  */
 @Composable
 internal fun <T : Any> TitleSlots(
@@ -209,10 +226,15 @@ internal fun <T : Any> TitleSlots(
     modifier: Modifier = Modifier,
     key: (T) -> Any = { it },
     inMillis: (from: T, to: T) -> Int = { _, _ -> CINEMATIC_MS },
+    extent: TitleExtent? = null,
     content: @Composable (value: T, live: Boolean) -> Unit,
 ) {
     val slots = remember { TitleSlotsState(target) }
     slots.show(target, key)
+    if (extent != null) {
+        extent.width = slots::blockWidth
+        extent.ceiling = slots::widest
+    }
     val generation = slots.generation
     val cleared = slots.cleared
     SideEffect { slots.start(generation, animated, risePx.toFloat()) }
@@ -224,7 +246,8 @@ internal fun <T : Any> TitleSlots(
             Box(
                 Modifier
                     .graphicsLayer { alpha = slots.alpha[slot].floatValue }
-                    .drawWithContent { translate(top = slots.rise[slot].floatValue) { this@drawWithContent.drawContent() } },
+                    .drawWithContent { translate(top = slots.rise[slot].floatValue) { this@drawWithContent.drawContent() } }
+                    .onSizeChanged { slots.widths[slot].intValue = it.width },
             ) {
                 content(slots.values[slot], slot == slots.front || cleared < generation)
             }
@@ -248,13 +271,25 @@ private class TitleSlotsState<T : Any>(
     var cleared by mutableIntStateOf(0)
     val alpha = listOf(mutableFloatStateOf(1f), mutableFloatStateOf(0f))
     val rise = listOf(mutableFloatStateOf(0f), mutableFloatStateOf(0f))
+    val widths = listOf(mutableIntStateOf(0), mutableIntStateOf(0))
     private var started = 0
+    private var widthBefore = 0f
+
+    /** The width the block was drawn at when the last swap began: it moves from there to the front slot's width as that slot fades in. */
+    private val swapFrom = mutableFloatStateOf(0f)
+
+    /** How wide the block is drawn now. Read it in draw lambdas. */
+    fun blockWidth(): Float = swapFrom.floatValue + (widths[front].intValue - swapFrom.floatValue) * alpha[front].floatValue
+
+    /** The width no part of [blockWidth] goes past. Read it in layout lambdas. */
+    fun widest(): Int = max(swapFrom.floatValue.toInt(), widths[front].intValue)
 
     fun show(
         target: T,
         key: (T) -> Any,
     ) {
         if (key(target) != key(values[front])) {
+            widthBefore = Snapshot.withoutReadObservation { blockWidth() }
             from = values[front]
             front = 1 - front
             generation++
@@ -270,9 +305,11 @@ private class TitleSlotsState<T : Any>(
         if (started == generation) return
         started = generation
         if (animated) {
+            swapFrom.floatValue = widthBefore
             alpha[front].floatValue = 0f
             rise[front].floatValue = risePx
         } else {
+            swapFrom.floatValue = 0f
             alpha[front].floatValue = 1f
             rise[front].floatValue = 0f
             alpha[1 - front].floatValue = 0f
@@ -283,13 +320,16 @@ private class TitleSlotsState<T : Any>(
     suspend fun run(
         generation: Int,
         inMillis: Int,
-    ) = coroutineScope {
-        val incoming = front
-        val outgoing = 1 - front
-        launch { tweenTo(alpha[incoming], 1f, inMillis) }
-        launch { tweenTo(rise[incoming], 0f, inMillis) }
-        tweenTo(alpha[outgoing], 0f, TITLE_OUT_MS)
-        cleared = generation
+    ) {
+        coroutineScope {
+            val incoming = front
+            val outgoing = 1 - front
+            launch { tweenTo(alpha[incoming], 1f, inMillis) }
+            launch { tweenTo(rise[incoming], 0f, inMillis) }
+            tweenTo(alpha[outgoing], 0f, TITLE_OUT_MS)
+            cleared = generation
+        }
+        swapFrom.floatValue = widths[front].intValue.toFloat()
     }
 
     private suspend fun tweenTo(
@@ -320,17 +360,24 @@ internal fun TextStyle.withSubtitleShadow(): TextStyle {
     return remember(this, density) { copy(shadow = Shadow(SubtitleShadow, Offset(0f, 2 * density), 12 * density)) }
 }
 
-/** Draws a black 0.45 pill 8 dp wider and 3 dp taller than this on each side, while [on], for a subtitle over a bright picture. */
+/**
+ * Draws a pill 10 dp wider and 3 dp taller than this on each side, while [on], for a subtitle over a bright picture: black
+ * 0.45 with a white 0.12 stroke 1 dp wide inside its edge, ended by half circles.
+ */
 internal fun Modifier.subtitlePill(on: () -> Boolean): Modifier =
     drawBehind {
         if (!on()) return@drawBehind
-        val across = SubtitlePillAcross.toPx()
-        val down = SubtitlePillDown.toPx()
+        val topLeft = Offset(-SubtitlePillAcross.toPx(), -SubtitlePillDown.toPx())
+        val pill = Size(size.width + 2 * SubtitlePillAcross.toPx(), size.height + 2 * SubtitlePillDown.toPx())
+        val radius = pill.height / 2f
+        drawRoundRect(SubtitlePillColor, topLeft, pill, CornerRadius(radius))
+        val width = SubtitlePillStrokeWidth.toPx()
         drawRoundRect(
-            SubtitlePillColor,
-            topLeft = Offset(-across, -down),
-            size = Size(size.width + 2 * across, size.height + 2 * down),
-            cornerRadius = CornerRadius(SubtitlePillRadius.toPx()),
+            SubtitlePillStroke,
+            topLeft = topLeft + Offset(width / 2f, width / 2f),
+            size = Size(pill.width - width, pill.height - width),
+            cornerRadius = CornerRadius(radius - width / 2f),
+            style = Stroke(width),
         )
     }
 

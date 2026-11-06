@@ -28,6 +28,23 @@ class ReorderStateTest {
     }
 
     @Test
+    fun the_tiles_of_the_carried_tiles_row_lie_apart_before_it_and_after_it_and_no_other_row_does() {
+        assertEquals(mapOf("k5" to -1, "k7" to 1, "k8" to 1), session().carrying(6).view().apart)
+        assertEquals(mapOf("k6" to 1, "k7" to 1, "k8" to 1), session().carrying(5).view().apart)
+        assertEquals(mapOf("k9" to -1), session().carrying(10).view().apart)
+    }
+
+    @Test
+    fun in_a_single_row_every_other_tile_lies_apart_by_its_side_of_the_carried_one() {
+        assertEquals(mapOf("k1" to -1, "k2" to -1, "k4" to 1, "k5" to 1), session(count = 5, singleRow = true).carrying(3).view().apart)
+    }
+
+    @Test
+    fun with_nothing_carried_no_tile_lies_apart() {
+        assertEquals(emptyMap<String, Int>(), session().view().apart)
+    }
+
+    @Test
     fun up_and_down_move_a_row() {
         val s = session().carrying(6)
 

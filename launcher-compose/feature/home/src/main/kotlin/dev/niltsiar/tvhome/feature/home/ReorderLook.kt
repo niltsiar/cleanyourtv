@@ -25,14 +25,17 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import dev.niltsiar.tvhome.core.designsystem.FocusRingReach
 import dev.niltsiar.tvhome.core.designsystem.TILE_FOCUSED_SCALE
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.math.max
 
 private const val DIMMED_ALPHA = 0.65f
 
@@ -41,21 +44,24 @@ private const val LIFT_SCALE = 0.08f
 private const val WIGGLE_DEGREES = 1.6f
 private const val WIGGLE_MS = 150
 private const val DIM_MS = 140
+private const val APART_MS = 200
 private val LiftHeight = 8.dp
 private val LiftShadow = 20.dp
 private val LiftShadowColor = Color.Black.copy(alpha = 0.55f)
 private val ChevronDepth = 7.dp
 private val ChevronStroke = 2.5.dp
 private val ChevronOutline = 1.25.dp
-private val ChevronClear = 0.5.dp
+private val ChevronThickness = ChevronStroke + ChevronOutline * 2
+private val ChevronClear = 6.dp
 private val ChevronColor = Color.White
 private val ChevronOutlineColor = Color.Black.copy(alpha = 0.55f)
 
 /**
  * A tile's look in reorder and edit-dock modes: dimmed unless it is the carried one, which lifts, grows, casts a shadow
  * in its [shape], wiggles a little and shows a white chevron in the gutter beside each edge it can still move towards,
- * between the grown art and the next tile; it settles back with a spring when it is put down. The animated values are
- * read in the layer and draw lambdas only.
+ * clear of its ring and of the next tile; it settles back with a spring when it is put down. The tiles of its row move
+ * apart from it as far as the chevrons need ([ChevronGutter.extra]). The animated values are read in the layer and draw
+ * lambdas only.
  */
 @Composable
 internal fun Modifier.reorderLook(
@@ -70,9 +76,13 @@ internal fun Modifier.reorderLook(
     val wiggle = remember { Animatable(0f) }
     val left = remember { Animatable(input.badgeAtStart(key, input.canMoveLeft)) }
     val right = remember { Animatable(input.badgeAtStart(key, input.canMoveRight)) }
+    val apart = remember { Animatable(Snapshot.withoutReadObservation { input.apart.value[key]?.toFloat() ?: 0f }) }
     LaunchedEffect(key, input, motion) {
         launch {
             snapshotFlow { if (key in input.dimmed.value) DIMMED_ALPHA else 1f }.collect { dim.animateTo(it, motion.tweenSpec(DIM_MS)) }
+        }
+        launch {
+            snapshotFlow { input.apart.value[key]?.toFloat() ?: 0f }.collect { apart.animateTo(it, motion.tweenSpec(APART_MS)) }
         }
         launch {
             snapshotFlow { input.carried.value == key }.collectLatest { carried ->
@@ -107,13 +117,15 @@ internal fun Modifier.reorderLook(
         scaleY = scaleX
         translationY = -LiftHeight.toPx() * raised
         rotationZ = WIGGLE_DEGREES * wiggle.value * raised
+        translationX =
+            apart.value * chevronGutter(size.width, motion.focusScale(TILE_FOCUSED_SCALE) * (1f + LIFT_SCALE)).extra(TileGap.toPx())
         shadowElevation = LiftShadow.toPx() * raised.coerceIn(0f, 1f)
         this.shape = shape
         ambientShadowColor = LiftShadowColor
         spotShadowColor = LiftShadowColor
     }.drawWithCache {
         val stroke = Stroke(ChevronStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
-        val outline = Stroke((ChevronStroke + ChevronOutline * 2).toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        val outline = Stroke(ChevronThickness.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
         val grown = motion.focusScale(TILE_FOCUSED_SCALE)
         onDrawWithContent {
             drawContent()
@@ -123,24 +135,16 @@ internal fun Modifier.reorderLook(
             if (onLeft == 0f && onRight == 0f) return@onDrawWithContent
             // The layer is scaled by the lift: draw in the tile's own measures by undoing that.
             val raised = 1f + LIFT_SCALE * lift.value
-            val gutter =
-                chevronGutter(
-                    size.width,
-                    grown * raised,
-                    TileGap.toPx(),
-                    ChevronDepth.toPx(),
-                    (ChevronStroke + ChevronOutline * 2).toPx(),
-                    ChevronClear.toPx(),
-                ) ?: return@onDrawWithContent
+            val gutter = chevronGutter(size.width, grown * raised)
             scale(1f / raised, Offset(size.width / 2f, size.height / 2f)) {
                 val middle = size.height / 2f
                 if (onLeft > 0f) {
-                    val chevron = chevron(Offset(-gutter.centre, middle), gutter.depth, pointsLeft = true)
+                    val chevron = chevron(Offset(-gutter.centre, middle), ChevronDepth.toPx(), pointsLeft = true)
                     drawPath(chevron, ChevronOutlineColor, alpha = onLeft, style = outline)
                     drawPath(chevron, ChevronColor, alpha = onLeft, style = stroke)
                 }
                 if (onRight > 0f) {
-                    val chevron = chevron(Offset(size.width + gutter.centre, middle), gutter.depth, pointsLeft = false)
+                    val chevron = chevron(Offset(size.width + gutter.centre, middle), ChevronDepth.toPx(), pointsLeft = false)
                     drawPath(chevron, ChevronOutlineColor, alpha = onRight, style = outline)
                     drawPath(chevron, ChevronColor, alpha = onRight, style = stroke)
                 }
@@ -150,28 +154,29 @@ internal fun Modifier.reorderLook(
 }
 
 /**
- * Where a chevron sits in the gutter beside a carried tile: [centre] is its distance outside the tile's edge and [depth]
- * its width, which is also its half height. The art of the tile, [width] wide and grown [grown] times, ends
- * [width] x ([grown] - 1) / 2 outside the edge and the next tile starts [gap] out; the chevron, [margin] clear of both and
- * [thickness] wider than its depth, is centred between them, at most [maxDepth] deep. Null when nothing fits.
+ * Where a chevron sits beside a carried tile whose art, [width] wide, is [scale] times its size. The ring reaches
+ * [FocusRingReach] x [scale] past the art; the chevron, [ChevronDepth] wide and [ChevronThickness] wider with its outline,
+ * stands [ChevronClear] past the ring, and the next tile [ChevronClear] past it. [ChevronGutter.centre] is the chevron's
+ * distance outside the tile's edge, and [ChevronGutter.reach] the distance at which the next tile must start.
  */
-internal fun chevronGutter(
+private fun Density.chevronGutter(
     width: Float,
-    grown: Float,
-    gap: Float,
-    maxDepth: Float,
-    thickness: Float,
-    margin: Float,
-): ChevronGutter? {
-    val artEdge = width * (grown - 1f) / 2f
-    val depth = minOf(maxDepth, gap - artEdge - thickness - 2f * margin)
-    return if (depth > 0f) ChevronGutter((artEdge + gap) / 2f, depth) else null
+    scale: Float,
+): ChevronGutter {
+    val ringEnd = width * (scale - 1f) / 2f + FocusRingReach.toPx() * scale
+    val footprint = (ChevronDepth + ChevronThickness).toPx()
+    val clear = ChevronClear.toPx()
+    return ChevronGutter(centre = ringEnd + clear + footprint / 2f, reach = ringEnd + 2f * clear + footprint)
 }
 
-internal data class ChevronGutter(
+/** How far from a tile's edge a chevron stands ([centre]), and how far the next tile must start for it to be [ChevronClear] clear ([reach]). */
+private data class ChevronGutter(
     val centre: Float,
-    val depth: Float,
-)
+    val reach: Float,
+) {
+    /** How far the next tile must move out, when it starts [gap] from the edge. */
+    fun extra(gap: Float): Float = max(0f, reach - gap)
+}
 
 private fun HomeInput.badgeAtStart(
     key: String,

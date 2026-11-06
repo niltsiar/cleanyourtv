@@ -78,7 +78,17 @@ class DockGlassUiTest {
     private val cyan = bitmap(40, 40) { _, _ -> (0xFF shl 24) or (0 shl 16) or (200 shl 8) or 255 }
     private val lightApps =
         (1..9).map {
-            AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it", image = bitmap(16, 9) { _, _ -> grey(255) })
+            AppEntry(
+                key = "pkg.$it",
+                packageName = "pkg.$it",
+                label = "App $it",
+                image = bitmap(16, 9) { _, _ -> grey(245) },
+                lightArt = true,
+            )
+        }
+    private val darkApps =
+        (1..9).map {
+            AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it", image = bitmap(16, 9) { _, _ -> grey(40) })
         }
     private val white = bitmap(40, 40) { _, _ -> grey(255) }
 
@@ -124,6 +134,11 @@ class DockGlassUiTest {
     private fun settle() {
         compose.mainClock.advanceTimeBy(1_000)
         compose.waitForIdle()
+    }
+
+    private fun press(key: Key) {
+        compose.onRoot().performKeyInput { pressKey(key) }
+        settle()
     }
 
     private fun holdOk() {
@@ -346,19 +361,105 @@ class DockGlassUiTest {
         assertTrue("saturation ${saturation(screenAt(gap()))}", saturation(screenAt(gap())) <= 0.36f)
     }
 
-    @Test
-    fun dock_glass_draws_a_black_028_edge_1_dp_wide_inside_each_dock_tile() {
-        showHome(uniform, cinematic.copy(dockGlass = true), shown = lightApps)
-        val tile = dockTile(2)
+    /** The green channel over the left edge of tile [tag] (two pixels, the 1 dp edge) and 3 px inside it, at half its height. */
+    private fun edgeOf(tag: String): Pair<List<Float>, Float> {
+        val tile = compose.onNodeWithTag(tag).getBoundsInRoot()
         val density = compose.activity.resources.displayMetrics.density
         val image = compose.onRoot().captureToImage().toPixelMap()
         val y = ((tile.top.value + tile.bottom.value) / 2f * density).toInt()
         val left = (tile.left.value * density).toInt()
-        val edge = (left..left + 1).map { image[it, y].green }
+        return (left..left + 1).map { image[it, y].green } to image[left + 3, y].green
+    }
 
-        assertEquals("edge $edge", 1f - 0.28f, edge.max(), 0.03f)
-        assertEquals("edge $edge", 1f - 0.28f, edge.min(), 0.03f)
-        assertEquals(1f, image[left + 3, y].green, 0.01f)
+    private fun assertEdge(
+        tag: String,
+        level: Float,
+    ) {
+        val (edge, inside) = edgeOf(tag)
+        assertEquals("edge $edge", level * (1f - 0.28f), edge.max(), 0.03f)
+        assertEquals("edge $edge", level * (1f - 0.28f), edge.min(), 0.03f)
+        assertEquals(level, inside, 0.01f)
+    }
+
+    private fun assertNoEdge(
+        tag: String,
+        level: Float,
+    ) {
+        val (edge, inside) = edgeOf(tag)
+        assertEquals("edge $edge", level, edge.min(), 0.02f)
+        assertEquals("edge $edge", level, edge.max(), 0.02f)
+        assertEquals(level, inside, 0.02f)
+    }
+
+    private val level245 = 245f / 255f
+
+    @Test
+    fun dock_glass_draws_a_black_028_edge_1_dp_wide_inside_each_light_dock_tile() {
+        showHome(uniform, cinematic.copy(dockGlass = true), shown = lightApps)
+
+        assertEdge("tile:pkg.2", level245)
+    }
+
+    @Test
+    fun the_light_tray_of_a_day_mode_dock_gives_a_light_tile_the_same_edge() {
+        showHome(uniform, darkTheme = false, shown = lightApps)
+
+        assertEdge("tile:pkg.2", level245)
+    }
+
+    @Test
+    fun a_dark_tray_gives_a_light_tile_no_edge() {
+        showHome(uniform, shown = lightApps)
+
+        assertNoEdge("tile:pkg.2", level245)
+    }
+
+    @Test
+    fun a_dark_tile_gets_no_edge_on_the_light_tray() {
+        showHome(uniform, cinematic.copy(dockGlass = true), shown = darkApps)
+
+        assertNoEdge("tile:pkg.2", 40f / 255f)
+    }
+
+    @Test
+    fun a_light_grid_tile_over_a_bright_wallpaper_gets_the_edge() {
+        showHome(white, shown = lightApps)
+        press(Key.DirectionDown)
+
+        assertEdge("tile:pkg.8", level245)
+    }
+
+    @Test
+    fun a_light_grid_tile_over_a_dim_wallpaper_gets_no_edge() {
+        showHome(uniform, shown = lightApps)
+        press(Key.DirectionDown)
+
+        assertNoEdge("tile:pkg.8", level245)
+    }
+
+    @Test
+    fun a_dark_grid_tile_over_a_bright_wallpaper_gets_no_edge() {
+        showHome(white, shown = darkApps)
+        press(Key.DirectionDown)
+
+        assertNoEdge("tile:pkg.8", 40f / 255f)
+    }
+
+    @Test
+    fun the_dock_rim_is_white_040_at_the_top_edge() {
+        showHome(uniform)
+        val inside = panelEdgeAt(7)
+
+        assertEquals(0.40f, (panelEdgeAt(1) - inside) / (1f - inside), 0.03f)
+    }
+
+    @Test
+    fun the_dock_rim_fades_to_white_008_at_the_bottom_edge_under_the_black_025_one() {
+        showHome(uniform)
+        val inside = panelEdgeAt(7, fromBottom = true)
+        val rim = panelEdgeAt(0, fromBottom = true) / 0.75f
+
+        assertEquals(0.08f, (rim - inside) / (1f - inside), 0.015f)
     }
 
     @Test
