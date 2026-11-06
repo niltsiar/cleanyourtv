@@ -18,6 +18,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.Role
@@ -43,7 +44,7 @@ public class FocusInk internal constructor(
 /**
  * A D-pad target for rows and buttons: while focused it fills with [TvSurfaces.pillFill] over [background], and the
  * [FocusInk] its content gets turns from the theme's text colours to the pill's. It grows to [focusedScale] and casts a
- * shadow of [shadowElevation] while idle too. As with [FocusSurface], the animation starts in the focus callback and is
+ * shadow of [shadowElevation] while idle too, about [transformOrigin]. As with [FocusSurface], the animation starts in the focus callback and is
  * read in the layer and draw lambdas only, so a focus change neither recomposes nor relays out.
  */
 @Composable
@@ -55,6 +56,7 @@ public fun FocusPill(
     interactionSource: MutableInteractionSource? = null,
     focusedScale: Float = 1f,
     shadowElevation: Dp = 0.dp,
+    transformOrigin: TransformOrigin = TransformOrigin.Center,
     background: @Composable BoxScope.() -> Unit = {},
     content: @Composable BoxScope.(ink: FocusInk) -> Unit,
 ) {
@@ -79,6 +81,7 @@ public fun FocusPill(
                     val scale = 1f + (grownScale - 1f) * focus.value
                     scaleX = scale
                     scaleY = scale
+                    this.transformOrigin = transformOrigin
                     if (shadowElevation > 0.dp) {
                         this.shadowElevation = shadowElevation.toPx()
                         this.shape = shape

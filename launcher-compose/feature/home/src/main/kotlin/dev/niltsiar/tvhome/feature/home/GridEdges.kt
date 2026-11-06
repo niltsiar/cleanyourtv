@@ -34,6 +34,9 @@ private const val SETTLE = 24f
 private const val MASK_STOPS = 32
 private const val SHELF_KEY = "shelf"
 
+/** The [SETTLE] distance on a screen [height] pixels high, in pixels. */
+internal fun settleOf(height: Float): Float = SETTLE * height / FRAME_HEIGHT
+
 /**
  * The grid's edges, drawn as a mask in the draw phase. Nothing is drawn above [cutoff] or lower than the fade
  * [FADE_GAP] below the last fully visible row, which runs [BOTTOM_FADE_RUN] and is gone by [BOTTOM_FADE_LIMIT]. At the top

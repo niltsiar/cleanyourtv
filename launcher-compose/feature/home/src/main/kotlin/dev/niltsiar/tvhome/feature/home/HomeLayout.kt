@@ -68,12 +68,12 @@ internal fun tileWidthShare(
     return (fitting / gridWidth).coerceIn(MIN_TILE_SHARE, 1f)
 }
 
-private const val NAMED_MIN_SHARE = 0.8f
+private const val NAMED_MIN_SHARE = 0.7f
 
 /**
  * The share of the grid's [gridWidth] that its tiles use so that, with a name under each, the row in focus and the next
  * one both fit in [availableHeight], the room from the top of the row in focus to the bottom edge (all in dp, [gap]
- * between rows, [nameRoom] under each tile). 1 when they fit at full width, never under 0.8.
+ * between rows, [nameRoom] under each tile). 1 when they fit at full width, never under 0.7.
  */
 internal fun namedRowsShare(
     gridWidth: Float,

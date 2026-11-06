@@ -24,8 +24,11 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.designsystem.FocusRingReach
+import dev.niltsiar.tvhome.core.designsystem.TILE_FOCUSED_SCALE
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
@@ -159,30 +162,24 @@ class AlwaysShowNamesUiTest {
         showHome(SixColumns.copy(alwaysShowNames = true))
 
         assertEquals(0.85f, ink("name:pkg.2"), 0.05f)
-        press(Key.DirectionRight)
-        assertEquals(1f, ink("name:pkg.2"), 0.03f)
     }
 
     @Test
-    fun the_name_under_an_unfocused_dock_tile_shows_at_85_percent_and_at_full_when_focused() {
+    fun the_name_under_an_unfocused_dock_tile_shows_at_85_percent() {
         showHome(SixColumns.copy(alwaysShowNames = true))
-        val unfocused = contrast("name:pkg.2")
 
-        press(Key.DirectionRight)
-        compose.onNodeWithTag("tile:pkg.2").assertIsFocused()
-        val focused = contrast("name:pkg.2")
-
-        assertEquals(0.85f, unfocused / focused, 0.05f)
+        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+        assertEquals(0.85f, ink("name:pkg.2"), 0.05f)
     }
 
     @Test
-    fun the_name_under_an_unfocused_grid_tile_shows_at_85_percent_and_at_full_when_focused() {
+    fun the_name_under_an_unfocused_grid_tile_shows_at_85_percent() {
         showHome(SixColumns.copy(alwaysShowNames = true))
 
         press(Key.DirectionDown)
         compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
 
-        assertEquals(0.85f, contrast("name:pkg.8") / contrast("name:pkg.7"), 0.05f)
+        assertEquals(0.85f, ink("name:pkg.8"), 0.05f)
     }
 
     private fun redAt(
@@ -286,5 +283,112 @@ class AlwaysShowNamesUiTest {
 
         assertEquals(1, compose.onAllNodesWithTag("name:pkg.5").fetchSemanticsNodes().size)
         assertNear(height("tile:pkg.1") + TileGap * 2 + TileNameRoom, height("dock"))
+    }
+
+    private val longName = List(30) { "Largo" }.joinToString(" ")
+
+    private fun withLongName(vararg keys: String) = apps.map { if (it.key in keys) it.copy(label = longName) else it }
+
+    private val named4 = SixColumns.copy(columns = 4, alwaysShowNames = true)
+
+    @Test
+    fun a_name_too_long_for_its_tile_takes_two_lines_and_a_short_name_one() {
+        showHome(named4, apps = withLongName("pkg.1"))
+
+        assertEquals(2f, height("name:pkg.1").value / height("name:pkg.2").value, 0.1f)
+    }
+
+    @Test
+    fun a_second_line_adds_one_line_to_its_row_and_the_next_row_starts_a_gap_under_the_pill() {
+        showHome(SixColumns.copy(alwaysShowNames = true), apps = withLongName("pkg.7"))
+        val pitch = rowPitch()
+
+        assertNear(height("tile:pkg.7") + TileGap + TileNameRoom + 20.dp, pitch)
+        val pillBottom = bounds("name:pkg.7").bottom.value + 2f
+        assertNear(TileGap, (top("tile:pkg.13").value - pillBottom).dp)
+    }
+
+    /** How far the focused ring's outer stroke ends under tile [key], then the gap to the top of its name's pill, in dp. */
+    private fun ringToPill(key: String): Float {
+        val tile = bounds("tile:$key")
+        val ringBottom =
+            tile.bottom.value + tile.height.value * (TILE_FOCUSED_SCALE - 1f) / 2f + FocusRingReach.value * TILE_FOCUSED_SCALE
+        return bounds("name:$key").top.value - 2f - ringBottom
+    }
+
+    @Test
+    fun the_focused_ring_ends_6_dp_or_more_above_the_name_pill_in_four_columns() {
+        showHome(named4)
+
+        assertTrue("the ring ends ${ringToPill("pkg.1")} dp above the pill", ringToPill("pkg.1") >= 6f)
+    }
+
+    @Test
+    fun the_focused_ring_ends_6_dp_or_more_above_the_name_pill_on_a_large_tile() {
+        showHome(SixColumns.copy(columns = 2, alwaysShowNames = true))
+
+        assertTrue("the ring ends ${ringToPill("pkg.1")} dp above the pill", ringToPill("pkg.1") >= 6f)
+    }
+
+    private fun bounds(tag: String): DpRect = compose.onNodeWithTag(tag).getBoundsInRoot()
+
+    /** The red channel at ([x], [y]) in dp, relative to the left and top of the pill that holds name [tag]: the text's box and 6 dp across, 2 dp down. */
+    private fun inPill(
+        tag: String,
+        x: Float,
+        y: Float,
+    ): Int {
+        val name = bounds(tag)
+        return redAt(name.left.value - 6f + x, name.top.value - 2f + y)
+    }
+
+    @Test
+    fun a_name_pill_is_a_capsule_of_the_height_of_one_line_whatever_the_lines() {
+        showHome(named4, wallpaper = Wallpaper(picture = white), apps = withLongName("pkg.2"))
+        val bare = inPill("name:pkg.3", -6f, 12f)
+
+        // One line: 24 dp tall, so its ends are half circles of 12 dp.
+        assertTrue("one line, corner ${inPill("name:pkg.3", 2.5f, 2.5f)} of $bare", inPill("name:pkg.3", 2.5f, 2.5f) > bare * 0.8f)
+        assertTrue("one line, end ${inPill("name:pkg.3", 1.2f, 12f)} of $bare", inPill("name:pkg.3", 1.2f, 12f) < bare * 0.6f)
+        // Two lines: 44 dp tall, with the same radius.
+        assertTrue("two lines, corner ${inPill("name:pkg.2", 2.5f, 2.5f)} of $bare", inPill("name:pkg.2", 2.5f, 2.5f) > bare * 0.8f)
+        assertTrue("two lines, side ${inPill("name:pkg.2", 1.2f, 14f)} of $bare", inPill("name:pkg.2", 1.2f, 14f) < bare * 0.6f)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_focused_name_is_dark_text_on_a_white_pill_and_the_others_keep_their_dark_pill() {
+        showHome(named4, wallpaper = Wallpaper(picture = white))
+
+        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+        assertTrue("focused pill ${inPill("name:pkg.1", 3f, 12f)}", inPill("name:pkg.1", 3f, 12f) >= 230)
+        assertTrue("other pill ${inPill("name:pkg.2", 3f, 12f)}", inPill("name:pkg.2", 3f, 12f) < 140)
+        val darkest =
+            compose.onNodeWithTag("name:pkg.1").captureToImage().toPixelMap().let { pixels ->
+                (0 until pixels.height).minOf { y -> (0 until pixels.width).minOf { x -> pixels[x, y].red } }
+            }
+        assertTrue("the text is $darkest", darkest < 0.25f)
+    }
+
+    private fun left(tag: String): Dp = compose.onNodeWithTag(tag).getBoundsInRoot().left
+
+    @Test
+    fun with_names_the_dock_and_the_grid_start_on_the_headers_left_edge_though_the_rows_shrank() {
+        showHome(named4)
+        val dockLeft = left("tile:pkg.1")
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
+
+        assertNear(ScreenMargin, dockLeft)
+        assertNear(ScreenMargin, left("tile:pkg.5"))
+        assertTrue("the rows shrank to ${height("tile:pkg.1")} dp", height("tile:pkg.1").value < 113f)
+    }
+
+    @Test
+    fun without_names_a_shrunk_grid_stays_centred_between_the_margins() {
+        showHome(SixColumns.copy(columns = 4, rowsBelowDock = 3))
+        press(Key.DirectionDown)
+
+        assertTrue("the grid starts at ${left("tile:pkg.5")}", left("tile:pkg.5").value > ScreenMargin.value + 4f)
     }
 }

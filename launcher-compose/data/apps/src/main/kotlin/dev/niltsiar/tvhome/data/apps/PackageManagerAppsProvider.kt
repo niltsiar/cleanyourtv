@@ -212,6 +212,7 @@ public class PackageManagerAppsProvider(
         val arrangement: Arrangement,
         val infos: Map<String, ResolveInfo>,
         val tvPackages: Set<String>,
+        val homePackages: Set<String>,
     )
 
     private fun load(): Loaded {
@@ -220,6 +221,10 @@ public class PackageManagerAppsProvider(
         packageSequence = pm.getChangedPackages(since)?.sequenceNumber ?: since
         val leanback = pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0)
         val tvPackages = leanback.mapTo(HashSet()) { it.activityInfo.packageName }
+        val homePackages =
+            pm
+                .queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), 0)
+                .mapTo(HashSet()) { it.activityInfo.packageName }
         val found = leanback.toMutableList()
         val choices = libraryChoices()
         if (choices.added.isNotEmpty()) {
@@ -238,7 +243,7 @@ public class PackageManagerAppsProvider(
         val arrangement = arrange(candidates, tvPackages, config, readOrder(orderFile), context.packageName, choices)
         this.infos = infos
         heroArts.clear()
-        return Loaded(arrangement, infos, tvPackages)
+        return Loaded(arrangement, infos, tvPackages, homePackages)
     }
 
     private fun Loaded.toAppList(withImages: Boolean): AppList {
@@ -256,6 +261,7 @@ public class PackageManagerAppsProvider(
                     leanback = tile.candidate.packageName in tvPackages,
                     iconArt = art?.fromIcon == true,
                     lightArt = art?.light == true,
+                    homeLauncher = tile.candidate.packageName in homePackages,
                 )
             }
         return AppList(apps, arrangement.docked)

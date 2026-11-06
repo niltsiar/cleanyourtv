@@ -35,6 +35,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorProducer
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -77,7 +78,8 @@ internal const val OFFER_PULSE_MS = 600
  * a pill while focused, and lays out on the width it draws at, its focus growth included, plus [GrownMargin] a side.
  * A button with a [label] has no rim. Over a wallpaper brighter than L* 70 under the top bar
  * ([GlassState.topBarLightness]) its tint thickens, up to a total alpha of 0.75 from L* 90. While [active] (a panel it
- * opened is open) it has a white fill of 0.25 and a white edge, so the panel reads as hanging from it.
+ * opened is open) it has a white fill of 0.25 and a white edge, so the panel reads as hanging from it. It grows about
+ * [transformOrigin].
  *
  * With a [focusLabel], a nonzero [offerToken] grows the button into its pill without focus and lights its rim once
  * ([OFFER_PULSE_MS]); a new token pulses again, 0 takes the offer back. With animations off or reduced motion the pill
@@ -94,6 +96,7 @@ public fun GlassIconButton(
     focusLabel: String? = null,
     offerToken: Int = 0,
     active: Boolean = false,
+    transformOrigin: TransformOrigin = TransformOrigin.Center,
     icon: @Composable BoxScope.(focus: () -> Float, ink: ColorProducer) -> Unit,
 ) {
     val motion = TvTheme.motion
@@ -139,6 +142,7 @@ public fun GlassIconButton(
             interactionSource = interactionSource,
             focusedScale = FOCUSED_SCALE,
             shadowElevation = ChromeShadow.Pill.elevation,
+            transformOrigin = transformOrigin,
             background = {
                 GlassSurface(
                     glass = glass,

@@ -18,6 +18,7 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
@@ -180,15 +181,28 @@ class HomeLookUiTest {
     }
 
     @Test
-    fun the_row_above_the_last_grid_row_draws_at_alpha_0_with_the_library_pill_focused() {
+    fun the_row_above_the_last_grid_row_draws_at_85_percent_with_the_library_pill_focused_when_it_clears_the_title_block() {
         showHome(apps = whiteApps(30), config = SixColumns.copy(appLibrary = true))
         repeat(5) { press(Key.DirectionDown) }
         compose.onNodeWithTag("library:pill").assertIsFocused()
 
         // The layer multiplies each draw: the white art, and the tile's own fill under it.
         val fill = 0x1B * 0.85f
-        assertNear(0, redAt(centreOf(bounds("tile:pkg.19"))), 2)
+        assertNear(0, redAt(centreOf(bounds("tile:pkg.13"))), 2)
+        assertNear(Math.round(0.85f * 255 + 0.15f * fill), redAt(centreOf(bounds("tile:pkg.19"))), 4)
         assertNear(Math.round(0.85f * 255 + 0.15f * fill), redAt(centreOf(bounds("tile:pkg.25"))), 4)
+    }
+
+    @Test
+    fun with_focus_on_the_third_row_the_second_shows_whole_below_the_title_block_and_the_first_is_gone() {
+        showHome(apps = whiteApps(24), config = SixColumns.copy(appLibrary = true))
+        repeat(3) { press(Key.DirectionDown) }
+        compose.onNodeWithTag("tile:pkg.19").assertIsFocused()
+
+        assertNear(255, redUnderTop("tile:pkg.13", 10f), 2)
+        assertNear(0, redUnderTop("tile:pkg.7", 10f), 2)
+        assertTrue("the second row starts at ${bounds("tile:pkg.13").top}", bounds("tile:pkg.13").top.value >= 240f)
+        assertTrue("the pill ends at ${bounds("library:pill").bottom}", bounds("library:pill").bottom.value <= screen().bottom.value - 12f)
     }
 
     /** How far under the top bar the title's capitals start: its line box top, 36 sp to the baseline, less the capitals' 0.72 of 48 sp. */
@@ -302,6 +316,17 @@ class HomeLookUiTest {
 
         assertNear(0, redAt(Offset(x, above.bottom.value - 1f)), 3)
         assertNear(0, redAt(Offset(x, above.bottom.value - 30f)), 3)
+    }
+
+    @Test
+    fun a_tile_of_another_launcher_says_its_name_at_the_bottom_left_of_its_banner_and_an_ordinary_tile_says_nothing() {
+        showHome(apps = whiteApps(9).map { if (it.key == "pkg.2") it.copy(label = "Inicio", homeLauncher = true) else it })
+
+        val tile = bounds("tile:pkg.2")
+        val name = compose.onNodeWithTag("name:pkg.2", useUnmergedTree = true).getBoundsInRoot()
+        assertTrue("the name is at $name in $tile", name.left.value - tile.left.value in 0f..16f)
+        assertTrue("the name is at $name in $tile", tile.bottom.value - name.bottom.value in 0f..16f)
+        compose.onAllNodesWithTag("name:pkg.3", useUnmergedTree = true).assertCountEquals(0)
     }
 
     @Test

@@ -95,10 +95,10 @@ class HomeLibraryUiTest {
         press(Key.DirectionDown)
         compose.onNodeWithTag("library:pill").assertIsFocused()
 
-        // A focused pill draws 8% wider about its centre; its left edge before that is the grid's.
+        // A focused pill grows 8% from its left edge, so that edge stays on the grid's.
         val pill = compose.onNodeWithTag("library:pill").getBoundsInRoot()
         val firstColumn = compose.onNodeWithTag("tile:pkg.7").getBoundsInRoot()
-        assertEquals(firstColumn.left.value, pill.left.value + pill.width.value * (1f - 1f / 1.08f) / 2f, 1f)
+        assertEquals(firstColumn.left.value, pill.left.value, 1f)
     }
 
     @Test

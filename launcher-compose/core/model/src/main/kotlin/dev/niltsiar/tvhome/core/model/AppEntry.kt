@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.ImageBitmap
  * the art is not loaded. [leanback] is true when the package has a LEANBACK_LAUNCHER activity, so its tile launches like
  * the TV's own. [iconArt] is true when [image] is the app's icon drawn in the middle of the tile, which names nothing,
  * rather than a banner. [lightArt] is true when the banner is light enough to need an edge on a light surface.
+ * [homeLauncher] is true when the app is a Home launcher other than this one, whose banner may not say what it is.
  */
 @Immutable
 public data class AppEntry(
@@ -22,6 +23,7 @@ public data class AppEntry(
     val leanback: Boolean = false,
     val iconArt: Boolean = false,
     val lightArt: Boolean = false,
+    val homeLauncher: Boolean = false,
 )
 
 /** The tiles in Home's order, and how many of the leading ones are dock apps (the rest follow in the grid). */
