@@ -26,10 +26,6 @@ private const val BOTTOM_FADE_RUN = 72f
 private const val BOTTOM_FADE_LIMIT = 1060f
 private const val TOP_FADE_RUN = 120f
 
-/** The row under the last fully visible one shows at most this much of its top, and at most [PEEK_ALPHA]. */
-private const val PEEK_MAX = 40f
-private const val PEEK_ALPHA = 0.5f
-
 /**
  * A row counts as fully visible once it is this far inside the edge, and is counted in over this much travel, so a row
  * that scrolls past an edge does not make the fade jump.
@@ -40,11 +36,10 @@ private const val SHELF_KEY = "shelf"
 
 /**
  * The grid's edges, drawn as a mask in the draw phase. Nothing is drawn above [cutoff] or lower than the fade
- * [FADE_GAP] below the last fully visible row, which runs [BOTTOM_FADE_RUN] and is gone by [BOTTOM_FADE_LIMIT]; in its
- * first [PEEK_MAX] the next row shows at no more than [PEEK_ALPHA]. At the top a fade of [TOP_FADE_RUN] ends [FADE_GAP]
- * above the first fully visible row. A row is an item of the grid with its [low] shift, the dock included; [cutoff] is the
- * line under which a row at the top counts as fully visible. Each fade is a layer the size of its strip, and the top one
- * is only drawn while an item is in it.
+ * [FADE_GAP] below the last fully visible row, which runs [BOTTOM_FADE_RUN] and is gone by [BOTTOM_FADE_LIMIT]. At the top
+ * a fade of [TOP_FADE_RUN] ends [FADE_GAP] above the first fully visible row. A row is an item of the grid with its [low]
+ * shift, the dock included; [cutoff] is the line under which a row at the top counts as fully visible. Each fade is a
+ * layer the size of its strip, and the top one is only drawn while an item is in it.
  */
 internal fun Modifier.gridEdges(
     grid: LazyGridState,
@@ -62,7 +57,6 @@ internal fun Modifier.gridEdges(
             val shift = low() - info.viewportStartOffset
             var solidBottom = Float.NaN
             var nextBottom = Float.POSITIVE_INFINITY
-            var nextTop = Float.POSITIVE_INFINITY
             var solidTop = Float.POSITIVE_INFINITY
             var partialTop = Float.NEGATIVE_INFINITY
             for (i in info.visibleItemsInfo.indices) {
@@ -74,7 +68,6 @@ internal fun Modifier.gridEdges(
                     if (solidBottom.isNaN() || itemBottom > solidBottom) solidBottom = itemBottom
                 } else if (itemBottom < nextBottom) {
                     nextBottom = itemBottom
-                    nextTop = itemTop
                 }
                 if (itemTop >= top + settle) solidTop = minOf(solidTop, itemTop) else partialTop = maxOf(partialTop, itemTop)
             }
@@ -102,14 +95,10 @@ internal fun Modifier.gridEdges(
                     else -> solidBottom + joined * (nextBottom - solidBottom)
                 }
             val bottomStart = minOf(bottomAnchor + FADE_GAP * unit, size.height)
-            val peekTop = if (nextTop < size.height) nextTop else Float.POSITIVE_INFINITY
             val wanted =
                 BottomMask(
                     start = bottomStart,
                     end = minOf(bottomStart + BOTTOM_FADE_RUN * unit, size.height * BOTTOM_FADE_LIMIT / FRAME_HEIGHT),
-                    peekTop = peekTop,
-                    peekEnd = if (peekTop.isInfinite()) 0f else peekTop + minOf(PEEK_MAX * unit, size.height - peekTop),
-                    joined = joined,
                 )
             val bottomMask =
                 cached?.takeIf { it.first == wanted }?.second
@@ -128,36 +117,26 @@ internal fun Modifier.gridEdges(
         }
     }
 
-/**
- * The bottom mask: whole down to [start], gone at [end], and from [peekTop] to [peekEnd] no more than [PEEK_ALPHA] falling
- * to 0, the row there counted [joined] (0 to 1) as whole already.
- */
+/** The bottom mask: whole down to [start], then falling to gone at [end]. */
 private data class BottomMask(
     val start: Float,
     val end: Float,
-    val peekTop: Float,
-    val peekEnd: Float,
-    val joined: Float,
 ) {
-    private fun alphaAt(y: Float): Float {
-        val fade =
-            if (y <= start) {
-                1f
-            } else if (y >= end) {
-                0f
-            } else {
-                (end - y) / (end - start)
-            }
-        val peek = if (y < peekTop) 1f else joined + (1f - joined) * PEEK_ALPHA * ((peekEnd - y) / (peekEnd - peekTop)).coerceIn(0f, 1f)
-        return minOf(fade, peek)
-    }
-
-    /** A gradient from [start] to the screen's bottom edge at [height], sampled, because the mask is the lower of two ramps. */
+    /** A gradient from [start] to the screen's bottom edge at [height]. */
     fun brush(height: Float): Brush {
         val stops =
             Array(MASK_STOPS + 1) { i ->
                 val fraction = i / MASK_STOPS.toFloat()
-                fraction to Color.Black.copy(alpha = alphaAt(start + fraction * (height - start)))
+                val y = start + fraction * (height - start)
+                val alpha =
+                    if (y <= start) {
+                        1f
+                    } else if (y >= end) {
+                        0f
+                    } else {
+                        (end - y) / (end - start)
+                    }
+                fraction to Color.Black.copy(alpha = alpha)
             }
         return Brush.verticalGradient(colorStops = stops, startY = start, endY = height)
     }

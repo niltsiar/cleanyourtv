@@ -37,7 +37,8 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 
-private const val FOCUSED_SCALE = 1.08f
+/** How much a focused [FocusSurface] grows by default. */
+public const val TILE_FOCUSED_SCALE: Float = 1.08f
 private val RingWidth = 3.dp
 private val RingGap = 3.dp
 private val HairlineWidth = 1.dp
@@ -76,7 +77,7 @@ public fun FocusSurface(
     interactionSource: MutableInteractionSource? = null,
     glow: Boolean = true,
     accent: Color = Color.Unspecified,
-    focusedScale: Float = FOCUSED_SCALE,
+    focusedScale: Float = TILE_FOCUSED_SCALE,
     ring: ColorProducer? = null,
     ringBlends: Boolean = false,
     plate: Color = Color.Unspecified,

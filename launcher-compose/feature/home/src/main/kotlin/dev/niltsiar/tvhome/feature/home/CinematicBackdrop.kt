@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.isSpecified
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
@@ -44,17 +45,24 @@ private const val SCRIM_H = 270
 private val ScrimColor = Color(0xFF060406)
 private val NoArtGlow = Color(0xFF444444)
 
+/** The glow in reorder mode: its strongest alpha, and how far its colour is mixed towards [NoArtGlow]. */
+private const val REORDER_GLOW_CORE = 0.30f
+private const val REORDER_GLOW_MIX = 0.5f
+
 /**
  * The cinematic shelf's part of the backdrop, drawn between the picture and the UI by [draw] in the draw phase:
  * the focused app's softened art stretched over the screen, the glow in its colour from the top corner away from the
  * text, and the scrim that keeps the text and the dock readable. Alpha is applied while drawing, never through a layer.
- * From one app to the next the art cross-fades and the glow changes colour, both in one [cinematicTween].
- * [show] and [hide] run the fades; one coroutine at a time may call them, and a new call continues from what is on screen.
+ * From one app to the next the art cross-fades and the glow changes colour, both in one [cinematicTween]. While
+ * [reordering] the glow is at most [REORDER_GLOW_CORE] strong and half the way to grey, so a vivid app does not flood the
+ * screen. [show] and [hide] run the fades; one coroutine at a time may call them, and a new call continues from what is
+ * on screen.
  */
 @Stable
 internal class CinematicBackdrop(
     private val layout: ShelfLayout,
     private val direction: LayoutDirection,
+    private val reordering: () -> Boolean,
 ) {
     private var art by mutableStateOf<ImageBitmap?>(null)
     private var artKey: String? = null
@@ -86,7 +94,11 @@ internal class CinematicBackdrop(
                 art?.let { if (mix > 0f) drawArt(it, alpha * mix) }
             }
             val glow = glowAlpha.value
-            if (glow > 0f) drawRect(glowBrush(glowColor.value, size), alpha = glow)
+            if (glow > 0f) {
+                val calm = reordering()
+                val color = if (calm) lerp(glowColor.value, NoArtGlow, REORDER_GLOW_MIX) else glowColor.value
+                drawRect(glowBrush(color, size), alpha = if (calm) glow * REORDER_GLOW_CORE / GLOW_CORE else glow)
+            }
             scrim?.let { drawImage(it, dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()), alpha = layout.scrimAlpha) }
         }
 
@@ -233,10 +245,12 @@ internal fun rememberCinematicBackdrop(
     layout: ShelfLayout,
     shelf: () -> Shelf?,
     heroArt: suspend (String) -> ImageBitmap?,
+    reordering: () -> Boolean,
 ): CinematicBackdrop? {
     if (!layout.cinematic) return null
     val direction = LocalLayoutDirection.current
-    val backdrop = remember(layout, direction) { CinematicBackdrop(layout, direction) }
+    val currentReordering by rememberUpdatedState(reordering)
+    val backdrop = remember(layout, direction) { CinematicBackdrop(layout, direction) { currentReordering() } }
     val currentShelf by rememberUpdatedState(shelf)
     val currentHeroArt by rememberUpdatedState(heroArt)
     LaunchedEffect(backdrop) { backdrop.prepareScrim() }

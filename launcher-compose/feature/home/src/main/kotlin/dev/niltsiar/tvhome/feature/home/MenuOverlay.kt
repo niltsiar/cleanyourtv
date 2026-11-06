@@ -28,10 +28,8 @@ private val MenuTopLimit = TopBarTop + TopBarHeight + 8.dp
 private val MenuClearance = 16.dp
 private val TileMenuBottom = 60.dp
 private val SettingsRowHeight = 42.dp
-private val SettingsPadding = 8.dp
 private val DockMenuRowHeight = 40.dp
 private val TileRowHeight = 46.dp
-private val TilePadding = 14.dp
 
 /** The space between a dock tile menu and the dock's panel, which starts [TileGap] above the tile. */
 private val TrayClearance = 12.dp
@@ -41,7 +39,8 @@ private val TrayClearance = 12.dp
  * whole number of tiles wide and lines up with its tile's column ([anchor] is the tile). A dock tile's menu ([dockTile] is
  * the app's name, which heads it) opens above the tile with shorter rows, ending [TrayClearance] above the dock's panel;
  * a grid tile's sits beside it and under [bandBottom], the bottom of the band over the grid, when it fits there. The
- * Settings menu hangs from the Settings button with shorter rows, so it ends clear of the dock.
+ * Settings menu hangs from the Settings button with shorter rows, so it ends clear of the dock, and a line sets its
+ * restart row apart.
  */
 @Composable
 internal fun MenuOverlay(
@@ -78,7 +77,6 @@ internal fun MenuOverlay(
             above = dockTile != null,
             anchorGap = TileGap + TrayClearance,
             rowHeight = if (dockTile != null) DockMenuRowHeight else TileRowHeight,
-            padding = if (dockTile != null) SettingsPadding else TilePadding,
             columnGap = TileGap,
             edgeMargin = ScreenMargin,
         )
@@ -93,7 +91,7 @@ internal fun MenuOverlay(
             modifier = modifier,
             topLimit = MenuTopLimit,
             rowHeight = SettingsRowHeight,
-            padding = SettingsPadding,
+            dividerBefore = { it == MenuRow.PowerMenu },
         )
     }
 }

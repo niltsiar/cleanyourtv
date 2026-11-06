@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -37,11 +38,15 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
@@ -57,7 +62,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -89,19 +93,26 @@ private val OnHomeTint = Color(0x1475BBA4)
 private const val RIM_ALPHA = 0.09f
 private val RecentGreen = Color(0xFF70D9A0)
 private val StatusHeight = 14.dp
-private val GlyphAlone = 14.dp
-private val GlyphBeforeText = 12.dp
-private val GlyphGap = 4.dp
-private const val GLYPH_ALONE_ALPHA = 0.55f
+private val PlusSize = 12.dp
+private val PlusStroke = 1.5.dp
+private val PlusGap = 4.dp
 private const val NEVER_OPENED_ALPHA = 0.45f
+private val BadgeSize = 24.dp
+
+/** How far the badge's centre lies inside the card's top-right corner, so that it stays clear of the art. */
+private val BadgeInset = 2.dp
+private const val BADGE_ALPHA = 0.90f
+private val BadgeInk = Color(0xFF0B0D12)
+private const val OFF_HOME_ART_ALPHA = 0.5f
 
 /**
  * One card of the grid: the app's art on a small tile and its name of up to [NAME_LINES] lines, in the room above the status
- * slot, which says in one line what is not the usual state and shows a house when the app is on Home. An idle card is
- * opaque, so nothing of Home shows through it; a focused one lets the plate [FocusSurface] draws behind it show. It rises
- * in once per opening, with the delay [CardEntrance] gives it, and pops a little when its Home shortcut changes. Both run
- * in the layer lambda. The status slot keeps its place while the card grows, so it stays level with the cards beside it.
- * [widthPx] is the narrowest the card can be.
+ * slot, which says in one line what is not the usual state. An app on Home has no mark, except in the chooser
+ * ([LibraryLayout.selection]), where a check badge hangs on the card's top-right corner and the art of an app that is not on
+ * Home is dimmed. An idle card is opaque, so nothing of Home shows through it; a focused one lets the plate [FocusSurface]
+ * draws behind it show. It rises in once per opening, with the delay [CardEntrance] gives it, and pops a little when its
+ * Home shortcut changes. Both run in the layer lambda. The status slot keeps its place while the card grows, so it stays
+ * level with the cards beside it. [widthPx] is the narrowest the card can be.
  */
 @Composable
 internal fun LibraryCardView(
@@ -199,7 +210,7 @@ internal fun LibraryCardView(
                     .semantics { contentDescription = card.app.label },
             ) {
                 ArtAndName(Modifier.fillMaxSize().padding(start = CardSide, end = CardSide, bottom = CardBottom + StatusHeight)) {
-                    Art(card, artwork, Modifier.padding(horizontal = ArtInset))
+                    Art(card, artwork, layout.selection && !card.onHome, Modifier.padding(horizontal = ArtInset))
                     Name(card.app.label, measurer, widthPx - with(density) { CardSide.roundToPx() * 2 })
                 }
                 Status(
@@ -213,6 +224,7 @@ internal fun LibraryCardView(
                 if (card.recent && !card.onHome) RecentDot(Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp))
             }
         }
+        if (layout.selection && card.onHome) OnHomeBadge(key, Modifier.align(Alignment.TopEnd))
     }
 }
 
@@ -245,6 +257,7 @@ private fun ArtAndName(
 private fun Art(
     card: LibraryCard,
     artwork: LibraryArt?,
+    dimmed: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -252,7 +265,10 @@ private fun Art(
             modifier
                 .fillMaxWidth()
                 .aspectRatio(ART_ASPECT)
-                .clip(ArtShape)
+                .graphicsLayer {
+                    compositingStrategy = CompositingStrategy.ModulateAlpha
+                    alpha = if (dimmed) OFF_HOME_ART_ALPHA else 1f
+                }.clip(ArtShape)
                 .background(TvTheme.colors.surface)
                 .testTag("card:art:${card.app.key}"),
         contentAlignment = Alignment.Center,
@@ -271,45 +287,53 @@ private fun Art(
     }
 }
 
-/** A house of [side], the app is on Home. */
+/**
+ * A white disc with a check on the top-right corner of the card: the app is on Home. It hangs off the corner, outside the
+ * card's shape and clear of the art, over the gap between cards.
+ */
 @Composable
-private fun HomeGlyph(
-    side: Dp,
-    color: Color,
+private fun OnHomeBadge(
+    key: String,
+    modifier: Modifier = Modifier,
 ) {
     val description = stringResource(R.string.library_on_home)
+    val hang = BadgeSize / 2 - BadgeInset
     Box(
-        Modifier
-            .size(side)
+        modifier
+            .offset(x = hang, y = -hang)
+            .size(BadgeSize)
+            .testTag("card:onhome:$key")
             .semantics { contentDescription = description }
-            .drawBehind { drawHouse(color, size.width) },
+            .drawBehind {
+                drawCircle(Color.White, alpha = BADGE_ALPHA)
+                drawCheck(BadgeInk)
+            },
     )
 }
 
-/** A house of [side] in the middle of the scope: a roof over a body with a door. */
-private fun DrawScope.drawHouse(
+/** A check mark in the middle of the scope, its stroke 2 dp. */
+private fun DrawScope.drawCheck(color: Color) {
+    val side = size.width
+    val path =
+        Path().apply {
+            moveTo(side * 0.28f, side * 0.52f)
+            lineTo(side * 0.44f, side * 0.68f)
+            lineTo(side * 0.74f, side * 0.34f)
+        }
+    drawPath(path, color, style = Stroke(2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+}
+
+/** A plus of [side], round caps included, in the middle of the scope. */
+private fun DrawScope.drawPlus(
     color: Color,
     side: Float,
 ) {
-    val left = (size.width - side) / 2f
-    val top = (size.height - side) / 2f
-    val eaves = top + side * 0.46f
-    val roof =
-        Path().apply {
-            moveTo(left + side / 2f, top)
-            lineTo(left + side, eaves)
-            lineTo(left + side * 0.86f, eaves)
-            lineTo(left + side * 0.86f, top + side)
-            lineTo(left + side * 0.58f, top + side)
-            lineTo(left + side * 0.58f, top + side * 0.68f)
-            lineTo(left + side * 0.42f, top + side * 0.68f)
-            lineTo(left + side * 0.42f, top + side)
-            lineTo(left + side * 0.14f, top + side)
-            lineTo(left + side * 0.14f, eaves)
-            lineTo(left, eaves)
-            close()
-        }
-    drawPath(roof, color)
+    val stroke = PlusStroke.toPx()
+    val left = (size.width - side + stroke) / 2f
+    val top = (size.height - side + stroke) / 2f
+    val reach = side - stroke
+    drawLine(color, Offset(left, top + reach / 2f), Offset(left + reach, top + reach / 2f), stroke, StrokeCap.Round)
+    drawLine(color, Offset(left + reach / 2f, top), Offset(left + reach / 2f, top + reach), stroke, StrokeCap.Round)
 }
 
 /** The first character, whole: a letter outside the Basic Multilingual Plane is two chars. */
@@ -364,9 +388,9 @@ internal fun shownName(
 }
 
 /**
- * The status slot, one baseline for every card: a house when the app is on Home, then the line that says what the name does
- * not. That line is, in the least used order when the app was last opened, else the recent-install text, else "Add to
- * Home" for an app that is not on Home, else nothing. The house stands alone, centred, when there is no line.
+ * The status slot, one baseline for every card: the line that says what the name does not. That line is, in the least used
+ * order when the app was last opened, else the recent-install text, else "Add to Home" for an app that is not on Home, else
+ * nothing. A "+" goes before the recent-install text and "Add to Home".
  */
 @Composable
 private fun Status(
@@ -383,7 +407,6 @@ private fun Status(
             card.recent -> stringResource(R.string.library_recent)
             else -> stringResource(R.string.library_add_home)
         }
-    val hasText = opened != null || text != null
     val never = opened != null && opened.at == null
     val shown = if (never) style.copy(color = style.color.copy(alpha = style.color.alpha * NEVER_OPENED_ALPHA)) else style
     Row(
@@ -391,18 +414,13 @@ private fun Status(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (card.onHome) {
-            if (hasText) {
-                HomeGlyph(GlyphBeforeText, shown.color)
-                Spacer(Modifier.width(GlyphGap))
-            } else {
-                HomeGlyph(GlyphAlone, TvTheme.colors.onSurface.copy(alpha = GLYPH_ALONE_ALPHA))
-            }
-        }
         val line = Modifier.weight(1f, fill = false)
         if (opened != null) {
             Opened(card.app.key, opened, shown, line)
         } else if (text != null) {
+            val color = style.color
+            Box(Modifier.size(PlusSize).drawBehind { drawPlus(color, size.width) })
+            Spacer(Modifier.width(PlusGap))
             BasicText(text, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = line)
         }
     }

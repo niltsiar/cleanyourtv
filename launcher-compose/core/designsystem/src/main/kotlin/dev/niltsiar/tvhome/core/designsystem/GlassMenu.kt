@@ -5,10 +5,12 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -64,8 +66,14 @@ import kotlin.math.roundToInt
 private val MenuGap = 10.dp
 private val MenuRise = 14.dp
 private const val MENU_START_SCALE = 0.94f
-private val PanelPadding = 14.dp
-private val RowSpacing = 8.dp
+private val PanelPadding = 8.dp
+
+/** The space between two rows of a [GlassMenu] or a [GlassDropdown]. */
+public val MenuRowSpacing: Dp = 8.dp
+
+/** The height of a [MenuDivider]. */
+public val MenuDividerHeight: Dp = 5.dp
+private const val DIVIDER_ALPHA = 0.12f
 private val RowHeight = 46.dp
 private const val TITLE_ALPHA = 0.75f
 private val TitlePadding = 8.dp
@@ -95,7 +103,8 @@ public class BesideAnchor(
  * string [label] gives and carries the test tag [rowTag]; the panel's own tag is `menu`, [padding] inside its edge, and
  * the rows' corners are concentric with the panel's. It rises and fades in with a spring and takes focus on its first
  * row, and never goes above [topLimit]; focus cannot leave it. A [title] is a header row over the rows, tagged
- * `menu:title`. [above], [anchorGap], [columnGap] and [edgeMargin] are [GlassDropdown]'s.
+ * `menu:title`. A row for which [dividerBefore] is true, and that is not the first, has a [MenuDivider] above it. [above],
+ * [anchorGap], [columnGap] and [edgeMargin] are [GlassDropdown]'s.
  */
 @Composable
 public fun <T> GlassMenu(
@@ -115,9 +124,10 @@ public fun <T> GlassMenu(
     anchorGap: Dp = MenuGap,
     columnGap: Dp? = null,
     edgeMargin: Dp = 0.dp,
+    dividerBefore: (T) -> Boolean = { false },
 ) {
     val first = remember { FocusRequester() }
-    val rowShape = remember(padding) { RoundedCornerShape(OverlayCorner - padding) }
+    val rowShape = remember(padding) { menuRowShape(padding) }
     GlassDropdown(
         anchor,
         alignEnd,
@@ -133,6 +143,7 @@ public fun <T> GlassMenu(
     ) {
         if (title != null) MenuTitle(title)
         rows.forEachIndexed { index, row ->
+            if (index > 0 && dividerBefore(row)) MenuDivider()
             val focus = if (index == 0) Modifier.focusRequester(first) else Modifier
             MenuItem(label(row), rowTag(row), { onPick(row) }, rowHeight, rowShape, focus)
         }
@@ -149,7 +160,8 @@ public fun <T> GlassMenu(
  * coordinates) a panel that hangs below the anchor ends at or above it, and scrolls when its content is taller: it
  * fades its content over 24 dp at an edge with more content past it, and a focused child scrolls clear of that fade.
  * With [childHeights], the heights of [content]'s children, such a panel ends between two children rather than through
- * one. With [columnGap] the anchor is one column of a grid whose columns are [columnGap] apart: the panel is a whole number of
+ * one; a [MenuDivider] counts with the child under it, so that the panel never ends on a divider. With [columnGap] the
+ * anchor is one column of a grid whose columns are [columnGap] apart: the panel is a whole number of
  * columns wide, plus the gaps between them, and starts at the anchor's left edge (or ends at its right edge when it
  * would pass [edgeMargin] from the screen's side); [beside] it, [BesideAnchor.gap] should be [columnGap] so that the
  * panel starts on the next column and ends on the one before.
@@ -209,7 +221,7 @@ public fun GlassDropdown(
                                 .padding(padding)
                                 .focusProperties { exit = { FocusRequester.Cancel } }
                                 .focusGroup(),
-                        verticalArrangement = Arrangement.spacedBy(RowSpacing),
+                        verticalArrangement = Arrangement.spacedBy(MenuRowSpacing),
                         content = content,
                     )
                 }
@@ -232,7 +244,7 @@ public fun GlassDropdown(
         val room = if (limited) bottomLimit.roundToPx() - anchor.value.bottom.toInt() - gap else Int.MAX_VALUE
         val height =
             if (limited && childHeights != null) {
-                wholeChildrenHeight(childHeights.map { it.roundToPx() }, padding.roundToPx(), RowSpacing.roundToPx(), maxOf(room, 0))
+                wholeChildrenHeight(childHeights.map { it.roundToPx() }, padding.roundToPx(), MenuRowSpacing.roundToPx(), maxOf(room, 0))
             } else {
                 room
             }
@@ -397,6 +409,22 @@ internal fun besideAnchor(
     val upper = if (panelHeight <= bottom - top) top else fallbackTop
     val y = (anchor.center.y - panelHeight / 2).coerceAtMost(bottom - panelHeight).coerceAtLeast(upper)
     return IntOffset(x, y)
+}
+
+/** The corner of a row of a panel padded by [padding], concentric with the panel's. */
+public fun menuRowShape(padding: Dp = PanelPadding): Shape = RoundedCornerShape(OverlayCorner - padding)
+
+/** A faint line between two groups of rows, [MenuDividerHeight] tall. */
+@Composable
+public fun MenuDivider(modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .testTag("menu:divider")
+            .fillMaxWidth()
+            .height(MenuDividerHeight)
+            .padding(horizontal = 12.dp, vertical = 2.dp)
+            .background(TvTheme.colors.onSurface.copy(alpha = DIVIDER_ALPHA)),
+    )
 }
 
 @Composable

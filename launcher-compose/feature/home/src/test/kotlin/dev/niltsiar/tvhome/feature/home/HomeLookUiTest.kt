@@ -238,15 +238,16 @@ class HomeLookUiTest {
     }
 
     @Test
-    fun a_grid_row_half_visible_or_more_keeps_its_look_at_the_bottom_edge() {
+    fun a_grid_row_half_visible_or_more_draws_whole_under_the_bottom_fade_not_as_a_half_alpha_strip() {
         showHome(apps = whiteApps(30), config = SixColumns.copy(columns = 5))
         press(Key.DirectionDown)
         compose.onNodeWithTag("tile:pkg.6").assertIsFocused()
 
-        // The third row shows 80% of its tile, and the bottom fade keeps its first 40 px at up to half alpha.
+        // The third row shows 80% of its tile and starts 24 dp under the last whole row, whose bottom is 8 dp short of the
+        // fade's start; the fade runs 36 dp, so the row's top reads (20 - dp) / 36 of its own alpha.
         assertTrue("the row shows ${visibleShare("tile:pkg.16")}", visibleShare("tile:pkg.16") in 0.5f..0.95f)
-        assertNear(Math.round(255 * 0.5f * (1 - 2f / 20f)), redUnderTop("tile:pkg.16", 2f), 8)
-        assertNear(Math.round(255 * 0.5f * (1 - 10f / 20f)), redUnderTop("tile:pkg.16", 10f), 8)
+        assertNear(Math.round(255 * (20f - 2f) / 36f), redUnderTop("tile:pkg.16", 2f), 5)
+        assertNear(Math.round(255 * (20f - 10f) / 36f), redUnderTop("tile:pkg.16", 10f), 5)
     }
 
     @Test
@@ -349,13 +350,6 @@ class HomeLookUiTest {
         assertDrawnAt(1f, white, clear)
     }
 
-    /** The green channel, 0 to 255, of the screen at [point] (in dp): white art reads 255, the coral ring of a carried tile 107. */
-    private fun greenAt(point: Offset): Int {
-        val pixels = compose.onRoot().captureToImage().toPixelMap()
-        val density = compose.activity.resources.displayMetrics.density
-        return Math.round(pixels[(point.x * density).toInt(), (point.y * density).toInt()].green * 255)
-    }
-
     /** The top and bottom, in dp, of the run of white art that crosses [y] in the column at [x]. */
     private fun artSpan(
         x: Float,
@@ -390,33 +384,69 @@ class HomeLookUiTest {
         assertNear((restTop + restBottom) / 2 - 8f, (top + bottom) / 2, 1f)
     }
 
-    /** Whether the screen is white just outside the [side] edge of the carried tile's art, where only a chevron badge reaches. */
-    private fun badgeOn(
+    /** Whether the screen holds a white pixel in the box from ([left], [top]) to ([right], [bottom]), in dp. */
+    private fun whiteIn(
+        left: Float,
+        top: Float,
+        right: Float,
+        bottom: Float,
+    ): Boolean {
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val density = compose.activity.resources.displayMetrics.density
+        return (((left * density).toInt()) until (right * density).toInt()).any { x ->
+            (((top * density).toInt()) until (bottom * density).toInt()).any { y -> pixels[x, y].green > 0.9f }
+        }
+    }
+
+    /** Apps whose art is clear, so that only a chevron is white over the dark tile. */
+    private fun clearApps(count: Int) = whiteApps(count).map { it.copy(image = ImageBitmap(16, 9)) }
+
+    /** The 24 dp gutter beside a carried tile is bare but for a chevron: its art, grown 1.08 twice, ends 8.3% of its width past the edge. */
+    private fun chevronOn(
         side: Int,
         key: String,
     ): Boolean {
         val tile = bounds("tile:$key")
-        val middle = (tile.left.value + tile.right.value) / 2
-        // The badge sits on the layer's edge; the art, 1.08 larger, ends 5 or 6 dp past it, and the badge 12.
-        val edge = middle + side * (tile.right.value - tile.left.value) / 2
-        return greenAt(Offset(edge + side * 9f, (tile.top.value + tile.bottom.value) / 2)) > 230
+        val artEnd = (tile.right.value - tile.left.value) * (1.08f * 1.08f - 1f) / 2f
+        val edge = if (side < 0) tile.left.value else tile.right.value
+        val near = edge + side * (artEnd + 0.5f)
+        val far = edge + side * (TileGap.value - 0.5f)
+        return whiteIn(minOf(near, far), tile.top.value - 10f, maxOf(near, far), tile.bottom.value)
     }
 
     @Test
-    fun the_carried_tile_shows_a_chevron_only_on_the_sides_it_can_move_to() {
-        showHome(apps = whiteApps(3))
+    @Config(qualifiers = "+night")
+    fun the_carried_tile_shows_a_chevron_in_the_gutter_only_on_the_sides_it_can_move_to() {
+        showHome(apps = clearApps(3))
 
         carryFirstTile()
-        assertTrue("first tile, right", badgeOn(+1, "pkg.1"))
-        assertTrue("first tile, left", !badgeOn(-1, "pkg.1"))
+        assertTrue("first tile, right", chevronOn(+1, "pkg.1"))
+        assertTrue("first tile, left", !chevronOn(-1, "pkg.1"))
 
         press(Key.DirectionRight)
-        assertTrue("middle tile, right", badgeOn(+1, "pkg.1"))
-        assertTrue("middle tile, left", badgeOn(-1, "pkg.1"))
+        assertTrue("middle tile, right", chevronOn(+1, "pkg.1"))
+        assertTrue("middle tile, left", chevronOn(-1, "pkg.1"))
 
         press(Key.DirectionRight)
-        assertTrue("last tile, right", !badgeOn(+1, "pkg.1"))
-        assertTrue("last tile, left", badgeOn(-1, "pkg.1"))
+        assertTrue("last tile, right", !chevronOn(+1, "pkg.1"))
+        assertTrue("last tile, left", chevronOn(-1, "pkg.1"))
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun a_chevron_covers_none_of_the_carried_tiles_art_and_none_of_the_tiles_beside_it() {
+        showHome(apps = clearApps(3))
+        carryFirstTile()
+        press(Key.DirectionRight)
+        assertTrue("both chevrons show", chevronOn(-1, "pkg.1") && chevronOn(+1, "pkg.1"))
+
+        val carried = bounds("tile:pkg.1")
+        val before = dockTile(2)
+        val after = dockTile(3)
+        // The art grows 8.3% of its width past the layout bounds; the box is the bounds, which the art covers.
+        assertTrue("the art", !whiteIn(carried.left.value, carried.top.value, carried.right.value, carried.bottom.value))
+        assertTrue("the tile before", !whiteIn(before.left.value, before.top.value, before.right.value, before.bottom.value))
+        assertTrue("the tile after", !whiteIn(after.left.value, after.top.value, after.right.value, after.bottom.value))
     }
 
     /** The red channel just outside a chip, inside its backing, and on its rim. */

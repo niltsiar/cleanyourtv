@@ -21,7 +21,10 @@ import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
@@ -483,54 +486,125 @@ class LibraryOverlayLookUiTest {
         assertTrue("red $red, green $green", green - red < 20)
     }
 
-    private fun houseGlyph(name: String): DpRect =
-        compose
-            .onNode(hasContentDescription("On Home") and hasAnyAncestor(hasTestTag("card:${key(name)}")), useUnmergedTree = true)
-            .getBoundsInRoot()
-
     @Test
     @Config(qualifiers = "+night")
-    fun an_app_on_home_has_no_badge_on_its_art() {
-        showLibrary(listOf(libraryApp("Aaa"), libraryApp("Gamma", onHome = true)), art = LibraryArt(white, Color.Gray))
-
-        val art = art("Gamma")
-        val corner = rgbAt(art.right - 22.5.dp, art.top + 14.dp)
-        assertTrue("art corner $corner", corner.all { it >= 250 })
-        assertTrue("glyph ${houseGlyph("Gamma")} on the art $art", houseGlyph("Gamma").top >= art.bottom)
-    }
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun an_app_on_home_with_no_status_text_shows_a_14_dp_house_glyph_centred_in_the_status_slot() {
+    fun in_browse_mode_an_app_on_home_has_no_mark_and_an_empty_status_slot() {
         showLibrary(listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp("Gamma", onHome = true)))
 
-        val glyph = houseGlyph("Gamma")
-        val card = card("Gamma")
-        assertNear(14.dp, glyph.width)
-        assertNear(14.dp, glyph.height)
-        assertNear((card.left + card.right) / 2, (glyph.left + glyph.right) / 2)
-        assertNear((statusText("Add to Home", "Beta").top + statusText("Add to Home", "Beta").bottom) / 2, (glyph.top + glyph.bottom) / 2)
-        assertNear(card.bottom - 6.dp - 7.dp, (glyph.top + glyph.bottom) / 2)
-        val (peak, ground) = lineBrightness(glyph)
-        assertTrue("glyph peaks at $peak over $ground", peak - ground in 60..170)
+        compose.onAllNodes(hasContentDescription("On Home"), useUnmergedTree = true).assertCountEquals(0)
+        val gamma = card("Gamma")
+        val (peak, ground) = lineBrightness(DpRect(gamma.left + 6.dp, gamma.bottom - 20.dp, gamma.right - 6.dp, gamma.bottom - 6.dp))
+        assertTrue("the status slot of an app on Home draws up to $peak over $ground", peak - ground <= 3)
+    }
+
+    /** The first and last column, in dp, where [area] holds a pixel lighter than its top left one by [TEXT_OVER_GROUND]; null for none. */
+    private fun lightSpan(area: DpRect): ClosedFloatingPointRange<Float>? {
+        val density = compose.activity.resources.displayMetrics.density
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val xs = (area.left.value * density).toInt() until (area.right.value * density).toInt()
+        val ys = (area.top.value * density).toInt() until (area.bottom.value * density).toInt()
+        val ground = pixels[xs.first, ys.first].red
+        val lit = xs.filter { x -> ys.any { y -> (pixels[x, y].red - ground) * 255 > TEXT_OVER_GROUND } }
+        return if (lit.isEmpty()) null else (lit.first() / density)..((lit.last() + 1) / density)
     }
 
     @Test
     @Config(qualifiers = "+night")
-    fun an_app_on_home_with_a_status_text_shows_a_12_dp_house_glyph_4_dp_before_it() {
+    fun an_app_off_home_has_a_12_dp_plus_4_dp_before_its_add_to_home_line_at_the_lines_alpha() {
+        showLibrary(listOf(libraryApp("Aaa"), libraryApp("Beta")))
+
+        val text = statusText("Add to Home", "Beta")
+        val plusArea = DpRect(text.left - 30.dp, text.top, text.left - 0.5.dp, text.bottom)
+        val plus = lightSpan(plusArea)!!
+        assertEquals(12f, plus.endInclusive - plus.start, 1f)
+        assertEquals(4f, text.left.value - plus.endInclusive, 1f)
+        val (plusPeak, ground) = lineBrightness(DpRect(text.left - 17.dp, text.top, text.left - 4.dp, text.bottom))
+        val (textPeak, _) = lineBrightness(text)
+        val ratio = (plusPeak - ground).toFloat() / (textPeak - ground)
+        assertTrue("the plus peaks at $plusPeak, the line at $textPeak, over $ground", ratio in 0.7f..1.3f)
+    }
+
+    private val red =
+        ImageBitmap(16, 9).also { image ->
+            Canvas(image).drawRect(Rect(0f, 0f, 16f, 9f), Paint().apply { color = Color.Red })
+        }
+
+    private val chooser = TvConfig(appLibrary = true, appLibrarySelection = true)
+
+    /** An app on Home draws first in the chooser, so the focus takes Aaa and Bbb stays idle. Ccc is the idle app off Home. */
+    private fun showChooser() =
         showLibrary(
-            listOf(libraryApp("Aaa"), libraryApp("Gamma", onHome = true)),
-            config = TvConfig(appLibrary = true, libraryLeastUsed = true),
-            record = OpenedRecord(times = mapOf(key("Gamma") to NOW - 3 * DAY), since = NOW - 90 * DAY),
+            listOf(libraryApp("Aaa", onHome = true), libraryApp("Bbb", onHome = true), libraryApp("Ccc"), libraryApp("Ddd")),
+            art = LibraryArt(red, Color.Red),
+            config = chooser,
         )
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun in_the_chooser_an_app_on_home_has_a_24_dp_white_check_badge_on_the_cards_corner_clear_of_its_art() {
+        showChooser()
+
+        val badge = compose.onNodeWithTag("card:onhome:${key("Bbb")}", useUnmergedTree = true).getBoundsInRoot()
+        val card = card("Bbb")
+        assertNear(24.dp, badge.width)
+        assertNear(24.dp, badge.height)
+        assertNear(card.right - 2.dp, (badge.left + badge.right) / 2)
+        assertNear(card.top + 2.dp, (badge.top + badge.bottom) / 2)
+        compose.onNodeWithTag("card:onhome:${key("Bbb")}", useUnmergedTree = true).assertContentDescriptionEquals("On Home")
+        val middle = rgbAt((badge.left + badge.right) / 2, (badge.top + badge.bottom) / 2)
+        assertTrue("badge $middle", middle.all { it >= 225 })
+        // The tip of the check, 0.44 across and 0.68 down.
+        val check = rgbAt(badge.left + badge.width * 0.44f, badge.top + badge.height * 0.68f)
+        assertTrue("check $check", check.all { it < 90 })
+        val art = art("Bbb")
+        assertTrue("the art shows red only", (0..20).all { rgbAt(art.left + art.width * it / 20, art.top + art.height * 0.5f)[1] < 60 })
+        assertTrue("the badge covers no art", (0..20).all { rgbAt(art.right - 2.dp, art.top + art.height * it / 20)[1] < 60 })
+        assertTrue("the badge covers no art at the corner", rgbAt(art.right - 3.dp, art.top + 3.dp)[1] < 60)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun in_the_chooser_the_art_of_an_app_off_home_draws_at_half_alpha_and_it_has_no_badge() {
+        showChooser()
+
+        val on = art("Bbb")
+        val off = art("Ccc")
+        val onRed = redAt((on.left + on.right) / 2, (on.top + on.bottom) / 2)
+        val offRed = redAt((off.left + off.right) / 2, (off.top + off.bottom) / 2)
+        assertEquals(255, onRed)
+        assertEquals("half of the red art over the card", 142f, offRed.toFloat(), 14f)
+        compose.onNodeWithTag("card:onhome:${key("Ccc")}", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun in_the_chooser_an_app_off_home_shows_the_plus_and_add_to_home_and_an_app_on_home_no_status_line() {
+        showChooser()
+
+        assertEquals(listOf("Ccc", "Add to Home"), compose.textsOnCard("Ccc"))
+        assertEquals(listOf("Bbb"), compose.textsOnCard("Bbb"))
+        val text = statusText("Add to Home", "Ccc")
+        assertEquals(
+            12f,
+            lightSpan(DpRect(text.left - 30.dp, text.top, text.left - 0.5.dp, text.bottom))!!.let { it.endInclusive - it.start },
+            1f,
+        )
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_no_usage_status_is_one_line_under_the_order_chip_and_not_in_the_hint() {
+        showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
+
         press(Key.Menu)
 
-        val glyph = houseGlyph("Gamma")
-        val text = compose.onNodeWithTag("card:opened:${key("Gamma")}", useUnmergedTree = true).getBoundsInRoot()
-        assertNear(12.dp, glyph.width)
-        assertNear(12.dp, glyph.height)
-        assertNear(4.dp, text.left - glyph.right)
-        assertNear((text.top + text.bottom) / 2, (glyph.top + glyph.bottom) / 2)
+        val chip = bounds("library:order")
+        val status = bounds("library:status")
+        compose.onNodeWithTag("library:hint").assertTextEquals("Press to add to Home · Hold for options · Menu: Usual order")
+        compose.onNodeWithTag("library:status").assertTextEquals("No usage data yet")
+        assertNear(chip.right, status.right)
+        assertTrue("status $status under chip $chip", status.top >= chip.bottom)
+        assertNear(bounds("library:hint").height, status.height)
     }
 
     /** The darkest red, 0 to 255, in [area]. */

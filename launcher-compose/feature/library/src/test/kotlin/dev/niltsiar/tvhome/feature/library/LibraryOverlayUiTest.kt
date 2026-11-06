@@ -288,28 +288,27 @@ class LibraryOverlayUiTest {
     }
 
     @Test
-    fun with_no_open_time_for_any_app_the_least_used_order_shows_no_opened_text_and_the_hint_says_so() {
+    fun with_no_open_time_for_any_app_the_least_used_order_shows_no_opened_text_and_a_status_says_so() {
         showLibrary(leastUsed)
         compose.onNodeWithTag("library:hint").assertTextEquals("Press to add to Home · Hold for options · Menu: Least used")
 
         press(Key.Menu)
 
-        compose
-            .onNodeWithTag(
-                "library:hint",
-            ).assertTextEquals("Press to add to Home · Hold for options · Menu: Usual order · No usage data yet")
+        compose.onNodeWithTag("library:hint").assertTextEquals("Press to add to Home · Hold for options · Menu: Usual order")
+        compose.onNodeWithTag("library:status").assertTextEquals("No usage data yet")
         compose.onNodeWithTag("card:opened:${key("Alpha")}", useUnmergedTree = true).assertDoesNotExist()
         assertEquals(listOf("Alpha", "Add to Home"), compose.textsOnCard("Alpha"))
     }
 
     @Test
-    fun with_an_open_time_the_hint_does_not_say_there_is_no_usage_data() {
+    fun with_an_open_time_the_library_does_not_say_there_is_no_usage_data() {
         gammaOpenedThreeDaysAgo()
         showLibrary(leastUsed)
 
         press(Key.Menu)
 
         compose.onNodeWithTag("library:hint").assertTextEquals("Press to add to Home · Hold for options · Menu: Usual order")
+        compose.onNodeWithTag("library:status").assertDoesNotExist()
     }
 
     @Test

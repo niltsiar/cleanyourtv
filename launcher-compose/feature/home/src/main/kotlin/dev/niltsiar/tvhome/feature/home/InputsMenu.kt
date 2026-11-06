@@ -7,8 +7,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,6 +40,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -53,7 +51,11 @@ import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.designsystem.FocusInk
 import dev.niltsiar.tvhome.core.designsystem.FocusPill
 import dev.niltsiar.tvhome.core.designsystem.GlassDropdown
+import dev.niltsiar.tvhome.core.designsystem.MenuDivider
+import dev.niltsiar.tvhome.core.designsystem.MenuDividerHeight
+import dev.niltsiar.tvhome.core.designsystem.MenuRowSpacing
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.designsystem.menuRowShape
 import dev.niltsiar.tvhome.core.model.InputConnection
 import dev.niltsiar.tvhome.core.model.InputIcon
 import dev.niltsiar.tvhome.core.model.InputRow
@@ -63,8 +65,7 @@ import dev.niltsiar.tvhome.core.model.visible
 private val MinListWidth = 150.dp
 private val MaxListWidth = 360.dp
 private val RowHeight = 46.dp
-private val SeparatorHeight = 5.dp
-private val RowShape = RoundedCornerShape(14.dp)
+private val RowShape = menuRowShape()
 private const val ICON_ALPHA = 0.9f
 private const val NO_DEVICE_ALPHA = 0.5f
 private val CapsuleHeight = 24.dp
@@ -84,11 +85,11 @@ private val CapsuleSolid = Color(0xFF146C2E)
 private const val PULSE_MS = 1800
 private const val HALO_ALPHA = 0.4f
 private const val HALO_GROWTH = 1.8f
-private const val SEPARATOR_ALPHA = 0.12f
 
 /**
- * The TV's input list hanging under the Inputs button at [anchor]: as wide as the button, or 150 dp, and wider for a
- * long name up to 360 dp. It ends at or above [bottomLimit], between two rows, and scrolls when its rows are taller. Each
+ * The TV's input list hanging under the Inputs button at [anchor], its right edge on the top bar's: as wide as the button,
+ * or 150 dp, and wider for a long name up to 360 dp. It ends at or above [bottomLimit], between two rows, and scrolls when
+ * its rows are taller. Each
  * [InputRow.Port] row shows a green capsule while its port is connected, its dot ringed
  * by a pulse unless [animated] is off. "More inputs" shows the rows [rows] folds. The Live TV row comes last.
  * Focus opens on the first connected port, as the TV does not say which input is active, else on the first row.
@@ -115,7 +116,10 @@ internal fun InputsMenu(
         }
     }
     val pulse = rememberPulse(animated)
-    val buttonWidth = with(LocalDensity.current) { anchor.value.width.toDp() }
+    val density = LocalDensity.current
+    val buttonWidth = with(density) { anchor.value.width.toDp() }
+    val clusterRight = LocalWindowInfo.current.containerSize.width - with(density) { ScreenMargin.toPx() }
+    val endAtCluster = remember(anchor, clusterRight) { derivedStateOf { anchor.value.copy(right = clusterRight) } }
     val minWidth = maxOf(buttonWidth, MinListWidth)
     val openRow =
         remember(shown) {
@@ -123,10 +127,10 @@ internal fun InputsMenu(
             if (connected >= 0) connected else shown.indexOfFirst { it !is InputRow.Separator }
         }
     val firstFolded = remember(shown) { shown.indexOfFirst { it is InputRow.Port && it.folded } }
-    val childHeights = remember(shown) { shown.map { if (it is InputRow.Separator) SeparatorHeight else RowHeight } }
+    val childHeights = remember(shown) { rowHeights(shown) }
     GlassDropdown(
-        anchor = anchor,
-        alignEnd = false,
+        anchor = endAtCluster,
+        alignEnd = true,
         firstFocus = first,
         modifier = modifier,
         minWidth = minWidth,
@@ -187,14 +191,23 @@ internal fun InputsMenu(
                 }
 
                 is InputRow.Separator -> {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(SeparatorHeight)
-                            .padding(horizontal = 12.dp, vertical = 2.dp)
-                            .background(TvTheme.colors.onSurface.copy(alpha = SEPARATOR_ALPHA)),
-                    )
+                    MenuDivider()
                 }
+            }
+        }
+    }
+}
+
+/** The heights of the rows of [rows] for the list to end between, a divider counted with the row under it. */
+private fun rowHeights(rows: List<InputRow>): List<Dp> {
+    var divided = 0.dp
+    return buildList {
+        rows.forEach { row ->
+            if (row is InputRow.Separator) {
+                divided += MenuDividerHeight + MenuRowSpacing
+            } else {
+                add(RowHeight + divided)
+                divided = 0.dp
             }
         }
     }

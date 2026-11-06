@@ -124,8 +124,22 @@ class AlwaysShowNamesUiTest {
         assertEquals(0, compose.onAllNodesWithTag("name:pkg.7").fetchSemanticsNodes().size)
     }
 
+    /** The brightest red, 0 to 1, of [tag]: the ink of a name over its pill. */
+    private fun ink(tag: String): Float {
+        val pixels = compose.onNodeWithTag(tag).captureToImage().toPixelMap()
+        return (0 until pixels.height).maxOf { y -> (0 until pixels.width).maxOf { x -> pixels[x, y].red } }
+    }
+
     @Test
-    @Config(qualifiers = "+night")
+    fun a_name_on_its_pill_is_white_ink_with_the_surfaces_light_too() {
+        showHome(SixColumns.copy(alwaysShowNames = true))
+
+        assertEquals(0.85f, ink("name:pkg.2"), 0.05f)
+        press(Key.DirectionRight)
+        assertEquals(1f, ink("name:pkg.2"), 0.03f)
+    }
+
+    @Test
     fun the_name_under_an_unfocused_dock_tile_shows_at_85_percent_and_at_full_when_focused() {
         showHome(SixColumns.copy(alwaysShowNames = true))
         val unfocused = contrast("name:pkg.2")

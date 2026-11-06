@@ -342,7 +342,8 @@ public fun HomeScreen(
             input.openInputs()
         }
     }
-    val backdrop = rememberCinematicBackdrop(shelfLayout, shelf = { state().shelf }, heroArt = heroArt)
+    val reordering = { state().reorder != null }
+    val backdrop = rememberCinematicBackdrop(shelfLayout, shelf = { state().shelf }, heroArt = heroArt, reordering = reordering)
     val titleShift: GraphicsLayerScope.() -> Float = { dim.titleShiftPx(TitleGridDrop.toPx()) }
     val shelfModifier =
         Modifier
@@ -1682,8 +1683,8 @@ private fun AppTile(
 }
 
 /**
- * [tile] with [app]'s name under it, on a pill as wide as the text, at [NAME_REST_ALPHA] and at 1 while the tile has
- * focus. The pill is static; the fade runs in the draw phase, so a focus move recomposes nothing.
+ * [tile] with [app]'s name under it in white, on a dark pill as wide as the text, at [NAME_REST_ALPHA] and at 1 while the
+ * tile has focus. The pill is static; the fade runs in the draw phase, so a focus move recomposes nothing.
  */
 @Composable
 private fun NameUnder(
@@ -1696,7 +1697,7 @@ private fun NameUnder(
     val scope = rememberCoroutineScope()
     val style =
         TvTheme.typography.tileLabel
-            .copy(color = TvTheme.colors.onSurface, textAlign = TextAlign.Center)
+            .copy(color = Color.White, textAlign = TextAlign.Center)
             .withSubtitleShadow()
     Column(
         modifier.onFocusChanged {

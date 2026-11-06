@@ -16,9 +16,11 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -27,6 +29,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.height
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
@@ -67,9 +70,16 @@ class HomeOverlayLookUiTest {
         appCount: Int = 9,
         inputs: InputsMenu = FourPorts,
         config: TvConfig = SixColumns,
+        topBarApps: List<AppEntry> = emptyList(),
     ) {
         apps = appsOf(appCount)
-        val sources = sources(apps = flowOf(AppList(apps)), inputs = flowOf(inputs), powerMenuAvailable = { true })
+        val sources =
+            sources(
+                apps = flowOf(AppList(apps)),
+                topBarApps = flowOf(topBarApps),
+                inputs = flowOf(inputs),
+                powerMenuAvailable = { true },
+            )
         compose.setContent {
             TvTheme {
                 val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
@@ -128,6 +138,12 @@ class HomeOverlayLookUiTest {
         expected: Int,
         actual: Int,
         tolerance: Int,
+    ) = assertTrue("expected $expected, got $actual", abs(actual - expected) <= tolerance)
+
+    private fun assertNear(
+        expected: Float,
+        actual: Float,
+        tolerance: Float,
     ) = assertTrue("expected $expected, got $actual", abs(actual - expected) <= tolerance)
 
     private fun press(key: Key) {
@@ -315,10 +331,7 @@ class HomeOverlayLookUiTest {
         assertNear(Math.round(dimmed + 0.7f * (255 - dimmed)), redAt(Offset(tile.left.value - 1f, middle)), 8)
     }
 
-    @Test
-    @Config(qualifiers = "+night")
-    fun settings_menu_rows_have_corners_concentric_with_the_panel() {
-        showHome()
+    private fun openSettingsMenu() {
         compose.onRoot().performKeyInput { pressKey(Key.DirectionUp) }
         settle()
         repeat(2) {
@@ -327,12 +340,90 @@ class HomeOverlayLookUiTest {
         }
         compose.onNodeWithContentDescription("Settings").assertIsFocused()
         openTileMenu()
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun settings_menu_rows_have_corners_concentric_with_the_panel() {
+        showHome()
+        openSettingsMenu()
         compose.onNodeWithTag("menu:EditDock").assertIsFocused()
 
         val row = bounds("menu:EditDock")
         assertNear(0xF2, redAt(Offset(row.right.value - 12f, (row.top.value + row.bottom.value) / 2)), 3)
         // 5 dp in from the corner lies inside a 14 dp corner and outside a 20 dp one.
         assertTrue(redAt(Offset(row.left.value + 5f, row.top.value + 5f)) < 0x80)
+    }
+
+    /** How far the focused row of the open menu is from the panel's left edge, in dp. */
+    private fun focusedRowInset(): Float {
+        val row = compose.onNode(isFocused() and hasAnyAncestor(hasTestTag("menu"))).getBoundsInRoot()
+        return row.left.value - bounds("menu").left.value
+    }
+
+    @Test
+    fun the_focused_row_of_a_grid_tiles_menu_is_8_dp_inside_the_panel() {
+        showHome()
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+        openTileMenu()
+
+        assertNear(8f, focusedRowInset(), 0.5f)
+    }
+
+    @Test
+    fun the_focused_row_of_the_settings_menu_is_8_dp_inside_the_panel() {
+        showHome()
+        openSettingsMenu()
+
+        assertNear(8f, focusedRowInset(), 0.5f)
+    }
+
+    @Test
+    fun the_focused_row_of_the_inputs_list_is_8_dp_inside_the_panel() {
+        openInputs()
+
+        assertNear(8f, focusedRowInset(), 0.5f)
+    }
+
+    @Test
+    fun the_settings_menu_sets_its_restart_row_apart_with_the_inputs_lists_line() {
+        showHome()
+        openSettingsMenu()
+
+        val line = compose.onNodeWithTag("menu:divider").getBoundsInRoot()
+        assertTrue("the line is ${line.height} dp tall", abs(line.height.value - 5f) <= 0.5f)
+        assertTrue("the line ${line.top} is under the Reorder row ${bounds("menu:Reorder")}", line.top >= bounds("menu:Reorder").bottom)
+        assertTrue(
+            "the line ${line.bottom} is over the restart row ${bounds("menu:PowerMenu")}",
+            line.bottom <= bounds("menu:PowerMenu").top,
+        )
+    }
+
+    @Test
+    fun the_inputs_list_does_not_end_on_its_line_when_the_row_after_it_does_not_fit() {
+        showHome(inputs = InputsMenu(available = true, rows = (1..4).map { port(it) } + InputRow.Separator() + InputRow.LiveTv))
+        press(Key.DirectionUp)
+        press(Key.DirectionCenter)
+        compose.onNodeWithTag("input:0").assertIsFocused()
+
+        val list = bounds("menu")
+        val line = compose.onNodeWithTag("menu:divider").getUnclippedBoundsInRoot()
+        val live = compose.onNodeWithTag("input:5").getUnclippedBoundsInRoot()
+        assertTrue("the last row of the list does not fit: list $list, live tv $live", live.bottom > list.bottom)
+        assertTrue("the line $line shows at the bottom of the list $list", line.top >= list.bottom)
+    }
+
+    @Test
+    fun the_inputs_list_ends_on_the_right_edge_of_the_top_bar() {
+        val chat = (1..3).map { AppEntry(key = "chat.$it", packageName = "chat.$it", label = "Chat $it") }
+        showHome(inputs = InputsMenu(available = true, rows = listOf(port(1))), topBarApps = chat)
+        press(Key.DirectionUp)
+        compose.onNodeWithContentDescription("Inputs").assertIsFocused()
+        press(Key.DirectionCenter)
+
+        val settings = compose.onNodeWithContentDescription("Settings").getBoundsInRoot()
+        assertNear(settings.right.value, bounds("menu").right.value, 1f)
     }
 
     /** The red channel at the empty right end of the focused first row of the open tile menu. */

@@ -30,6 +30,7 @@ import dev.niltsiar.tvhome.core.model.AppList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -139,6 +140,30 @@ class FocusColourUiTest {
         showHome()
 
         assertNear(ringColor(red), ringAtTop(1))
+    }
+
+    private fun carryFirstTile() {
+        press(Key.Menu)
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+    }
+
+    @Test
+    fun in_reorder_mode_the_glow_is_at_most_030_strong_and_half_the_way_to_grey() {
+        showHome()
+        val glow = { at(576f, 108f) }
+        val before = glow()
+        assertTrue("the glow shows ${before.red}", before.red > 0.35f)
+
+        carryFirstTile()
+
+        val reordering = glow()
+        // Alpha 0.30 against 0.65 at the core, and red 0xE5 mixed half the way to 0x44 is 0.65 of itself.
+        assertEquals(0.30f / 0.65f * 0.648f, reordering.red / before.red, 0.04f)
+        assertTrue(
+            "the colour is greyer: ${reordering.blue / reordering.red} against ${before.blue / before.red}",
+            reordering.blue / reordering.red > 1.4f * before.blue / before.red,
+        )
     }
 
     /** The colour 2 dp out from tile [n]'s edge, the middle of the outer 2 dp of the gap between the tile and its ring. */

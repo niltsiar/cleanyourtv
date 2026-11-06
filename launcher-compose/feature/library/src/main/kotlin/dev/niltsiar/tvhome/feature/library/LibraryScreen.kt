@@ -40,6 +40,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -70,6 +71,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -253,6 +255,7 @@ private fun Header(
     val title = remember(typography) { typography.shelfTitle.copy(fontSize = 26.sp) }
     val countStyle = remember(typography) { typography.date.copy(fontSize = 18.sp) }
     val muted = remember(typography) { typography.date.copy(fontSize = 14.sp) }
+    var countWidth by remember { mutableIntStateOf(0) }
     Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
         Row(Modifier.height(HeaderTitleHeight), verticalAlignment = Alignment.CenterVertically) {
             BasicText(
@@ -263,14 +266,19 @@ private fun Header(
                 modifier = Modifier.weight(1f),
             )
             if (layout.leastUsed) {
-                val end = Modifier.padding(end = 16.dp)
+                val end = Modifier.padding(end = ChipEnd)
                 if (empty) {
                     BasicText(stringResource(order.label()), style = countStyle, maxLines = 1, modifier = end)
                 } else {
                     OrderChip(stringResource(order.label()), actions.onOrder, chip, onChipDown, end)
                 }
             }
-            BasicText(pluralStringResource(R.plurals.library_app_count, count, count), style = countStyle, maxLines = 1)
+            BasicText(
+                pluralStringResource(R.plurals.library_app_count, count, count),
+                style = countStyle,
+                maxLines = 1,
+                modifier = Modifier.onSizeChanged { countWidth = it.width },
+            )
         }
         if (!empty) {
             val other = stringResource(order.other().label())
@@ -282,14 +290,25 @@ private fun Header(
                 } else {
                     hintText(hint)
                 }
-            val shown = if (noUsage) "$keys · ${stringResource(R.string.library_no_usage_yet)}" else keys
-            BasicText(
-                shown,
-                style = muted,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.height(HeaderHintHeight).testTag("library:hint"),
-            )
+            Row(Modifier.height(HeaderHintHeight), verticalAlignment = Alignment.CenterVertically) {
+                BasicText(
+                    keys,
+                    style = muted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f).testTag("library:hint"),
+                )
+                if (noUsage) {
+                    // Ends where the order chip does: the count and the gap after the chip in from the header's end.
+                    val inset = ChipEnd + with(LocalDensity.current) { countWidth.toDp() }
+                    BasicText(
+                        stringResource(R.string.library_no_usage_yet),
+                        style = muted,
+                        maxLines = 1,
+                        modifier = Modifier.padding(start = 12.dp, end = inset).testTag("library:status"),
+                    )
+                }
+            }
         }
     }
 }
@@ -370,6 +389,7 @@ private fun DrawScope.drawSortArrows(
     drawPath(arrows, color, style = Stroke(ChipGlyphStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
 }
 
+private val ChipEnd = 16.dp
 private val ChipHeight = 32.dp
 private val ChipGlyph = 14.dp
 private val ChipGlyphGap = 6.dp
