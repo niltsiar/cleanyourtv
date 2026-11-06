@@ -11,7 +11,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -45,6 +44,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLocale
@@ -95,12 +95,12 @@ private const val GLYPH_ALONE_ALPHA = 0.55f
 private const val NEVER_OPENED_ALPHA = 0.45f
 
 /**
- * One card of the grid: the app's art on a small tile and its name of up to [NAME_LINES] lines, together centred in the room
- * above the status slot, which says in one line what is not the usual state and shows a house when the app is on Home. An
- * idle card is opaque, so nothing of Home shows through it; a focused one lets the plate [FocusSurface] draws behind it
- * show. It rises in once per opening, with the delay [CardEntrance] gives it, and pops a little when its Home shortcut
- * changes. Both run in the layer lambda. The status slot keeps its place while the card grows, so it stays level with the
- * cards beside it. [widthPx] is the narrowest the card can be.
+ * One card of the grid: the app's art on a small tile and its name of up to [NAME_LINES] lines, in the room above the status
+ * slot, which says in one line what is not the usual state and shows a house when the app is on Home. An idle card is
+ * opaque, so nothing of Home shows through it; a focused one lets the plate [FocusSurface] draws behind it show. It rises
+ * in once per opening, with the delay [CardEntrance] gives it, and pops a little when its Home shortcut changes. Both run
+ * in the layer lambda. The status slot keeps its place while the card grows, so it stays level with the cards beside it.
+ * [widthPx] is the narrowest the card can be.
  */
 @Composable
 internal fun LibraryCardView(
@@ -195,11 +195,7 @@ internal fun LibraryCardView(
                     }.border(1.dp, ink.copy(alpha = RIM_ALPHA), CardShape)
                     .semantics { contentDescription = card.app.label },
             ) {
-                Column(
-                    modifier = Modifier.fillMaxSize().padding(start = CardSide, end = CardSide, bottom = CardBottom + StatusHeight),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
+                ArtAndName(Modifier.fillMaxSize().padding(start = CardSide, end = CardSide, bottom = CardBottom + StatusHeight)) {
                     Art(card, artwork, Modifier.padding(horizontal = ArtInset))
                     Name(card.app.label, measurer, widthPx - with(density) { CardSide.roundToPx() * 2 })
                 }
@@ -218,6 +214,29 @@ internal fun LibraryCardView(
 }
 
 private const val CARD_TINT_MS = 300
+
+/**
+ * The art, then the name, in the room above the status slot. The art sits where it would for a name of [NAME_LINES] lines
+ * centred with it, so every card in a row has its art at one height, and the name is centred in what is left below the art.
+ */
+@Composable
+private fun ArtAndName(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val nameRoom = NameGap + NameHeight
+    Layout(content = content, modifier = modifier) { measurables, constraints ->
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val art = measurables[0].measure(loose)
+        val name = measurables[1].measure(loose)
+        val artTop = ((constraints.maxHeight - art.height - nameRoom.roundToPx()) / 2).coerceAtLeast(0)
+        val nameTop = artTop + art.height + (constraints.maxHeight - artTop - art.height - name.height) / 2
+        layout(constraints.maxWidth, constraints.maxHeight) {
+            art.place((constraints.maxWidth - art.width) / 2, artTop)
+            name.place((constraints.maxWidth - name.width) / 2, nameTop)
+        }
+    }
+}
 
 @Composable
 private fun Art(
@@ -309,7 +328,7 @@ private fun Name(
         maxLines = NAME_LINES,
         overflow = TextOverflow.Ellipsis,
         autoSize = if (shown == label) fit else null,
-        modifier = Modifier.padding(top = NameGap).fillMaxWidth().heightIn(max = NameHeight),
+        modifier = Modifier.fillMaxWidth().heightIn(max = NameHeight),
     )
 }
 

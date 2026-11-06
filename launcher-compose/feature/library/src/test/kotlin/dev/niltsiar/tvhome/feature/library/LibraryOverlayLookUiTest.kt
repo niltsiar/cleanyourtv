@@ -560,15 +560,31 @@ class LibraryOverlayLookUiTest {
     }
 
     @Test
-    fun a_card_with_a_one_line_name_has_as_much_room_above_its_art_as_below_its_name() {
+    fun the_art_of_a_one_line_card_starts_as_far_below_the_card_top_as_the_art_of_a_two_line_card() {
         showLibrary(listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp(longNames[0])))
 
-        listOf("Beta", longNames[0]).forEach { name ->
-            val above = art(name).top - card(name).top
-            val below = statusTop(name) - nameBottom(name)
-            assertTrue("$name: $above above the art, $below under the name", abs(above.value - below.value) <= 4f)
-        }
+        val one = art("Beta").top - card("Beta").top
+        val two = art(longNames[0]).top - card(longNames[0]).top
+        assertTrue("one-line art $one below its card top, two-line art $two", abs(one.value - two.value) <= 1f)
     }
+
+    @Test
+    fun a_one_line_name_is_centred_between_the_art_and_the_status_line() {
+        showLibrary(listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp(longNames[0])))
+
+        val above = nameTop("Beta") - art("Beta").bottom
+        val below = statusTop("Beta") - nameBottom("Beta")
+        assertTrue("$above under the art, $below above the status line", abs(above.value - below.value) <= 2f)
+    }
+
+    /** The layout top of the first line of the name on the card of [name], in the root's dp. */
+    private fun nameTop(name: String): Dp =
+        compose
+            .onNode(
+                hasText(name.substringBefore(' '), substring = true) and hasAnyAncestor(hasTestTag("card:${key(name)}")),
+                useUnmergedTree = true,
+            ).getBoundsInRoot()
+            .top + (nameLayout(name).getLineTop(0) / compose.activity.resources.displayMetrics.density).dp
 
     /** The layout bounds of the status line of the card of [name]. */
     private fun status(name: String): DpRect =
