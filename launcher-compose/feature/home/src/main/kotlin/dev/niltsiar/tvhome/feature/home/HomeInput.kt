@@ -35,6 +35,8 @@ internal class HomeInput(
     private val openLibrary: State<() -> Unit> = mutableStateOf({}),
     /** Whether the Inputs button offers a device. Read it in a focus-properties lambda, not in composition. */
     val inputOffered: State<Boolean> = mutableStateOf(false),
+    /** The package of the app with the habit mark; null without habit_hint. Read it in effects and draw lambdas only. */
+    val habit: State<String?>? = null,
     val hold: OkHold = OkHold(),
 ) {
     /** The colour of the focus ring as it moves from tile to tile. */

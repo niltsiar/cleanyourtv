@@ -47,4 +47,5 @@
     <item quantity="one">%1$d indgang tilsluttet</item>
     <item quantity="other">%1$d indgange tilsluttet</item>
   </plurals>
+  <string name="habit_usual">Du åbner den normalt på dette tidspunkt</string>
 </resources>

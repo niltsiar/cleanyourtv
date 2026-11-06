@@ -49,4 +49,5 @@
   <plurals name="inputs_connected">
     <item quantity="other">%1$d nguồn vào đã kết nối</item>
   </plurals>
+  <string name="habit_usual">Bạn thường mở ứng dụng này vào giờ này</string>
 </resources>

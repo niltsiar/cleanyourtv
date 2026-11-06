@@ -51,4 +51,5 @@
     <item quantity="one">%1$d lähde yhdistetty</item>
     <item quantity="other">%1$d lähdettä yhdistetty</item>
   </plurals>
+  <string name="habit_usual">Avaat sen yleensä tähän aikaan</string>
 </resources>

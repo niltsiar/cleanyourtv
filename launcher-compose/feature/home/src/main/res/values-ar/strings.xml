@@ -58,4 +58,5 @@
     <item quantity="many">%1$d مدخلًا متصلًا</item>
     <item quantity="other">%1$d مدخل متصل</item>
   </plurals>
+  <string name="habit_usual">عادةً ما تفتحه الآن</string>
 </resources>

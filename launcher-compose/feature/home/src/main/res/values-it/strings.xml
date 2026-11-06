@@ -54,4 +54,5 @@
     <item quantity="many">%1$d di ingressi collegati</item>
     <item quantity="other">%1$d ingressi collegati</item>
   </plurals>
+  <string name="habit_usual">Di solito la apri a quest\'ora</string>
 </resources>

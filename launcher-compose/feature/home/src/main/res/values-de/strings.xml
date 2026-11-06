@@ -48,4 +48,5 @@
     <item quantity="one">%1$d Quelle verbunden</item>
     <item quantity="other">%1$d Quellen verbunden</item>
   </plurals>
+  <string name="habit_usual">Du öffnest sie meistens um diese Zeit</string>
 </resources>

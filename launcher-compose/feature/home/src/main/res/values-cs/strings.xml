@@ -55,4 +55,5 @@
     <item quantity="many">%1$d připojeného vstupu</item>
     <item quantity="other">%1$d připojených vstupů</item>
   </plurals>
+  <string name="habit_usual">Obvykle ji otevíráte v tuto dobu</string>
 </resources>

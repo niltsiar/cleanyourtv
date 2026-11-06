@@ -160,6 +160,8 @@ public data class TvConfig(
     val inputsCecStateOnly: Boolean = false,
     /** A device switched on while Home shows (an HDMI port goes to connected) is offered on the Inputs button. */
     val inputArrival: Boolean = false,
+    /** A quiet mark on the app the household usually opens at this time of day; Home keeps a log of its launches for it. */
+    val habitHint: Boolean = false,
     /** Answer the system's VIEW_INPUTS request by opening the Inputs menu. */
     val handleViewInputs: Boolean = false,
     /** Seconds the boot's app waits for a validated network, 0 to 600; 0 opens it at once. */

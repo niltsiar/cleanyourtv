@@ -286,6 +286,7 @@ public fun HomeScreen(
                 canMoveRight = derivedStateOf { currentState.value().reorder?.canMoveRight == true },
                 openLibrary = currentOpenLibrary,
                 inputOffered = derivedStateOf { currentState.value().inputOffer != null },
+                habit = if (layout.habitMark) derivedStateOf { currentState.value().habit } else null,
             ).also { it.anchor.value = menuAnchor }
         }
     val menu by remember { derivedStateOf { currentState.value().menu } }
@@ -989,13 +990,14 @@ private fun rememberBandFade(libraryOpen: () -> Boolean): BandFade {
 
 /**
  * What the band over the grid says when the cinematic shelf does not. A [meta] of a space keeps the line's place;
- * [opened] puts when Home last opened the tile there instead. [quick] swaps in [LIBRARY_SWAP_MS].
+ * [opened] puts when Home last opened the tile there instead, and [usual] adds that the tile is the app of this time of day. [quick] swaps in [LIBRARY_SWAP_MS].
  */
 @Immutable
 private data class HeroLine(
     val title: String,
     val meta: String = " ",
     val opened: OpenedAt? = null,
+    val usual: Boolean = false,
     val hint: ReorderHint? = null,
     val quick: Boolean = false,
     /** The title names a chrome control (a top-bar button or the library pill), which gets a smaller title than an app. */
@@ -1030,7 +1032,13 @@ private fun HeroTitle(
     val tile by remember(state) {
         derivedStateOf {
             val home = state()
-            if (cinematic && home.shelf != null) HeroLine("") else HeroLine(home.focusedLabel, opened = home.focusedOpened)
+            if (cinematic &&
+                home.shelf != null
+            ) {
+                HeroLine("")
+            } else {
+                HeroLine(home.focusedLabel, opened = home.focusedOpened, usual = home.focusedUsual)
+            }
         }
     }
     val mode = hint
@@ -1054,7 +1062,7 @@ private fun HeroTitle(
             animated,
             rise,
             // A new time for the same tile, as the clock moves on, replaces the old one without a cross-fade.
-            key = { it.copy(opened = null) },
+            key = { it.copy(opened = null, usual = false) },
             inMillis = { from, to -> if (from.quick || to.quick) LIBRARY_SWAP_MS else CINEMATIC_MS },
         ) { shown, live ->
             Column {
@@ -1080,7 +1088,7 @@ private fun HeroTitle(
                             BasicText(
                                 when {
                                     !live -> AnnotatedString("")
-                                    opened != null -> lastOpenedLine(opened)
+                                    opened != null || shown.usual -> lastOpenedLine(opened, shown.usual)
                                     else -> AnnotatedString(shown.meta)
                                 },
                                 style = metaStyle,
@@ -1431,11 +1439,13 @@ private fun AppTile(
     tileMenu: Boolean,
     modifier: Modifier = Modifier,
     showName: Boolean = false,
+    habitMark: Boolean = true,
     edge: DockEdgeLight? = null,
     glassStroke: Boolean = false,
 ) {
+    val marked = if (habitMark) modifier.habitMark(input.habit, app.packageName) else modifier
     if (showName) {
-        NameUnder(app, modifier) {
+        NameUnder(app, marked) {
             AppTile(
                 app,
                 accent,
@@ -1446,6 +1456,7 @@ private fun AppTile(
                 reordering,
                 tileMenu,
                 Modifier.fillMaxWidth(),
+                habitMark = false,
                 edge = edge,
                 glassStroke = glassStroke,
             )
@@ -1477,7 +1488,7 @@ private fun AppTile(
         accent = accent,
         ring = ringColour,
         modifier =
-            modifier
+            marked
                 .then(if (reordering) Modifier.reorderLook(key, input, TileShape) else Modifier)
                 .aspectRatio(TILE_ASPECT)
                 .then(

@@ -28,6 +28,8 @@ import java.util.Locale
  * is [inputsOpen] while the list hangs under the button; the button shows until the TV says it has nothing to list.
  * [inputOffer] is the device switched on since Home came on screen that the button offers, null when none is.
  * [libraryCount] is how many apps the App library lists, null until it is known.
+ * [habit] is the package of the app the household usually opens at this time of day (habit_hint), null when none is, and
+ * [focusedUsual] whether the focused app is it.
  */
 @Immutable
 public data class HomeUiState(
@@ -51,6 +53,8 @@ public data class HomeUiState(
     val inputsOpen: Boolean = false,
     val inputOffer: InputArrival? = null,
     val libraryCount: Int? = null,
+    val habit: String? = null,
+    val focusedUsual: Boolean = false,
 )
 
 /** Focus goes to the tile with this key, or to the Settings button for [SETTINGS_FOCUS]. A new [token] asks again. */
@@ -74,7 +78,8 @@ public const val LIBRARY_BUTTON_FOCUS: String = "library-button"
 
 /**
  * The dock app the cinematic shelf shows: its [key] and [label], the [accent] colour of its art, its [position] among
- * the [count] dock apps (one dot each) and [lastOpened], when Home last opened it, null if it never did.
+ * the [count] dock apps (one dot each), [lastOpened], when Home last opened it, null if it never did, and whether it is
+ * the [usual] app of this time of day.
  */
 @Immutable
 public data class Shelf(
@@ -84,6 +89,7 @@ public data class Shelf(
     val position: Int,
     val count: Int,
     val lastOpened: OpenedAt?,
+    val usual: Boolean = false,
 )
 
 /** One-shot results the host handles outside the UI state. */
@@ -166,6 +172,8 @@ public class HomeSources(
     public val focusMemory: FocusMemory = FocusMemory(),
     /** How many apps the App library lists, again after each change; never emits without the library. */
     public val libraryCount: Flow<Int> = emptyFlow(),
+    /** The package the household usually opens now (habit_hint); null when no app is one. Runs off the main thread. */
+    public val habit: suspend () -> String? = { null },
 )
 
 internal sealed interface HomeEvent {
@@ -217,6 +225,9 @@ internal sealed interface HomeEvent {
 
     /** Home left the screen. */
     data object Stopped : HomeEvent
+
+    /** Home came to the front. */
+    data object Started : HomeEvent
 
     /** The Home key was pressed while Home shows. */
     data object HomePressed : HomeEvent
@@ -287,6 +298,7 @@ internal fun homeUiState(
     inputsOpen: Boolean = false,
     inputOffer: InputArrival? = null,
     libraryCount: Int? = null,
+    habit: String? = null,
 ): HomeUiState {
     val focused = apps.all.firstOrNull { it.key == focusedKey } ?: apps.all.firstOrNull()
     return HomeUiState(
@@ -302,7 +314,7 @@ internal fun homeUiState(
         focusedLabel = focused?.label.orEmpty(),
         focusedOpened = focused?.let { openedAt(it.key, lastOpened, now, header.hour24, zone) },
         wallpaper = wallpaper,
-        shelf = if (cinematic) shelfFor(apps, focusedKey, lastOpened, now, header.hour24, zone) else null,
+        shelf = if (cinematic) shelfFor(apps, focusedKey, lastOpened, now, header.hour24, zone, habit) else null,
         menu = menu,
         reorder = reorder,
         focusRequest = focusRequest,
@@ -310,6 +322,8 @@ internal fun homeUiState(
         inputsOpen = inputsOpen,
         inputOffer = inputOffer,
         libraryCount = libraryCount,
+        habit = habit,
+        focusedUsual = habit != null && focused?.packageName == habit,
     )
 }
 
@@ -337,6 +351,7 @@ internal fun shelfFor(
     now: LocalDateTime?,
     hour24: Boolean,
     zone: ZoneId,
+    habit: String? = null,
 ): Shelf? {
     val app = apps.all.firstOrNull { it.key == focusedKey } ?: apps.all.firstOrNull() ?: return null
     val position = apps.dock.indexOfFirst { it.key == app.key }
@@ -348,6 +363,7 @@ internal fun shelfFor(
         position = position,
         count = apps.dock.size,
         lastOpened = openedAt(app.key, lastOpened, now, hour24, zone),
+        usual = habit != null && app.packageName == habit,
     )
 }
 

@@ -27,13 +27,15 @@ public sealed interface LaunchResult {
 
 /**
  * Opens an app's tile the way the reference launcher does, honouring launch_actions. With [recordOpened] (the cinematic
- * Home) a tile that opened is noted in [lastOpened].
+ * Home) a tile that opened is noted in [lastOpened]. Every tile that opened is noted in [launchLog], which keeps nothing
+ * unless habit_hint is on.
  */
 public class AppLauncher(
     private val context: Context,
     private val launchActions: Map<String, String>,
     private val lastOpened: LastOpened,
     private val recordOpened: Boolean,
+    private val launchLog: LaunchLog,
 ) {
     /** The TV input a tile's launch_actions "input:<id>" switches to instead of opening the app; null for any other tile. */
     internal fun inputId(app: AppEntry): String? = inputIdOf(launchActions[app.packageName])
@@ -43,6 +45,7 @@ public class AppLauncher(
         inputId(app)?.let { return LaunchResult.SwitchInput(InputTarget.TvInput(it)) }
         if (!launch(app)) return LaunchResult.CantOpen
         if (recordOpened) lastOpened.record(app.key)
+        launchLog.record(app.packageName)
         return LaunchResult.Opened
     }
 

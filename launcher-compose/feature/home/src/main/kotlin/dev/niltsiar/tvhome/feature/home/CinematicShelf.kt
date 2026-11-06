@@ -147,7 +147,7 @@ internal fun CinematicShelf(
                                 .graphicsLayer { this.alpha = titleAlpha() },
                     )
                     BasicText(
-                        text = if (live) lastOpenedLine(app.lastOpened) else AnnotatedString(""),
+                        text = if (live) lastOpenedLine(app.lastOpened, app.usual) else AnnotatedString(""),
                         style = metaStyle,
                         maxLines = 1,
                         modifier =
@@ -298,18 +298,31 @@ internal fun TextStyle.withSubtitleShadow(): TextStyle {
     return remember(this, density) { copy(shadow = Shadow(SubtitleShadow, Offset(0f, 2 * density), 12 * density)) }
 }
 
-/** "Last opened <time>" with the time in white; a space when there is none, which keeps the line's height. */
+/**
+ * "Last opened <time>" with the time in white, then, for the [usual] app of this time of day, "· You usually open it now"
+ * (alone when Home never opened it); a space when there is neither, which keeps the line's height.
+ */
 @Composable
-internal fun lastOpenedLine(opened: OpenedAt?): AnnotatedString {
-    if (opened == null) return AnnotatedString(" ")
+internal fun lastOpenedLine(
+    opened: OpenedAt?,
+    usual: Boolean = false,
+): AnnotatedString {
+    if (opened == null && !usual) return AnnotatedString(" ")
     val context = LocalContext.current
-    val relative = remember(opened) { describeLastOpened(context, opened) }
-    val text = stringResource(R.string.last_opened, relative)
-    val at = text.indexOf(relative)
-    return remember(text, relative) {
+    val relative = remember(opened) { opened?.let { describeLastOpened(context, it) } }
+    val last = stringResource(R.string.last_opened, relative.orEmpty())
+    val habit = stringResource(R.string.habit_usual)
+    return remember(last, relative, habit, usual) {
         buildAnnotatedString {
-            append(text)
-            if (at >= 0) addStyle(SpanStyle(color = Color.White), at, at + relative.length)
+            if (relative != null) {
+                append(last)
+                val at = last.indexOf(relative)
+                if (at >= 0) addStyle(SpanStyle(color = Color.White), at, at + relative.length)
+            }
+            if (usual) {
+                if (relative != null) append(" \u00B7 ")
+                append(habit)
+            }
         }
     }
 }

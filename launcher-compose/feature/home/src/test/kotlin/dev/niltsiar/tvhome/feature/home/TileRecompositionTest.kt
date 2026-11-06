@@ -99,6 +99,8 @@ open class TileRecompositionTest {
     protected open val alwaysShowNames = false
 
     private val inputs = MutableStateFlow(FourPorts)
+    private var habitApp = "pkg.3"
+    private var habitLooks = 0
 
     @Before
     fun showHome() {
@@ -112,6 +114,7 @@ open class TileRecompositionTest {
                 focusOvershoot = false,
                 alwaysShowNames = alwaysShowNames,
                 inputArrival = true,
+                habitHint = true,
             )
         compose.setContent {
             val home = currentComposer.composition
@@ -121,7 +124,14 @@ open class TileRecompositionTest {
                 onDispose { observing?.dispose() }
             }
             TvTheme {
-                val viewModel = rememberHomeViewModel(sources(apps = flowOf(AppList(apps)), inputs = inputs), config, mutableListOf())
+                val viewModel =
+                    rememberHomeViewModel(
+                        sources(apps = flowOf(AppList(apps)), inputs = inputs, habit = {
+                            habitApp.also { habitLooks++ }
+                        }),
+                        config,
+                        mutableListOf(),
+                    )
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(
                     state = { state.value },
@@ -158,6 +168,18 @@ open class TileRecompositionTest {
         compose.waitForIdle()
 
         compose.onNode(hasContentDescription("Apple TV", substring = true)).assertExists()
+        assertEquals(0, tiles.count)
+        assertEquals(0, items.count)
+    }
+
+    @Test
+    fun a_new_habit_composes_no_tile_and_recomposes_no_grid_item() {
+        assertEquals(1, habitLooks)
+        habitApp = "pkg.9"
+        compose.mainClock.advanceTimeBy(HABIT_REFRESH_MS)
+        compose.waitForIdle()
+
+        assertEquals(2, habitLooks)
         assertEquals(0, tiles.count)
         assertEquals(0, items.count)
     }

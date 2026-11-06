@@ -49,4 +49,5 @@
     <item quantity="one">%1$d entrada coneutada</item>
     <item quantity="other">%1$d entraes coneutaes</item>
   </plurals>
+  <string name="habit_usual">Sueles abrila a esta hora</string>
 </resources>

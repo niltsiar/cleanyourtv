@@ -50,4 +50,5 @@
     <item quantity="one">%1$d giriş bağlı</item>
     <item quantity="other">%1$d giriş bağlı</item>
   </plurals>
+  <string name="habit_usual">Bunu genellikle bu saatte açarsınız</string>
 </resources>

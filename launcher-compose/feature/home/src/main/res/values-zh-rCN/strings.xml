@@ -49,4 +49,5 @@
   <plurals name="inputs_connected">
     <item quantity="other">%1$d 个输入源已连接</item>
   </plurals>
+  <string name="habit_usual">你通常在这个时间打开它</string>
 </resources>

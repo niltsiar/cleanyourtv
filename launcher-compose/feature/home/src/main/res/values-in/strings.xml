@@ -49,4 +49,5 @@
   <plurals name="inputs_connected">
     <item quantity="other">%1$d input terhubung</item>
   </plurals>
+  <string name="habit_usual">Biasanya Anda membukanya pada jam ini</string>
 </resources>

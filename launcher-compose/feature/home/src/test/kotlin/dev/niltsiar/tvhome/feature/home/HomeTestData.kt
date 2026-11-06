@@ -50,6 +50,7 @@ internal fun sources(
     inputs: Flow<InputsMenu> = emptyFlow(),
     focusMemory: FocusMemory = FocusMemory(),
     libraryCount: Flow<Int> = emptyFlow(),
+    habit: suspend () -> String? = { null },
 ) = HomeSources(
     apps,
     clock,
@@ -66,6 +67,7 @@ internal fun sources(
     inputs = inputs,
     focusMemory = focusMemory,
     libraryCount = libraryCount,
+    habit = habit,
 )
 
 internal fun port(

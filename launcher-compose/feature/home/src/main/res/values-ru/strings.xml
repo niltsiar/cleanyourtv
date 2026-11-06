@@ -55,4 +55,5 @@
     <item quantity="many">%1$d подключённых источников</item>
     <item quantity="other">%1$d подключённого источника</item>
   </plurals>
+  <string name="habit_usual">Обычно вы открываете её в это время</string>
 </resources>

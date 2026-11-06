@@ -52,4 +52,5 @@
     <item quantity="many">%1$d d’entrades connectades</item>
     <item quantity="other">%1$d entrades connectades</item>
   </plurals>
+  <string name="habit_usual">Normalment l\'obres a aquesta hora</string>
 </resources>

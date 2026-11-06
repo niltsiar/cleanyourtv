@@ -53,4 +53,5 @@
     <item quantity="many">%1$d de sources connectées</item>
     <item quantity="other">%1$d sources connectées</item>
   </plurals>
+  <string name="habit_usual">Vous l\'ouvrez d\'habitude à cette heure</string>
 </resources>

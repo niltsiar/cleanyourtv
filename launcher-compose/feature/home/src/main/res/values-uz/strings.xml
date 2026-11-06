@@ -51,4 +51,5 @@
     <item quantity="one">%1$d ta manba ulangan</item>
     <item quantity="other">%1$d ta manba ulangan</item>
   </plurals>
+  <string name="habit_usual">Odatda buni shu vaqtda ochasiz</string>
 </resources>

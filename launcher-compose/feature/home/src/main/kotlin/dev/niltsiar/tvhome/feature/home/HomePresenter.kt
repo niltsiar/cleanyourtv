@@ -25,6 +25,9 @@ internal const val ARRIVAL_HOLD_MS = 2_000L
 /** How long the Inputs button offers a device that nobody acted on. */
 internal const val OFFER_MS = 20_000L
 
+/** How often the habit is looked at again while Home shows. */
+internal const val HABIT_REFRESH_MS = 15 * 60 * 1_000L
+
 /** The Inputs button before the TV has said what it lists: hidden, as the reference hides it until it finds something to list. */
 private val UnknownInputs = InputsMenu(available = false)
 
@@ -58,6 +61,15 @@ internal fun homePresenter(
             interaction.offerEnded(offered)
         }
     }
+    val showing = interaction.showing
+    LaunchedEffect(interaction, showing) {
+        if (config.habitHint && showing) {
+            while (true) {
+                interaction.habitFound(sources.habit())
+                delay(HABIT_REFRESH_MS)
+            }
+        }
+    }
     val now by sources.clock.collectAsState(null)
     val network by sources.network.collectAsState(NoNetwork)
     val wallpaper by sources.wallpaper.collectAsState(NoWallpaper)
@@ -88,5 +100,6 @@ internal fun homePresenter(
         inputsOpen = interaction.inputsOpen,
         inputOffer = interaction.offer,
         libraryCount = libraryCount,
+        habit = interaction.habit,
     )
 }

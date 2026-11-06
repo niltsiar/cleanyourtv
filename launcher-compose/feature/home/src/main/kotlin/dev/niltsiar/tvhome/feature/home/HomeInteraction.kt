@@ -67,6 +67,18 @@ internal class HomeInteraction(
         endedToken = token
     }
 
+    /** Home is on screen: from its start to its stop. */
+    var showing by mutableStateOf(true)
+        private set
+
+    /** The package the household usually opens now, as the last look at the launch log found it. */
+    var habit by mutableStateOf<String?>(null)
+        private set
+
+    fun habitFound(packageName: String?) {
+        habit = packageName
+    }
+
     private val memory = sources.focusMemory
 
     /** The tile that had focus last. It starts as the remembered one, which the first list of apps may replace. */
@@ -154,8 +166,13 @@ internal class HomeInteraction(
             }
 
             HomeEvent.Stopped -> {
+                showing = false
                 closeAll()
                 inputs = inputs?.copy(arrival = null)
+            }
+
+            HomeEvent.Started -> {
+                showing = true
             }
 
             HomeEvent.HomePressed -> {

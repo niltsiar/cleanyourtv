@@ -51,4 +51,5 @@
     <item quantity="one">%1$d ingang verbonden</item>
     <item quantity="other">%1$d ingangen verbonden</item>
   </plurals>
+  <string name="habit_usual">Je opent deze meestal rond deze tijd</string>
 </resources>

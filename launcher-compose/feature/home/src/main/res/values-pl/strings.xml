@@ -54,4 +54,5 @@
     <item quantity="many">%1$d podłączonych wejść</item>
     <item quantity="other">%1$d podłączonych wejść</item>
   </plurals>
+  <string name="habit_usual">Zwykle otwierasz ją o tej porze</string>
 </resources>

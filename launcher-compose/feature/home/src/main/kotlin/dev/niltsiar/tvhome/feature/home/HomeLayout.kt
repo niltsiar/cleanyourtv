@@ -11,7 +11,8 @@ import dev.niltsiar.tvhome.core.model.showLibraryPill
  * apps take the dock slots that dock_apps leaves free, [tileMenu] whether a held OK or MENU opens a tile's menu (else a held
  * OK opens its App info), [libraryPill] whether the App library pill follows the last row, and [showNames] whether every
  * tile has its name under it (always_show_names), which the dock panel and each grid row grow to hold, and
- * [inputArrival] whether the Inputs button offers a device that was just switched on (input_arrival).
+ * [inputArrival] whether the Inputs button offers a device that was just switched on (input_arrival), and [habitMark]
+ * whether the app usually opened at this time of day has a mark under its tile (habit_hint).
  */
 @Immutable
 public data class HomeLayout(
@@ -23,6 +24,7 @@ public data class HomeLayout(
     val libraryPill: Boolean = false,
     val showNames: Boolean = false,
     val inputArrival: Boolean = false,
+    val habitMark: Boolean = false,
 )
 
 public fun TvConfig.homeLayout(): HomeLayout =
@@ -35,6 +37,7 @@ public fun TvConfig.homeLayout(): HomeLayout =
         libraryPill = showLibraryPill(appLibrary, libraryButton, showLibraryPill),
         showNames = alwaysShowNames,
         inputArrival = inputArrival && showInputsPill,
+        habitMark = habitHint,
     )
 
 private const val MIN_TILE_SHARE = 0.85f

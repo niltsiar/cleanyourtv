@@ -66,6 +66,7 @@ internal fun HomeHost(
             }
         }
     }
+    LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onStarted() }
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.onStopped() }
     val state = viewModel.uiState.collectAsStateWithLifecycle()
     val layout = remember(graph) { graph.config.homeLayout() }

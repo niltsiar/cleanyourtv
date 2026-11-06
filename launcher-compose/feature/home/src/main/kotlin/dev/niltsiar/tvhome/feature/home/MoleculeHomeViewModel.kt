@@ -93,6 +93,11 @@ public class MoleculeHomeViewModel(
             onHomePressed = { events.trySend(HomeEvent.HomePressed) },
         )
 
+    /** Home came to the front. */
+    public fun onStarted() {
+        events.trySend(HomeEvent.Started)
+    }
+
     /** Home left the screen: a reorder ends and saves, a menu closes. */
     public fun onStopped() {
         events.trySend(HomeEvent.Stopped)

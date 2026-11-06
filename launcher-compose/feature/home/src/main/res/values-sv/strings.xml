@@ -52,4 +52,5 @@
     <item quantity="one">%1$d ingång ansluten</item>
     <item quantity="other">%1$d ingångar anslutna</item>
   </plurals>
+  <string name="habit_usual">Du brukar öppna den vid den här tiden</string>
 </resources>

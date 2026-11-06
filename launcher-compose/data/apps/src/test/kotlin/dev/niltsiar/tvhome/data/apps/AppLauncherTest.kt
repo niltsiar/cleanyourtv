@@ -13,6 +13,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
+import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 class AppLauncherTest {
@@ -20,11 +21,13 @@ class AppLauncherTest {
 
     private val context = RuntimeEnvironment.getApplication()
     private val lastOpened = LastOpened(context, Dispatchers.Unconfined)
+    private val logFile = File(context.filesDir, "launch_log.txt")
+    private val launchLog = LaunchLog(logFile, enabled = true, io = Dispatchers.Unconfined)
 
     private fun launcher(
         launchActions: Map<String, String> = emptyMap(),
         recordOpened: Boolean = true,
-    ) = AppLauncher(context, launchActions, lastOpened, recordOpened)
+    ) = AppLauncher(context, launchActions, lastOpened, recordOpened, launchLog)
 
     private fun intent(
         app: AppEntry = tile,
@@ -115,5 +118,20 @@ class AppLauncherTest {
 
         assertEquals(LaunchResult.CantOpen, result)
         assertEquals(emptyMap<String, Long>(), lastOpened.times.value)
+    }
+
+    @Test
+    fun an_opened_tile_adds_one_record_with_its_package_to_the_launch_log() {
+        launcher(recordOpened = false).open(tile)
+
+        assertEquals(listOf("com.shop"), logFile.readLines().map { it.substringAfter(' ') })
+    }
+
+    @Test
+    fun a_tile_that_switches_input_or_cannot_start_adds_nothing_to_the_launch_log() {
+        launcher(mapOf("com.shop" to "input:HW5")).open(tile)
+        launcher().open(tile.copy(key = "not a component"))
+
+        assertFalse(logFile.exists())
     }
 }

@@ -52,4 +52,5 @@
     <item quantity="few">%1$d povezana ulaza</item>
     <item quantity="other">%1$d povezanih ulaza</item>
   </plurals>
+  <string name="habit_usual">Obično je otvarate u ovo vreme</string>
 </resources>

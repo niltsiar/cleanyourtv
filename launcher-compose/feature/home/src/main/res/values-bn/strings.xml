@@ -50,4 +50,5 @@
     <item quantity="one">%1$dটি ইনপুট কানেক্টেড</item>
     <item quantity="other">%1$dটি ইনপুট কানেক্টেড</item>
   </plurals>
+  <string name="habit_usual">আপনি সাধারণত এই সময়ে এটি খোলেন</string>
 </resources>

@@ -54,4 +54,5 @@
     <item quantity="two">%1$d כניסות מחוברות</item>
     <item quantity="other">%1$d כניסות מחוברות</item>
   </plurals>
+  <string name="habit_usual">אתם פותחים אותה בדרך כלל בשעה הזו</string>
 </resources>

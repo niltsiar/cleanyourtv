@@ -46,4 +46,5 @@
   <plurals name="inputs_connected">
     <item quantity="other">เชื่อมต่อ %1$d แหล่งสัญญาณ</item>
   </plurals>
+  <string name="habit_usual">คุณมักเปิดแอปนี้ในเวลานี้</string>
 </resources>

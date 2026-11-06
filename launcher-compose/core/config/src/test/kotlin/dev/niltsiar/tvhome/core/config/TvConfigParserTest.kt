@@ -509,6 +509,7 @@ class TvConfigParserTest {
             "inputs_connected_only" to ("true" to defaults.copy(inputsConnectedOnly = true)),
             "inputs_cec_state_only" to ("true" to defaults.copy(inputsCecStateOnly = true)),
             "input_arrival" to ("true" to defaults.copy(inputArrival = true)),
+            "habit_hint" to ("true" to defaults.copy(habitHint = true)),
             "handle_view_inputs" to ("true" to defaults.copy(handleViewInputs = true)),
             "open_on_start_network_wait" to ("30" to defaults.copy(openOnStartNetworkWait = 30)),
             "app_keys" to ("""["172:com.a"]""" to defaults.copy(appKeys = listOf("172:com.a"))),

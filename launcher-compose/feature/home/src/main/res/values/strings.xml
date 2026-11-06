@@ -52,4 +52,5 @@
     <item quantity="one">%1$d input connected</item>
     <item quantity="other">%1$d inputs connected</item>
   </plurals>
+  <string name="habit_usual">You usually open it now</string>
 </resources>

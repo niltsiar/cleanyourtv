@@ -6,6 +6,7 @@ import dev.niltsiar.tvhome.core.config.ThemeDirectory
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.data.apps.AppLauncher
 import dev.niltsiar.tvhome.data.apps.LastOpened
+import dev.niltsiar.tvhome.data.apps.LaunchLog
 import dev.niltsiar.tvhome.data.apps.LibraryCatalog
 import dev.niltsiar.tvhome.data.apps.PackageManagerAppsProvider
 import dev.niltsiar.tvhome.data.inputs.InputLauncher
@@ -31,6 +32,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import java.io.File
 
 @DependencyGraph(AppScope::class)
 interface AppGraph {
@@ -75,7 +77,15 @@ interface AppGraph {
         application: Application,
         config: TvConfig,
         lastOpened: LastOpened,
-    ): AppLauncher = AppLauncher(application, config.launchActions, lastOpened, config.cinematicHome)
+        launchLog: LaunchLog,
+    ): AppLauncher = AppLauncher(application, config.launchActions, lastOpened, config.cinematicHome, launchLog)
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideLaunchLog(
+        application: Application,
+        config: TvConfig,
+    ): LaunchLog = LaunchLog(File(application.filesDir, "launch_log.txt"), config.habitHint)
 
     @Provides
     @SingleIn(AppScope::class)
@@ -149,6 +159,7 @@ interface AppGraph {
         config: TvConfig,
         appsProvider: PackageManagerAppsProvider,
         lastOpened: LastOpened,
+        launchLog: LaunchLog,
         networkMonitor: NetworkMonitor,
         minuteClock: MinuteClock,
         wallpaperProvider: WallpaperProvider,
@@ -165,6 +176,7 @@ interface AppGraph {
             wallpaper = wallpaperProvider.wallpaper(minuteClock.now),
             systemHour24 = { DateFormat.is24HourFormat(application) },
             lastOpened = lastOpened.times,
+            habit = { launchLog.habit(System.currentTimeMillis()) },
             heroArt = appsProvider::heroArt,
             hasAppInfo = systemSettings::hasAppInfo,
             hasNativeSettings = systemSettings::hasNativeSettings,
