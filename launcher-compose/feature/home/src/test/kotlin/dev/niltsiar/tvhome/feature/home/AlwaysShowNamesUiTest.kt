@@ -124,15 +124,15 @@ class AlwaysShowNamesUiTest {
     }
 
     @Test
-    fun the_name_under_an_unfocused_dock_tile_shows_at_85_percent_and_at_full_when_focused() {
+    fun the_name_under_an_unfocused_dock_tile_shows_at_three_quarters_and_at_full_when_focused() {
         showHome(SixColumns.copy(alwaysShowNames = true))
-        val focused = contrast("name:pkg.1")
+        val unfocused = contrast("name:pkg.2")
 
-        assertEquals(0.85f, contrast("name:pkg.2") / focused, 0.04f)
         press(Key.DirectionRight)
         compose.onNodeWithTag("tile:pkg.2").assertIsFocused()
-        assertEquals(focused, contrast("name:pkg.2"), 0.02f)
-        assertEquals(0.85f, contrast("name:pkg.1") / focused, 0.04f)
+        val focused = contrast("name:pkg.2")
+
+        assertEquals(0.75f, unfocused / focused, 0.05f)
     }
 
     @Test
@@ -184,13 +184,14 @@ class AlwaysShowNamesUiTest {
     }
 
     @Test
-    fun a_dock_name_has_no_pill() {
+    fun a_dock_name_sits_on_a_black_045_pill_6_dp_wider_than_its_text_on_each_side() {
         showHome(SixColumns.copy(alwaysShowNames = true), wallpaper = Wallpaper(picture = white))
 
-        val (bareLeft, _) = besideName("name:pkg.4", out = 9f)
-        val (padLeft, _) = besideName("name:pkg.4", out = 3f)
+        val (bareLeft, bareRight) = besideName("name:pkg.4", out = 9f)
+        val (padLeft, padRight) = besideName("name:pkg.4", out = 3f)
 
-        assertTrue("left $padLeft of $bareLeft", padLeft > bareLeft * 0.9f)
+        assertTrue("left $padLeft of $bareLeft", padLeft < bareLeft * 0.65f)
+        assertTrue("right $padRight of $bareRight", padRight < bareRight * 0.65f)
     }
 
     @Test

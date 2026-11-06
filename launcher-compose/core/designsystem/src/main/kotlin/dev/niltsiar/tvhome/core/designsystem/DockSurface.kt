@@ -41,21 +41,19 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-private val DockRim = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.48f), Color.White.copy(alpha = 0.10f)))
+private val DockRim = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.30f), Color.White.copy(alpha = 0.10f)))
+private val DockRimWidth = 1.5.dp
 private val DockSheen = Brush.verticalGradient(0f to Color.White.copy(alpha = 0.16f), 0.35f to Color.Transparent)
-private val InnerRim = Color.White.copy(alpha = 0.12f)
-private val InnerRimWidth = 1.dp
-
-/** The inner line's centre: the rim's 1 dp, a 1 dp gap and half its own width in from the edge. */
-private val InnerRimInset = 2.5.dp
+private val BottomEdge = Color.Black.copy(alpha = 0.25f)
+private val BottomEdgeWidth = 1.dp
 private val DockShadow = Color.Black.copy(alpha = 0.22f)
 private val DockElevation = 20.dp
 private val DockShadowDrop = 6.dp
 
 /**
- * The dock's panel: the frost under a [tint] (read in the draw phase), a sheen over its top, a rim with a second line
- * inside its top half, and a shadow that falls 6 dp lower than the panel. With an [edgeLight] the focused tile lights
- * the rim and the floor.
+ * The dock's panel: the frost under a [tint] (read in the draw phase), a sheen over its top, a 1.5 dp rim that is white 0.30
+ * at the top and fades down the sides, a 1 dp black 0.25 edge along its bottom half, and a shadow that falls 6 dp lower
+ * than the panel. With an [edgeLight] the focused tile lights the rim and the floor.
  */
 @Composable
 public fun DockSurface(
@@ -79,11 +77,12 @@ public fun DockSurface(
                 }.drawWithContent {
                     drawContent()
                     val outline = shape.createOutline(size, layoutDirection, this)
-                    clipRect(bottom = size.height / 2f) {
-                        drawOutline(outline.grownBy(-InnerRimInset.toPx()), InnerRim, style = Stroke(InnerRimWidth.toPx()))
+                    clipRect(top = size.height / 2f) {
+                        val width = BottomEdgeWidth.toPx()
+                        drawOutline(outline.grownBy(-width / 2f), BottomEdge, style = Stroke(width))
                     }
                     edgeLight?.run { drawRim() }
-                }.border(1.dp, DockRim, shape)
+                }.border(DockRimWidth, DockRim, shape)
                 .then(if (edgeLight != null) Modifier.onGloballyPositioned { edgeLight.panelLeft = it.positionInRoot().x } else Modifier),
     ) {
         SurfaceContent { content() }

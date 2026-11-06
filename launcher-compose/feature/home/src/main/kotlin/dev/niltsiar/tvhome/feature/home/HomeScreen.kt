@@ -167,9 +167,8 @@ private val TileNameLine = 22.dp
 /** The room always_show_names adds under a tile. */
 internal val TileNameRoom = TileNameGap + TileNameLine
 
-/** The alpha of the name under a dock tile without focus; a grid tile's, which has a pill behind it, is the Java launcher's. */
-private const val NAME_REST_ALPHA = 0.85f
-private const val PILL_NAME_REST_ALPHA = 0.75f
+/** The alpha of the name under a tile without focus; it has a pill behind it. */
+private const val NAME_REST_ALPHA = 0.75f
 
 /** How long a name takes to reach 1 on focus. */
 private const val NAME_FADE_MS = 220
@@ -186,9 +185,12 @@ private val CaptionTop = TopBarTop + TopBarHeight + 8.dp
 private val TileCorner = 12.dp
 private val TileShape = RoundedCornerShape(TileCorner)
 private val GlassTileStrokeWidth = 1.dp
-private val GlassTileStroke = Color.Black.copy(alpha = 0.12f)
+private val GlassTileStroke = Color.Black.copy(alpha = 0.20f)
 private val DockShape = RoundedCornerShape(32.dp)
 private val GridBottom = 48.dp
+
+/** The space between the end of the Inputs list and the dock's panel. */
+private val InputsTrayClearance = 24.dp
 private val LibraryRowHeight = 84.dp
 
 /** The padding at the sides of a dock panel that has fewer tiles than the row holds. */
@@ -210,7 +212,7 @@ private val CinematicShelfHeight = CinematicTextHeight + TitleToShelfBottom
 
 /** A 48 sp title line (its ascent and descent), then the meta line or the key chips. */
 private val ShelfHeight = 52.dp + MetaGap + ChipHeight + TitleToShelfBottom
-private const val ROW_ABOVE_ALPHA = 0.15f
+private const val ROW_ABOVE_ALPHA = 0f
 
 /** With focus on the library pill the grid is not a ghost above it: its tiles stay nearly whole. */
 private const val ROW_ABOVE_PILL_ALPHA = 0.85f
@@ -289,6 +291,11 @@ public fun HomeScreen(
     val shelfHeight = if (shelfLayout.cinematic) CinematicShelfHeight else ShelfHeight
     val shelfBottom = ContentTop + shelfHeight
     val dim = rememberFocusDim(currentState, shelfBottom, layout)
+    val windowHeight =
+        with(LocalDensity.current) {
+            LocalWindowInfo.current.containerSize.height
+                .toDp()
+        }
     val input =
         remember {
             HomeInput(
@@ -470,6 +477,7 @@ public fun HomeScreen(
                 InputsMenu(
                     rows = { state().inputs.rows },
                     anchor = input.inputsBounds,
+                    bottomLimit = windowHeight * dim.band.top - InputsTrayClearance,
                     animated = topBar.animated,
                     onPick = input.actions.onInputPick,
                 )
@@ -629,7 +637,6 @@ private fun HomeContent(
                     tileMenu = layout.tileMenu,
                     showName = layout.showNames,
                     fadeUnused = true,
-                    namePill = true,
                     modifier =
                         Modifier
                             .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = TvTheme.motion.placementSpec)
@@ -1499,13 +1506,12 @@ private fun AppTile(
     showName: Boolean = false,
     habitMark: Boolean = true,
     fadeUnused: Boolean = false,
-    namePill: Boolean = false,
     edge: DockEdgeLight? = null,
     glassStroke: Boolean = false,
 ) {
     val marked = if (habitMark) modifier.habitMark(input.habit, app.packageName) else modifier
     if (showName) {
-        NameUnder(app, namePill, marked) {
+        NameUnder(app, marked) {
             AppTile(
                 app,
                 accent,
@@ -1613,20 +1619,17 @@ private fun AppTile(
 }
 
 /**
- * [tile] with [app]'s name under it, at [NAME_REST_ALPHA] and at 1 while the tile has focus; with [pill], on a pill as
- * wide as the text and at [PILL_NAME_REST_ALPHA] at rest. The pill is static; the fade runs in the draw phase, so a focus
- * move recomposes nothing.
+ * [tile] with [app]'s name under it, on a pill as wide as the text, at [NAME_REST_ALPHA] and at 1 while the tile has
+ * focus. The pill is static; the fade runs in the draw phase, so a focus move recomposes nothing.
  */
 @Composable
 private fun NameUnder(
     app: AppEntry,
-    pill: Boolean,
     modifier: Modifier = Modifier,
     tile: @Composable () -> Unit,
 ) {
     val motion = TvTheme.motion
-    val rest = if (pill) PILL_NAME_REST_ALPHA else NAME_REST_ALPHA
-    val alpha = remember { Animatable(rest) }
+    val alpha = remember { Animatable(NAME_REST_ALPHA) }
     val scope = rememberCoroutineScope()
     val style =
         TvTheme.typography.tileLabel
@@ -1634,7 +1637,7 @@ private fun NameUnder(
             .withSubtitleShadow()
     Column(
         modifier.onFocusChanged {
-            val target = if (it.hasFocus) 1f else rest
+            val target = if (it.hasFocus) 1f else NAME_REST_ALPHA
             if (alpha.targetValue != target) {
                 scope.launch(start = CoroutineStart.UNDISPATCHED) { alpha.animateTo(target, motion.tweenSpec(NAME_FADE_MS)) }
             }
@@ -1645,7 +1648,7 @@ private fun NameUnder(
             Box(
                 Modifier
                     .wrapContentHeight(Alignment.Top, unbounded = true)
-                    .then(if (pill) NamePill else Modifier),
+                    .then(NamePill),
             ) {
                 BasicText(
                     app.label,

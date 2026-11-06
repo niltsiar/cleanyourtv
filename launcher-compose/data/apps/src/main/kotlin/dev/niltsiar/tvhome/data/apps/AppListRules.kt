@@ -26,8 +26,9 @@ internal data class Arrangement(
 
 /**
  * Picks and orders the tiles. [candidates] come in query order, TV launcher activities first.
- * A tile needs an exported activity in another package, and is shown by [LibraryChoices.showsOnHome]: a TV app that
- * the theme does not hide, or a package added in the library or through library_apps, unless the owner removed it.
+ * A tile needs an exported activity in a package that is not this launcher ([isThisLauncher]), and is shown by
+ * [LibraryChoices.showsOnHome]: a TV app that the theme does not hide, or a package added in the library or through
+ * library_apps, unless the owner removed it.
  * Two tiles with one package and one name are one tile.
  * Order: the saved order, then dock_apps, then name.
  */
@@ -45,7 +46,7 @@ internal fun arrange(
         candidates.mapNotNull { candidate ->
             val pkg = candidate.packageName
             val shown = choices.showsOnHome(pkg, tvApp = pkg in tvPackages, hidden = pkg in hidden)
-            if (pkg == ownPackage || !candidate.exported || !shown) return@mapNotNull null
+            if (isThisLauncher(pkg, ownPackage) || !candidate.exported || !shown) return@mapNotNull null
             val label = cleanLabel(config.appLabels[pkg] ?: candidate.label, pkg)
             if (seen.add("$pkg\n$label")) Tile(candidate, label) else null
         }
@@ -80,6 +81,15 @@ internal fun arrange(
             }.size
     return Arrangement(sorted, docked)
 }
+
+/**
+ * Whether [pkg] is this launcher: [ownPackage], or the same application id with or without a build-type suffix such as
+ * `.benchmark`, which installs beside the release build.
+ */
+internal fun isThisLauncher(
+    pkg: String,
+    ownPackage: String,
+): Boolean = pkg == ownPackage || pkg.startsWith("$ownPackage.") || ownPackage.startsWith("$pkg.")
 
 /**
  * A tile name an app cannot use to draw something else (a bidi override, a line break): whitespace and format

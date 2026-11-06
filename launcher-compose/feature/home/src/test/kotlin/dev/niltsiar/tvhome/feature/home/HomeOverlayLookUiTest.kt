@@ -27,6 +27,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
+import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
@@ -65,19 +66,20 @@ class HomeOverlayLookUiTest {
     private fun showHome(
         appCount: Int = 9,
         inputs: InputsMenu = FourPorts,
+        config: TvConfig = SixColumns,
     ) {
         apps = appsOf(appCount)
         val sources = sources(apps = flowOf(AppList(apps)), inputs = flowOf(inputs), powerMenuAvailable = { true })
         compose.setContent {
             TvTheme {
-                val viewModel = rememberHomeViewModel(sources, SixColumns, mutableListOf())
+                val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(
                     state = { state.value },
-                    layout = SixColumns.homeLayout(),
+                    layout = config.homeLayout(),
                     onFocus = viewModel::onFocus,
                     onClick = {},
-                    topBar = SixColumns.topBarLayout(),
+                    topBar = config.topBarLayout(),
                     actions = viewModel.actions,
                     libraryOpen = { libraryOpen },
                 )
@@ -163,13 +165,33 @@ class HomeOverlayLookUiTest {
 
     @Test
     @Config(qualifiers = "+night")
-    fun the_inputs_panel_hides_the_white_tiles_under_it() {
+    fun a_dock_tiles_menu_of_four_rows_ends_at_least_12_dp_above_the_dock_panel() {
+        showHome(config = SixColumns.copy(appLibrary = true))
+        openTileMenu()
+        compose.onNodeWithTag("menu:RemoveFromHome").assertExists()
+        compose.onNodeWithTag("menu:AppInfo").assertExists()
+
+        val clearance = bounds("dock").top.value - bounds("menu").bottom.value
+        assertTrue(
+            "the menu ends $clearance dp above the panel: ${bounds("dock")} ${bounds("menu")} ${bounds("tile:pkg.1")}",
+            clearance >= 11.5f,
+        )
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_inputs_list_ends_at_least_24_dp_above_the_dock_panel_and_scrolls_to_the_row_in_focus() {
         val ports = InputsMenu(available = true, rows = (1..6).map { port(it, InputConnection.Disconnected) } + InputRow.LiveTv)
         showHome(inputs = ports)
         press(Key.DirectionUp)
         press(Key.DirectionCenter)
 
-        assertNear(0x14, redAt(gapOverATile("menu", above = "input:5", below = "input:6")), 1)
+        val clearance = bounds("dock").top.value - bounds("menu").bottom.value
+        assertTrue("the list ends $clearance dp above the panel", clearance >= 23.5f)
+
+        repeat(6) { press(Key.DirectionDown) }
+        compose.onNodeWithTag("input:6").assertIsFocused()
+        assertTrue("the last row ends at ${bounds("input:6").bottom}", bounds("input:6").bottom.value <= bounds("menu").bottom.value)
     }
 
     @Test

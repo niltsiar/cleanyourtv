@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.designsystem.FocusInk
@@ -86,7 +87,8 @@ private const val SEPARATOR_ALPHA = 0.12f
 
 /**
  * The TV's input list hanging under the Inputs button at [anchor]: as wide as the button, or 150 dp, and wider for a
- * long name up to 360 dp. Each [InputRow.Port] row shows a green capsule while its port is connected, its dot ringed
+ * long name up to 360 dp. It ends at or above [bottomLimit] and scrolls when its rows are taller. Each
+ * [InputRow.Port] row shows a green capsule while its port is connected, its dot ringed
  * by a pulse unless [animated] is off. "More inputs" shows the rows [rows] folds. The Live TV row comes last.
  * Focus opens on the first connected port, as the TV does not say which input is active, else on the first row.
  * Rows are tagged `input:<n>` by position, the list `menu`.
@@ -95,6 +97,7 @@ private const val SEPARATOR_ALPHA = 0.12f
 internal fun InputsMenu(
     rows: () -> List<InputRow>,
     anchor: State<Rect>,
+    bottomLimit: Dp,
     animated: Boolean,
     onPick: (InputTarget) -> Unit,
     modifier: Modifier = Modifier,
@@ -127,6 +130,7 @@ internal fun InputsMenu(
         minWidth = minWidth,
         maxWidth = maxOf(minWidth, MaxListWidth),
         edgeMargin = ScreenMargin,
+        bottomLimit = bottomLimit,
     ) {
         shown.forEachIndexed { index, row ->
             val focus =

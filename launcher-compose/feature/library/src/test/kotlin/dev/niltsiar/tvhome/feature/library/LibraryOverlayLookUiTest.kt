@@ -700,18 +700,18 @@ class LibraryOverlayLookUiTest {
 
     @Test
     @Config(qualifiers = "+night")
-    fun the_ring_of_a_card_whose_art_is_coloured_takes_that_colour_lightened() {
+    fun the_ring_of_a_card_whose_art_is_coloured_takes_that_colour_lifted_to_a_lightness_of_065() {
         showLibrary(nineApps, art = LibraryArt(white, Color(0xFFE53935)))
 
-        assertRing(listOf(255, 160, 150), ringAtTop("App 1"))
+        assertRing(listOf(235, 100, 97), ringAtTop("App 1"))
     }
 
     @Test
     @Config(qualifiers = "+night")
-    fun the_ring_of_a_card_whose_art_is_near_grey_is_the_neutral_ring() {
+    fun the_ring_of_a_card_whose_art_is_near_grey_is_white() {
         showLibrary(nineApps, art = LibraryArt(white, Color(0xFF808080)))
 
-        assertRing(listOf(242, 244, 248), ringAtTop("App 1"))
+        assertRing(listOf(255, 255, 255), ringAtTop("App 1"))
     }
 
     @Test

@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
@@ -199,20 +200,20 @@ class DockGlassUiTest {
     private val light = Color(0xFFF4F6FA)
 
     @Test
-    fun the_dock_panel_tints_the_frost_by_032_on_a_dim_wallpaper() {
+    fun the_dock_panel_tints_the_frost_by_016_on_a_dim_wallpaper() {
         showHome(uniform)
         val at = gap()
 
-        assertSame(over(dark, 0.32f, frostAt(uniform, at)), screenAt(at))
+        assertSame(over(dark, 0.16f, frostAt(uniform, at)), screenAt(at))
     }
 
     @Test
-    fun a_bright_wallpaper_raises_the_tint_to_042() {
+    fun a_bright_wallpaper_raises_the_tint_to_022() {
         showHome(white)
         val at = gap()
 
         assertTrue("L* ${glass.dockLightness}", glass.dockLightness >= 75f)
-        assertSame(over(dark, 0.42f, frostAt(white, at)), screenAt(at))
+        assertSame(over(dark, 0.22f, frostAt(white, at)), screenAt(at))
     }
 
     @Test
@@ -224,7 +225,7 @@ class DockGlassUiTest {
         wallpaper.value = Wallpaper()
         settle()
 
-        assertEquals(0.32f, DockLook().tint(darkSurfaces = true, lightness = glass.dockLightness).alpha, 0.005f)
+        assertEquals(0.16f, DockLook().tint(darkSurfaces = true, lightness = glass.dockLightness).alpha, 0.005f)
     }
 
     @Test
@@ -240,7 +241,69 @@ class DockGlassUiTest {
         showHome(uniform, cinematic.copy(dockGlass = true))
         val at = gap()
 
-        assertSame(over(light, 0.36f, frostAt(uniform, at, glass = true)), screenAt(at))
+        assertSame(over(light, 0.20f, frostAt(uniform, at, glass = true)), screenAt(at))
+    }
+
+    /** The mean relative luminance of the panel, less 3 dp inside its edges and 10 dp around each tile, which clears their rings. */
+    private fun trayLuminance(): Float {
+        val panel = compose.onNodeWithTag("dock").getBoundsInRoot()
+        val tiles = (1..6).map { dockTile(it) }
+        val density = compose.activity.resources.displayMetrics.density
+        val image = compose.onRoot().captureToImage().toPixelMap()
+        var sum = 0.0
+        var count = 0
+        for (x in ((panel.left.value + 3f) * density).toInt() until ((panel.right.value - 3f) * density).toInt()) {
+            for (y in ((panel.top.value + 3f) * density).toInt() until ((panel.bottom.value - 3f) * density).toInt()) {
+                val near =
+                    tiles.any {
+                        x >= (it.left.value - 10f) * density && x <= (it.right.value + 10f) * density &&
+                            y >= (it.top.value - 10f) * density && y <= (it.bottom.value + 10f) * density
+                    }
+                if (near) continue
+                sum += image[x, y].luminance()
+                count++
+            }
+        }
+        return (sum / count).toFloat()
+    }
+
+    @Test
+    fun a_light_glass_tray_over_a_white_picture_keeps_a_mean_relative_luminance_of_at_most_075() {
+        showHome(white, cinematic.copy(dockGlass = true))
+
+        assertTrue("luminance ${trayLuminance()}", trayLuminance() <= 0.75f)
+    }
+
+    /** The red channel of the screen [px] pixels under the panel's top (or over its bottom) in the gap between the third and fourth tiles. */
+    private fun panelEdgeAt(
+        px: Int,
+        fromBottom: Boolean = false,
+    ): Float {
+        val panel = compose.onNodeWithTag("dock").getBoundsInRoot()
+        val density = compose.activity.resources.displayMetrics.density
+        val y = if (fromBottom) (panel.bottom.value * density).toInt() - 1 - px else (panel.top.value * density).toInt() + px
+        return compose
+            .onRoot()
+            .captureToImage()
+            .toPixelMap()[(gap().x * density).toInt(), y]
+            .red
+    }
+
+    @Test
+    fun the_dock_panel_has_a_1_5_dp_white_highlight_along_its_top_edge() {
+        showHome(uniform)
+
+        // At 2 pixels to the dp, row 2 lies 1 to 1.5 dp down, in the highlight; row 7 lies 3.5 dp down, below it.
+        val lift = panelEdgeAt(2) - panelEdgeAt(7)
+        assertTrue("the highlight lifts the red by $lift", lift in 0.05f..0.20f)
+    }
+
+    @Test
+    fun the_dock_panel_has_a_1_dp_dark_edge_along_its_bottom() {
+        showHome(uniform)
+
+        val drop = panelEdgeAt(6, fromBottom = true) - panelEdgeAt(0, fromBottom = true)
+        assertTrue("the edge darkens the red by $drop", drop in 0.05f..0.25f)
     }
 
     private fun saturation(colour: Color): Float {
@@ -257,7 +320,7 @@ class DockGlassUiTest {
     }
 
     @Test
-    fun dock_glass_draws_a_black_012_edge_1_dp_wide_inside_each_dock_tile() {
+    fun dock_glass_draws_a_black_020_edge_1_dp_wide_inside_each_dock_tile() {
         showHome(uniform, cinematic.copy(dockGlass = true), shown = lightApps)
         val tile = dockTile(2)
         val density = compose.activity.resources.displayMetrics.density
@@ -266,8 +329,8 @@ class DockGlassUiTest {
         val left = (tile.left.value * density).toInt()
         val edge = (left..left + 1).map { image[it, y].green }
 
-        assertEquals("edge $edge", 1f - 0.12f, edge.max(), 0.03f)
-        assertEquals("edge $edge", 1f - 0.12f, edge.min(), 0.03f)
+        assertEquals("edge $edge", 1f - 0.20f, edge.max(), 0.03f)
+        assertEquals("edge $edge", 1f - 0.20f, edge.min(), 0.03f)
         assertEquals(1f, image[left + 3, y].green, 0.01f)
     }
 
@@ -301,7 +364,7 @@ class DockGlassUiTest {
         showHome(uniform, darkTheme = false)
         val at = gap()
 
-        assertSame(over(light, 0.36f, frostAt(uniform, at)), screenAt(at))
+        assertSame(over(light, 0.20f, frostAt(uniform, at)), screenAt(at))
     }
 
     @Test

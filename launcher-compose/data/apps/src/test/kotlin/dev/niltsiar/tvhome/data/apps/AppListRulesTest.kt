@@ -20,9 +20,18 @@ class AppListRulesTest {
         order: Order? = null,
         tv: Set<String> = candidates.map { it.packageName }.toSet(),
         choices: LibraryChoices = LibraryChoices(added = config.libraryApps.toSet()),
-    ) = arrange(candidates.toList(), tv, config, order, ownPackage = "own", choices = choices)
+        ownPackage: String = "own",
+    ) = arrange(candidates.toList(), tv, config, order, ownPackage = ownPackage, choices = choices)
 
     private fun Arrangement.keys() = tiles.map { it.candidate.packageName }
+
+    @Test
+    fun no_build_of_this_launcher_gets_a_tile_whichever_one_is_running() {
+        val builds = arrayOf(candidate("own"), candidate("own.benchmark"), candidate("owner"), candidate("com.vendor.home"))
+
+        assertEquals(listOf("com.vendor.home", "owner"), arrange(*builds, ownPackage = "own").keys())
+        assertEquals(listOf("com.vendor.home", "owner"), arrange(*builds, ownPackage = "own.benchmark").keys())
+    }
 
     @Test
     fun dock_apps_come_first_in_dock_apps_order_then_the_rest_by_name() {

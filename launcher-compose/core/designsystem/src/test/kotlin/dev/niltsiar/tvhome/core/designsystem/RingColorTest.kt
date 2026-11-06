@@ -2,65 +2,86 @@ package dev.niltsiar.tvhome.core.designsystem
 
 import androidx.compose.ui.graphics.Color
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.abs
 
-/** The focus ring's colour from an app's brand colour, worked in OKLCH. */
+/** The focus ring's colour from an app's colour, worked in HSL. */
 class RingColorTest {
     private val twitch = Color(0xFF9146FF)
     private val spotify = Color(0xFF1DB954)
-    private val youtube = Color(0xFFFF0000)
+    private val navy = Color(0xFF1A3C8C)
 
-    private fun hueGap(
-        a: Float,
-        b: Float,
-    ): Float = abs(((a - b + 540f) % 360f) - 180f)
+    private class Hsl(
+        val h: Float,
+        val s: Float,
+        val l: Float,
+    )
 
-    private fun assertLiftedKeepingTheHue(brand: Color) {
-        val before = oklch(brand)
-        val after = oklch(ringColor(brand))
-
-        assertTrue("L ${after.l}", after.l in 0.795f..0.925f)
-        assertTrue("C ${after.c}", after.c <= 0.145f)
-        assertTrue("hue ${before.h} became ${after.h}", hueGap(before.h, after.h) < 3f)
+    private fun hsl(color: Color): Hsl {
+        val high = maxOf(color.red, color.green, color.blue)
+        val low = minOf(color.red, color.green, color.blue)
+        val l = (high + low) / 2f
+        val c = high - low
+        val s = if (c == 0f) 0f else c / (1f - abs(2f * l - 1f))
+        val h =
+            when {
+                c == 0f -> 0f
+                high == color.red -> (((color.green - color.blue) / c) % 6f + 6f) % 6f
+                high == color.green -> (color.blue - color.red) / c + 2f
+                else -> (color.red - color.green) / c + 4f
+            } * 60f
+        return Hsl(h, s, l)
     }
 
     @Test
-    fun vivid_brand_colours_are_lifted_to_a_light_tone_with_at_most_0_14_of_chroma_and_keep_their_hue() {
-        assertLiftedKeepingTheHue(twitch)
-        assertLiftedKeepingTheHue(spotify)
-        assertLiftedKeepingTheHue(youtube)
-        // Their light, chromatic versions fall outside what a screen shows: the chroma gives way, never the hue.
-        for (brand in listOf(Color(0xFF00FFFF), Color(0xFFFFFF00), Color(0xFF0000FF), Color(0xFF00FF00))) assertLiftedKeepingTheHue(brand)
-    }
-
-    @Test
-    fun a_brand_colour_already_inside_the_band_is_left_as_it_is() {
-        val pastel = Color(0xFFA6D8FF)
-        val before = oklch(pastel)
-        assertTrue(before.l in 0.8f..0.92f && before.c in 0.04f..0.14f)
-
-        val after = oklch(ringColor(pastel))
-
-        assertEquals(before.l, after.l, 0.01f)
-        assertEquals(before.c, after.c, 0.01f)
-    }
-
-    @Test
-    fun a_dark_brand_colour_rises_to_the_floor_of_the_band() {
-        val navy = Color(0xFF1A3C8C)
-
-        assertEquals(0.80f, oklch(ringColor(navy)).l, 0.01f)
-    }
-
-    @Test
-    fun white_black_and_grey_brands_use_the_neutral_ring() {
-        val neutral = Color(0xFFF2F4F8)
-
-        for (brand in listOf(Color.White, Color.Black, Color(0xFF808080), Color(0xFFF4F4EC))) {
-            assertEquals("$brand", neutral, ringColor(brand))
+    fun a_grey_app_colour_gets_a_white_ring() {
+        // A dark grey tile and a pale blue-grey one both vanish on cloud, so neither keeps its own tone.
+        for (art in listOf(Color(0xFF3A3A3A), Color(0xFF8A8F99), Color(0xFFB8C4D4), Color.Black, Color.White)) {
+            assertEquals("$art", Color.White, ringColor(art))
         }
+    }
+
+    @Test
+    fun a_dark_saturated_app_colour_is_lifted_to_a_lightness_of_065_keeping_its_hue_and_saturation() {
+        val before = hsl(navy)
+        val after = hsl(ringColor(navy))
+
+        assertEquals(0.65f, after.l, 0.005f)
+        assertEquals(before.s, after.s, 0.01f)
+        assertEquals(before.h, after.h, 1f)
+    }
+
+    @Test
+    fun every_saturated_app_colour_gets_a_ring_at_least_065_light_in_its_own_hue() {
+        for (art in listOf(twitch, spotify, Color(0xFFE50914), Color(0xFF113CCF), Color(0xFFFF8800), Color(0xFF00A0A0))) {
+            val before = hsl(art)
+            val after = hsl(ringColor(art))
+
+            assertTrue("$art lightness ${after.l}", after.l >= 0.645f)
+            assertTrue("$art hue ${before.h} became ${after.h}", abs(before.h - after.h) < 1f)
+        }
+    }
+
+    @Test
+    fun a_saturated_app_colour_that_is_already_light_is_left_as_it_is() {
+        val pastel = Color(0xFFA6D8FF)
+
+        assertEquals(pastel, ringColor(pastel))
+    }
+
+    /** A colour of HSL lightness 0.4 and the given [saturation], red-leaning. */
+    private fun hslColor(saturation: Float): Color {
+        val l = 0.4f
+        val c = (1f - abs(2f * l - 1f)) * saturation
+        return Color(l + c / 2f, l, l - c / 2f)
+    }
+
+    @Test
+    fun a_saturation_of_025_is_the_first_to_keep_its_colour() {
+        assertEquals(Color.White, ringColor(hslColor(0.24f)))
+        assertNotEquals(Color.White, ringColor(hslColor(0.26f)))
     }
 
     @Test

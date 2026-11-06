@@ -144,7 +144,7 @@ class FocusSurfaceMotionTest {
     }
 
     @Test
-    fun a_focused_ring_has_a_dark_stroke_outside_its_hairline_on_a_bright_backdrop_and_none_at_rest() {
+    fun a_focused_ring_has_a_2_dp_stroke_of_black_055_outside_its_hairline_on_a_bright_backdrop_and_none_at_rest() {
         compose.setContent {
             view = LocalView.current
             TvTheme {
@@ -158,16 +158,18 @@ class FocusSurfaceMotionTest {
         }
         compose.runOnUiThread { view.requestFocusFromTouch() }
         compose.waitForIdle()
-        // At 1.08 the ring's pieces lie, in dp from the tile's grown edge: gap 3.24, ring to 6.48, hairline to 7.56, stroke to 8.64.
+        // At 1.08 the ring's pieces lie, in dp from the tile's grown edge: gap 3.24, ring to 6.48, hairline to 7.56, stroke to 9.72.
         val strokeAt = 70f - 54f - 8.1f
-        val outsideAt = 70f - 54f - 9.5f
+        val strokeOuterAt = 70f - 54f - 9.4f
+        val outsideAt = 70f - 54f - 10.3f
         assertEquals(1f, greyAt(strokeAt), 0.01f)
 
         compose.runOnUiThread { requester.requestFocus() }
         compose.mainClock.advanceTimeBy(1_000)
         compose.waitForIdle()
 
-        assertEquals(1f - 0.35f, greyAt(strokeAt), 0.04f)
+        assertEquals(1f - 0.55f, greyAt(strokeAt), 0.04f)
+        assertEquals(1f - 0.55f, greyAt(strokeOuterAt), 0.04f)
         assertEquals(1f, greyAt(outsideAt), 0.01f)
     }
 }

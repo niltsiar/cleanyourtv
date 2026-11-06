@@ -77,6 +77,14 @@ class LibraryCatalogTest {
     }
 
     @Test
+    fun the_library_leaves_out_every_build_of_this_launcher_and_keeps_another_home_app() {
+        install(context.packageName + ".benchmark", "Inicio", Intent.CATEGORY_LEANBACK_LAUNCHER)
+        install("com.vendor.home", "Inicio", Intent.CATEGORY_LEANBACK_LAUNCHER)
+
+        assertEquals(setOf("com.vendor.home"), load(config).map { it.app.packageName }.toSet())
+    }
+
+    @Test
     fun an_app_knows_whether_it_is_a_tv_app_and_whether_it_shows_on_home() {
         install("tv.app", "TV App", Intent.CATEGORY_LEANBACK_LAUNCHER)
         install("phone.app", "Phone App", Intent.CATEGORY_LAUNCHER)

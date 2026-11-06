@@ -165,14 +165,14 @@ class HomeLookUiTest {
     }
 
     @Test
-    fun rows_above_the_focused_row_draw_at_fifteen_percent() {
+    fun rows_above_the_focused_row_draw_at_alpha_0() {
         showHome(apps = whiteAppsAndOneClear())
         assertNear(255, redAt(centreOf(dockTile(6))), 2)
 
         press(Key.DirectionDown)
         compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
 
-        assertDrawnAt(0.15f, centreOf(dockTile(6)), centreOf(dockTile(5)))
+        assertDrawnAt(0f, centreOf(dockTile(6)), centreOf(dockTile(5)))
     }
 
     /** How far under the top bar the title's capitals start: its line box top, 36 sp to the baseline, less the capitals' 0.72 of 48 sp. */
@@ -249,19 +249,15 @@ class HomeLookUiTest {
     }
 
     @Test
-    fun the_top_fade_runs_60_dp_and_ends_8_dp_above_the_first_fully_visible_row() {
+    fun no_row_above_the_focused_one_leaves_a_band_under_the_shelf() {
         showHome(apps = whiteApps(30))
         repeat(2) { press(Key.DirectionDown) }
         compose.onNodeWithTag("tile:pkg.13").assertIsFocused()
-        val row = bounds("tile:pkg.14").top.value
         val above = bounds("tile:pkg.8")
-        assertTrue("the row above ends at ${above.bottom}", above.bottom.value < row)
-
-        // The row above the focused one draws at 0.15; the fade is 0 60 dp above its end and 1 at its end.
         val x = (above.left.value + above.right.value) / 2
-        val bottom = redAt(Offset(x, above.bottom.value - 1f))
-        assertNear(Math.round(255 * 0.15f * (row - 8f - 60f).let { (above.bottom.value - 1f - it) / 60f }), bottom, 8)
-        assertTrue("above the fade ${redAt(Offset(x, row - 70f))}", redAt(Offset(x, row - 70f)) < 6)
+
+        assertNear(0, redAt(Offset(x, above.bottom.value - 1f)), 3)
+        assertNear(0, redAt(Offset(x, above.bottom.value - 30f)), 3)
     }
 
     @Test

@@ -42,8 +42,8 @@ private val RingWidth = 3.dp
 private val RingGap = 3.dp
 private val HairlineWidth = 1.dp
 private val Hairline = Color(0x73000000)
-private val OuterStrokeWidth = 1.dp
-private val OuterStroke = Color.Black.copy(alpha = 0.35f)
+private val OuterStrokeWidth = 2.dp
+private val OuterStroke = Color.Black.copy(alpha = 0.55f)
 private val GlowElevation = 16.dp
 private val Gloss = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f), Color.Transparent))
 private const val PLATE_TOP_ALPHA = 0.22f
@@ -52,9 +52,9 @@ private const val PLATE_STROKE_ALPHA = 0.3f
 
 /**
  * A D-pad target, for tiles and cards: scales up and gets a lit top, a white ring with a dark hairline outside it and a
- * glow while focused, and a 1 dp black stroke at 0.35 outside the hairline, so the ring holds on a bright wallpaper; how it
+ * glow while focused, and a 2 dp black stroke at 0.55 outside the hairline, so the ring holds on a bright wallpaper; how it
  * moves is the theme's [Motion]. Only the content is clipped to [shape]; the ring floats outside it and its corners are
- * concentric to the shape's, so a parent must leave the grown surface plus 8dp times [focusedScale] free around it or it
+ * concentric to the shape's, so a parent must leave the grown surface plus 9dp times [focusedScale] free around it or it
  * clips the ring. [onFocused] fires on gaining focus. [interactionSource] receives
  * the press and focus events, for content that reacts to them. [accent] colours the glow; unspecified takes the
  * theme's. [ring] colours the ring instead of white. [plate], when specified, is the colour of a plate behind the surface,

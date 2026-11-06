@@ -14,8 +14,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,6 +44,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.roundToIntRect
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -77,7 +80,7 @@ public class BesideAnchor(
  * string [label] gives and carries the test tag [rowTag]; the panel's own tag is `menu`, [padding] inside its edge, and
  * the rows' corners are concentric with the panel's. It rises and fades in with a spring and takes focus on its first
  * row, and never goes above [topLimit]; focus cannot leave it. A [title] is a header row over the rows, tagged
- * `menu:title`. [above], [columnGap] and [edgeMargin] are [GlassDropdown]'s.
+ * `menu:title`. [above], [anchorGap], [columnGap] and [edgeMargin] are [GlassDropdown]'s.
  */
 @Composable
 public fun <T> GlassMenu(
@@ -94,6 +97,7 @@ public fun <T> GlassMenu(
     padding: Dp = PanelPadding,
     title: String? = null,
     above: Boolean = false,
+    anchorGap: Dp = MenuGap,
     columnGap: Dp? = null,
     edgeMargin: Dp = 0.dp,
 ) {
@@ -109,6 +113,7 @@ public fun <T> GlassMenu(
         beside = beside,
         padding = padding,
         above = above,
+        anchorGap = anchorGap,
         columnGap = columnGap,
     ) {
         if (title != null) MenuTitle(title)
@@ -125,10 +130,12 @@ public fun <T> GlassMenu(
  * the screen and never above [topLimit] (a top bar to keep clear), or goes [beside] the anchor. [padding] is the space
  * inside the panel's edge. It rises and fades in with a spring, then focus goes to [firstFocus], which the caller puts on
  * one of the rows; focus cannot leave the panel. With [above] the panel sits 10 dp above the anchor when it fits
- * there, before it tries below. With [columnGap] the anchor is one column of a grid whose columns are [columnGap]
- * apart: the panel is a whole number of columns wide, plus the gaps between them, and starts at the anchor's left edge
- * (or ends at its right edge when it would pass [edgeMargin] from the screen's side); [beside] it, [BesideAnchor.gap]
- * should be [columnGap] so that the panel starts on the next column and ends on the one before.
+ * there, before it tries below; [anchorGap] is that distance, 10 dp by default. With [bottomLimit] (in the root's
+ * coordinates) a panel that hangs below the anchor ends at or above it, and scrolls when its content is taller. With
+ * [columnGap] the anchor is one column of a grid whose columns are [columnGap] apart: the panel is a whole number of
+ * columns wide, plus the gaps between them, and starts at the anchor's left edge (or ends at its right edge when it
+ * would pass [edgeMargin] from the screen's side); [beside] it, [BesideAnchor.gap] should be [columnGap] so that the
+ * panel starts on the next column and ends on the one before.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -144,10 +151,13 @@ public fun GlassDropdown(
     beside: BesideAnchor? = null,
     padding: Dp = PanelPadding,
     above: Boolean = false,
+    anchorGap: Dp = MenuGap,
+    bottomLimit: Dp = Dp.Unspecified,
     columnGap: Dp? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val motion = TvTheme.motion
+    val scroll = rememberScrollState()
     val columnWidth by remember(anchor) { derivedStateOf { anchor.value.width } }
     val reveal = remember { Animatable(if (motion.animations) 0f else 1f) }
     LaunchedEffect(Unit) {
@@ -174,6 +184,7 @@ public fun GlassDropdown(
                             .then(if (columnGap != null) Modifier.fillMaxWidth() else Modifier)
                             .widthIn(min = minWidth, max = maxWidth)
                             .width(IntrinsicSize.Max)
+                            .then(if (bottomLimit.isSpecified) Modifier.verticalScroll(scroll) else Modifier)
                             .padding(padding)
                             .focusProperties { exit = { FocusRequester.Cancel } }
                             .focusGroup(),
@@ -194,7 +205,10 @@ public fun GlassDropdown(
                 val width = if (columnWidth > 0f) columnsWidth(content, columnWidth, columns) else content
                 width.coerceAtMost(constraints.maxWidth).let { constraints.copy(minWidth = it, maxWidth = it, minHeight = 0) }
             }
-        val panel = measurable.measure(limits)
+        val gap = anchorGap.roundToPx()
+        val limited = bottomLimit.isSpecified && beside == null
+        val room = if (limited) bottomLimit.roundToPx() - anchor.value.bottom.toInt() - gap else Int.MAX_VALUE
+        val panel = measurable.measure(limits.copy(maxHeight = minOf(limits.maxHeight, maxOf(room, 0))))
         layout(constraints.maxWidth, constraints.maxHeight) {
             val at = anchor.value
             if (beside != null) {
@@ -214,7 +228,6 @@ public fun GlassDropdown(
                 )
                 return@layout
             }
-            val gap = MenuGap.roundToPx()
             val margin = edgeMargin.roundToPx()
             val end = alignEnd || (columns != null && at.left.toInt() + panel.width > constraints.maxWidth - margin + EDGE_SLACK_PX)
             val x =

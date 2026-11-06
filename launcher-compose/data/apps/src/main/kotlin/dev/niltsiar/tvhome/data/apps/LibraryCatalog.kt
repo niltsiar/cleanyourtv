@@ -29,8 +29,8 @@ private class KnownLabel(
 
 /**
  * Every app the library offers: the TV and the phone launcher activities that can be started from outside, the first
- * entry of a package winning and the TV one preferred, less this launcher and library_excluded_apps. Each app says
- * whether it has a tile on Home.
+ * entry of a package winning and the TV one preferred, less this launcher (every build of it) and
+ * library_excluded_apps. Each app says whether it has a tile on Home.
  */
 public class LibraryCatalog(
     private val context: Context,
@@ -111,7 +111,7 @@ public class LibraryCatalog(
                 if (activity == null || !activity.exported) continue
                 val pkg = activity.packageName
                 if (category == Intent.CATEGORY_LEANBACK_LAUNCHER) tvPackages.add(pkg)
-                if (pkg != context.packageName && pkg !in excluded) unique.putIfAbsent(pkg, info)
+                if (!isThisLauncher(pkg, context.packageName) && pkg !in excluded) unique.putIfAbsent(pkg, info)
             }
         }
         return Launchable(unique, tvPackages)
