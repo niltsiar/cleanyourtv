@@ -9,6 +9,8 @@ import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.PixelMap
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
@@ -29,12 +31,18 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
+import dev.niltsiar.tvhome.core.model.InputConnection
+import dev.niltsiar.tvhome.core.model.InputIcon
+import dev.niltsiar.tvhome.core.model.InputRow
+import dev.niltsiar.tvhome.core.model.InputTarget
+import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -81,8 +89,9 @@ class HeaderLegibilityUiTest {
         config: TvConfig = SixColumns,
         wallpaperLayout: WallpaperLayout = WallpaperLayout(),
         wallpapers: Flow<Wallpaper> = grey(level).let { flowOf(Wallpaper(picture = it, thumbnail = it)) },
+        inputs: Flow<InputsMenu> = emptyFlow(),
     ) {
-        val sources = sources(wallpaper = wallpapers, network = flowOf(wifi))
+        val sources = sources(wallpaper = wallpapers, network = flowOf(wifi), inputs = inputs)
         compose.setContent {
             CompositionLocalProvider(LocalBakeDispatcher provides Dispatchers.Unconfined) {
                 TvTheme(darkTheme = true) {
@@ -154,11 +163,11 @@ class HeaderLegibilityUiTest {
         return Offset(subtitle.left.value + 10f, (subtitle.top.value + subtitle.bottom.value) / 2f)
     }
 
-    /** What the local scrim leaves of a level: black 0.40 at the left edge of the screen, 0 760 dp in. */
+    /** What the local scrim leaves of a level: black 0.60 at the left edge of the screen, 0 760 dp in. */
     private fun heroScrimmed(
         level: Int,
         at: Offset,
-    ): Int = Math.round(level * (1f - 0.40f * max(0f, 1f - at.x / 760f)))
+    ): Int = Math.round(level * (1f - 0.60f * max(0f, 1f - at.x / 760f)))
 
     private fun assertNear(
         expected: Int,
@@ -191,7 +200,7 @@ class HeaderLegibilityUiTest {
     }
 
     @Test
-    fun a_bright_wallpaper_gets_a_soft_black_040_scrim_behind_the_subtitle() {
+    fun a_bright_wallpaper_gets_a_soft_black_060_scrim_behind_the_subtitle() {
         showHome(level = 1f)
         val at = inTheSubtitleBox()
 
@@ -250,6 +259,115 @@ class HeaderLegibilityUiTest {
         wallpapers.value = Wallpaper(picture = picture, thumbnail = grey(0.4f))
         settle()
         assertNear(scrimmed(255, top = 0.55f, left = 0.40f, at), redAt(at))
+    }
+
+    @Test
+    fun the_hero_title_has_a_black_055_shadow_1_dp_down_blurred_9_dp() {
+        showHome(level = 0.4f)
+
+        val shadow = checkNotNull(compose.onNodeWithTag("shelf:title").textStyle().shadow)
+        val density = compose.activity.resources.displayMetrics.density
+
+        assertEquals(Color.Black.copy(alpha = 0.55f), shadow.color)
+        assertEquals(Offset(0f, density), shadow.offset)
+        assertEquals(9 * density, shadow.blurRadius, 0.01f)
+    }
+
+    @Test
+    fun the_local_scrim_keeps_its_full_strength_24_dp_under_the_subtitle_line() {
+        showHome(level = 1f)
+        val line = compose.onNodeWithTag("shelf:title-meta").getBoundsInRoot()
+        val x = line.left.value + 10f
+
+        val inside = redAt(Offset(x, line.bottom.value - 2f))
+        val below = redAt(Offset(x, line.bottom.value + 24f))
+
+        assertNear(inside, below, tolerance = 3)
+    }
+
+    /** Pixels of [mask] within [reach] pixels of a set one, in a [width] by [height] image. */
+    private fun spread(
+        mask: BooleanArray,
+        width: Int,
+        height: Int,
+        reach: Int,
+    ): BooleanArray {
+        val across = BooleanArray(mask.size)
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                if (mask[y * width + x]) for (k in max(0, x - reach)..minOf(width - 1, x + reach)) across[y * width + k] = true
+            }
+        }
+        val all = BooleanArray(mask.size)
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                if (across[y * width + x]) for (k in max(0, y - reach)..minOf(height - 1, y + reach)) all[k * width + x] = true
+            }
+        }
+        return all
+    }
+
+    /**
+     * The lowest, over six slices of the text of [tag], contrast ratio of its ink against the pixels 1.5 to 6 dp round
+     * it. [onBlack] is the screen over a black picture, where only the text shows, and gives its pixels; [onPicture] is
+     * the screen over the picture under test.
+     */
+    private fun worstContrast(
+        tag: String,
+        onBlack: PixelMap,
+        onPicture: PixelMap,
+    ): Float {
+        val density = compose.activity.resources.displayMetrics.density
+        val box = compose.onNodeWithTag(tag).getBoundsInRoot()
+        val margin = 14
+        val left = (box.left.value * density).toInt() - margin
+        val top = (box.top.value * density).toInt() - margin
+        val width = ((box.right.value - box.left.value) * density).toInt() + 2 * margin
+        val height = ((box.bottom.value - box.top.value) * density).toInt() + 2 * margin
+        val black = { i: Int -> onBlack[left + i % width, top + i / width].luminance() }
+        val ink = BooleanArray(width * height) { black(it) > 0.8f }
+        val text = BooleanArray(width * height) { black(it) > 0.02f }
+        val near = spread(text, width, height, 3)
+        val around = spread(text, width, height, 12)
+        val inkColumns = ink.indices.filter { ink[it] }.map { it % width }
+        val slices = 6
+        val first = inkColumns.min()
+        val span = inkColumns.max() - first + 1
+        return (0 until slices).minOf { slice ->
+            val columns = first + span * slice / slices until first + span * (slice + 1) / slices
+            val onInk = mutableListOf<Float>()
+            val beside = mutableListOf<Float>()
+            for (i in ink.indices) {
+                if (i % width !in columns) continue
+                val level = onPicture[left + i % width, top + i / width].luminance()
+                if (ink[i]) {
+                    onInk += level
+                } else if (around[i] && !near[i]) {
+                    beside += level
+                }
+            }
+            (onInk.average().toFloat() + 0.05f) / (beside.average().toFloat() + 0.05f)
+        }
+    }
+
+    @Test
+    fun over_a_white_picture_the_title_holds_3_to_1_and_the_subtitle_4_5_to_1_against_what_is_round_them() {
+        val wallpapers = MutableStateFlow(Wallpaper(picture = grey(0f), thumbnail = grey(0f)))
+        val connected = InputRow.Port("HDMI 3 (eARC/ARC)", InputIcon.Hdmi, InputConnection.Connected, InputTarget.TvInput("tv/.Hdmi/HW3"))
+        showHome(wallpapers = wallpapers, inputs = flowOf(InputsMenu(available = true, rows = listOf(connected))))
+        press(Key.DirectionUp)
+        press(Key.DirectionLeft)
+        compose.onNodeWithContentDescription("Inputs").assertIsFocused()
+        val onBlack = compose.onRoot().captureToImage().toPixelMap()
+
+        wallpapers.value = Wallpaper(picture = grey(1f), thumbnail = grey(1f))
+        settle()
+        val onPicture = compose.onRoot().captureToImage().toPixelMap()
+
+        val title = worstContrast("shelf:title", onBlack, onPicture)
+        val subtitle = worstContrast("shelf:title-meta", onBlack, onPicture)
+        assertTrue("title $title", title >= 3f)
+        assertTrue("subtitle $subtitle", subtitle >= 4.5f)
     }
 
     @Test

@@ -37,6 +37,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridLayoutInfo
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
@@ -135,6 +136,7 @@ import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.holdOk
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
+import dev.niltsiar.tvhome.core.designsystem.ringBlendsWith
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
 import dev.niltsiar.tvhome.core.model.InputConnection
@@ -168,14 +170,14 @@ private val TileNameLine = 22.dp
 internal val TileNameRoom = TileNameGap + TileNameLine
 
 /** The alpha of the name under a tile without focus; it has a pill behind it. */
-private const val NAME_REST_ALPHA = 0.75f
+private const val NAME_REST_ALPHA = 0.85f
 
 /** How long a name takes to reach 1 on focus. */
 private const val NAME_FADE_MS = 220
 private val NamePill =
     Modifier
         .background(
-            Color.Black.copy(alpha = 0.45f),
+            Color.Black.copy(alpha = 0.55f),
             RoundedCornerShape(8.dp),
         ).padding(horizontal = 6.dp, vertical = 2.dp)
 internal val TopBarTop = 20.dp
@@ -188,6 +190,9 @@ private val GlassTileStrokeWidth = 1.dp
 private val GlassTileStroke = Color.Black.copy(alpha = 0.20f)
 private val DockShape = RoundedCornerShape(32.dp)
 private val GridBottom = 48.dp
+
+/** The room the grid's bottom fade leaves, at least, under the last whole row. */
+private val NamedRowsClearance = 16.dp
 
 /** The space between the end of the Inputs list and the dock's panel. */
 private val InputsTrayClearance = 24.dp
@@ -337,7 +342,6 @@ public fun HomeScreen(
             input.openInputs()
         }
     }
-    val gridState = rememberLazyGridState()
     val backdrop = rememberCinematicBackdrop(shelfLayout, shelf = { state().shelf }, heroArt = heroArt)
     val titleShift: GraphicsLayerScope.() -> Float = { dim.titleShiftPx(TitleGridDrop.toPx()) }
     val shelfModifier =
@@ -346,7 +350,8 @@ public fun HomeScreen(
             .height(shelfHeight - TitleToShelfBottom)
             .graphicsLayer { translationY = titleShift() }
     val band = rememberBandFade(libraryOpen)
-    FocusDimEffects(dim, currentState, input, layout, libraryOpen)
+    val gridState = rememberLazyGridState()
+    FocusDimEffects(dim, currentState, input, layout, libraryOpen, gridState)
     val scope = rememberCoroutineScope()
     val edge = remember(dockLook.edgeLight) { if (dockLook.edgeLight) DockEdgeLight(scope) else null }
     if (edge != null) DockEdgeEffect(edge, currentState, input, layout, libraryOpen)
@@ -782,8 +787,17 @@ private class FocusDim(
     val row = Animatable(DOCK_ROW.toFloat())
     val low = Animatable(1f)
 
+    /** The first grid row that [hiddenFromRow] finds cut by the bottom edge, animated; rows from it down draw at alpha 0. */
+    val fold = Animatable(Float.MAX_VALUE)
+
+    /** The dock band's alpha: [POPUP_DOCK_ALPHA] while a top-bar popup is open, else 1. */
+    val popup = Animatable(1f)
+
     /** The alpha of [row]: 0 while focus is a row or more below it, 1 from the focused row down. */
     fun alphaOf(row: Int): Float = 1f - (this.row.value - row).coerceIn(0f, 1f)
+
+    /** The alpha of grid [row] for the bottom edge: 1 above [fold], 0 from it down. */
+    fun fitsAbove(row: Int): Float = (fold.value - row).coerceIn(0f, 1f)
 
     /** How far down the group is drawn now, in pixels. */
     fun lowPx(): Float = low.value * lowering.value
@@ -852,16 +866,18 @@ private fun rememberFocusDim(
     return remember { FocusDim(currentLowering, currentBand, currentHero) }
 }
 
-/** The share of the grid's width its tiles use, so that [HomeLayout.rowsBelowDock] rows fit under a dock whose panel starts at [shelfBottom]. */
+/**
+ * The share of the grid's width its tiles use, so that [HomeLayout.rowsBelowDock] rows fit under a dock whose panel starts at
+ * [shelfBottom]; with names, so that the row in focus and the next one, names included, end [NamedRowsClearance] above the bottom edge.
+ */
 private fun gridShare(
     layout: HomeLayout,
     gridWidth: Dp,
     windowHeight: Dp,
     shelfBottom: Dp,
-): Float =
-    if (layout.singleRow) {
-        1f
-    } else {
+): Float {
+    if (layout.singleRow) return 1f
+    val below =
         tileWidthShare(
             gridWidth.value,
             (windowHeight - shelfBottom - GridBottom).value,
@@ -870,7 +886,17 @@ private fun gridShare(
             TileGap.value,
             layout.nameRoom(),
         )
-    }
+    if (!layout.showNames) return below
+    val named =
+        namedRowsShare(
+            gridWidth.value,
+            (windowHeight - shelfBottom - TileGap - NamedRowsClearance).value,
+            layout.columns,
+            TileGap.value,
+            TileNameRoom.value,
+        )
+    return minOf(below, named)
+}
 
 /** The room a tile's name takes under it, in dp; 0 with the names off. */
 private fun HomeLayout.nameRoom(): Float = if (showNames) TileNameRoom.value else 0f
@@ -910,7 +936,8 @@ private fun groupLowFor(
 
 /**
  * Runs [dim]: its row follows focus in [ROW_DIM_MS], and its group goes low or up as [groupLowFor] says, in
- * [GROUP_MS], at once without motion. It stays where it is while the App library is open.
+ * [GROUP_MS], at once without motion. It stays where it is while the App library is open. Its [FocusDim.fold] follows the
+ * [grid]'s bottom edge in [ROW_DIM_MS], and its [FocusDim.popup] a top-bar popup in [BAND_IN_MS] and [BAND_OUT_MS].
  */
 @Composable
 private fun FocusDimEffects(
@@ -919,6 +946,7 @@ private fun FocusDimEffects(
     input: HomeInput,
     layout: HomeLayout,
     libraryOpen: () -> Boolean,
+    grid: LazyGridState,
 ) {
     val motion = TvTheme.motion
     val currentLibraryOpen = rememberUpdatedState(libraryOpen)
@@ -942,6 +970,21 @@ private fun FocusDimEffects(
                 motion.focusOvershoot -> dim.low.animateTo(target, spring(GROUP_OVERSHOOT_DAMPING, Spring.StiffnessMediumLow))
                 else -> dim.low.animateTo(target, tween(GROUP_MS, easing = FastOutSlowInEasing))
             }
+        }
+    }
+    LaunchedEffect(state, grid, layout, dim, motion) {
+        var first = true
+        snapshotFlow {
+            val rows = (state.value().grid.size + layout.columns - 1) / layout.columns
+            minOf(dim.hiddenFromRow(grid.layoutInfo, layout.columns), rows).toFloat()
+        }.collectLatest { target ->
+            if (first) dim.fold.snapTo(target) else dim.fold.animateTo(target, motion.tweenSpec(ROW_DIM_MS))
+            first = false
+        }
+    }
+    LaunchedEffect(state, dim, motion) {
+        snapshotFlow { state.value().let { it.inputsOpen || (it.menu != null && it.menu.tileKey == null) } }.collectLatest { open ->
+            dim.popup.animateTo(if (open) POPUP_DOCK_ALPHA else 1f, motion.tweenSpec(if (open) BAND_IN_MS else BAND_OUT_MS))
         }
     }
 }
@@ -971,6 +1014,28 @@ private fun DockEdgeEffect(
 
 private const val ROW_DIM_MS = 160
 
+/** The dock's alpha under a top-bar popup, so that the popup is what looks active. */
+private const val POPUP_DOCK_ALPHA = 0.55f
+
+/**
+ * The first grid row whose tile shows under half its height above the bottom edge, or [Int.MAX_VALUE]: a smaller part
+ * reads as a rendering fault.
+ */
+private fun FocusDim.hiddenFromRow(
+    info: LazyGridLayoutInfo,
+    columns: Int,
+): Int {
+    val shift = lowPx() - info.viewportStartOffset
+    var first = Int.MAX_VALUE
+    for (i in info.visibleItemsInfo.indices) {
+        val item = info.visibleItemsInfo[i]
+        val index = item.index - GRID_ITEMS_BEFORE
+        if (index < 0 || item.key == LIBRARY_FOCUS) continue
+        if (info.viewportSize.height - (item.offset.y + shift) < item.size.width / TILE_ASPECT / 2f) first = minOf(first, index / columns)
+    }
+    return first
+}
+
 /** Draws the item of grid [row] at the alpha [dim] gives it, as far down as [dim]'s group is. */
 private fun Modifier.dimAboveFocus(
     row: Int,
@@ -978,7 +1043,7 @@ private fun Modifier.dimAboveFocus(
 ): Modifier =
     graphicsLayer {
         compositingStrategy = CompositingStrategy.ModulateAlpha
-        alpha = dim.alphaOf(row)
+        alpha = dim.alphaOf(row) * dim.fitsAbove(row)
         translationY = dim.lowPx()
     }
 
@@ -1003,7 +1068,7 @@ private fun Modifier.dockLayer(
                 val bottom = dock.offset.y - info.viewportStartOffset + dock.size.height + dim.lowPx()
                 ((bottom - shelfBottomPx) / DockFadeOut.toPx()).coerceIn(0f, 1f)
             }
-        alpha = dim.alphaOf(DOCK_ROW) * shown
+        alpha = dim.alphaOf(DOCK_ROW) * shown * dim.popup.value
         translationY = dim.lowPx()
     }
 
@@ -1415,7 +1480,7 @@ private fun DockPanel(
     if (look.band) {
         val dark = TvTheme.surfaces.dark
         val tint = remember(look, dark, glass) { { look.tint(dark, glass.dockLightness) } }
-        DockSurface(glass, tint, DockShape, modifier, edge, content)
+        DockSurface(glass, tint, DockShape, modifier, edge, outerHairline = look.light(dark), content = content)
     } else {
         Box(modifier, content = content)
     }
@@ -1533,6 +1598,7 @@ private fun AppTile(
     val scope = rememberCoroutineScope()
     val placed = remember { Placed() }
     val currentRing by rememberUpdatedState(ring)
+    val ringBlends = remember(ring, app.accent) { ringBlendsWith(ring, app.accent) }
     val ringColour =
         remember(input, key, ring) {
             ColorProducer { if (input.carried.value == key) ReorderRing else travel.colourFor(key, ring) }
@@ -1550,6 +1616,7 @@ private fun AppTile(
         shape = TileShape,
         accent = accent,
         ring = ringColour,
+        ringBlends = ringBlends,
         modifier =
             (if (fadeUnused) marked.unusedFade(input.faded, key) else marked)
                 .then(if (reordering) Modifier.reorderLook(key, input, TileShape) else Modifier)

@@ -790,6 +790,16 @@ class LibraryOverlayLookUiTest {
 
     @Test
     @Config(qualifiers = "+night")
+    fun a_ring_that_blends_with_its_cards_colour_gets_a_white_stroke_between_the_gap_and_the_ring() {
+        showLibrary(nineApps, art = LibraryArt(white, Color(0xFFE53935)))
+
+        val grown = grownCard("App 1")
+        val gap = rgbAt((grown.left + grown.right) / 2, grown.top - 2.dp * FOCUSED_SCALE)
+        assertTrue("the gap is $gap", gap.all { it >= 216 })
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
     fun the_ring_of_a_card_whose_art_is_near_grey_is_white() {
         showLibrary(nineApps, art = LibraryArt(white, Color(0xFF808080)))
 

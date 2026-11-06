@@ -141,6 +141,41 @@ class FocusColourUiTest {
         assertNear(ringColor(red), ringAtTop(1))
     }
 
+    /** The colour 2 dp out from tile [n]'s edge, the middle of the outer 2 dp of the gap between the tile and its ring. */
+    private fun gapAtTop(n: Int): Color {
+        val box = tile(n)
+        val centre = (box.top.value + box.bottom.value) / 2f
+        return at(centreX(n), centre - 1.08f * ((box.bottom.value - box.top.value) / 2f + 2f))
+    }
+
+    @Test
+    fun a_dock_ring_that_blends_with_its_tiles_colour_gets_a_white_stroke_between_the_gap_and_the_ring() {
+        showHome()
+
+        val gap = gapAtTop(1)
+        assertTrue("the gap is $gap", minOf(gap.red, gap.green, gap.blue) >= 0.85f)
+        assertNear(ringColor(red), ringAtTop(1))
+    }
+
+    @Test
+    fun a_grid_ring_that_blends_with_its_tiles_colour_gets_a_white_stroke_between_the_gap_and_the_ring() {
+        showHome()
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+
+        val gap = gapAtTop(7)
+        assertTrue("the gap is $gap", minOf(gap.red, gap.green, gap.blue) >= 0.85f)
+    }
+
+    @Test
+    fun a_ring_that_stands_out_from_a_dark_saturated_tile_has_no_white_stroke() {
+        val navy = Color(0xFF14143C)
+        showHome(appList = flowOf(AppList(apps.map { it.copy(accent = navy) })))
+
+        assertTrue("the gap is ${gapAtTop(1)}", gapAtTop(1).red < 0.5f)
+        assertNear(ringColor(navy), ringAtTop(1))
+    }
+
     @Test
     fun cinematic_white_focus_keeps_the_ring_white() {
         showHome(cinematic.copy(cinematicWhiteFocus = true))

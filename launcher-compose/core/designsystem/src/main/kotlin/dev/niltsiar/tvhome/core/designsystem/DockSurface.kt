@@ -46,6 +46,8 @@ private val DockRimWidth = 1.5.dp
 private val DockSheen = Brush.verticalGradient(0f to Color.White.copy(alpha = 0.16f), 0.35f to Color.Transparent)
 private val BottomEdge = Color.Black.copy(alpha = 0.25f)
 private val BottomEdgeWidth = 1.dp
+private val OuterHairline = Color.Black.copy(alpha = 0.30f)
+private val OuterHairlineWidth = 1.dp
 private val DockShadow = Color.Black.copy(alpha = 0.22f)
 private val DockElevation = 20.dp
 private val DockShadowDrop = 6.dp
@@ -53,7 +55,8 @@ private val DockShadowDrop = 6.dp
 /**
  * The dock's panel: the frost under a [tint] (read in the draw phase), a sheen over its top, a 1.5 dp rim that is white 0.30
  * at the top and fades down the sides, a 1 dp black 0.25 edge along its bottom half, and a shadow that falls 6 dp lower
- * than the panel. With an [edgeLight] the focused tile lights the rim and the floor.
+ * than the panel. With an [edgeLight] the focused tile lights the rim and the floor. With [outerHairline] a 1 dp black 0.30 line
+ * runs round the outside of the panel, so a light panel keeps its edge on a bright picture.
  */
 @Composable
 public fun DockSurface(
@@ -62,12 +65,14 @@ public fun DockSurface(
     shape: RoundedCornerShape,
     modifier: Modifier = Modifier,
     edgeLight: DockEdgeLight? = null,
+    outerHairline: Boolean = false,
     content: @Composable BoxScope.() -> Unit,
 ) {
     Box(
         modifier =
             modifier
                 .then(DockShadowElement(shape))
+                .then(if (outerHairline) Modifier.drawBehind { drawOuterHairline(shape) } else Modifier)
                 .clip(shape)
                 .glassFrost(glass, dock = true)
                 .drawBehind {
@@ -87,6 +92,11 @@ public fun DockSurface(
     ) {
         SurfaceContent { content() }
     }
+}
+
+private fun DrawScope.drawOuterHairline(shape: RoundedCornerShape) {
+    val width = OuterHairlineWidth.toPx()
+    drawOutline(shape.createOutline(size, layoutDirection, this).grownBy(width / 2f), OuterHairline, style = Stroke(width))
 }
 
 /** Draws the dock's shadow: a layer of the panel's shape that casts it from [DockShadowDrop] lower than the panel. */

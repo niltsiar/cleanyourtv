@@ -268,10 +268,10 @@ class DockGlassUiTest {
     }
 
     @Test
-    fun a_light_glass_tray_over_a_white_picture_keeps_a_mean_relative_luminance_of_at_most_075() {
+    fun a_light_glass_tray_over_a_white_picture_keeps_a_mean_relative_luminance_of_at_most_065() {
         showHome(white, cinematic.copy(dockGlass = true))
 
-        assertTrue("luminance ${trayLuminance()}", trayLuminance() <= 0.75f)
+        assertTrue("luminance ${trayLuminance()}", trayLuminance() <= 0.65f)
     }
 
     /** The red channel of the screen [px] pixels under the panel's top (or over its bottom) in the gap between the third and fourth tiles. */
@@ -304,6 +304,33 @@ class DockGlassUiTest {
 
         val drop = panelEdgeAt(6, fromBottom = true) - panelEdgeAt(0, fromBottom = true)
         assertTrue("the edge darkens the red by $drop", drop in 0.05f..0.25f)
+    }
+
+    /** The red channel of the screen [outside] pixels over the panel's top edge in the middle of the panel, over a white wallpaper. */
+    private fun redOutsideTop(outside: Int): Float {
+        val panel = compose.onNodeWithTag("dock").getBoundsInRoot()
+        val density = compose.activity.resources.displayMetrics.density
+        return compose
+            .onRoot()
+            .captureToImage()
+            .toPixelMap()[((panel.left.value + panel.right.value) / 2f * density).toInt(), (panel.top.value * density).toInt() - outside]
+            .red
+    }
+
+    @Test
+    fun a_light_glass_tray_has_a_1_dp_black_030_hairline_round_its_outside() {
+        showHome(white, cinematic.copy(dockGlass = true), wallpaper = flowOf(Wallpaper(picture = white, thumbnail = white)))
+
+        // Row 1 lies in the hairline, 0.5 dp out; row 8 lies 4 dp out, past it.
+        val dark = redOutsideTop(8) - redOutsideTop(1)
+        assertTrue("the hairline darkens the red by $dark", dark in 0.15f..0.35f)
+    }
+
+    @Test
+    fun a_dark_tray_has_no_hairline_round_its_outside() {
+        showHome(white, wallpaper = flowOf(Wallpaper(picture = white, thumbnail = white)))
+
+        assertEquals(redOutsideTop(8), redOutsideTop(1), 0.06f)
     }
 
     private fun saturation(colour: Color): Float {

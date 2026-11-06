@@ -68,6 +68,25 @@ internal fun tileWidthShare(
     return (fitting / gridWidth).coerceIn(MIN_TILE_SHARE, 1f)
 }
 
+private const val NAMED_MIN_SHARE = 0.8f
+
+/**
+ * The share of the grid's [gridWidth] that its tiles use so that, with a name under each, the row in focus and the next
+ * one both fit in [availableHeight], the room from the top of the row in focus to the bottom edge (all in dp, [gap]
+ * between rows, [nameRoom] under each tile). 1 when they fit at full width, never under 0.8.
+ */
+internal fun namedRowsShare(
+    gridWidth: Float,
+    availableHeight: Float,
+    columns: Int,
+    gap: Float,
+    nameRoom: Float,
+): Float {
+    if (columns <= 0 || gridWidth <= 0f) return 1f
+    val tileHeight = (availableHeight - gap - 2 * nameRoom) / 2f
+    return ((tileHeight * TILE_ASPECT * columns + (columns - 1) * gap) / gridWidth).coerceIn(NAMED_MIN_SHARE, 1f)
+}
+
 /** How far the band and the dock sit lower in dock focus than in the grid layout, in dp. */
 internal const val DOCK_LOWERING = 120f
 

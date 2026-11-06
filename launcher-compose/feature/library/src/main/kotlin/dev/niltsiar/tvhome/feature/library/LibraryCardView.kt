@@ -65,6 +65,7 @@ import dev.niltsiar.tvhome.core.designsystem.FocusSurface
 import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.holdOk
+import dev.niltsiar.tvhome.core.designsystem.ringBlendsWith
 import dev.niltsiar.tvhome.core.model.LibraryArt
 import dev.niltsiar.tvhome.core.model.describeLastOpened
 import kotlinx.coroutines.CoroutineStart
@@ -146,6 +147,7 @@ internal fun LibraryCardView(
     val focus = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val ring = remember(artwork, layout) { layout.ringColour(artwork?.accent ?: Color.Unspecified) }
+    val ringBlends = remember(ring, artwork) { ringBlendsWith(ring, artwork?.accent ?: Color.Unspecified) }
     Box(
         modifier =
             modifier.fillMaxWidth().height(CardHeight).graphicsLayer {
@@ -164,6 +166,7 @@ internal fun LibraryCardView(
             glow = false,
             focusedScale = FOCUSED_SCALE,
             ring = { ring },
+            ringBlends = ringBlends,
             plate = ink,
             modifier =
                 Modifier

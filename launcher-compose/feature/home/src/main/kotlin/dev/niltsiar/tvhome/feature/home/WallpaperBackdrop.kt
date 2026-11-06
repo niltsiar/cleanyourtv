@@ -54,10 +54,15 @@ private val CaptionMaxWidth = 520.dp
 private const val TOP_SCRIM_REACH = 0.45f
 private const val LEFT_SCRIM_REACH = 0.55f
 
-/** The hero block's scrim: [HERO_SCRIM_ALPHA] black at the screen's left edge, gone [HeroScrimWidth] in, feathered [HeroScrimFeather] above and below the block. */
+/**
+ * The hero block's scrim: [HERO_SCRIM_ALPHA] black at the screen's left edge, gone [HeroScrimWidth] in, feathered
+ * [HeroScrimFeather] above and below the block, and held [HeroScrimBelow] past its bottom: the subtitle line ends 12 dp above
+ * that edge (22 dp with the cinematic shelf), so 24 dp of full strength lie under it.
+ */
 private val HeroScrimWidth = 760.dp
 private val HeroScrimFeather = 48.dp
-private const val HERO_SCRIM_ALPHA = 0.40f
+private val HeroScrimBelow = 12.dp
+private const val HERO_SCRIM_ALPHA = 0.60f
 
 /** The width of the hero block's box, from the screen margin, whose picture the scrim's brightness is read from. */
 internal val HeroSampleWidth = 480.dp
@@ -169,7 +174,8 @@ private fun DrawScope.drawCover(
 
 /**
  * A soft scrim behind the hero block (the title and its line) while the picture under it is bright
- * ([GlassState.heroBrightShare] at [HERO_BRIGHT_SHARE] or more), over the [boxHeight] of the block and a feather above and below it.
+ * ([GlassState.heroBrightShare] at [HERO_BRIGHT_SHARE] or more), over the [boxHeight] of the block, [HeroScrimBelow] more, and a
+ * feather above and below it.
  * It sits in one cached offscreen layer that [shift] moves in the layer phase, so a move draws nothing again.
  */
 @Composable
@@ -183,7 +189,7 @@ internal fun HeroScrim(
     Box(
         Modifier
             .padding(top = ContentTop - HeroScrimFeather)
-            .size(HeroScrimWidth, boxHeight + HeroScrimFeather * 2)
+            .size(HeroScrimWidth, boxHeight + HeroScrimBelow + HeroScrimFeather * 2)
             .graphicsLayer {
                 compositingStrategy = CompositingStrategy.Offscreen
                 translationY = shift()

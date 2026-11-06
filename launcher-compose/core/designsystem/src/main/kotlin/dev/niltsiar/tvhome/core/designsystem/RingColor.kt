@@ -2,12 +2,14 @@ package dev.niltsiar.tvhome.core.designsystem
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.isUnspecified
+import androidx.compose.ui.graphics.luminance
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
 private const val GREY_BELOW_SATURATION = 0.25f
 private const val RING_MIN_LIGHTNESS = 0.65f
+private const val MIN_RING_CONTRAST = 3f
 
 /**
  * The ring of a focused tile for an app whose art gives [art]: white with [whiteFocus] or when the tile is not [coloured],
@@ -50,4 +52,18 @@ public fun ringColor(brand: Color): Color {
         4 -> Color(x + m, m, newChroma + m)
         else -> Color(newChroma + m, m, x + m)
     }
+}
+
+/**
+ * Whether a coloured [ring] reads as a thick border of a tile of colour [brand], which it comes from: its contrast ratio
+ * against the tile is under 3:1. A white ring never does, and a brand not known yet has none.
+ */
+public fun ringBlendsWith(
+    ring: Color,
+    brand: Color,
+): Boolean {
+    if (brand.isUnspecified || ring == Color.White) return false
+    val light = max(ring.luminance(), brand.luminance())
+    val dark = min(ring.luminance(), brand.luminance())
+    return (light + 0.05f) / (dark + 0.05f) < MIN_RING_CONTRAST
 }

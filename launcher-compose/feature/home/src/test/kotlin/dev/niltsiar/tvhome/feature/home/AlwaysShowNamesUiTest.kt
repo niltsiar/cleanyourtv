@@ -19,6 +19,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.height
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
@@ -124,7 +125,8 @@ class AlwaysShowNamesUiTest {
     }
 
     @Test
-    fun the_name_under_an_unfocused_dock_tile_shows_at_three_quarters_and_at_full_when_focused() {
+    @Config(qualifiers = "+night")
+    fun the_name_under_an_unfocused_dock_tile_shows_at_85_percent_and_at_full_when_focused() {
         showHome(SixColumns.copy(alwaysShowNames = true))
         val unfocused = contrast("name:pkg.2")
 
@@ -132,17 +134,17 @@ class AlwaysShowNamesUiTest {
         compose.onNodeWithTag("tile:pkg.2").assertIsFocused()
         val focused = contrast("name:pkg.2")
 
-        assertEquals(0.75f, unfocused / focused, 0.05f)
+        assertEquals(0.85f, unfocused / focused, 0.05f)
     }
 
     @Test
-    fun the_name_under_an_unfocused_grid_tile_shows_at_three_quarters_and_at_full_when_focused() {
+    fun the_name_under_an_unfocused_grid_tile_shows_at_85_percent_and_at_full_when_focused() {
         showHome(SixColumns.copy(alwaysShowNames = true))
 
         press(Key.DirectionDown)
         compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
 
-        assertEquals(0.75f, contrast("name:pkg.8") / contrast("name:pkg.7"), 0.05f)
+        assertEquals(0.85f, contrast("name:pkg.8") / contrast("name:pkg.7"), 0.05f)
     }
 
     private fun redAt(
@@ -170,7 +172,7 @@ class AlwaysShowNamesUiTest {
     }
 
     @Test
-    fun a_grid_name_sits_on_a_black_045_pill_6_dp_wider_than_its_text_on_each_side() {
+    fun a_grid_name_sits_on_a_black_055_pill_6_dp_wider_than_its_text_on_each_side() {
         showHome(SixColumns.copy(alwaysShowNames = true), wallpaper = Wallpaper(picture = white))
         press(Key.DirectionDown)
         compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
@@ -178,20 +180,20 @@ class AlwaysShowNamesUiTest {
         val (bareLeft, bareRight) = besideName("name:pkg.9", out = 9f)
         val (padLeft, padRight) = besideName("name:pkg.9", out = 3f)
 
-        // The text's own shadow darkens its padding a little too, so the pill is "under two thirds of the bare picture".
-        assertTrue("left $padLeft of $bareLeft", padLeft < bareLeft * 0.65f)
-        assertTrue("right $padRight of $bareRight", padRight < bareRight * 0.65f)
+        // The text's own shadow darkens its padding a little too, so the pill is "under half of the bare picture".
+        assertTrue("left $padLeft of $bareLeft", padLeft < bareLeft * 0.5f)
+        assertTrue("right $padRight of $bareRight", padRight < bareRight * 0.5f)
     }
 
     @Test
-    fun a_dock_name_sits_on_a_black_045_pill_6_dp_wider_than_its_text_on_each_side() {
+    fun a_dock_name_sits_on_a_black_055_pill_6_dp_wider_than_its_text_on_each_side() {
         showHome(SixColumns.copy(alwaysShowNames = true), wallpaper = Wallpaper(picture = white))
 
         val (bareLeft, bareRight) = besideName("name:pkg.4", out = 9f)
         val (padLeft, padRight) = besideName("name:pkg.4", out = 3f)
 
-        assertTrue("left $padLeft of $bareLeft", padLeft < bareLeft * 0.65f)
-        assertTrue("right $padRight of $bareRight", padRight < bareRight * 0.65f)
+        assertTrue("left $padLeft of $bareLeft", padLeft < bareLeft * 0.5f)
+        assertTrue("right $padRight of $bareRight", padRight < bareRight * 0.5f)
     }
 
     @Test
@@ -218,6 +220,26 @@ class AlwaysShowNamesUiTest {
     fun a_grid_row_grows_by_the_room_of_a_name_with_the_key_on() {
         showHome(SixColumns.copy(alwaysShowNames = true))
         assertNear(height("tile:pkg.1") + TileGap + TileNameRoom, rowPitch())
+    }
+
+    @Test
+    fun with_four_columns_and_names_the_second_grid_row_shows_whole_with_its_names() {
+        showHome(SixColumns.copy(columns = 4, alwaysShowNames = true), wallpaper = Wallpaper(picture = white))
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
+        val screen =
+            compose
+                .onRoot()
+                .getBoundsInRoot()
+                .bottom.value
+
+        val name = compose.onNodeWithTag("name:pkg.10").getBoundsInRoot()
+        assertTrue("the second row's name ends at ${name.bottom}", name.bottom.value <= screen - 12f)
+        val first = compose.onNodeWithTag("tile:pkg.6").getBoundsInRoot()
+        val second = compose.onNodeWithTag("tile:pkg.10").getBoundsInRoot()
+        val x = first.left.value + 8f
+        val middle = { tile: DpRect -> (tile.top.value + tile.bottom.value) / 2f }
+        assertEquals(redAt(x, middle(first)), redAt(x, middle(second)))
     }
 
     @Test

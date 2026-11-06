@@ -21,6 +21,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.DpRect
+import androidx.compose.ui.unit.height
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
@@ -224,16 +225,43 @@ class HomeLookUiTest {
         return redAt(Offset((tile.left.value + tile.right.value) / 2, tile.bottom.value - above))
     }
 
-    @Test
-    fun the_row_under_the_low_dock_shows_at_most_40_px_of_its_top_at_half_alpha() {
-        showHome(apps = whiteApps(30))
-        val screen = screen().bottom.value
+    /** How much of a tile's height tile [tag] shows above the screen's bottom edge; a tile's bounds stop at the edge, so the dock's first tile gives the height. */
+    private fun visibleShare(tag: String): Float = (screen().bottom.value - bounds(tag).top.value) / bounds("tile:pkg.1").height.value
 
-        // 40 px of the 1080 px frame are 20 dp here.
-        assertTrue("the row starts at ${bounds("tile:pkg.8").top}", bounds("tile:pkg.8").top.value + 21f < screen)
-        assertNear(Math.round(255 * 0.5f * (1 - 2f / 20f)), redUnderTop("tile:pkg.8", 2f), 8)
-        assertNear(Math.round(255 * 0.5f * (1 - 10f / 20f)), redUnderTop("tile:pkg.8", 10f), 8)
-        assertTrue("past the peek ${redUnderTop("tile:pkg.8", 21f)}", redUnderTop("tile:pkg.8", 21f) < 8)
+    @Test
+    fun a_grid_row_under_half_visible_draws_at_alpha_0() {
+        showHome(apps = whiteApps(30), config = SixColumns.copy(columns = 4))
+
+        assertTrue("the row shows ${visibleShare("tile:pkg.6")}", visibleShare("tile:pkg.6") in 0.05f..0.5f)
+        assertNear(0, redUnderTop("tile:pkg.6", 2f), 2)
+        assertNear(0, redUnderTop("tile:pkg.6", 10f), 2)
+    }
+
+    @Test
+    fun a_grid_row_half_visible_or_more_keeps_its_look_at_the_bottom_edge() {
+        showHome(apps = whiteApps(30), config = SixColumns.copy(columns = 5))
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("tile:pkg.6").assertIsFocused()
+
+        // The third row shows 80% of its tile, and the bottom fade keeps its first 40 px at up to half alpha.
+        assertTrue("the row shows ${visibleShare("tile:pkg.16")}", visibleShare("tile:pkg.16") in 0.5f..0.95f)
+        assertNear(Math.round(255 * 0.5f * (1 - 2f / 20f)), redUnderTop("tile:pkg.16", 2f), 8)
+        assertNear(Math.round(255 * 0.5f * (1 - 10f / 20f)), redUnderTop("tile:pkg.16", 10f), 8)
+    }
+
+    @Test
+    fun a_row_that_scrolls_in_from_the_bottom_edge_draws_again_once_it_is_whole() {
+        showHome(apps = whiteApps(30), config = SixColumns.copy(columns = 4))
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
+        assertTrue("row 3 shows ${visibleShare("tile:pkg.13")}", visibleShare("tile:pkg.13") < 0.5f)
+        assertNear(0, redUnderTop("tile:pkg.13", 2f), 2)
+
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("tile:pkg.9").assertIsFocused()
+
+        assertTrue("the row shows ${visibleShare("tile:pkg.13")}", visibleShare("tile:pkg.13") >= 1f)
+        assertNear(255, redAboveBottom("tile:pkg.13", 1f), 2)
     }
 
     @Test

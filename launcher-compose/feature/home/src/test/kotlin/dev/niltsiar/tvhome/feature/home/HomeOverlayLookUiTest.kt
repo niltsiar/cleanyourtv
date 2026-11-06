@@ -226,6 +226,51 @@ class HomeOverlayLookUiTest {
         assertNear(255, redAt(centreOf("tile:pkg.6")), 2)
     }
 
+    private fun back() {
+        compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        settle()
+    }
+
+    /** What a white dock tile shows under the 0.5 dim of an open popup, once the dock is drawn at [alpha] over the black wallpaper. */
+    private fun dimmedDock(alpha: Float) = Math.round((255 * alpha + 0x07) / 2)
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_inputs_list_draws_the_dock_at_055_under_its_dim_and_closing_it_brings_the_dock_back_to_full() {
+        openInputs()
+
+        assertNear(dimmedDock(0.55f), redAt(centreOf("tile:pkg.2")), 4)
+
+        back()
+        compose.onNodeWithTag("input:0").assertDoesNotExist()
+        assertNear(255, redAt(centreOf("tile:pkg.2")), 2)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_settings_menu_draws_the_dock_at_055_under_its_dim_and_closing_it_brings_the_dock_back_to_full() {
+        showHome()
+        press(Key.DirectionUp)
+        repeat(2) { press(Key.DirectionRight) }
+        compose.onNodeWithContentDescription("Settings").assertIsFocused()
+        openTileMenu()
+
+        assertNear(dimmedDock(0.55f), redAt(centreOf("tile:pkg.2")), 4)
+
+        back()
+        compose.onNodeWithTag("menu").assertDoesNotExist()
+        assertNear(255, redAt(centreOf("tile:pkg.2")), 2)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun a_dock_tiles_menu_leaves_the_dock_at_full_alpha_under_its_dim() {
+        showHome()
+        openTileMenu()
+
+        assertNear(dimmedDock(1f), redAt(centreOf("tile:pkg.6")), 4)
+    }
+
     /** The brightest red channel, 0 to 255, anywhere on the screen. */
     private fun brightestOnScreen(): Int {
         val pixels = compose.onRoot().captureToImage().toPixelMap()

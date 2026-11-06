@@ -44,6 +44,8 @@ private val HairlineWidth = 1.dp
 private val Hairline = Color(0x73000000)
 private val OuterStrokeWidth = 2.dp
 private val OuterStroke = Color.Black.copy(alpha = 0.55f)
+private val InnerStrokeWidth = 2.dp
+private val InnerStroke = Color.White.copy(alpha = 0.90f)
 private val GlowElevation = 16.dp
 private val Gloss = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f), Color.Transparent))
 private const val PLATE_TOP_ALPHA = 0.22f
@@ -57,7 +59,8 @@ private const val PLATE_STROKE_ALPHA = 0.3f
  * concentric to the shape's, so a parent must leave the grown surface plus 9dp times [focusedScale] free around it or it
  * clips the ring. [onFocused] fires on gaining focus. [interactionSource] receives
  * the press and focus events, for content that reacts to them. [accent] colours the glow; unspecified takes the
- * theme's. [ring] colours the ring instead of white. [plate], when specified, is the colour of a plate behind the surface,
+ * theme's. [ring] colours the ring instead of white. [ringBlends] ([ringBlendsWith]) puts a 2 dp white stroke at 0.90 in the
+ * outer part of the gap, between the dark gap and the ring. [plate], when specified, is the colour of a plate behind the surface,
  * out to the ring's inner edge with corners concentric to the shape's: it fades and grows with the ring, as one cue, and a
  * translucent surface shows it. [glow] turns the glow off: the elevation shadow also shows through
  * a translucent surface, as a dark patch. The animation starts in the focus callback and is read in the layer and draw
@@ -75,6 +78,7 @@ public fun FocusSurface(
     accent: Color = Color.Unspecified,
     focusedScale: Float = FOCUSED_SCALE,
     ring: ColorProducer? = null,
+    ringBlends: Boolean = false,
     plate: Color = Color.Unspecified,
     content: @Composable BoxScope.() -> Unit,
 ) {
@@ -113,6 +117,10 @@ public fun FocusSurface(
                         this@drawWithContent.drawContent()
                         if (outline != null) {
                             drawOutline(outline, Gloss, alpha = progress)
+                            if (ringBlends) {
+                                val inner = InnerStrokeWidth.toPx()
+                                drawOutline(outline.grownBy(gap - inner / 2f), InnerStroke, alpha = progress, style = Stroke(inner))
+                            }
                             drawOutline(
                                 outline.grownBy(gap + width / 2f),
                                 ring?.invoke() ?: Color.White,
