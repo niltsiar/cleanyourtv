@@ -28,15 +28,18 @@ class ReorderStateTest {
     }
 
     @Test
-    fun the_tiles_of_the_carried_tiles_row_lie_apart_before_it_and_after_it_and_no_other_row_does() {
-        assertEquals(mapOf("k5" to -1, "k7" to 1, "k8" to 1), session().carrying(6).view().apart)
-        assertEquals(mapOf("k6" to 1, "k7" to 1, "k8" to 1), session().carrying(5).view().apart)
-        assertEquals(mapOf("k9" to -1), session().carrying(10).view().apart)
+    fun the_tiles_of_the_carried_tiles_row_are_numbered_by_their_place_from_it_and_no_other_row_is() {
+        assertEquals(mapOf("k5" to -1, "k6" to 0, "k7" to 1, "k8" to 2), session().carrying(6).view().apart)
+        assertEquals(mapOf("k5" to 0, "k6" to 1, "k7" to 2, "k8" to 3), session().carrying(5).view().apart)
+        assertEquals(mapOf("k9" to -1, "k10" to 0), session().carrying(10).view().apart)
     }
 
     @Test
-    fun in_a_single_row_every_other_tile_lies_apart_by_its_side_of_the_carried_one() {
-        assertEquals(mapOf("k1" to -1, "k2" to -1, "k4" to 1, "k5" to 1), session(count = 5, singleRow = true).carrying(3).view().apart)
+    fun in_a_single_row_every_tile_is_numbered_by_its_place_from_the_carried_one() {
+        assertEquals(
+            mapOf("k1" to -2, "k2" to -1, "k3" to 0, "k4" to 1, "k5" to 2),
+            session(count = 5, singleRow = true).carrying(3).view().apart,
+        )
     }
 
     @Test

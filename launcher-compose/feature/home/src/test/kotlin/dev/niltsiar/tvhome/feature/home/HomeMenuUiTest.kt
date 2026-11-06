@@ -267,16 +267,16 @@ class HomeMenuUiTest {
     }
 
     @Test
-    fun a_dock_tiles_menu_header_is_15_sp_semi_bold_at_three_quarters_of_the_text_colour() {
+    fun a_dock_tiles_menu_header_is_16_sp_semi_bold_at_85_percent_of_the_text_colour() {
         showHome()
 
         holdOk()
         releaseOk()
 
         val style = compose.onNodeWithTag("menu:title").textStyle()
-        assertEquals(15.sp, style.fontSize)
+        assertEquals(16.sp, style.fontSize)
         assertEquals(FontWeight.SemiBold, style.fontWeight)
-        assertEquals(0.75f, style.color.alpha, 0.005f)
+        assertEquals(0.85f, style.color.alpha, 0.005f)
     }
 
     private fun gap() = with(compose.density) { TileGap.toPx() }

@@ -56,7 +56,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
@@ -106,8 +109,8 @@ private val PanelMargin = 32.dp
 private val PanelEdge = 16.dp
 private val EmptyPanelHeight = 282.dp
 private val PanelSide = 12.dp
-private val PanelTop = 8.dp
-private val PanelBottom = 12.dp
+private val PanelTop = 0.dp
+private val PanelBottom = 20.dp
 private val HeaderTitleHeight = 48.dp
 private val HeaderHintHeight = KeyChipHeight
 private val PanelRise = 56.dp
@@ -184,6 +187,7 @@ internal fun LibraryScreen(
             modifier =
                 Modifier
                     .padding(horizontal = PanelMargin, vertical = PanelEdge)
+                    .testTag("library:panel")
                     .widthIn(max = PanelMaxWidth)
                     .fillMaxWidth()
                     .heightIn(max = if (empty) EmptyPanelHeight else PanelHeight)
@@ -258,7 +262,9 @@ private fun Header(
     val typography = TvTheme.typography
     val title = remember(typography) { typography.shelfTitle.copy(fontSize = 26.sp) }
     val countStyle = remember(typography) { typography.date.copy(fontSize = 18.sp) }
-    val muted = remember(typography) { typography.date.copy(fontSize = 14.sp) }
+    val ink = TvTheme.colors.onSurface
+    val look = remember(ink) { KeyChipLook.inPanel(ink) }
+    val status = remember(typography, look) { typography.chipLabel.copy(color = look.action) }
     Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
         Row(Modifier.height(HeaderTitleHeight), verticalAlignment = Alignment.CenterVertically) {
             BasicText(
@@ -289,11 +295,18 @@ private fun Header(
         }
         if (!empty) {
             Row(Modifier.height(HeaderHintHeight), verticalAlignment = Alignment.CenterVertically) {
-                KeyHints(hint, order, orderMenu = layout.leastUsed, chipFocused = chip.focused, Modifier.weight(1f).testTag("library:hint"))
+                KeyHints(
+                    hint,
+                    order,
+                    look,
+                    orderMenu = layout.leastUsed,
+                    chipFocused = chip.focused,
+                    Modifier.weight(1f).testTag("library:hint"),
+                )
                 if (noUsage) {
                     BasicText(
                         stringResource(R.string.library_no_usage_yet),
-                        style = muted,
+                        style = status,
                         maxLines = 1,
                         modifier = Modifier.padding(start = 12.dp).testTag("library:status"),
                     )
@@ -304,23 +317,21 @@ private fun Header(
 }
 
 /**
- * What the keys do, as the chips of reorder mode: the focused card's OK and a held OK, then, with the order switch
- * ([orderMenu]), the MENU key. While the order chip has focus ([chipFocused]) it is the OK on it alone.
+ * What the keys do, as the chips of reorder mode drawn in [look]: the focused card's OK and a held OK, then, with the
+ * order switch ([orderMenu]), the MENU key. While the order chip has focus ([chipFocused]) it is the OK on it alone.
  */
 @Composable
 private fun KeyHints(
     hint: LibraryHint,
     order: LibraryOrder,
+    look: KeyChipLook,
     orderMenu: Boolean,
     chipFocused: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val ink = TvTheme.colors.onSurface
-    val look =
-        remember(ink) { KeyChipLook(backing = ink.copy(alpha = 0.10f), rim = ink.copy(alpha = 0.20f), keyFill = ink.copy(alpha = 0.16f)) }
     val ok = stringResource(R.string.library_key_ok)
     val other = stringResource(order.other().label())
-    Row(modifier.clipToBounds().semantics(mergeDescendants = true) {}, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(modifier.clipToBounds().semantics(mergeDescendants = true) {}, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         if (orderMenu && chipFocused) {
             KeyChip(ok, other, look = look)
             return@Row
@@ -421,7 +432,7 @@ private val ChipGlyph = 14.dp
 private val ChipGlyphGap = 6.dp
 private val ChipGlyphStroke = 1.5.dp
 private const val CHIP_FILL_ALPHA = 0.10f
-private const val CHIP_RIM_ALPHA = 0.20f
+private const val CHIP_RIM_ALPHA = 0.24f
 
 @StringRes
 private fun LibraryOrder.label(): Int =
@@ -539,18 +550,36 @@ private val CueWidth = 14.dp
 private val CueHeight = 7.dp
 private val CueStroke = 2.dp
 private const val CUE_ALPHA = 0.55f
+private val CueBottomWidth = 18.dp
+private val CueBottomHeight = 9.dp
+private val CuePillWidth = 36.dp
+private val CuePillHeight = 20.dp
+private const val CUE_PILL_ALPHA = 0.15f
+
+/** The bottom pill's middle is this far under the grid: its top, [CuePillHeight] / 2 above it, is 2 dp inside the grid's bottom edge. */
+private val CuePillDrop = 8.dp
 
 /**
- * A chevron under the grid while cards lie below the view, and one in its top padding while cards lie above. It is drawn
- * from the grid's scroll state in the draw phase: two short strokes, no layer, nothing recomposes with a focus move.
+ * A chevron in a pill under the grid while cards lie below the view, and a smaller one in its top padding while cards lie
+ * above. It is drawn from the grid's scroll state in the draw phase: no layer, nothing recomposes with a focus move.
  */
 @Composable
 private fun ScrollCue(grid: LazyGridState) {
     val ink = TvTheme.colors.onSurface
     Box(
         Modifier.fillMaxSize().drawBehind {
-            if (grid.canScrollBackward) drawChevron(ink, GridEdge.toPx() / 2f, down = false)
-            if (grid.canScrollForward) drawChevron(ink, size.height + PanelBottom.toPx() / 2f, down = true)
+            if (grid.canScrollBackward) drawChevron(ink, GridEdge.toPx() / 2f, CueWidth.toPx(), CueHeight.toPx(), down = false)
+            if (grid.canScrollForward) {
+                val centreY = size.height + CuePillDrop.toPx()
+                val pill = Size(CuePillWidth.toPx(), CuePillHeight.toPx())
+                drawRoundRect(
+                    ink.copy(alpha = CUE_PILL_ALPHA),
+                    Offset((size.width - pill.width) / 2f, centreY - pill.height / 2f),
+                    pill,
+                    CornerRadius(pill.height / 2f),
+                )
+                drawChevron(ink, centreY, CueBottomWidth.toPx(), CueBottomHeight.toPx(), down = true)
+            }
         },
     )
 }
@@ -558,11 +587,13 @@ private fun ScrollCue(grid: LazyGridState) {
 private fun DrawScope.drawChevron(
     ink: Color,
     centreY: Float,
+    width: Float,
+    height: Float,
     down: Boolean,
 ) {
     val centreX = size.width / 2f
-    val halfWidth = CueWidth.toPx() / 2f
-    val halfHeight = CueHeight.toPx() / 2f * if (down) 1f else -1f
+    val halfWidth = width / 2f
+    val halfHeight = height / 2f * if (down) 1f else -1f
     val path =
         Path().apply {
             moveTo(centreX - halfWidth, centreY - halfHeight)

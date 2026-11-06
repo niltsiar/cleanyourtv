@@ -75,8 +75,9 @@ public val MenuRowSpacing: Dp = 8.dp
 public val MenuDividerHeight: Dp = 5.dp
 private const val DIVIDER_ALPHA = 0.12f
 private val RowHeight = 46.dp
-private const val TITLE_ALPHA = 0.75f
-private val TitlePadding = 8.dp
+private const val TITLE_ALPHA = 0.85f
+private val TitleTop = 6.dp
+private val TitleRuleGap = 8.dp
 
 /** How far a scrolling panel fades its content out at an edge with more content past it. */
 private val EdgeFade = 24.dp
@@ -430,14 +431,26 @@ public fun MenuDivider(modifier: Modifier = Modifier) {
 @Composable
 private fun MenuTitle(text: String) {
     val typography = TvTheme.typography
-    val style = remember(typography) { typography.chipKey.copy(color = typography.chipKey.color.copy(alpha = TITLE_ALPHA)) }
-    BasicText(
-        text,
-        style = style,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.testTag("menu:title").fillMaxWidth().padding(horizontal = 16.dp, vertical = TitlePadding),
-    )
+    val ink = TvTheme.colors.onSurface
+    val style =
+        remember(typography) { typography.chipKey.copy(fontSize = typography.pillLabel.fontSize, color = ink.copy(alpha = TITLE_ALPHA)) }
+    Column(verticalArrangement = Arrangement.spacedBy(TitleRuleGap)) {
+        BasicText(
+            text,
+            style = style,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.testTag("menu:title").fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = TitleTop),
+        )
+        Box(
+            Modifier
+                .testTag("menu:title:rule")
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp)
+                .height(1.dp)
+                .background(ink.copy(alpha = DIVIDER_ALPHA)),
+        )
+    }
 }
 
 @Composable

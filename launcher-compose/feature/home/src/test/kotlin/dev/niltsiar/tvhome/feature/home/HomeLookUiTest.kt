@@ -523,33 +523,47 @@ class HomeLookUiTest {
     /** The chevron's black outline, 1.25 dp round its white stroke, which the gutter counts as part of the chevron. */
     private val chevronOutline = 1.25f
 
+    /** Carries the first tile to [slot] (1 to 6) of a dock of clear and white art, and returns the 6 dp clearance's shortfalls, in dp. */
+    private fun chevronShortfalls(slot: Int): List<Float> {
+        showHome(apps = clearApps(1) + whiteApps(9).drop(1))
+        val artRow = dockTile(2).top.value + 6f
+        carryFirstTile()
+        repeat(slot - 1) { press(Key.DirectionRight) }
+        val carried = bounds("tile:pkg.1")
+        val middle = (carried.top.value + carried.bottom.value) / 2f
+        val centre = (carried.left.value + carried.right.value) / 2f
+        val halo = 3f * 1.08f * 1.08f
+        val ringRight = ringColumns(centre, carried.right.value + 30f, middle).endInclusive + halo
+        val ringLeft = ringColumns(carried.left.value - 30f, centre, middle).start - halo
+
+        val chevronRight = whiteRuns(ringRight - halo, carried.right.value + 80f, middle - 10f, middle + 10f).single()
+        val chevronLeft = whiteRuns(carried.left.value - 80f, ringLeft + halo, middle - 10f, middle + 10f).single()
+        // The tiles beside it are dimmed to 0.65, and their art starts and ends at the row above the chevrons.
+        val neighbourRight = whiteRuns(ringRight, carried.right.value + 80f, artRow, artRow + 1f, level = 0.5f).first().start
+        val neighbourLeft = whiteRuns(carried.left.value - 80f, ringLeft, artRow, artRow + 1f, level = 0.5f).last().endInclusive
+
+        return listOf(
+            chevronRight.start - chevronOutline - ringRight,
+            neighbourRight - (chevronRight.endInclusive + chevronOutline),
+            ringLeft - (chevronLeft.endInclusive + chevronOutline),
+            chevronLeft.start - chevronOutline - neighbourLeft,
+        )
+    }
+
     @Test
     @Config(qualifiers = "+night")
     fun a_chevron_stands_6_dp_clear_of_the_ring_and_6_dp_clear_of_the_neighbour_tile_on_both_sides() {
-        showHome(apps = clearApps(1) + whiteApps(9).drop(1))
-        val place = dockTile(2)
-        val middle = (place.top.value + place.bottom.value) / 2f
-        val artRow = place.top.value + 6f
-        val centre = (place.left.value + place.right.value) / 2f
-        carryFirstTile()
-        press(Key.DirectionRight)
-        val halo = 3f * 1.08f * 1.08f
-        val ringRight = ringColumns(centre, place.right.value + 30f, middle).endInclusive + halo
-        val ringLeft = ringColumns(place.left.value - 30f, centre, middle).start - halo
+        val shortfalls = chevronShortfalls(slot = 2)
 
-        val chevronRight = whiteRuns(ringRight - halo, place.right.value + 80f, middle - 10f, middle + 10f).single()
-        val chevronLeft = whiteRuns(place.left.value - 80f, ringLeft + halo, middle - 10f, middle + 10f).single()
-        // The tiles beside it are dimmed to 0.65, and their art starts and ends at the row above the chevrons.
-        val neighbourRight = whiteRuns(ringRight, place.right.value + 80f, artRow, artRow + 1f, level = 0.5f).first().start
-        val neighbourLeft = whiteRuns(place.left.value - 80f, ringLeft, artRow, artRow + 1f, level = 0.5f).last().endInclusive
+        assertTrue("ring and neighbour, right then left: $shortfalls", shortfalls.all { it >= 5.5f })
+    }
 
-        assertTrue("right, from the ring: $chevronRight, ring $ringRight", chevronRight.start - chevronOutline - ringRight >= 5.5f)
-        assertTrue(
-            "right, from the tile: $chevronRight, tile $neighbourRight",
-            neighbourRight - (chevronRight.endInclusive + chevronOutline) >= 5.5f,
-        )
-        assertTrue("left, from the ring: $chevronLeft, ring $ringLeft", ringLeft - (chevronLeft.endInclusive + chevronOutline) >= 5.5f)
-        assertTrue("left, from the tile: $chevronLeft, tile $neighbourLeft", chevronLeft.start - chevronOutline - neighbourLeft >= 5.5f)
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_chevrons_keep_their_clearance_with_the_carried_tile_in_the_middle_of_a_full_dock() {
+        val shortfalls = chevronShortfalls(slot = 4)
+
+        assertTrue("ring and neighbour, right then left: $shortfalls", shortfalls.all { it >= 5.5f })
     }
 
     /** The left edge, in dp, of the white art that covers [x] dp at [row] dp. */
@@ -560,23 +574,38 @@ class HomeLookUiTest {
 
     @Test
     @Config(qualifiers = "+night")
-    fun the_tiles_beside_a_carried_tile_move_apart_with_all_those_beyond_and_come_back_when_it_is_put_down() {
+    fun the_tiles_beside_a_carried_tile_move_apart_and_come_back_when_it_is_put_down() {
         showHome(apps = clearApps(1) + whiteApps(9).drop(1))
         val row = dockTile(3).top.value + 6f
         val next = centreOf(dockTile(3)).x
-        val beyond = centreOf(dockTile(4)).x
         val rest = artStart(next, row)
-        val restBeyond = artStart(beyond, row)
 
         carryFirstTile()
         press(Key.DirectionRight)
         val moved = artStart(next, row)
 
         assertTrue("the next tile moved from $rest to $moved", moved - rest > 10f)
-        assertEquals(moved - rest, artStart(beyond + (moved - rest), row) - restBeyond, 0.6f)
 
         back()
         assertEquals(rest, artStart(next, row), 0.6f)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun with_a_tile_carried_the_other_tiles_of_a_full_dock_stay_between_the_rest_places_of_its_first_and_last_tile() {
+        showHome(apps = clearApps(1) + whiteApps(9).drop(1))
+        val from = dockTile(1).left.value
+        val to = dockTile(6).right.value
+
+        carryFirstTile()
+        for (slot in 1..6) {
+            if (slot > 1) press(Key.DirectionRight)
+            for (n in 2..6) {
+                val tile = dockTile(n)
+                assertTrue("tile $n at slot $slot is ${tile.left}, the row starts at $from", tile.left.value >= from - 0.5f)
+                assertTrue("tile $n at slot $slot is ${tile.right}, the row ends at $to", tile.right.value <= to + 0.5f)
+            }
+        }
     }
 
     /** The red channel just outside a chip, inside its backing, and on its rim. */

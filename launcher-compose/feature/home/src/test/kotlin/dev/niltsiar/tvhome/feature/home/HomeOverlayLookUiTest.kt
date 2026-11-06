@@ -372,6 +372,23 @@ class HomeOverlayLookUiTest {
     }
 
     @Test
+    @Config(qualifiers = "+night")
+    fun a_dock_tiles_menu_sets_its_header_off_with_a_1_dp_line_of_12_percent_white_8_dp_under_it_and_keeps_the_rows_8_dp_inside() {
+        showHome()
+        openTileMenu()
+
+        val title = bounds("menu:title")
+        val rule = bounds("menu:title:rule")
+        val ground = redAt(Offset(rule.left.value + 4f, rule.top.value - 3f))
+        val line = redAt(Offset((rule.left.value + rule.right.value) / 2, (rule.top.value + rule.bottom.value) / 2))
+
+        assertNear(8f, rule.top.value - title.bottom.value, 0.5f)
+        assertNear(1f, rule.height.value, 0.1f)
+        assertNear(Math.round(ground + 0.12f * (255 - ground)), line, 3)
+        assertNear(8f, focusedRowInset(), 0.5f)
+    }
+
+    @Test
     fun the_focused_row_of_the_settings_menu_is_8_dp_inside_the_panel() {
         showHome()
         openSettingsMenu()

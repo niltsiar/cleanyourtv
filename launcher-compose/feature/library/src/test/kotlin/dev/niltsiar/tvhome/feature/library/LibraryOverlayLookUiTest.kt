@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
@@ -40,6 +41,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
@@ -249,7 +251,8 @@ class LibraryOverlayLookUiTest {
         showLibrary(twentyThree)
         val grid = bounds("library:cards")
         val middle = (grid.left + grid.right) / 2
-        val bottomTip = grid.bottom + 9.dp
+        // The bottom chevron's tip: its pill is centred 8 dp under the grid and the chevron is 9 dp tall.
+        val bottomTip = grid.bottom + 12.5.dp
         val topTip = grid.top + 3.5.dp
 
         assertTrue("bottom cue at the start", cueAt(middle, bottomTip))
@@ -258,6 +261,62 @@ class LibraryOverlayLookUiTest {
         press(Key.DirectionDown, times = 3)
         assertTrue("no bottom cue with the last row in view", !cueAt(middle, bottomTip))
         assertTrue("top cue with the first row scrolled out", cueAt(middle, topTip))
+    }
+
+    /** The columns, in dp, of the row at [y] where the screen is lighter than the panel 60 dp to the left of the grid by at least [level]. */
+    private fun lighterColumns(
+        y: Dp,
+        level: Int,
+    ): ClosedFloatingPointRange<Float> {
+        val grid = bounds("library:cards")
+        val ground = redAt(grid.left - 8.dp, y)
+        val density = compose.activity.resources.displayMetrics.density
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val row = (y.value * density).toInt()
+        val lit =
+            (((grid.left.value + 20f) * density).toInt() until ((grid.right.value - 20f) * density).toInt()).filter {
+                pixels[it, row].red * 255 - ground >= level
+            }
+        return (lit.min() / density)..((lit.max() + 1) / density)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_bottom_chevron_sits_in_a_36_dp_wide_20_dp_tall_pill_of_15_percent_white_centred_under_the_grid() {
+        showLibrary(twentyThree)
+        val grid = bounds("library:cards")
+        val centre = grid.bottom + 8.dp
+
+        // 15 % white over the panel's 0x14 is 20 + 0.15 x 235 = 55; 18 is half of what it adds. Only the middle row spans the whole pill.
+        val pill = lighterColumns(centre, level = 18)
+
+        assertEquals(36f, pill.endInclusive - pill.start, 1f)
+        assertEquals((grid.left.value + grid.right.value) / 2f, (pill.start + pill.endInclusive) / 2f, 1f)
+        assertTrue("the pill ends inside the panel ${bounds("library:panel")}", centre + 10.dp <= bounds("library:panel").bottom)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_bottom_chevron_is_18_dp_wide() {
+        showLibrary(twentyThree)
+        val grid = bounds("library:cards")
+        val centre = grid.bottom + 8.dp
+
+        // The arms are 18 dp apart at their tops, 4.5 dp over the pill's middle, and 2 dp of stroke widen that to 20 dp.
+        val tops = lighterColumns(centre - 4.dp, level = 70)
+
+        assertEquals(20f, tops.endInclusive - tops.start, 1.5f)
+    }
+
+    @Test
+    fun the_panel_keeps_20_dp_under_the_grid_and_ends_where_it_did_over_the_screens_bottom() {
+        showLibrary(twentyThree)
+
+        val panel = bounds("library:panel")
+        val screen = compose.onRoot().getBoundsInRoot()
+
+        assertEquals(20f, (panel.bottom - bounds("library:cards").bottom).value, 0.5f)
+        assertEquals(17.5f, (screen.bottom - panel.bottom).value, 0.5f)
     }
 
     @Test
@@ -1025,6 +1084,69 @@ class LibraryOverlayLookUiTest {
                 .endsWith(ELLIPSIS),
         )
         assertEquals(unshrunk(layout).lineWidth(layout.lineCount - 1), layout.lineWidth(layout.lineCount - 1), WIDTH_ROUNDING)
+    }
+
+    private fun hintPart(text: String) =
+        compose.onNode(hasText(text) and hasAnyAncestor(hasTestTag("library:hint")), useUnmergedTree = true)
+
+    private fun SemanticsNodeInteraction.textStyle(): TextStyle {
+        val layouts = mutableListOf<TextLayoutResult>()
+        fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult].action!!(layouts)
+        return layouts.single().layoutInput.style
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_hints_have_no_pill_round_them_and_each_key_keeps_its_fill() {
+        showLibrary(nineApps)
+        val hint = bounds("library:hint")
+        val key = hintPart("OK").getBoundsInRoot()
+        val middle = (hint.top + hint.bottom) / 2
+
+        // Where a pill's backing would be: over the key's fill, in the row's top 2 dp.
+        val ground = redAt(hint.right - 20.dp, hint.top + 2.dp)
+        assertTrue(
+            "over the key: ${redAt((key.left + key.right) / 2, hint.top + 2.dp)}, panel $ground",
+            abs(redAt((key.left + key.right) / 2, hint.top + 2.dp) - ground) <= 6,
+        )
+        assertTrue("key fill ${redAt(key.left - 4.dp, middle)}", redAt(key.left - 4.dp, middle) - ground >= 20)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun a_hints_action_is_plain_text_at_70_percent_of_the_text_colour_and_16_dp_lies_between_hints() {
+        showLibrary(nineApps)
+
+        val style = hintPart("Add to Home").textStyle()
+        val gap = hintPart("Hold OK").getBoundsInRoot().left - 8.dp - hintPart("Add to Home").getBoundsInRoot().right
+
+        assertEquals(0.70f, style.color.alpha, 0.005f)
+        assertEquals(16f, gap.value, 1f)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_order_chip_has_a_1_dp_rim_of_24_percent_white_at_rest() {
+        showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
+        val chip = bounds("library:order")
+        val x = (chip.left + chip.right) / 2
+
+        val inside = redAt(x, chip.top + 3.dp)
+        val rim = maxOf(redAt(x, chip.top + 0.25.dp), redAt(x, chip.top + 0.75.dp))
+
+        assertEquals(Math.round(inside + 0.24f * (255 - inside)).toFloat(), rim.toFloat(), 3f)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_no_usage_status_is_set_in_the_hints_size_at_70_percent_of_the_text_colour() {
+        showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
+        press(Key.Menu)
+
+        val status = compose.onNodeWithTag("library:status").textStyle()
+
+        assertEquals(hintPart("Usual order").textStyle().fontSize, status.fontSize)
+        assertEquals(0.70f, status.color.alpha, 0.005f)
     }
 
     private companion object {
