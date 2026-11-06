@@ -10,7 +10,8 @@ import dev.niltsiar.tvhome.core.model.showLibraryPill
  * the grid rows that must fit under the dock, [singleRow] one sideways row of every app, and [fillDock] whether grid
  * apps take the dock slots that dock_apps leaves free, [tileMenu] whether a held OK or MENU opens a tile's menu (else a held
  * OK opens its App info), [libraryPill] whether the App library pill follows the last row, and [showNames] whether every
- * tile has its name under it (always_show_names), which the dock panel and each grid row grow to hold.
+ * tile has its name under it (always_show_names), which the dock panel and each grid row grow to hold, and
+ * [inputArrival] whether the Inputs button offers a device that was just switched on (input_arrival).
  */
 @Immutable
 public data class HomeLayout(
@@ -21,6 +22,7 @@ public data class HomeLayout(
     val tileMenu: Boolean = true,
     val libraryPill: Boolean = false,
     val showNames: Boolean = false,
+    val inputArrival: Boolean = false,
 )
 
 public fun TvConfig.homeLayout(): HomeLayout =
@@ -32,6 +34,7 @@ public fun TvConfig.homeLayout(): HomeLayout =
         tileMenu = tileMenu,
         libraryPill = showLibraryPill(appLibrary, libraryButton, showLibraryPill),
         showNames = alwaysShowNames,
+        inputArrival = inputArrival && showInputsPill,
     )
 
 private const val MIN_TILE_SHARE = 0.85f

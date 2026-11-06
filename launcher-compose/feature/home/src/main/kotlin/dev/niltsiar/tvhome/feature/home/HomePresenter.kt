@@ -11,12 +11,19 @@ import dev.niltsiar.tvhome.core.config.is24Hour
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.Wallpaper
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import java.util.Locale
 
 private val NoNetwork = NetworkState()
 private val NoWallpaper = Wallpaper()
 private val NoOpened = emptyMap<String, Long>()
+
+/** How long a port must stay connected before its device is offered: CEC flaps between standby and connected. */
+internal const val ARRIVAL_HOLD_MS = 2_000L
+
+/** How long the Inputs button offers a device that nobody acted on. */
+internal const val OFFER_MS = 20_000L
 
 /** The Inputs button before the TV has said what it lists: hidden, as the reference hides it until it finds something to list. */
 private val UnknownInputs = InputsMenu(available = false)
@@ -37,6 +44,20 @@ internal fun homePresenter(
     LaunchedEffect(interaction) { sources.topBarApps.collect(interaction::topBarAppsLoaded) }
     LaunchedEffect(interaction) { sources.inputs.collect(interaction::inputsLoaded) }
     LaunchedEffect(events) { events.collect(interaction::handle) }
+    val arriving = interaction.arriving
+    LaunchedEffect(interaction, arriving) {
+        if (arriving != null) {
+            delay(ARRIVAL_HOLD_MS)
+            interaction.arrivalHeld(arriving)
+        }
+    }
+    val offered = interaction.offer?.token
+    LaunchedEffect(interaction, offered) {
+        if (offered != null) {
+            delay(OFFER_MS)
+            interaction.offerEnded(offered)
+        }
+    }
     val now by sources.clock.collectAsState(null)
     val network by sources.network.collectAsState(NoNetwork)
     val wallpaper by sources.wallpaper.collectAsState(NoWallpaper)
@@ -65,6 +86,7 @@ internal fun homePresenter(
         focusRequest = interaction.focusRequest,
         inputs = interaction.inputs ?: UnknownInputs,
         inputsOpen = interaction.inputsOpen,
+        inputOffer = interaction.offer,
         libraryCount = libraryCount,
     )
 }

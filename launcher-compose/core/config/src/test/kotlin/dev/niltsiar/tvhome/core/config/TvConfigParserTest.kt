@@ -62,6 +62,7 @@ class TvConfigParserTest {
             config.coocaaSources ||
                 config.inputsConnectedOnly ||
                 config.inputsCecStateOnly ||
+                config.inputArrival ||
                 config.handleViewInputs ||
                 config.bootToLiveTv,
         )
@@ -507,6 +508,7 @@ class TvConfigParserTest {
             "coocaa_sources" to ("true" to defaults.copy(coocaaSources = true)),
             "inputs_connected_only" to ("true" to defaults.copy(inputsConnectedOnly = true)),
             "inputs_cec_state_only" to ("true" to defaults.copy(inputsCecStateOnly = true)),
+            "input_arrival" to ("true" to defaults.copy(inputArrival = true)),
             "handle_view_inputs" to ("true" to defaults.copy(handleViewInputs = true)),
             "open_on_start_network_wait" to ("30" to defaults.copy(openOnStartNetworkWait = 30)),
             "app_keys" to ("""["172:com.a"]""" to defaults.copy(appKeys = listOf("172:com.a"))),

@@ -71,7 +71,13 @@ private fun PortState.connection(): InputConnection =
 internal fun portRows(
     all: List<TvInput>,
     settings: InputsSettings,
-): List<InputRow> {
+): List<InputRow> = portEntries(all, settings).map { it.second }
+
+/** [portRows], each row with the id of the HDMI port it stands for: the port itself, or the port a CEC device sits on. */
+internal fun portEntries(
+    all: List<TvInput>,
+    settings: InputsSettings,
+): List<Pair<String?, InputRow>> {
     val inputs =
         all.sortedWith(
             compareBy<TvInput> { it.type != PortType.Hdmi }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.label.orEmpty() },
@@ -82,7 +88,7 @@ internal fun portRows(
     val devices = inputs.filter { it.onPort() && it.passthrough && !it.hidden }.groupBy { it.parentId }
     val ports = inputs.filter { it.passthrough && it.type == PortType.Hdmi && !it.onPort() }
     val stateBogus = settings.cecStateOnly || (ports.size > 1 && ports.all { it.state == PortState.Connected })
-    val rows = mutableListOf<InputRow>()
+    val rows = mutableListOf<Pair<String?, InputRow>>()
     var sawNonHdmi = false
     for (input in inputs) {
         if (!input.passthrough || input.hidden || input.onPort()) continue
@@ -92,7 +98,7 @@ internal fun portRows(
         if (hdmi && "HDMI" !in label.uppercase(Locale.ROOT)) label = "HDMI $label"
         val custom = tidyInputName(input.customLabel)
         val named = !custom.isNullOrEmpty() && custom != label
-        if (!hdmi && rows.isNotEmpty() && !sawNonHdmi) rows += InputRow.Separator(folded = settings.connectedOnly)
+        if (!hdmi && rows.isNotEmpty() && !sawNonHdmi) rows += null to InputRow.Separator(folded = settings.connectedOnly)
         if (!hdmi) sawNonHdmi = true
         val onThisPort = devices[input.id]
         if (onThisPort != null) {
@@ -108,6 +114,7 @@ internal fun portRows(
                     }
                 val state = if (stateBogus && !settings.cecStateOnly) PortState.None else device.state
                 rows +=
+                    input.id to
                     InputRow.Port(
                         label = if (name.isNullOrEmpty()) label else "$name · $label",
                         icon = InputIcon.Hdmi,
@@ -122,6 +129,7 @@ internal fun portRows(
         // Analog AV jacks have no hotplug detection, and some TVs report them as always connected.
         val state = if (!hdmi || stateBogus) PortState.None else input.state
         rows +=
+            (if (hdmi) input.id else null) to
             InputRow.Port(
                 label = label,
                 icon = if (hdmi) InputIcon.Hdmi else InputIcon.Av,

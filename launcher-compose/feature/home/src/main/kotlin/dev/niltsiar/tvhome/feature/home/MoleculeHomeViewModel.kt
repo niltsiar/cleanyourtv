@@ -83,6 +83,7 @@ public class MoleculeHomeViewModel(
             onTileMenu = { key, held -> events.trySend(HomeEvent.TileMenu(key, held)) },
             onSettingsMenu = { events.trySend(HomeEvent.SettingsMenu) },
             onInputs = { events.trySend(HomeEvent.OpenInputs) },
+            onInputsPress = { events.trySend(HomeEvent.PressInputs) },
             onInputPick = { events.trySend(HomeEvent.PickInput(it)) },
             onMenuPick = { events.trySend(HomeEvent.MenuPick(it)) },
             onBack = { events.trySend(HomeEvent.Back) },

@@ -2,11 +2,13 @@ package dev.niltsiar.tvhome.feature.home
 
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
+import dev.niltsiar.tvhome.core.model.InputArrival
 import dev.niltsiar.tvhome.core.model.InputRow
 import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.core.model.InputsMenu
@@ -45,6 +47,25 @@ internal class HomeInteraction(
     var inputsOpen by mutableStateOf(false)
         private set
     private var inputsAsked = false
+
+    private var heldToken by mutableIntStateOf(0)
+    private var endedToken by mutableIntStateOf(0)
+
+    /** The token of the arrival still waiting out its 2 s hold, null when none is or input_arrival is off. */
+    val arriving: Int?
+        get() = inputs?.arrival?.takeIf { layout.inputArrival && it.token != heldToken }?.token
+
+    /** The device the Inputs button offers: an arrival that held, until 20 s pass, the person presses OK or its port leaves. */
+    val offer: InputArrival?
+        get() = inputs?.arrival?.takeIf { layout.inputArrival && it.token == heldToken && it.token != endedToken }
+
+    fun arrivalHeld(token: Int) {
+        if (inputs?.arrival?.token == token) heldToken = token
+    }
+
+    fun offerEnded(token: Int) {
+        endedToken = token
+    }
 
     private val memory = sources.focusMemory
 
@@ -94,6 +115,16 @@ internal class HomeInteraction(
                 openInputs()
             }
 
+            HomeEvent.PressInputs -> {
+                val offered = offer
+                if (offered != null && !inputsOpen) {
+                    offerEnded(offered.token)
+                    effect(HomeEffect.OpenInput(offered.target))
+                } else {
+                    openInputs()
+                }
+            }
+
             is HomeEvent.PickInput -> {
                 pickInput(event.target)
             }
@@ -124,6 +155,7 @@ internal class HomeInteraction(
 
             HomeEvent.Stopped -> {
                 closeAll()
+                inputs = inputs?.copy(arrival = null)
             }
 
             HomeEvent.HomePressed -> {
@@ -206,9 +238,18 @@ internal class HomeInteraction(
         inputsAsked = false
         if (menu != null || inputsOpen) return
         when {
-            listed.panelOnly -> effect(HomeEffect.OpenInput(InputTarget.SourcePanel))
-            listed.rows.none { it is InputRow.Port || it == InputRow.Panel || it == InputRow.LiveTv } -> effect(HomeEffect.NoInputs)
-            else -> inputsOpen = true
+            listed.panelOnly -> {
+                effect(HomeEffect.OpenInput(InputTarget.SourcePanel))
+            }
+
+            listed.rows.none { it is InputRow.Port || it == InputRow.Panel || it == InputRow.LiveTv } -> {
+                effect(HomeEffect.NoInputs)
+            }
+
+            else -> {
+                inputsOpen = true
+                offer?.let { offerEnded(it.token) }
+            }
         }
     }
 

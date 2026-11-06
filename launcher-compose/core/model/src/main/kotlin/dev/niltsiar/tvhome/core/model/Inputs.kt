@@ -60,14 +60,28 @@ public sealed interface InputRow {
 }
 
 /**
+ * A device that was switched on while Home showed: its port went from no device or standby to connected. [label] is
+ * what its Inputs row reads ("PlayStation 5 · HDMI 2") and [target] what that row opens. The [token] is new for each
+ * arrival, so a port that flaps between standby and connected gives a new one each time it comes back.
+ */
+@Immutable
+public data class InputArrival(
+    val label: String,
+    val target: InputTarget,
+    val token: Int,
+)
+
+/**
  * What the Inputs button and its menu show. [available] is whether the button shows at all. [panelOnly] says the
  * button opens the TV's source panel and no menu: a panel is set and there is no Live TV row to list beside it.
+ * [arrival] is the latest device to arrive since Home came on screen, for as long as its port stays connected.
  */
 @Immutable
 public data class InputsMenu(
     val available: Boolean = false,
     val rows: List<InputRow> = emptyList(),
     val panelOnly: Boolean = false,
+    val arrival: InputArrival? = null,
 )
 
 /** The rows shown now: folded ones only once [expanded], and "More inputs" only until then. */

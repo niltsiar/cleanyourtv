@@ -29,6 +29,7 @@ Keys that this launcher adds:
 - `dock_edge_light` (default true): the focused dock tile lights the dock's top rim and floor in its colour. It is off with `dock_band: false`, `animations: false` or `reduced_motion: true`.
 - `header_scrim` (default `auto`): `auto` scales the dark scrims behind the title and the top bar to how bright the wallpaper is there, up to 0.70 at the top and 0.60 at the left; `off` keeps the fixed 0.55 and 0.40.
 - `capture_input_keys` (default false): see ADR 0001.
+- `input_arrival` (default false): when an HDMI port goes from no device or standby to connected while Home shows, and stays connected for 2 s, the Inputs button grows into its pill without taking focus, names the device and port ("PlayStation 5 · HDMI 2"), and lights its rim once. Up from the dock then goes to the button, and OK on it switches to that input. The offer ends after 20 s, when the port leaves connected, when Home leaves the screen, when the list opens, or after OK. It never switches input by itself. A port connected when Home came on screen is not an arrival. A TV whose ports all report connected, which the Inputs menu already shows without states, has none to tell. It is off with `show_inputs_pill: false`.
 - `latitude` and `longitude`: both together, in degrees. The Java launcher reads them from `config.xml` only.
 - `settings_key_scancodes`: raw scancodes that open Settings. The Java launcher reads them from `config.xml` only.
 

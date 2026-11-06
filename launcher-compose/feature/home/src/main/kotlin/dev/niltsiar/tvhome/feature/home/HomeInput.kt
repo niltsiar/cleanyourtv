@@ -33,6 +33,8 @@ internal class HomeInput(
     val canMoveLeft: State<Boolean> = mutableStateOf(false),
     val canMoveRight: State<Boolean> = mutableStateOf(false),
     private val openLibrary: State<() -> Unit> = mutableStateOf({}),
+    /** Whether the Inputs button offers a device. Read it in a focus-properties lambda, not in composition. */
+    val inputOffered: State<Boolean> = mutableStateOf(false),
     val hold: OkHold = OkHold(),
 ) {
     /** The colour of the focus ring as it moves from tile to tile. */
@@ -80,9 +82,14 @@ internal class HomeInput(
     /** The library was opened from the top bar button, so closing it returns there. */
     var fromTopBar = false
 
-    /** OK on the Inputs button, or the system asking for the list. */
+    /** The system asking for the list. */
     fun openInputs() {
         actions.onInputs()
+    }
+
+    /** OK on the Inputs button. */
+    fun pressInputs() {
+        actions.onInputsPress()
     }
 
     fun requester(target: String): FocusRequester = requesters.getOrPut(target) { FocusRequester() }

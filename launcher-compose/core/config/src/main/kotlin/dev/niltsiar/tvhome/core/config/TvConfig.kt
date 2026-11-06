@@ -158,6 +158,8 @@ public data class TvConfig(
     val inputsConnectedOnly: Boolean = false,
     /** The TV puts port states on the wrong port: ports show none, CEC device rows show their own. */
     val inputsCecStateOnly: Boolean = false,
+    /** A device switched on while Home shows (an HDMI port goes to connected) is offered on the Inputs button. */
+    val inputArrival: Boolean = false,
     /** Answer the system's VIEW_INPUTS request by opening the Inputs menu. */
     val handleViewInputs: Boolean = false,
     /** Seconds the boot's app waits for a validated network, 0 to 600; 0 opens it at once. */

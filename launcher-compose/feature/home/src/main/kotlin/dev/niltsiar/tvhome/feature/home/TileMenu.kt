@@ -32,8 +32,10 @@ public class HomeMenuActions(
     /** A tile asks for its menu: [held] is true for a held OK, false for the MENU key. */
     public val onTileMenu: (key: String, held: Boolean) -> Unit = { _, _ -> },
     public val onSettingsMenu: () -> Unit = {},
-    /** OK on the Inputs button. */
+    /** The system asked for the input list. */
     public val onInputs: () -> Unit = {},
+    /** OK on the Inputs button. */
+    public val onInputsPress: () -> Unit = {},
     public val onInputPick: (InputTarget) -> Unit = {},
     public val onMenuPick: (MenuRow) -> Unit = {},
     /** Back, while a menu or a mode is open. */

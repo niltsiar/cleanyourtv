@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
+import dev.niltsiar.tvhome.core.model.InputArrival
 import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkState
@@ -25,6 +26,7 @@ import java.util.Locale
  * [menu] is the open tile or Settings menu, [reorder] a reorder or edit-dock session, and [focusRequest] asks the
  * screen to move focus to a tile or the Settings button. [inputs] is what the Inputs button and its list show, which
  * is [inputsOpen] while the list hangs under the button; the button shows until the TV says it has nothing to list.
+ * [inputOffer] is the device switched on since Home came on screen that the button offers, null when none is.
  * [libraryCount] is how many apps the App library lists, null until it is known.
  */
 @Immutable
@@ -47,6 +49,7 @@ public data class HomeUiState(
     val focusRequest: FocusRequest? = null,
     val inputs: InputsMenu = InputsMenu(available = false),
     val inputsOpen: Boolean = false,
+    val inputOffer: InputArrival? = null,
     val libraryCount: Int? = null,
 )
 
@@ -188,8 +191,11 @@ internal sealed interface HomeEvent {
 
     data object SettingsMenu : HomeEvent
 
-    /** OK on the Inputs button, or the system asked for the input list. */
+    /** The system asked for the input list. */
     data object OpenInputs : HomeEvent
+
+    /** OK on the Inputs button: switch to the device it offers, else open the list. */
+    data object PressInputs : HomeEvent
 
     data class PickInput(
         val target: InputTarget,
@@ -279,6 +285,7 @@ internal fun homeUiState(
     focusRequest: FocusRequest? = null,
     inputs: InputsMenu = InputsMenu(available = false),
     inputsOpen: Boolean = false,
+    inputOffer: InputArrival? = null,
     libraryCount: Int? = null,
 ): HomeUiState {
     val focused = apps.all.firstOrNull { it.key == focusedKey } ?: apps.all.firstOrNull()
@@ -301,6 +308,7 @@ internal fun homeUiState(
         focusRequest = focusRequest,
         inputs = inputs,
         inputsOpen = inputsOpen,
+        inputOffer = inputOffer,
         libraryCount = libraryCount,
     )
 }

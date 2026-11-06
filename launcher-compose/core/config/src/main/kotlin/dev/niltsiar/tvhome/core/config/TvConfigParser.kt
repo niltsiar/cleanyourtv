@@ -154,6 +154,7 @@ public fun parseTvConfig(json: String): ParsedConfig {
             coocaaSources = o.bool("coocaa_sources", d.coocaaSources),
             inputsConnectedOnly = o.bool("inputs_connected_only", d.inputsConnectedOnly),
             inputsCecStateOnly = o.bool("inputs_cec_state_only", d.inputsCecStateOnly),
+            inputArrival = o.bool("input_arrival", d.inputArrival),
             handleViewInputs = o.bool("handle_view_inputs", d.handleViewInputs),
             openOnStartNetworkWait = o.int("open_on_start_network_wait", d.openOnStartNetworkWait, 0..600),
             appKeys = o.stringList("app_keys", d.appKeys),

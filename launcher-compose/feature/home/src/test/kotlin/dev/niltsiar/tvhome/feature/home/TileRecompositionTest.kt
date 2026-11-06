@@ -13,6 +13,7 @@ import androidx.compose.runtime.tooling.ObservableComposition
 import androidx.compose.runtime.tooling.setObserver
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
@@ -22,6 +23,9 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
+import dev.niltsiar.tvhome.core.model.InputArrival
+import dev.niltsiar.tvhome.core.model.InputTarget
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -94,12 +98,21 @@ open class TileRecompositionTest {
 
     protected open val alwaysShowNames = false
 
+    private val inputs = MutableStateFlow(FourPorts)
+
     @Before
     fun showHome() {
         Composer.setTracer(tiles)
         val apps = (1..12).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") }
         val config =
-            TvConfig(columns = 6, cinematicHome = true, appLibrary = true, focusOvershoot = false, alwaysShowNames = alwaysShowNames)
+            TvConfig(
+                columns = 6,
+                cinematicHome = true,
+                appLibrary = true,
+                focusOvershoot = false,
+                alwaysShowNames = alwaysShowNames,
+                inputArrival = true,
+            )
         compose.setContent {
             val home = currentComposer.composition
             DisposableEffect(home) {
@@ -108,7 +121,7 @@ open class TileRecompositionTest {
                 onDispose { observing?.dispose() }
             }
             TvTheme {
-                val viewModel = rememberHomeViewModel(sources(apps = flowOf(AppList(apps))), config, mutableListOf())
+                val viewModel = rememberHomeViewModel(sources(apps = flowOf(AppList(apps)), inputs = inputs), config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(
                     state = { state.value },
@@ -136,6 +149,17 @@ open class TileRecompositionTest {
     private fun press(key: Key) {
         compose.onRoot().performKeyInput { pressKey(key) }
         compose.waitForIdle()
+    }
+
+    @Test
+    fun a_device_offered_on_the_inputs_button_composes_no_tile_and_recomposes_no_grid_item() {
+        inputs.value = FourPorts.copy(arrival = InputArrival("Apple TV \u00B7 HDMI 2", InputTarget.TvInput("tv/.Cec/HDMI2"), token = 1))
+        compose.mainClock.advanceTimeBy(2_100)
+        compose.waitForIdle()
+
+        compose.onNode(hasContentDescription("Apple TV", substring = true)).assertExists()
+        assertEquals(0, tiles.count)
+        assertEquals(0, items.count)
     }
 
     @Test

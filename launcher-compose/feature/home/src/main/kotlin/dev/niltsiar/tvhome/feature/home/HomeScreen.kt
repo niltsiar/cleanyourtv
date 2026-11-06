@@ -285,6 +285,7 @@ public fun HomeScreen(
                 canMoveLeft = derivedStateOf { currentState.value().reorder?.canMoveLeft == true },
                 canMoveRight = derivedStateOf { currentState.value().reorder?.canMoveRight == true },
                 openLibrary = currentOpenLibrary,
+                inputOffered = derivedStateOf { currentState.value().inputOffer != null },
             ).also { it.anchor.value = menuAnchor }
         }
     val menu by remember { derivedStateOf { currentState.value().menu } }
@@ -1018,7 +1019,13 @@ private fun HeroTitle(
     val hint by remember(state) { derivedStateOf { state().reorder?.hint } }
     val count by remember(state) { derivedStateOf { state().libraryCount } }
     val control by remember(state, input) { derivedStateOf { input.headerControl(state()) } }
-    val inputs by remember(state) { derivedStateOf { state().inputs.rows.connectedSummary() } }
+    val inputs by remember(state) {
+        derivedStateOf {
+            state().let { home ->
+                home.inputOffer?.let { InputsSummary.One(it.label) } ?: home.inputs.rows.connectedSummary()
+            }
+        }
+    }
     val link by remember(state) { derivedStateOf { state().network.link } }
     val tile by remember(state) {
         derivedStateOf {
@@ -1223,7 +1230,7 @@ private fun Dock(
             CompositionLocalProvider(LocalBringIntoViewSpec provides RevealBringIntoViewSpec) {
                 LazyRow(
                     state = row,
-                    modifier = Modifier.focusRequester(focus).focusRestorer(),
+                    modifier = Modifier.focusRequester(focus).focusRestorer().upToOffer(input, layout),
                     contentPadding = PaddingValues(TileGap),
                     horizontalArrangement = Arrangement.spacedBy(TileGap),
                 ) {
@@ -1272,6 +1279,7 @@ private fun Dock(
                         .focusRequester(focus)
                         .focusRestorer()
                         .focusGroup()
+                        .upToOffer(input, layout)
                         .padding(horizontal = if (shrunk) DockShrunkSide else TileGap, vertical = TileGap),
                 horizontalArrangement = Arrangement.spacedBy(TileGap),
             ) {
@@ -1314,6 +1322,17 @@ private fun Dock(
         }
     }
 }
+
+/** With input_arrival, Up from a dock tile goes to the Inputs button while it offers a device. Read when focus moves. */
+private fun Modifier.upToOffer(
+    input: HomeInput,
+    layout: HomeLayout,
+): Modifier =
+    if (!layout.inputArrival) {
+        this
+    } else {
+        focusProperties { if (input.inputOffered.value) up = input.requester(INPUTS_FOCUS) }
+    }
 
 /** The dock's panel, or with the theme's dock_band off nothing but the room it takes. */
 @Composable

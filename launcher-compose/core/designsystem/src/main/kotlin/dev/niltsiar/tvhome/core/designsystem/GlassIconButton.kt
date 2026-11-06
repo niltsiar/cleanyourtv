@@ -1,7 +1,10 @@
 package dev.niltsiar.tvhome.core.designsystem
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -17,9 +20,12 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -40,7 +46,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
+import kotlin.math.PI
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 private val ButtonSize = 40.dp
 private val IconSize = 22.dp
@@ -54,6 +62,11 @@ private const val BRIGHT_BAR_FILL = 0.75f
 private val GrownMargin = 1.dp
 private val ActiveStroke = 1.dp
 private const val ACTIVE_FILL = 0.25f
+private val PulseStroke = 2.dp
+private const val PULSE_PEAK = 0.9f
+
+/** How long an offered button's rim takes to light and fade, in milliseconds. */
+internal const val OFFER_PULSE_MS = 600
 
 /**
  * A round glass button, a chrome surface that fills as a [FocusPill] while focused. [icon] fills a 22dp box; it gets
@@ -65,6 +78,10 @@ private const val ACTIVE_FILL = 0.25f
  * A button with a [label] has no rim. Over a wallpaper brighter than L* 70 under the top bar
  * ([GlassState.topBarLightness]) its tint thickens, up to a total alpha of 0.75 from L* 90. While [active] (a panel it
  * opened is open) it has a white fill of 0.25 and a white edge, so the panel reads as hanging from it.
+ *
+ * With a [focusLabel], a nonzero [offerToken] grows the button into its pill without focus and lights its rim once
+ * ([OFFER_PULSE_MS]); a new token pulses again, 0 takes the offer back. With animations off or reduced motion the pill
+ * appears and goes without motion and the rim stays dark.
  */
 @Composable
 public fun GlassIconButton(
@@ -75,25 +92,40 @@ public fun GlassIconButton(
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     label: (@Composable RowScope.(ink: FocusInk) -> Unit)? = null,
     focusLabel: String? = null,
+    offerToken: Int = 0,
     active: Boolean = false,
     icon: @Composable BoxScope.(focus: () -> Float, ink: ColorProducer) -> Unit,
 ) {
     val motion = TvTheme.motion
     val progress = remember { Animatable(0f) }
     val grow = remember { Animatable(0f) }
+    val pulse = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val grownScale = motion.focusScale(FOCUSED_SCALE)
+    val growSpec = motion.springSpec<Float>(dampingRatio = 0.8f, stiffness = Spring.StiffnessMedium)
+    val offered by rememberUpdatedState(offerToken != 0)
     val follow =
         modifier.onFocusChanged {
             val target = if (it.isFocused) 1f else 0f
             if (progress.targetValue != target) {
                 // Undispatched, as the fill's, so all three start on one frame.
                 scope.launch(start = CoroutineStart.UNDISPATCHED) { progress.animateTo(target, motion.tweenSpec(Motion.ICON_MS)) }
-                scope.launch(start = CoroutineStart.UNDISPATCHED) {
-                    grow.animateTo(target, motion.springSpec(dampingRatio = 0.8f, stiffness = Spring.StiffnessMedium))
-                }
+                scope.launch(start = CoroutineStart.UNDISPATCHED) { grow.animateTo(if (offered) 1f else target, growSpec) }
             }
         }
+    LaunchedEffect(offerToken, motion) {
+        val spec = if (motion.animated) growSpec else snap()
+        if (offerToken != 0) {
+            grow.animateTo(1f, spec)
+            if (motion.animated) {
+                pulse.snapTo(0f)
+                pulse.animateTo(1f, tween(OFFER_PULSE_MS, easing = LinearEasing))
+            }
+        } else {
+            pulse.snapTo(0f)
+            if (progress.targetValue == 0f) grow.animateTo(0f, spec)
+        }
+    }
     val size =
         when {
             label != null -> follow.height(ButtonSize).widthIn(min = ButtonSize)
@@ -123,6 +155,7 @@ public fun GlassIconButton(
                     )
                 }
                 if (active) Spacer(Modifier.matchParentSize().drawBehind { drawActive() })
+                if (offerToken != 0) Spacer(Modifier.matchParentSize().drawBehind { drawPulse(pulse.value) })
             },
         ) { ink ->
             val focus = { progress.value }
@@ -176,6 +209,20 @@ private fun DrawScope.drawActive() {
         topLeft = Offset(edge / 2f, edge / 2f),
         size = Size(size.width - edge, size.height - edge),
         cornerRadius = CornerRadius((size.height - edge) / 2f),
+        style = Stroke(edge),
+    )
+}
+
+/** The rim of an offered button at [progress] 0 to 1 of its pulse: a white edge that rises to [PULSE_PEAK] and falls back. */
+private fun DrawScope.drawPulse(progress: Float) {
+    if (progress <= 0f || progress >= 1f) return
+    val edge = PulseStroke.toPx()
+    drawRoundRect(
+        Color.White,
+        topLeft = Offset(edge / 2f, edge / 2f),
+        size = Size(size.width - edge, size.height - edge),
+        cornerRadius = CornerRadius((size.height - edge) / 2f),
+        alpha = PULSE_PEAK * sin(PI.toFloat() * progress),
         style = Stroke(edge),
     )
 }

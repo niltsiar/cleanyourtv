@@ -211,6 +211,7 @@ internal fun TopBar(
 ) {
     val inputsAvailable by remember(state) { derivedStateOf { state().inputs.available } }
     val inputsOpen by remember(state) { derivedStateOf { state().inputsOpen } }
+    val inputOffer by remember(state) { derivedStateOf { state().inputOffer } }
     val settingsOpen by remember(state) { derivedStateOf { state().menu.let { it != null && it.tileKey == null } } }
     Row(
         modifier =
@@ -229,17 +230,19 @@ internal fun TopBar(
             val inputsSource = remember { MutableInteractionSource() }
             val slide = rememberFocusTimeline(inputsSource, layout.animated)
             val inputs = stringResource(R.string.inputs)
+            val offer = inputOffer
             GlassIconButton(
                 glass,
-                inputs,
-                onClick = input::openInputs,
+                if (offer == null) inputs else "$inputs \u00B7 ${offer.label}",
+                onClick = input::pressInputs,
                 modifier =
                     Modifier
                         .focusRequester(input.requester(INPUTS_FOCUS))
                         .nameInBand(input, BarControl.Inputs)
                         .onGloballyPositioned { input.inputsBounds.value = it.boundsInRoot() },
                 interactionSource = inputsSource,
-                focusLabel = inputs,
+                focusLabel = offer?.label ?: inputs,
+                offerToken = offer?.token ?: 0,
                 active = inputsOpen,
             ) { _, ink ->
                 IconPart(R.drawable.ic_inputs_frame, ink)
