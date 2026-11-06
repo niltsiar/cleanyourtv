@@ -18,6 +18,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.unit.width
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.InputsMenu
@@ -84,6 +85,20 @@ class HomeLibraryUiTest {
 
         press(Key.DirectionCenter)
         assertEquals(1, opened)
+    }
+
+    @Test
+    fun the_pill_under_the_grid_starts_where_the_grids_first_column_does() {
+        showHome()
+        press(Key.DirectionDown)
+        press(Key.DirectionRight)
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("library:pill").assertIsFocused()
+
+        // A focused pill draws 8% wider about its centre; its left edge before that is the grid's.
+        val pill = compose.onNodeWithTag("library:pill").getBoundsInRoot()
+        val firstColumn = compose.onNodeWithTag("tile:pkg.7").getBoundsInRoot()
+        assertEquals(firstColumn.left.value, pill.left.value + pill.width.value * (1f - 1f / 1.08f) / 2f, 1f)
     }
 
     @Test

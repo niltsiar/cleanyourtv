@@ -132,6 +132,8 @@ import dev.niltsiar.tvhome.core.designsystem.DockSurface
 import dev.niltsiar.tvhome.core.designsystem.FocusSurface
 import dev.niltsiar.tvhome.core.designsystem.GlassIconButton
 import dev.niltsiar.tvhome.core.designsystem.GlassState
+import dev.niltsiar.tvhome.core.designsystem.KeyChip
+import dev.niltsiar.tvhome.core.designsystem.KeyChipHeight
 import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.holdOk
@@ -207,12 +209,7 @@ private val ShelfToFade = 16.dp
 /** From the bottom of the band's text to the shelf's bottom edge, with 12 dp between the text and the grid's cutoff. */
 private val TitleToShelfBottom = 12.dp + ShelfToFade
 private val HeroAscent = 36.sp
-private val ChipHeight = 32.dp
-private val ChipRim = Color.White.copy(alpha = 0.20f)
-private val ChipBacking = Color(0xFF07080C).copy(alpha = 0.55f)
-private const val IDLE_CHIP_ALPHA = 0.60f
-private const val CHIP_FADE_MS = 140
-private val ChipKeyFill = Color.White.copy(alpha = 0.16f)
+private val ChipHeight = KeyChipHeight
 private val CinematicShelfHeight = CinematicTextHeight + TitleToShelfBottom
 
 /** A 48 sp title line (its ascent and descent), then the meta line or the key chips. */
@@ -722,8 +719,9 @@ private fun overlayOwnerOf(
     }
 
 /**
- * The App library pill, centred in [modifier]'s box: after the last row, where only Up leaves it, to the tile [up] names;
- * or, [inRow], the last item of the single dock row, where Left walks back along the row and Up leaves as a tile's does.
+ * The App library pill, in [modifier]'s box: after the last row, on the grid's start edge, where only Up leaves it, to the
+ * tile [up] names; or, [inRow], centred, the last item of the single dock row, where Left walks back along the row and Up
+ * leaves as a tile's does.
  */
 @Composable
 private fun LibraryPill(
@@ -734,7 +732,7 @@ private fun LibraryPill(
     inRow: Boolean = false,
     up: () -> FocusRequester? = { null },
 ) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+    Box(modifier = modifier, contentAlignment = if (inRow) Alignment.Center else Alignment.CenterStart) {
         GlassIconButton(
             glass = glass,
             contentDescription = stringResource(R.string.library_entry),
@@ -1285,43 +1283,30 @@ private fun libraryCountText(count: Int?): String = count?.let { pluralStringRes
 private fun KeyChips(carried: State<String?>) {
     val carrying by remember(carried) { derivedStateOf { carried.value != null } }
     Row(Modifier.testTag("reorder:hint"), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        KeyChip("ok", R.string.reorder_key_ok, R.string.reorder_pick_up, !carrying)
-        KeyChip("arrows", R.string.reorder_key_arrows, R.string.reorder_move, carrying)
-        KeyChip("back", R.string.reorder_key_back, R.string.reorder_drop, carrying)
-        KeyChip("back-twice", R.string.reorder_key_back_twice, R.string.reorder_finish, !carrying)
-    }
-}
-
-@Composable
-private fun KeyChip(
-    tag: String,
-    @StringRes key: Int,
-    @StringRes action: Int,
-    applies: Boolean,
-) {
-    val typography = TvTheme.typography
-    val alpha = animateFloatAsState(if (applies) 1f else IDLE_CHIP_ALPHA, TvTheme.motion.tweenSpec(CHIP_FADE_MS), label = "chip")
-    Row(
-        modifier =
-            Modifier
-                .testTag("reorder:chip:$tag")
-                .graphicsLayer {
-                    compositingStrategy = CompositingStrategy.ModulateAlpha
-                    this.alpha = alpha.value
-                }.height(ChipHeight)
-                .background(ChipBacking, CircleShape)
-                .border(1.dp, ChipRim, CircleShape)
-                .padding(horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        BasicText(
-            stringResource(key),
-            style = typography.chipKey,
-            maxLines = 1,
-            modifier = Modifier.background(ChipKeyFill, CircleShape).padding(horizontal = 8.dp, vertical = 2.dp),
+        KeyChip(
+            stringResource(R.string.reorder_key_ok),
+            stringResource(R.string.reorder_pick_up),
+            Modifier.testTag("reorder:chip:ok"),
+            !carrying,
         )
-        BasicText(stringResource(action), style = typography.chipLabel, maxLines = 1)
+        KeyChip(
+            stringResource(R.string.reorder_key_arrows),
+            stringResource(R.string.reorder_move),
+            Modifier.testTag("reorder:chip:arrows"),
+            carrying,
+        )
+        KeyChip(
+            stringResource(R.string.reorder_key_back),
+            stringResource(R.string.reorder_drop),
+            Modifier.testTag("reorder:chip:back"),
+            carrying,
+        )
+        KeyChip(
+            stringResource(R.string.reorder_key_back_twice),
+            stringResource(R.string.reorder_finish),
+            Modifier.testTag("reorder:chip:back-twice"),
+            !carrying,
+        )
     }
 }
 
@@ -1676,7 +1661,7 @@ private fun AppTile(
                 Image(bitmap = image, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 if (app.iconArt) IconTileLabel(app.label)
             } else {
-                BasicText(text = app.label, style = TvTheme.typography.tileLabel, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                TrimmedEllipsisText(app.label, TvTheme.typography.tileLabel, maxLines = 2)
             }
         }
     }
@@ -1714,11 +1699,10 @@ private fun NameUnder(
                     .wrapContentHeight(Alignment.Top, unbounded = true)
                     .then(NamePill),
             ) {
-                BasicText(
+                TrimmedEllipsisText(
                     app.label,
-                    style = style,
+                    style,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.testTag("name:${app.key}").clearAndSetSemantics {}.drawnAt { alpha.value },
                 )
             }
@@ -1749,13 +1733,7 @@ private fun BoxScope.IconTileLabel(label: String) {
                 .clearAndSetSemantics {},
         contentAlignment = Alignment.BottomStart,
     ) {
-        BasicText(
-            label,
-            style = TvTheme.typography.tileCaption,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(10.dp),
-        )
+        TrimmedEllipsisText(label, TvTheme.typography.tileCaption, maxLines = 1, modifier = Modifier.padding(10.dp))
     }
 }
 

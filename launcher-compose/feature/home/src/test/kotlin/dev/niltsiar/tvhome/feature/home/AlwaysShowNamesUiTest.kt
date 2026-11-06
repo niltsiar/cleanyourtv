@@ -9,9 +9,13 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -55,6 +59,7 @@ class AlwaysShowNamesUiTest {
     private fun showHome(
         config: TvConfig,
         wallpaper: Wallpaper = Wallpaper(),
+        apps: List<AppEntry> = this.apps,
     ) {
         val sources = sources(apps = flowOf(AppList(apps)), wallpaper = flowOf(wallpaper))
         compose.setContent {
@@ -115,6 +120,25 @@ class AlwaysShowNamesUiTest {
         expected: Dp,
         actual: Dp,
     ) = assertTrue("expected $expected, got $actual", abs(expected.value - actual.value) <= 1f)
+
+    @Test
+    fun a_name_cut_to_two_lines_on_a_text_tile_ends_in_an_ellipsis_with_no_space_before_it() {
+        // Words of 1 to 6 letters, so the cut falls at a different place in each name.
+        val names = (1..6).map { size -> List(30) { "x".repeat(size) }.joinToString(" ") }
+        showHome(SixColumns, apps = names.mapIndexed { i, name -> AppEntry("pkg.${i + 1}", "pkg.${i + 1}", name) })
+
+        val shown =
+            (1..6).map { i ->
+                compose
+                    .onNode(hasText("x", substring = true) and hasAnyAncestor(hasTestTag("tile:pkg.$i")), useUnmergedTree = true)
+                    .fetchSemanticsNode()
+                    .config[SemanticsProperties.Text]
+                    .joinToString("") { it.text }
+            }
+
+        assertTrue("$shown", shown.all { it.endsWith(Char(0x2026).toString()) })
+        assertTrue("$shown", shown.none { it.endsWith(" " + Char(0x2026)) })
+    }
 
     @Test
     fun with_the_key_off_no_tile_has_a_name_under_it() {

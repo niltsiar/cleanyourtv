@@ -40,7 +40,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -51,6 +50,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -71,13 +71,13 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
@@ -86,6 +86,9 @@ import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.designsystem.BesideAnchor
 import dev.niltsiar.tvhome.core.designsystem.FocusPill
 import dev.niltsiar.tvhome.core.designsystem.GlassMenu
+import dev.niltsiar.tvhome.core.designsystem.KeyChip
+import dev.niltsiar.tvhome.core.designsystem.KeyChipHeight
+import dev.niltsiar.tvhome.core.designsystem.KeyChipLook
 import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.OverlaySurface
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
@@ -106,7 +109,7 @@ private val PanelSide = 12.dp
 private val PanelTop = 8.dp
 private val PanelBottom = 12.dp
 private val HeaderTitleHeight = 48.dp
-private val HeaderHintHeight = 28.dp
+private val HeaderHintHeight = KeyChipHeight
 private val PanelRise = 56.dp
 private const val PANEL_START_SCALE = 0.92f
 
@@ -248,6 +251,7 @@ private fun Header(
     onChipDown: () -> Unit,
 ) {
     val count by remember { derivedStateOf { state().cards.size } }
+    val onHomeCount by remember { derivedStateOf { state().cards.count { it.onHome } } }
     val hint by remember { derivedStateOf { state().hint } }
     val order by remember { derivedStateOf { state().order } }
     val noUsage by remember { derivedStateOf { state().noUsageYet } }
@@ -255,7 +259,6 @@ private fun Header(
     val title = remember(typography) { typography.shelfTitle.copy(fontSize = 26.sp) }
     val countStyle = remember(typography) { typography.date.copy(fontSize = 18.sp) }
     val muted = remember(typography) { typography.date.copy(fontSize = 14.sp) }
-    var countWidth by remember { mutableIntStateOf(0) }
     Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
         Row(Modifier.height(HeaderTitleHeight), verticalAlignment = Alignment.CenterVertically) {
             BasicText(
@@ -274,42 +277,65 @@ private fun Header(
                 }
             }
             BasicText(
-                pluralStringResource(R.plurals.library_app_count, count, count),
+                if (layout.selection) {
+                    pluralStringResource(R.plurals.library_count_on_home, count, onHomeCount, count)
+                } else {
+                    pluralStringResource(R.plurals.library_app_count, count, count)
+                },
                 style = countStyle,
                 maxLines = 1,
-                modifier = Modifier.onSizeChanged { countWidth = it.width },
+                modifier = Modifier.testTag("library:count"),
             )
         }
         if (!empty) {
-            val other = stringResource(order.other().label())
-            val keys =
-                if (layout.leastUsed && chip.focused) {
-                    stringResource(R.string.library_hint_select, stringResource(android.R.string.ok), other)
-                } else if (layout.leastUsed) {
-                    "${hintText(hint)} · ${stringResource(R.string.library_hint_order, other)}"
-                } else {
-                    hintText(hint)
-                }
             Row(Modifier.height(HeaderHintHeight), verticalAlignment = Alignment.CenterVertically) {
-                BasicText(
-                    keys,
-                    style = muted,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f).testTag("library:hint"),
-                )
+                KeyHints(hint, order, orderMenu = layout.leastUsed, chipFocused = chip.focused, Modifier.weight(1f).testTag("library:hint"))
                 if (noUsage) {
-                    // Ends where the order chip does: the count and the gap after the chip in from the header's end.
-                    val inset = ChipEnd + with(LocalDensity.current) { countWidth.toDp() }
                     BasicText(
                         stringResource(R.string.library_no_usage_yet),
                         style = muted,
                         maxLines = 1,
-                        modifier = Modifier.padding(start = 12.dp, end = inset).testTag("library:status"),
+                        modifier = Modifier.padding(start = 12.dp).testTag("library:status"),
                     )
                 }
             }
         }
+    }
+}
+
+/**
+ * What the keys do, as the chips of reorder mode: the focused card's OK and a held OK, then, with the order switch
+ * ([orderMenu]), the MENU key. While the order chip has focus ([chipFocused]) it is the OK on it alone.
+ */
+@Composable
+private fun KeyHints(
+    hint: LibraryHint,
+    order: LibraryOrder,
+    orderMenu: Boolean,
+    chipFocused: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val ink = TvTheme.colors.onSurface
+    val look =
+        remember(ink) { KeyChipLook(backing = ink.copy(alpha = 0.10f), rim = ink.copy(alpha = 0.20f), keyFill = ink.copy(alpha = 0.16f)) }
+    val ok = stringResource(R.string.library_key_ok)
+    val other = stringResource(order.other().label())
+    Row(modifier.clipToBounds().semantics(mergeDescendants = true) {}, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (orderMenu && chipFocused) {
+            KeyChip(ok, other, look = look)
+            return@Row
+        }
+        val action =
+            when (hint) {
+                LibraryHint.Open -> R.string.library_open
+                LibraryHint.Add, LibraryHint.SelectAdd -> R.string.library_add_home
+                LibraryHint.SelectRemove -> R.string.library_remove_shortcut
+            }
+        KeyChip(ok, stringResource(action), look = look)
+        if (hint == LibraryHint.Open || hint == LibraryHint.Add) {
+            KeyChip(stringResource(R.string.library_key_hold_ok), stringResource(R.string.library_key_options), look = look)
+        }
+        if (orderMenu) KeyChip(stringResource(R.string.library_key_menu), other, look = look)
     }
 }
 
@@ -405,30 +431,6 @@ private fun LibraryOrder.label(): Int =
     }
 
 private fun LibraryOrder.other(): LibraryOrder = if (this == LibraryOrder.Usual) LibraryOrder.LeastUsed else LibraryOrder.Usual
-
-@Composable
-private fun hintText(hint: LibraryHint): String =
-    when (hint) {
-        LibraryHint.Open -> {
-            stringResource(R.string.library_hint_open)
-        }
-
-        LibraryHint.Add -> {
-            stringResource(R.string.library_hint_add)
-        }
-
-        LibraryHint.SelectAdd -> {
-            stringResource(R.string.library_hint_select, stringResource(android.R.string.ok), stringResource(R.string.library_add_home))
-        }
-
-        LibraryHint.SelectRemove -> {
-            stringResource(
-                R.string.library_hint_select,
-                stringResource(android.R.string.ok),
-                stringResource(R.string.library_remove_shortcut),
-            )
-        }
-    }
 
 /** With nothing to list the panel itself takes focus, so Home behind it gets no key. */
 @Composable

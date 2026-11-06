@@ -8,15 +8,19 @@
   <string name="library_open">Mở</string>
   <string name="library_app_info">Thông tin ứng dụng</string>
   <string name="library_recent">Mới · Thêm vào màn hình chính</string>
-  <string name="library_hint_add">Bấm để thêm vào màn hình chính · Giữ để xem tùy chọn</string>
-  <string name="library_hint_open">Bấm để mở · Giữ để xem tùy chọn</string>
   <plurals name="library_app_count">
     <item quantity="other">%1$d ứng dụng</item>
   </plurals>
   <string name="library_order_usual">Thứ tự thường</string>
   <string name="library_order_least_used">Ít dùng nhất</string>
-  <string name="library_hint_order">Menu: %1$s</string>
   <string name="library_never_opened">Chưa từng mở</string>
   <string name="library_title_choose">Chọn ứng dụng cho màn hình chính</string>
   <string name="library_no_usage_yet">Chưa có dữ liệu sử dụng</string>
+  <string name="library_key_ok">OK</string>
+  <string name="library_key_hold_ok">Giữ OK</string>
+  <string name="library_key_menu">Menu</string>
+  <string name="library_key_options">Tùy chọn</string>
+  <plurals name="library_count_on_home">
+    <item quantity="other">%1$d/%2$d trên màn hình chính</item>
+  </plurals>
 </resources>

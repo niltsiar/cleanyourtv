@@ -8,8 +8,6 @@
   <string name="library_open">Obre</string>
   <string name="library_app_info">Informació de l’aplicació</string>
   <string name="library_recent">Nova · Afegeix a l’inici</string>
-  <string name="library_hint_add">Prem per afegir a Inici · Mantén per a opcions</string>
-  <string name="library_hint_open">Prem per obrir · Mantén per a opcions</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d aplicació</item>
     <item quantity="many">%1$d d\'aplicacions</item>
@@ -17,8 +15,16 @@
   </plurals>
   <string name="library_order_usual">Ordre habitual</string>
   <string name="library_order_least_used">Menys usades</string>
-  <string name="library_hint_order">Menú: %1$s</string>
   <string name="library_never_opened">Mai oberta</string>
   <string name="library_title_choose">Tria les aplicacions d\'Inici</string>
   <string name="library_no_usage_yet">Encara no hi ha dades d\'ús</string>
+  <string name="library_key_ok">D\'acord</string>
+  <string name="library_key_hold_ok">Mantén D\'acord</string>
+  <string name="library_key_menu">Menú</string>
+  <string name="library_key_options">Opcions</string>
+  <plurals name="library_count_on_home">
+    <item quantity="one">%1$d de %2$d a l’inici</item>
+    <item quantity="many">%1$d de %2$d a l’inici</item>
+    <item quantity="other">%1$d de %2$d a l’inici</item>
+  </plurals>
 </resources>

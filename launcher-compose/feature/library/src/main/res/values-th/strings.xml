@@ -8,15 +8,19 @@
   <string name="library_open">เปิด</string>
   <string name="library_app_info">ข้อมูลแอป</string>
   <string name="library_recent">ใหม่ · เพิ่มในหน้าหลัก</string>
-  <string name="library_hint_add">กดเพื่อเพิ่มที่หน้าหลัก · กดค้างเพื่อดูตัวเลือก</string>
-  <string name="library_hint_open">กดเพื่อเปิด · กดค้างเพื่อดูตัวเลือก</string>
   <plurals name="library_app_count">
     <item quantity="other">%1$d แอป</item>
   </plurals>
   <string name="library_order_usual">ลำดับปกติ</string>
   <string name="library_order_least_used">ใช้น้อยที่สุด</string>
-  <string name="library_hint_order">เมนู: %1$s</string>
   <string name="library_never_opened">ไม่เคยเปิด</string>
   <string name="library_title_choose">เลือกแอปในหน้าหลัก</string>
   <string name="library_no_usage_yet">ยังไม่มีข้อมูลการใช้งาน</string>
+  <string name="library_key_ok">OK</string>
+  <string name="library_key_hold_ok">กด OK ค้าง</string>
+  <string name="library_key_menu">เมนู</string>
+  <string name="library_key_options">ตัวเลือก</string>
+  <plurals name="library_count_on_home">
+    <item quantity="other">%1$d จาก %2$d อยู่ในหน้าหลัก</item>
+  </plurals>
 </resources>

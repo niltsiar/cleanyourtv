@@ -8,16 +8,21 @@
   <string name="library_open">Openen</string>
   <string name="library_app_info">App-info</string>
   <string name="library_recent">Nieuw · Toevoegen aan Home</string>
-  <string name="library_hint_add">Druk om toe te voegen aan Home · Houd ingedrukt voor opties</string>
-  <string name="library_hint_open">Druk om te openen · Houd ingedrukt voor opties</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d app</item>
     <item quantity="other">%1$d apps</item>
   </plurals>
   <string name="library_order_usual">Gebruikelijke volgorde</string>
   <string name="library_order_least_used">Minst gebruikt</string>
-  <string name="library_hint_order">Menu: %1$s</string>
   <string name="library_never_opened">Nooit geopend</string>
   <string name="library_title_choose">Kies apps voor Home</string>
   <string name="library_no_usage_yet">Nog geen gebruiksgegevens</string>
+  <string name="library_key_ok">OK</string>
+  <string name="library_key_hold_ok">Houd OK ingedrukt</string>
+  <string name="library_key_menu">Menu</string>
+  <string name="library_key_options">Opties</string>
+  <plurals name="library_count_on_home">
+    <item quantity="one">%1$d van %2$d op Home</item>
+    <item quantity="other">%1$d van %2$d op Home</item>
+  </plurals>
 </resources>

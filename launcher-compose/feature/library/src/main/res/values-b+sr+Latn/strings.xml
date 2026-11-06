@@ -8,8 +8,6 @@
   <string name="library_open">Otvori</string>
   <string name="library_app_info">Informacije o aplikaciji</string>
   <string name="library_recent">Novo · Dodaj na početni ekran</string>
-  <string name="library_hint_add">Pritisni za početni ekran · Zadrži za opcije</string>
-  <string name="library_hint_open">Pritisni za otvaranje · Zadrži za opcije</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d aplikacija</item>
     <item quantity="few">%1$d aplikacije</item>
@@ -17,8 +15,16 @@
   </plurals>
   <string name="library_order_usual">Uobičajen redosled</string>
   <string name="library_order_least_used">Najmanje korišćene</string>
-  <string name="library_hint_order">Meni: %1$s</string>
   <string name="library_never_opened">Nikad otvorena</string>
   <string name="library_title_choose">Izaberi aplikacije za početni ekran</string>
   <string name="library_no_usage_yet">Još nema podataka o korišćenju</string>
+  <string name="library_key_ok">OK</string>
+  <string name="library_key_hold_ok">Zadrži OK</string>
+  <string name="library_key_menu">Meni</string>
+  <string name="library_key_options">Opcije</string>
+  <plurals name="library_count_on_home">
+    <item quantity="one">%1$d od %2$d na početnom ekranu</item>
+    <item quantity="few">%1$d od %2$d na početnom ekranu</item>
+    <item quantity="other">%1$d od %2$d na početnom ekranu</item>
+  </plurals>
 </resources>

@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,8 +42,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
@@ -92,14 +96,18 @@ private val StatusHeight = 14.dp
 private val PlusSize = 12.dp
 private val PlusStroke = 1.5.dp
 private val PlusGap = 4.dp
+private val CheckSize = 16.dp
+private val CheckStroke = 1.75.dp
+private const val CHECK_DISC_ALPHA = 0.90f
+private val CheckInk = Color(0xFF07080C)
 private const val NEVER_OPENED_ALPHA = 0.45f
 private const val OFF_HOME_ART_ALPHA = 0.5f
 
 /**
  * One card of the grid: the app's art on a small tile and its name of up to [NAME_LINES] lines, in the room above the status
  * slot, which says in one line what is not the usual state. An app on Home has no mark; in the chooser
- * ([LibraryLayout.selection]) the art of an app that is not on Home is dimmed and the card says "On Home" to accessibility
- * for one that is. An idle card is opaque, so nothing of Home shows through it; a focused one lets the plate [FocusSurface]
+ * ([LibraryLayout.selection]) the art of an app that is not on Home is dimmed and an app that is on Home has a check in the
+ * status slot. An idle card is opaque, so nothing of Home shows through it; a focused one lets the plate [FocusSurface]
  * draws behind it show. It rises in once per opening, with the delay [CardEntrance] gives it, and pops a little when its
  * Home shortcut changes. Both run in the layer lambda. The status slot keeps its place while the card grows, so it stays
  * level with the cards beside it. [widthPx] is the narrowest the card can be.
@@ -149,7 +157,6 @@ internal fun LibraryCardView(
     val scope = rememberCoroutineScope()
     val ring = remember(artwork, layout) { layout.ringColour(artwork?.accent ?: Color.Unspecified) }
     val ringBlends = remember(ring, artwork) { ringBlendsWith(ring, artwork?.accent ?: Color.Unspecified) }
-    val onHome = stringResource(R.string.library_on_home)
     Box(
         modifier =
             modifier.fillMaxWidth().height(CardHeight).graphicsLayer {
@@ -198,7 +205,7 @@ internal fun LibraryCardView(
                         drawRect(fill, alpha = (1f - focus.value).coerceIn(0f, 1f))
                         drawRect(tint.value)
                     }.border(1.dp, ink.copy(alpha = RIM_ALPHA), CardShape)
-                    .semantics { contentDescription = if (layout.selection && card.onHome) onHome else card.app.label },
+                    .semantics { contentDescription = card.app.label },
             ) {
                 ArtAndName(Modifier.fillMaxSize().padding(start = CardSide, end = CardSide, bottom = CardBottom + StatusHeight)) {
                     Art(card, artwork, layout.selection && !card.onHome, Modifier.padding(horizontal = ArtInset))
@@ -344,7 +351,7 @@ internal fun shownName(
 /**
  * The status slot, one baseline for every card: the line that says what the name does not. That line is, in the least used
  * order when the app was last opened, else the recent-install text, else "Add to Home" for an app that is not on Home, else
- * nothing. A "+" goes before the recent-install text and "Add to Home".
+ * nothing; in the chooser an app on Home has a check there instead. A "+" goes before the recent-install text and "Add to Home".
  */
 @Composable
 private fun Status(
@@ -371,6 +378,8 @@ private fun Status(
         val line = Modifier.weight(1f, fill = false)
         if (opened != null) {
             Opened(card.app.key, opened, shown, line)
+        } else if (layout.selection && card.onHome) {
+            OnHomeCheck(card.app.key)
         } else if (text != null) {
             val color = style.color
             Box(Modifier.size(PlusSize).drawBehind { drawPlus(color, size.width) })
@@ -378,6 +387,29 @@ private fun Status(
             BasicText(text, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = line)
         }
     }
+}
+
+/** A white disc with a dark check, [CheckSize] across and centred in the slot, which it may overhang a little above and below. */
+@Composable
+private fun OnHomeCheck(key: String) {
+    val onHome = stringResource(R.string.library_on_home)
+    Box(
+        Modifier
+            .requiredSize(CheckSize)
+            .testTag("card:check:$key")
+            .semantics { contentDescription = onHome }
+            .drawBehind {
+                drawCircle(Color.White.copy(alpha = CHECK_DISC_ALPHA))
+                val side = size.width
+                val check =
+                    Path().apply {
+                        moveTo(0.29f * side, 0.52f * side)
+                        lineTo(0.44f * side, 0.67f * side)
+                        lineTo(0.72f * side, 0.35f * side)
+                    }
+                drawPath(check, CheckInk, style = Stroke(CheckStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+            },
+    )
 }
 
 /** When the app was last opened, in the TV's language, shrunk to fit one line; "Never opened" for an app Home never opened. */

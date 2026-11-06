@@ -8,16 +8,21 @@
   <string name="library_open">Öffnen</string>
   <string name="library_app_info">App-Info</string>
   <string name="library_recent">Neu · Zum Startbildschirm</string>
-  <string name="library_hint_add">Drücken: zu Start hinzufügen · Halten: Optionen</string>
-  <string name="library_hint_open">Drücken: öffnen · Halten: Optionen</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d App</item>
     <item quantity="other">%1$d Apps</item>
   </plurals>
   <string name="library_order_usual">Übliche Reihenfolge</string>
   <string name="library_order_least_used">Am seltensten genutzt</string>
-  <string name="library_hint_order">Menü: %1$s</string>
   <string name="library_never_opened">Nie geöffnet</string>
   <string name="library_title_choose">Apps für den Startbildschirm wählen</string>
   <string name="library_no_usage_yet">Noch keine Nutzungsdaten</string>
+  <string name="library_key_ok">OK</string>
+  <string name="library_key_hold_ok">OK halten</string>
+  <string name="library_key_menu">Menü</string>
+  <string name="library_key_options">Optionen</string>
+  <plurals name="library_count_on_home">
+    <item quantity="one">%1$d von %2$d auf dem Startbildschirm</item>
+    <item quantity="other">%1$d von %2$d auf dem Startbildschirm</item>
+  </plurals>
 </resources>

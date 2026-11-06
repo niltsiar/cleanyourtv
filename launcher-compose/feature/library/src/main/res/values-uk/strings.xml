@@ -8,8 +8,6 @@
   <string name="library_open">Відкрити</string>
   <string name="library_app_info">Про застосунок</string>
   <string name="library_recent">Новий · Додати на головний екран</string>
-  <string name="library_hint_add">Натиснути: додати на головний екран · Утримати: опції</string>
-  <string name="library_hint_open">Натиснути: відкрити · Утримати: опції</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d застосунок</item>
     <item quantity="few">%1$d застосунки</item>
@@ -18,8 +16,17 @@
   </plurals>
   <string name="library_order_usual">Звичайний порядок</string>
   <string name="library_order_least_used">Найменш використовувані</string>
-  <string name="library_hint_order">Меню: %1$s</string>
   <string name="library_never_opened">Ніколи не відкривався</string>
   <string name="library_title_choose">Вибір застосунків головного екрана</string>
   <string name="library_no_usage_yet">Даних про використання ще немає</string>
+  <string name="library_key_ok">OK</string>
+  <string name="library_key_hold_ok">Утримувати OK</string>
+  <string name="library_key_menu">Меню</string>
+  <string name="library_key_options">Опції</string>
+  <plurals name="library_count_on_home">
+    <item quantity="one">%1$d з %2$d на головному екрані</item>
+    <item quantity="few">%1$d з %2$d на головному екрані</item>
+    <item quantity="many">%1$d з %2$d на головному екрані</item>
+    <item quantity="other">%1$d з %2$d на головному екрані</item>
+  </plurals>
 </resources>

@@ -539,22 +539,49 @@ class LibraryOverlayLookUiTest {
             config = chooser,
         )
 
+    /** The pixels of the screen, dp by dp, in [area] that are white to within 0.12. */
+    private fun whitePixels(area: DpRect): Int {
+        val density = compose.activity.resources.displayMetrics.density
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val xs = (area.left.value * density).toInt() until (area.right.value * density).toInt()
+        val ys = (area.top.value * density).toInt() until (area.bottom.value * density).toInt()
+        return xs.sumOf { x ->
+            ys.count { y ->
+                val pixel = pixels[x, y]
+                listOf(pixel.red, pixel.green, pixel.blue).all { it >= 0.88f }
+            }
+        }
+    }
+
     @Test
     @Config(qualifiers = "+night")
-    fun in_the_chooser_an_app_on_home_has_no_white_mark_on_or_past_its_corner_and_says_on_home_on_the_card() {
+    fun in_the_chooser_an_app_on_home_has_a_16_dp_check_centred_in_its_status_slot_and_none_off_home() {
         showChooser()
 
         val card = card("Bbb")
-        val pixels = compose.onRoot().captureToImage().toPixelMap()
-        val density = compose.activity.resources.displayMetrics.density
-        val corner = (-12..12).flatMap { dx -> (-12..12).map { dy -> dx to dy } }
-        val white =
-            corner.filter { (dx, dy) ->
-                val pixel = pixels[((card.right.value + dx) * density).toInt(), ((card.top.value + dy) * density).toInt()]
-                listOf(pixel.red, pixel.green, pixel.blue).all { it >= 0.88f }
-            }
-        assertTrue("white pixels at $white", white.isEmpty())
-        compose.onNodeWithTag("card:${key("Bbb")}").assertContentDescriptionEquals("On Home")
+        val slot = DpRect(card.left + 6.dp, card.bottom - 20.dp, card.right - 6.dp, card.bottom - 6.dp)
+        val disc = lightSpan(DpRect(slot.left, slot.top - 2.dp, slot.right, slot.bottom + 2.dp))!!
+        assertEquals(16f, disc.endInclusive - disc.start, 1f)
+        assertEquals((card.left.value + card.right.value) / 2f, (disc.start + disc.endInclusive) / 2f, 1f)
+        val check = compose.onNodeWithTag("card:check:${key("Bbb")}", useUnmergedTree = true).getBoundsInRoot()
+        assertEquals((slot.top.value + slot.bottom.value) / 2f, (check.top.value + check.bottom.value) / 2f, 1f)
+        compose.onNodeWithTag("card:check:${key("Bbb")}", useUnmergedTree = true).assertContentDescriptionEquals("On Home")
+        compose.onNodeWithTag("card:check:${key("Ccc")}", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun in_the_chooser_the_check_is_the_only_white_on_an_app_on_home_and_none_hangs_past_the_card() {
+        showChooser()
+
+        val card = card("Bbb")
+        val art = art("Bbb")
+        assertEquals("on the art", 0, whitePixels(art))
+        val corner = DpRect(card.right - 12.dp, card.top - 12.dp, card.right + 12.dp, card.top + 12.dp)
+        assertEquals("on the corner", 0, whitePixels(corner))
+        val below = DpRect(card.left, card.bottom, card.right, card.bottom + 6.dp)
+        assertEquals("under the card", 0, whitePixels(below))
+        assertTrue("the check in the slot", whitePixels(DpRect(card.left, card.bottom - 21.dp, card.right, card.bottom - 5.dp)) > 100)
     }
 
     @Test
@@ -592,13 +619,38 @@ class LibraryOverlayLookUiTest {
 
         press(Key.Menu)
 
-        val chip = bounds("library:order")
+        val count = bounds("library:count")
         val status = bounds("library:status")
-        compose.onNodeWithTag("library:hint").assertTextEquals("Press to add to Home · Hold for options · Menu: Usual order")
+        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Add to Home", "Hold OK", "Options", "Menu", "Usual order")
         compose.onNodeWithTag("library:status").assertTextEquals("No usage data yet")
-        assertNear(chip.right, status.right)
-        assertTrue("status $status under chip $chip", status.top >= chip.bottom)
-        assertNear(bounds("library:hint").height, status.height)
+        assertNear(count.right, status.right)
+        assertTrue("status $status under count $count", status.top >= count.bottom)
+        assertTrue("status $status beside the hint ${bounds("library:hint")}", status.left >= bounds("library:hint").left)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_hint_is_a_row_of_key_chips_as_tall_as_reorder_mode_draws_them() {
+        showLibrary(nineApps)
+
+        assertEquals(32f, bounds("library:hint").height.value, 1f)
+    }
+
+    @Test
+    fun in_the_chooser_the_count_says_how_many_apps_are_on_home_and_follows_a_change() {
+        showChooser()
+        compose.onNodeWithTag("library:count").assertTextEquals("2 of 4 on Home")
+
+        press(Key.DirectionCenter)
+
+        compose.onNodeWithTag("library:count").assertTextEquals("1 of 4 on Home")
+    }
+
+    @Test
+    fun in_browse_mode_the_count_stays_the_number_of_apps() {
+        showLibrary(listOf(libraryApp("Aaa", onHome = true), libraryApp("Bbb"), libraryApp("Ccc")))
+
+        compose.onNodeWithTag("library:count").assertTextEquals("3 apps")
     }
 
     /** The darkest red, 0 to 255, in [area]. */

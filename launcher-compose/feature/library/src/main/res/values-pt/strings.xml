@@ -8,8 +8,6 @@
   <string name="library_open">Abrir</string>
   <string name="library_app_info">Informações do app</string>
   <string name="library_recent">Novo · Adicionar à tela inicial</string>
-  <string name="library_hint_add">Pressione para adicionar à tela inicial · Segure para ver opções</string>
-  <string name="library_hint_open">Pressione para abrir · Segure para ver opções</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d app</item>
     <item quantity="many">%1$d apps</item>
@@ -17,8 +15,16 @@
   </plurals>
   <string name="library_order_usual">Ordem habitual</string>
   <string name="library_order_least_used">Menos usados</string>
-  <string name="library_hint_order">Menu: %1$s</string>
   <string name="library_never_opened">Nunca aberto</string>
   <string name="library_title_choose">Escolher apps da tela inicial</string>
   <string name="library_no_usage_yet">Ainda não há dados de uso</string>
+  <string name="library_key_ok">OK</string>
+  <string name="library_key_hold_ok">Segure OK</string>
+  <string name="library_key_menu">Menu</string>
+  <string name="library_key_options">Opções</string>
+  <plurals name="library_count_on_home">
+    <item quantity="one">%1$d de %2$d na tela inicial</item>
+    <item quantity="many">%1$d de %2$d na tela inicial</item>
+    <item quantity="other">%1$d de %2$d na tela inicial</item>
+  </plurals>
 </resources>

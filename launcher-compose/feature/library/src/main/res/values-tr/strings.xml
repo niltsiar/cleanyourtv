@@ -8,16 +8,21 @@
   <string name="library_open">Aç</string>
   <string name="library_app_info">Uygulama bilgileri</string>
   <string name="library_recent">Yeni · Ana ekrana ekle</string>
-  <string name="library_hint_add">Ana ekrana eklemek için bas · Seçenekler için basılı tut</string>
-  <string name="library_hint_open">Açmak için bas · Seçenekler için basılı tut</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d uygulama</item>
     <item quantity="other">%1$d uygulama</item>
   </plurals>
   <string name="library_order_usual">Olağan sıra</string>
   <string name="library_order_least_used">En az kullanılan</string>
-  <string name="library_hint_order">Menü: %1$s</string>
   <string name="library_never_opened">Hiç açılmadı</string>
   <string name="library_title_choose">Ana ekran uygulamalarını seç</string>
   <string name="library_no_usage_yet">Henüz kullanım verisi yok</string>
+  <string name="library_key_ok">Tamam</string>
+  <string name="library_key_hold_ok">Tamam\'ı basılı tut</string>
+  <string name="library_key_menu">Menü</string>
+  <string name="library_key_options">Seçenekler</string>
+  <plurals name="library_count_on_home">
+    <item quantity="one">%2$d içinde %1$d ana ekranda</item>
+    <item quantity="other">%2$d içinde %1$d ana ekranda</item>
+  </plurals>
 </resources>

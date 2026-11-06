@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.getBoundsInRoot
@@ -214,13 +215,13 @@ class LibraryOverlayUiTest {
         gammaOpenedThreeDaysAgo()
         showLibrary(leastUsed)
         compose.onNodeWithTag("library:order").assertTextEquals("Usual order")
-        compose.onNodeWithTag("library:hint").assertTextContains("Menu: Least used", substring = true)
+        compose.onNodeWithTag("library:hint").assertTextContains("Least used", substring = true)
         compose.onNodeWithTag("card:${key("Delta")}").assertIsFocused()
 
         press(Key.Menu)
 
         compose.onNodeWithTag("library:order").assertTextEquals("Least used")
-        compose.onNodeWithTag("library:hint").assertTextContains("Menu: Usual order", substring = true)
+        compose.onNodeWithTag("library:hint").assertTextContains("Usual order", substring = true)
         compose.onNodeWithTag("card:${key("Delta")}").assertIsFocused()
         press(Key.DirectionRight)
         compose.onNodeWithTag("card:${key("Gamma")}").assertIsFocused()
@@ -238,7 +239,7 @@ class LibraryOverlayUiTest {
         press(Key.Menu)
 
         compose.onNodeWithTag("library:order").assertDoesNotExist()
-        compose.onNodeWithTag("library:hint").assertTextEquals("Press to add to Home · Hold for options")
+        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Add to Home", "Hold OK", "Options")
         compose.onNodeWithTag("card:${key("Delta")}").assertIsFocused()
         press(Key.DirectionRight)
         compose.onNodeWithTag("card:${key("Alpha")}").assertIsFocused()
@@ -255,6 +256,25 @@ class LibraryOverlayUiTest {
 
         compose.onNodeWithTag("card:opened:${key("Gamma")}", useUnmergedTree = true).assertTextContains("3 days ago, ", substring = true)
         compose.onNodeWithTag("card:opened:${key("Alpha")}", useUnmergedTree = true).assertTextEquals("Never opened")
+    }
+
+    @Test
+    fun in_browse_mode_the_hint_is_the_chips_of_ok_and_a_held_ok_and_an_app_that_opens_says_open() {
+        showLibrary(TvConfig(appLibrary = true, libraryOkOpens = true))
+
+        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Open", "Hold OK", "Options")
+    }
+
+    @Test
+    fun in_the_chooser_the_hint_says_ok_removes_an_app_on_home_and_ok_adds_one_off_home() {
+        showLibrary(TvConfig(appLibrary = true, appLibrarySelection = true))
+        compose.onNodeWithTag("card:${key("Gamma")}").assertIsFocused()
+        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Remove from Home")
+
+        press(Key.DirectionRight)
+
+        compose.onNodeWithTag("card:${key("Gamma")}").assertIsNotFocused()
+        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Add to Home")
     }
 
     @Test
@@ -290,11 +310,11 @@ class LibraryOverlayUiTest {
     @Test
     fun with_no_open_time_for_any_app_the_least_used_order_shows_no_opened_text_and_a_status_says_so() {
         showLibrary(leastUsed)
-        compose.onNodeWithTag("library:hint").assertTextEquals("Press to add to Home · Hold for options · Menu: Least used")
+        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Add to Home", "Hold OK", "Options", "Menu", "Least used")
 
         press(Key.Menu)
 
-        compose.onNodeWithTag("library:hint").assertTextEquals("Press to add to Home · Hold for options · Menu: Usual order")
+        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Add to Home", "Hold OK", "Options", "Menu", "Usual order")
         compose.onNodeWithTag("library:status").assertTextEquals("No usage data yet")
         compose.onNodeWithTag("card:opened:${key("Alpha")}", useUnmergedTree = true).assertDoesNotExist()
         assertEquals(listOf("Alpha", "Add to Home"), compose.textsOnCard("Alpha"))
@@ -307,7 +327,7 @@ class LibraryOverlayUiTest {
 
         press(Key.Menu)
 
-        compose.onNodeWithTag("library:hint").assertTextEquals("Press to add to Home · Hold for options · Menu: Usual order")
+        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Add to Home", "Hold OK", "Options", "Menu", "Usual order")
         compose.onNodeWithTag("library:status").assertDoesNotExist()
     }
 
@@ -332,13 +352,13 @@ class LibraryOverlayUiTest {
 
         press(Key.DirectionUp)
         orderChip().assertIsFocused()
-        compose.onNodeWithTag("library:hint").assertTextEquals("OK: Least used")
+        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Least used")
 
         press(Key.DirectionCenter)
-        compose.onNodeWithTag("library:hint").assertTextEquals("OK: Usual order")
+        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Usual order")
 
         press(Key.DirectionDown)
-        compose.onNodeWithTag("library:hint").assertTextContains("Menu: Usual order", substring = true)
+        compose.onNodeWithTag("library:hint").assertTextContains("Menu", substring = true)
     }
 
     @Test
@@ -390,7 +410,7 @@ class LibraryOverlayUiTest {
 
         orderChip().assertIsFocused()
         orderChip().assertTextEquals("Least used")
-        compose.onNodeWithTag("library:hint").assertTextEquals("OK: Usual order")
+        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Usual order")
 
         press(Key.DirectionDown)
 

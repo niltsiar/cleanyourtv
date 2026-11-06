@@ -8,16 +8,21 @@
   <string name="library_open">খুলুন</string>
   <string name="library_app_info">অ্যাপের তথ্য</string>
   <string name="library_recent">নতুন · হোমে যোগ করুন</string>
-  <string name="library_hint_add">হোমে যোগ করতে চাপুন · অপশনের জন্য চেপে ধরে রাখুন</string>
-  <string name="library_hint_open">খুলতে চাপুন · অপশনের জন্য চেপে ধরে রাখুন</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$dটি অ্যাপ</item>
     <item quantity="other">%1$dটি অ্যাপ</item>
   </plurals>
   <string name="library_order_usual">স্বাভাবিক ক্রম</string>
   <string name="library_order_least_used">সবচেয়ে কম ব্যবহৃত</string>
-  <string name="library_hint_order">মেনু: %1$s</string>
   <string name="library_never_opened">কখনও খোলা হয়নি</string>
   <string name="library_title_choose">হোমের অ্যাপ বেছে নিন</string>
   <string name="library_no_usage_yet">এখনও ব্যবহারের কোনো ডেটা নেই</string>
+  <string name="library_key_ok">OK</string>
+  <string name="library_key_hold_ok">OK ধরে রাখুন</string>
+  <string name="library_key_menu">মেনু</string>
+  <string name="library_key_options">অপশন</string>
+  <plurals name="library_count_on_home">
+    <item quantity="one">%2$d-এর মধ্যে %1$d হোমে আছে</item>
+    <item quantity="other">%2$d-এর মধ্যে %1$d হোমে আছে</item>
+  </plurals>
 </resources>

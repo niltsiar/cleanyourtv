@@ -8,8 +8,6 @@
   <string name="library_open">فتح</string>
   <string name="library_app_info">معلومات التطبيق</string>
   <string name="library_recent">جديد · إضافة إلى الرئيسية</string>
-  <string name="library_hint_add">اضغط للإضافة للرئيسية · اضغط مطولاً للخيارات</string>
-  <string name="library_hint_open">اضغط للفتح · اضغط مطولاً للخيارات</string>
   <plurals name="library_app_count">
     <item quantity="zero">%1$d تطبيق</item>
     <item quantity="one">%1$d تطبيق</item>
@@ -20,8 +18,19 @@
   </plurals>
   <string name="library_order_usual">الترتيب المعتاد</string>
   <string name="library_order_least_used">الأقل استخدامًا</string>
-  <string name="library_hint_order">القائمة: %1$s</string>
   <string name="library_never_opened">لم يُفتح أبدًا</string>
   <string name="library_title_choose">اختيار تطبيقات الرئيسية</string>
   <string name="library_no_usage_yet">لا توجد بيانات استخدام بعد</string>
+  <string name="library_key_ok">موافق</string>
+  <string name="library_key_hold_ok">اضغط مطولاً على موافق</string>
+  <string name="library_key_menu">القائمة</string>
+  <string name="library_key_options">الخيارات</string>
+  <plurals name="library_count_on_home">
+    <item quantity="zero">%1$d من %2$d على الرئيسية</item>
+    <item quantity="one">%1$d من %2$d على الرئيسية</item>
+    <item quantity="two">%1$d من %2$d على الرئيسية</item>
+    <item quantity="few">%1$d من %2$d على الرئيسية</item>
+    <item quantity="many">%1$d من %2$d على الرئيسية</item>
+    <item quantity="other">%1$d من %2$d على الرئيسية</item>
+  </plurals>
 </resources>

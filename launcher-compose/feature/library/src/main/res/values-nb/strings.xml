@@ -8,16 +8,21 @@
   <string name="library_open">Åpne</string>
   <string name="library_app_info">Appinformasjon</string>
   <string name="library_recent">Ny · Legg til på startskjermen</string>
-  <string name="library_hint_add">Trykk for å legge til på startskjermen · Hold inne for flere valg</string>
-  <string name="library_hint_open">Trykk for å åpne · Hold inne for flere valg</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d app</item>
     <item quantity="other">%1$d apper</item>
   </plurals>
   <string name="library_order_usual">Vanlig rekkefølge</string>
   <string name="library_order_least_used">Minst brukt</string>
-  <string name="library_hint_order">Meny: %1$s</string>
   <string name="library_never_opened">Aldri åpnet</string>
   <string name="library_title_choose">Velg apper til startskjermen</string>
   <string name="library_no_usage_yet">Ingen bruksdata ennå</string>
+  <string name="library_key_ok">OK</string>
+  <string name="library_key_hold_ok">Hold OK</string>
+  <string name="library_key_menu">Meny</string>
+  <string name="library_key_options">Valg</string>
+  <plurals name="library_count_on_home">
+    <item quantity="one">%1$d av %2$d på startskjermen</item>
+    <item quantity="other">%1$d av %2$d på startskjermen</item>
+  </plurals>
 </resources>
