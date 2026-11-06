@@ -3,6 +3,7 @@ package dev.niltsiar.tvhome.feature.home
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -10,12 +11,16 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.height
+import androidx.compose.ui.unit.width
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -127,21 +132,23 @@ class TopBarTest {
     }
 
     @Test
-    fun the_network_name_shows_beside_the_icon_unless_icon_only_buttons_is_on() {
+    fun the_network_button_is_a_round_icon_at_rest_and_grows_into_its_pill_while_focused() {
         show()
-        compose.onNodeWithText("Home").assertIsDisplayed()
-    }
-
-    @Test
-    fun icon_only_buttons_keeps_the_name_for_accessibility_only() {
-        show(TvConfig(columns = 6, iconOnlyButtons = true))
-        compose.onNodeWithContentDescription("Home").assertIsDisplayed()
         compose.onNodeWithText("Home").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Home").assertIsDisplayed()
+        val rest = compose.onNodeWithContentDescription("Home").getBoundsInRoot()
+        assertEquals(rest.width, rest.height)
+
+        compose.onNodeWithContentDescription("Home").requestFocus()
+        compose.mainClock.advanceTimeBy(1_000)
+
+        val grown = compose.onNodeWithContentDescription("Home").getBoundsInRoot().width
+        assertTrue("rest ${rest.width}, focused $grown", grown > rest.width + 20.dp)
     }
 
     @Test
-    fun a_wifi_label_width_keeps_the_name_with_icon_only_buttons() {
-        show(TvConfig(columns = 6, iconOnlyButtons = true, wifiLabelWidth = 120))
+    fun a_wifi_label_width_keeps_the_network_name_beside_the_icon_at_rest() {
+        show(TvConfig(columns = 6, wifiLabelWidth = 120))
         compose.onNodeWithText("Home").assertIsDisplayed()
     }
 

@@ -25,9 +25,9 @@
   <string name="tile_move">Перемістити</string>
   <string name="tile_remove_from_home">Прибрати з головного екрана</string>
   <string name="library_save_failed">Не вдалося зберегти ярлик</string>
-  <string name="dock_edit">Редагувати док</string>
+  <string name="dock_edit">Вибрати застосунки дока</string>
   <string name="reorder">Упорядкувати застосунки</string>
-  <string name="power_menu">Перезапустити…</string>
+  <string name="power_menu">Перезапустити телевізор…</string>
   <string name="reorder_hint">OK бере застосунок, стрілки переміщують, «Назад» ставить на місце. Ще раз «Назад» — завершити.</string>
   <string name="dock_edit_hint">Виберіть місце в доку, яке треба змінити, і натисніть OK. «Назад» — завершити.</string>
   <string name="dock_edit_pick_app">Тепер виберіть застосунок для цього місця та натисніть OK. «Назад» — вибрати інше місце.</string>
@@ -38,7 +38,6 @@
   <string name="reorder_move">перемістити</string>
   <string name="reorder_key_back">Назад</string>
   <string name="reorder_drop">поставити</string>
-  <string name="reorder_key_back_twice">Назад ×2</string>
   <string name="reorder_finish">завершити</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d застосунок</item>
@@ -56,4 +55,5 @@
     <item quantity="other">%1$d під’єднаного джерела</item>
   </plurals>
   <string name="habit_usual">Зазвичай ви відкриваєте її в цей час</string>
+  <string name="never_opened">Ніколи не відкривався</string>
 </resources>

@@ -25,9 +25,9 @@
   <string name="tile_move">Verplaatsen</string>
   <string name="tile_remove_from_home">Verwijderen van Home</string>
   <string name="library_save_failed">Kon de snelkoppeling niet opslaan</string>
-  <string name="dock_edit">Dock bewerken</string>
+  <string name="dock_edit">Dock-apps kiezen</string>
   <string name="reorder">Apps ordenen</string>
-  <string name="power_menu">Opnieuw opstarten…</string>
+  <string name="power_menu">Tv opnieuw opstarten…</string>
   <string name="reorder_hint">OK pakt een app op, de pijlen verplaatsen hem, Terug zet hem neer. Nog eens Terug om te stoppen.</string>
   <string name="dock_edit_hint">Kies de plek in het dock die je wilt wijzigen en druk op OK. Terug om te stoppen.</string>
   <string name="dock_edit_pick_app">Kies nu de app voor die plek en druk op OK. Terug om een andere plek te kiezen.</string>
@@ -38,7 +38,6 @@
   <string name="reorder_move">verplaatsen</string>
   <string name="reorder_key_back">Terug</string>
   <string name="reorder_drop">neerzetten</string>
-  <string name="reorder_key_back_twice">Terug ×2</string>
   <string name="reorder_finish">stoppen</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d app</item>
@@ -52,4 +51,5 @@
     <item quantity="other">%1$d ingangen verbonden</item>
   </plurals>
   <string name="habit_usual">Je opent deze meestal rond deze tijd</string>
+  <string name="never_opened">Nooit geopend</string>
 </resources>

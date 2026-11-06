@@ -242,7 +242,7 @@ class HabitHintUiTest {
     fun the_line_under_the_title_adds_the_usual_phrase_only_while_the_usual_app_has_focus() {
         showHome(SixColumns.copy(habitHint = true, cinematicHome = true), lastOpened = mapOf("pkg.2" to yesterday, "pkg.3" to yesterday))
 
-        compose.onNodeWithTag("shelf:meta").assertTextEquals(" ")
+        compose.onNodeWithTag("shelf:meta").assertTextEquals("Never opened")
         press(Key.DirectionRight)
         compose.onNodeWithTag("tile:pkg.2").assertIsFocused()
         compose.onNodeWithTag("shelf:meta").assertTextContains("Last opened", substring = true)

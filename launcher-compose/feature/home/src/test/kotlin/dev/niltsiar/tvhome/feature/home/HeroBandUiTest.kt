@@ -6,6 +6,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
@@ -144,6 +145,35 @@ class HeroBandUiTest {
     }
 
     @Test
+    fun an_app_never_opened_says_so_under_its_name_in_the_dock_and_over_the_grid() {
+        showHome()
+        assertEquals("Never opened", textOf("shelf:meta"))
+
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+        compose.mainClock.advanceTimeBy(1_000)
+
+        assertEquals("Never opened", textOf("shelf:title-meta"))
+    }
+
+    @Test
+    fun an_app_opened_before_says_when_and_not_never_opened() {
+        showHome(
+            lastOpened =
+                mapOf(
+                    "pkg.1" to
+                        Evening
+                            .minusHours(2)
+                            .atZone(ZoneId.systemDefault())
+                            .toInstant()
+                            .toEpochMilli(),
+                ),
+        )
+
+        assertTrue(textOf("shelf:meta"), textOf("shelf:meta").startsWith("Last opened "))
+    }
+
+    @Test
     fun the_band_text_ends_28_dp_above_the_dock() {
         showHome()
         // The page dots: 16 dp under the meta slot, 6 dp tall.
@@ -174,9 +204,11 @@ class HeroBandUiTest {
         compose.mainClock.advanceTimeBy(1_000)
 
         assertEquals("Reorder apps", textOf("shelf:title"))
-        for (chip in listOf("OK", "pick up", "Arrows", "move", "Back", "drop", "Back ×2", "finish")) {
+        // Move picks the tile up, so the legend is the held step's: OK and Back both drop it.
+        for (chip in listOf("OK", "Arrows", "move", "Back")) {
             compose.onNode(hasText(chip) and hasAnyAncestor(hasTestTag("reorder:hint"))).assertExists()
         }
+        compose.onAllNodes(hasText("drop") and hasAnyAncestor(hasTestTag("reorder:hint"))).assertCountEquals(2)
         assertTrue(bounds("reorder:hint").bottom <= bounds("dock").top)
     }
 
@@ -280,5 +312,17 @@ class HeroBandUiTest {
             "menu bottom ${bounds("menu").bottom}, dock top ${bounds("dock").top}",
             bounds("menu").bottom + 8.dp <= bounds("dock").top,
         )
+    }
+
+    @Test
+    fun the_settings_menu_names_its_rows_choose_dock_apps_and_restart_tv() {
+        showHome(powerMenu = true)
+        press(Key.DirectionUp)
+        repeat(2) { press(Key.DirectionRight) }
+        holdOk()
+
+        val ellipsis = Char(0x2026)
+        compose.onNode(hasTestTag("menu:EditDock") and hasText("Choose dock apps")).assertExists()
+        compose.onNode(hasTestTag("menu:PowerMenu") and hasText("Restart TV$ellipsis")).assertExists()
     }
 }

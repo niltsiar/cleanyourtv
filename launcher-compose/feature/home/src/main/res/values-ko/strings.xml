@@ -25,9 +25,9 @@
   <string name="tile_move">이동</string>
   <string name="tile_remove_from_home">홈에서 삭제</string>
   <string name="library_save_failed">바로가기를 저장할 수 없음</string>
-  <string name="dock_edit">독 편집</string>
+  <string name="dock_edit">독 앱 선택</string>
   <string name="reorder">앱 순서 바꾸기</string>
-  <string name="power_menu">다시 시작…</string>
+  <string name="power_menu">TV 다시 시작…</string>
   <string name="reorder_hint">OK로 앱을 선택 후 방향키로 옮기고, 뒤로 가기(←) 버튼으로 내려놓습니다. 뒤로 가기(←) 버튼을 한 번 더 누르면 종료됩니다.</string>
   <string name="dock_edit_hint">바꿀 독 위치를 고르고 OK를 누르세요. 뒤로 가기(←) 버튼을 누르면 종료됩니다.</string>
   <string name="dock_edit_pick_app">이제 그 자리에 넣을 앱을 고르고 OK를 누르세요. 뒤로 가기(←) 버튼을 누르면 다른 위치를 고릅니다.</string>
@@ -38,7 +38,6 @@
   <string name="reorder_move">이동</string>
   <string name="reorder_key_back">뒤로</string>
   <string name="reorder_drop">내려놓기</string>
-  <string name="reorder_key_back_twice">뒤로 ×2</string>
   <string name="reorder_finish">종료</string>
   <plurals name="library_app_count">
     <item quantity="other">앱 %1$d개</item>
@@ -50,4 +49,5 @@
     <item quantity="other">연결된 입력 %1$d개</item>
   </plurals>
   <string name="habit_usual">보통 이 시간에 이 앱을 엽니다</string>
+  <string name="never_opened">열어 본 적 없음</string>
 </resources>

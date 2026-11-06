@@ -22,9 +22,9 @@
   <string name="tile_move">Verschieben</string>
   <string name="tile_remove_from_home">Vom Startbildschirm entfernen</string>
   <string name="library_save_failed">Verknüpfung konnte nicht gespeichert werden</string>
-  <string name="dock_edit">Dock bearbeiten</string>
+  <string name="dock_edit">Dock-Apps wählen</string>
   <string name="reorder">Apps anordnen</string>
-  <string name="power_menu">Neu starten…</string>
+  <string name="power_menu">TV neu starten…</string>
   <string name="reorder_hint">OK hebt eine App an, Pfeiltasten verschieben sie, Zurück legt sie ab. Nochmals Zurück zum Beenden.</string>
   <string name="dock_edit_hint">Wähle den Dock-Platz, den du ändern willst, und drücke OK. Zurück zum Beenden.</string>
   <string name="dock_edit_pick_app">Wähle jetzt die App für diesen Platz und drücke OK. Zurück, um einen anderen Platz zu wählen.</string>
@@ -35,7 +35,6 @@
   <string name="reorder_move">verschieben</string>
   <string name="reorder_key_back">Zurück</string>
   <string name="reorder_drop">ablegen</string>
-  <string name="reorder_key_back_twice">Zurück ×2</string>
   <string name="reorder_finish">beenden</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d App</item>
@@ -49,4 +48,5 @@
     <item quantity="other">%1$d Quellen verbunden</item>
   </plurals>
   <string name="habit_usual">Du öffnest sie meistens um diese Zeit</string>
+  <string name="never_opened">Nie geöffnet</string>
 </resources>

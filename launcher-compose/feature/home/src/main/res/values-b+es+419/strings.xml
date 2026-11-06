@@ -26,9 +26,9 @@
   <string name="tile_move">Mover</string>
   <string name="tile_remove_from_home">Quitar de Inicio</string>
   <string name="library_save_failed">No se pudo guardar el acceso directo</string>
-  <string name="dock_edit">Editar la barra de favoritos</string>
+  <string name="dock_edit">Elegir apps de la barra de favoritos</string>
   <string name="reorder">Reordenar aplicaciones</string>
-  <string name="power_menu">Reiniciar…</string>
+  <string name="power_menu">Reiniciar el televisor…</string>
   <string name="reorder_hint">Presiona OK para seleccionar una aplicación, usa las flechas para moverla y presiona Atrás para colocarla. Presiona Atrás otra vez para terminar.</string>
   <string name="dock_edit_hint">Elige el espacio de la barra de favoritos que quieres cambiar y presiona OK. Presiona Atrás para terminar.</string>
   <string name="dock_edit_pick_app">Ahora elige la aplicación que quieres colocar ahí y presiona OK. Presiona Atrás para elegir otro espacio.</string>
@@ -39,7 +39,6 @@
   <string name="reorder_move">mover</string>
   <string name="reorder_key_back">Atrás</string>
   <string name="reorder_drop">colocar</string>
-  <string name="reorder_key_back_twice">Atrás ×2</string>
   <string name="reorder_finish">terminar</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d aplicación</item>
@@ -55,4 +54,5 @@
     <item quantity="other">%1$d entradas conectadas</item>
   </plurals>
   <string name="habit_usual">Sueles abrirla a esta hora</string>
+  <string name="never_opened">Nunca abierta</string>
 </resources>

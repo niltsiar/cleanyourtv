@@ -25,9 +25,9 @@
   <string name="tile_move">Di chuyển</string>
   <string name="tile_remove_from_home">Bỏ khỏi màn hình chính</string>
   <string name="library_save_failed">Không lưu được lối tắt</string>
-  <string name="dock_edit">Chỉnh sửa dock</string>
+  <string name="dock_edit">Chọn ứng dụng trên dock</string>
   <string name="reorder">Sắp xếp ứng dụng</string>
-  <string name="power_menu">Khởi động lại…</string>
+  <string name="power_menu">Khởi động lại TV…</string>
   <string name="reorder_hint">Bấm OK để nhấc ứng dụng, phím mũi tên để di chuyển, Back để đặt xuống. Bấm Back lần nữa để xong.</string>
   <string name="dock_edit_hint">Chọn vị trí trên dock cần đổi rồi nhấn OK. Nhấn Quay lại để kết thúc.</string>
   <string name="dock_edit_pick_app">Giờ chọn ứng dụng để đặt vào đó rồi nhấn OK. Nhấn Quay lại để chọn vị trí khác.</string>
@@ -38,7 +38,6 @@
   <string name="reorder_move">di chuyển</string>
   <string name="reorder_key_back">Back</string>
   <string name="reorder_drop">đặt xuống</string>
-  <string name="reorder_key_back_twice">Back ×2</string>
   <string name="reorder_finish">xong</string>
   <plurals name="library_app_count">
     <item quantity="other">%1$d ứng dụng</item>
@@ -50,4 +49,5 @@
     <item quantity="other">%1$d nguồn vào đã kết nối</item>
   </plurals>
   <string name="habit_usual">Bạn thường mở ứng dụng này vào giờ này</string>
+  <string name="never_opened">Chưa từng mở</string>
 </resources>

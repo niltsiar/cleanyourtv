@@ -25,9 +25,9 @@
   <string name="tile_move">Flytt</string>
   <string name="tile_remove_from_home">Fjern fra startskjermen</string>
   <string name="library_save_failed">Kunne ikke lagre snarveien</string>
-  <string name="dock_edit">Rediger favorittraden</string>
+  <string name="dock_edit">Velg apper i favorittraden</string>
   <string name="reorder">Endre apprekkefølge</string>
-  <string name="power_menu">Start på nytt…</string>
+  <string name="power_menu">Start TV-en på nytt…</string>
   <string name="reorder_hint">Trykk OK for å velge en app, bruk pilene for å flytte den, og trykk Tilbake for å plassere den. Trykk Tilbake igjen for å avslutte.</string>
   <string name="dock_edit_hint">Velg plassen du vil endre i favorittraden, og trykk OK. Trykk Tilbake for å avslutte.</string>
   <string name="dock_edit_pick_app">Velg appen du vil plassere der, og trykk OK. Trykk Tilbake for å velge en annen plass.</string>
@@ -38,7 +38,6 @@
   <string name="reorder_move">flytt</string>
   <string name="reorder_key_back">Tilbake</string>
   <string name="reorder_drop">plasser</string>
-  <string name="reorder_key_back_twice">Tilbake ×2</string>
   <string name="reorder_finish">avslutt</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d app</item>
@@ -52,4 +51,5 @@
     <item quantity="other">%1$d innganger tilkoblet</item>
   </plurals>
   <string name="habit_usual">Du åpner den vanligvis på dette tidspunktet</string>
+  <string name="never_opened">Aldri åpnet</string>
 </resources>

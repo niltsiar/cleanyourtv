@@ -26,9 +26,9 @@
   <string name="tile_move">Flytta</string>
   <string name="tile_remove_from_home">Ta bort från startskärmen</string>
   <string name="library_save_failed">Kunde inte spara genvägen</string>
-  <string name="dock_edit">Redigera favoritraden</string>
+  <string name="dock_edit">Välj appar i favoritraden</string>
   <string name="reorder">Ändra ordning på appar</string>
-  <string name="power_menu">Starta om…</string>
+  <string name="power_menu">Starta om TV:n…</string>
   <string name="reorder_hint">OK plockar upp en app, pilarna flyttar den, Tillbaka placerar den. Tillbaka igen för att avsluta.</string>
   <string name="dock_edit_hint">Välj platsen i favoritraden som du vill ändra och tryck OK. Tillbaka för att avsluta.</string>
   <string name="dock_edit_pick_app">Välj nu appen som ska ligga där och tryck OK. Tillbaka för att välja en annan plats.</string>
@@ -39,7 +39,6 @@
   <string name="reorder_move">flytta</string>
   <string name="reorder_key_back">Tillbaka</string>
   <string name="reorder_drop">placera</string>
-  <string name="reorder_key_back_twice">Tillbaka ×2</string>
   <string name="reorder_finish">avsluta</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d app</item>
@@ -53,4 +52,5 @@
     <item quantity="other">%1$d ingångar anslutna</item>
   </plurals>
   <string name="habit_usual">Du brukar öppna den vid den här tiden</string>
+  <string name="never_opened">Aldrig öppnad</string>
 </resources>

@@ -10,11 +10,13 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
@@ -483,26 +485,37 @@ class HomeLookUiTest {
         assertNear(Math.round(inside + 0.20f * alpha * (255 - inside)), rim, 8)
     }
 
+    /** The chip tagged [tag] says [key] and [action], and is drawn at full alpha. */
+    private fun assertChip(
+        tag: String,
+        key: String,
+        action: String,
+    ) {
+        compose.onNode(hasText(key) and hasAnyAncestor(hasTestTag("reorder:chip:$tag"))).assertExists()
+        compose.onNode(hasText(action) and hasAnyAncestor(hasTestTag("reorder:chip:$tag"))).assertExists()
+        assertChipAt(tag, 1f)
+    }
+
     @Test
-    fun with_nothing_carried_the_ok_and_finish_chips_are_at_full_alpha_and_the_others_at_sixty_percent() {
+    fun with_nothing_carried_the_legend_is_ok_pick_up_and_back_finish_and_nothing_else() {
         showHome(wallpaper = Wallpaper(picture = white))
         carryFirstTile()
         back()
 
-        assertChipAt("ok", 1f)
-        assertChipAt("back-twice", 1f)
-        assertChipAt("arrows", 0.60f)
-        assertChipAt("back", 0.60f)
+        assertChip("ok", "OK", "pick up")
+        assertChip("back", "Back", "finish")
+        compose.onNodeWithTag("reorder:chip:arrows").assertDoesNotExist()
     }
 
     @Test
-    fun with_a_tile_carried_the_move_and_drop_chips_are_at_full_alpha_and_the_others_at_sixty_percent() {
+    fun with_a_tile_carried_the_legend_is_arrows_move_ok_drop_and_back_drop_and_nothing_else() {
         showHome(wallpaper = Wallpaper(picture = white))
         carryFirstTile()
 
-        assertChipAt("arrows", 1f)
-        assertChipAt("back", 1f)
-        assertChipAt("ok", 0.60f)
-        assertChipAt("back-twice", 0.60f)
+        assertChip("arrows", "Arrows", "move")
+        assertChip("ok", "OK", "drop")
+        assertChip("back", "Back", "drop")
+        compose.onAllNodes(hasText("pick up")).assertCountEquals(0)
+        compose.onAllNodes(hasText("finish")).assertCountEquals(0)
     }
 }

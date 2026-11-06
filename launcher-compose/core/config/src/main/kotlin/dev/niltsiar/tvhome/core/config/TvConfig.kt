@@ -71,9 +71,9 @@ public data class TvConfig(
     val dateBelowClock: Boolean = false,
     val showNetworkPill: Boolean = true,
     val showInputsPill: Boolean = true,
-    /** Wi-Fi and Settings as round icon buttons, without their names. */
+    /** Read for themes of the replaced launcher; every top-bar button here is a round icon at rest, whatever this says. */
     val iconOnlyButtons: Boolean = false,
-    /** 0 to 300 dp: with [iconOnlyButtons], the network name stays beside the Wi-Fi icon up to this width. */
+    /** 0 to 300 dp: the network name stays beside the Wi-Fi icon at rest, up to this width; 0 leaves the icon alone. */
     val wifiLabelWidth: Int = 0,
     /** The Wi-Fi icon turns green while the TV is online. */
     val wifiStatusColor: Boolean = false,

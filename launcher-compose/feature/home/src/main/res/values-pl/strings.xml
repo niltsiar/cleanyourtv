@@ -24,9 +24,9 @@
   <string name="tile_move">Przenieś</string>
   <string name="tile_remove_from_home">Usuń z ekranu głównego</string>
   <string name="library_save_failed">Nie udało się zapisać skrótu</string>
-  <string name="dock_edit">Edytuj dock</string>
+  <string name="dock_edit">Wybierz aplikacje w docku</string>
   <string name="reorder">Zmień kolejność aplikacji</string>
-  <string name="power_menu">Uruchom ponownie…</string>
+  <string name="power_menu">Uruchom ponownie telewizor…</string>
   <string name="reorder_hint">OK podnosi aplikację, strzałki ją przesuwają, Wstecz ją upuszcza. Ponownie Wstecz, aby zakończyć.</string>
   <string name="dock_edit_hint">Wybierz miejsce w docku do zmiany i naciśnij OK. Wstecz, aby zakończyć.</string>
   <string name="dock_edit_pick_app">Teraz wybierz aplikację, która ma się tam znaleźć, i naciśnij OK. Wstecz, aby wybrać inne miejsce.</string>
@@ -37,7 +37,6 @@
   <string name="reorder_move">przesuń</string>
   <string name="reorder_key_back">Wstecz</string>
   <string name="reorder_drop">upuść</string>
-  <string name="reorder_key_back_twice">Wstecz ×2</string>
   <string name="reorder_finish">zakończ</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d aplikacja</item>
@@ -55,4 +54,5 @@
     <item quantity="other">%1$d podłączonych wejść</item>
   </plurals>
   <string name="habit_usual">Zwykle otwierasz ją o tej porze</string>
+  <string name="never_opened">Nigdy nieotwierana</string>
 </resources>

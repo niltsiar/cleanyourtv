@@ -24,9 +24,9 @@
   <string name="tile_move">Premesti</string>
   <string name="tile_remove_from_home">Ukloni sa početnog ekrana</string>
   <string name="library_save_failed">Prečica nije sačuvana</string>
-  <string name="dock_edit">Uredi dok</string>
+  <string name="dock_edit">Izaberi aplikacije za dok</string>
   <string name="reorder">Promeni redosled aplikacija</string>
-  <string name="power_menu">Ponovo pokreni…</string>
+  <string name="power_menu">Ponovo pokreni televizor…</string>
   <string name="reorder_hint">OK podiže aplikaciju, strelice je pomeraju, Nazad je postavlja. Ponovo Nazad za kraj.</string>
   <string name="dock_edit_hint">Izaberite mesto u doku i pritisnite OK. Nazad za kraj.</string>
   <string name="dock_edit_pick_app">Sada izaberite aplikaciju za to mesto i pritisnite OK. Nazad da izaberete drugo mesto.</string>
@@ -37,7 +37,6 @@
   <string name="reorder_move">pomeri</string>
   <string name="reorder_key_back">Nazad</string>
   <string name="reorder_drop">postavi</string>
-  <string name="reorder_key_back_twice">Nazad ×2</string>
   <string name="reorder_finish">kraj</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d aplikacija</item>
@@ -53,4 +52,5 @@
     <item quantity="other">%1$d povezanih ulaza</item>
   </plurals>
   <string name="habit_usual">Obično je otvarate u ovo vreme</string>
+  <string name="never_opened">Nikad otvorena</string>
 </resources>

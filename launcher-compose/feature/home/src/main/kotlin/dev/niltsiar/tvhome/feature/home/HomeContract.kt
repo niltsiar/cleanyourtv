@@ -22,7 +22,8 @@ import java.util.Locale
 /**
  * What the screen shows. [clock], [amPm], [date] and [greeting] are empty or null until the TV's time is valid.
  * [topBarApps] are the top_bar_apps that can be opened. [wallpaper] is the picture behind Home and its caption.
- * [focusedKey] is the tile that had focus last, and [focusedOpened] when Home last opened it, null if it never did.
+ * [focusedKey] is the tile that had focus last, and [focusedOpened] when Home last opened it, null if it never did or the time
+ * is not valid yet; [focusedNeverOpened] is true only when Home has no record of opening it.
  * [shelf] is the cinematic shelf's app while focus is on a dock tile, null otherwise and without cinematic_home.
  * [menu] is the open tile or Settings menu, [reorder] a reorder or edit-dock session, and [focusRequest] asks the
  * screen to move focus to a tile or the Settings button. [inputs] is what the Inputs button and its list show, which
@@ -45,6 +46,7 @@ public data class HomeUiState(
     val focusedKey: String? = null,
     val focusedLabel: String = "",
     val focusedOpened: OpenedAt? = null,
+    val focusedNeverOpened: Boolean = false,
     val wallpaper: Wallpaper = Wallpaper(),
     val shelf: Shelf? = null,
     val menu: HomeMenu? = null,
@@ -80,8 +82,8 @@ public const val LIBRARY_BUTTON_FOCUS: String = "library-button"
 
 /**
  * The dock app the cinematic shelf shows: its [key] and [label], the [accent] colour of its art, its [position] among
- * the [count] dock apps (one dot each), [lastOpened], when Home last opened it, null if it never did, and whether it is
- * the [usual] app of this time of day.
+ * the [count] dock apps (one dot each), [lastOpened], when Home last opened it, null if it never did or the time is not
+ * valid yet, [neverOpened] when Home has no record of opening it, and whether it is the [usual] app of this time of day.
  */
 @Immutable
 public data class Shelf(
@@ -91,6 +93,7 @@ public data class Shelf(
     val position: Int,
     val count: Int,
     val lastOpened: OpenedAt?,
+    val neverOpened: Boolean = false,
     val usual: Boolean = false,
 )
 
@@ -320,6 +323,7 @@ internal fun homeUiState(
         focusedKey = focusedKey,
         focusedLabel = focused?.label.orEmpty(),
         focusedOpened = focused?.let { openedAt(it.key, lastOpened, now, header.hour24, zone) },
+        focusedNeverOpened = focused != null && focused.key !in lastOpened,
         wallpaper = wallpaper,
         shelf = if (cinematic) shelfFor(apps, focusedKey, lastOpened, now, header.hour24, zone, habit) else null,
         menu = menu,
@@ -371,6 +375,7 @@ internal fun shelfFor(
         position = position,
         count = apps.dock.size,
         lastOpened = openedAt(app.key, lastOpened, now, hour24, zone),
+        neverOpened = app.key !in lastOpened,
         usual = habit != null && app.packageName == habit,
     )
 }

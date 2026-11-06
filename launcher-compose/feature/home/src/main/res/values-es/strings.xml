@@ -25,9 +25,9 @@
   <string name="tile_move">Mover</string>
   <string name="tile_remove_from_home">Quitar de Inicio</string>
   <string name="library_save_failed">No se pudo guardar el acceso directo</string>
-  <string name="dock_edit">Editar el dock</string>
+  <string name="dock_edit">Elegir apps del dock</string>
   <string name="reorder">Reordenar apps</string>
-  <string name="power_menu">Reiniciar…</string>
+  <string name="power_menu">Reiniciar el televisor…</string>
   <string name="reorder_hint">OK coge una app, las flechas la mueven, Atrás la suelta. Atrás de nuevo para terminar.</string>
   <string name="dock_edit_hint">Elige el hueco del dock que quieres cambiar y pulsa OK. Atrás para terminar.</string>
   <string name="dock_edit_pick_app">Ahora elige la app que quieres poner ahí y pulsa OK. Atrás para elegir otro hueco.</string>
@@ -39,7 +39,6 @@
   <string name="reorder_move">mover</string>
   <string name="reorder_key_back">Atrás</string>
   <string name="reorder_drop">soltar</string>
-  <string name="reorder_key_back_twice">Atrás ×2</string>
   <string name="reorder_finish">terminar</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d aplicación</item>
@@ -55,4 +54,5 @@
     <item quantity="other">%1$d entradas conectadas</item>
   </plurals>
   <string name="habit_usual">Sueles abrirla a esta hora</string>
+  <string name="never_opened">Nunca abierta</string>
 </resources>

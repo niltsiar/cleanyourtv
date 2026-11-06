@@ -24,9 +24,9 @@
   <string name="tile_move">Mou</string>
   <string name="tile_remove_from_home">Elimina de l’inici</string>
   <string name="library_save_failed">No s’ha pogut desar la drecera</string>
-  <string name="dock_edit">Edita el dock</string>
+  <string name="dock_edit">Tria les apps del dock</string>
   <string name="reorder">Reordena les aplicacions</string>
-  <string name="power_menu">Reinicia…</string>
+  <string name="power_menu">Reinicia el televisor…</string>
   <string name="reorder_hint">D\'acord agafa una aplicació, les fletxes la mouen, Enrere la deixa. Torna a prémer Enrere per acabar.</string>
   <string name="dock_edit_hint">Tria la posició del dock que vols canviar i prem D\'acord. Enrere per acabar.</string>
   <string name="dock_edit_pick_app">Ara tria l\'aplicació que hi vols posar i prem D\'acord. Enrere per triar una altra posició.</string>
@@ -37,7 +37,6 @@
   <string name="reorder_move">moure</string>
   <string name="reorder_key_back">Enrere</string>
   <string name="reorder_drop">deixar</string>
-  <string name="reorder_key_back_twice">Enrere ×2</string>
   <string name="reorder_finish">acabar</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d aplicació</item>
@@ -53,4 +52,5 @@
     <item quantity="other">%1$d entrades connectades</item>
   </plurals>
   <string name="habit_usual">Normalment l\'obres a aquesta hora</string>
+  <string name="never_opened">Mai oberta</string>
 </resources>

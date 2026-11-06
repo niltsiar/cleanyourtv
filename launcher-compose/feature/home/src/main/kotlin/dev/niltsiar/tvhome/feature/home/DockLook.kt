@@ -36,7 +36,7 @@ private const val DIM_LIGHTNESS = 60f
 private const val BRIGHT_LIGHTNESS = 75f
 
 /** The most relative luminance the light tray has over any picture. */
-private const val TRAY_MAX_LUMINANCE = 0.65f
+private const val TRAY_MAX_LUMINANCE = 0.55f
 
 /** Whether the tray takes the light tint: with [DockLook.glass], or without night mode. */
 internal fun DockLook.light(darkSurfaces: Boolean): Boolean = glass || !darkSurfaces
@@ -45,7 +45,7 @@ internal fun DockLook.light(darkSurfaces: Boolean): Boolean = glass || !darkSurf
  * The tint over the dock's frost, which carries the picture's colour. [darkSurfaces] is the TV's night mode; [lightness]
  * is the mean L* of the frost under the dock. With an [opacity] the tint is 0.85 times its percent. Without, it is 0.16
  * (dark) or 0.20 (light), and rises by 0.06 as the wallpaper under the dock goes from L* 60 to L* 75. A light tint
- * darkens, as far as it needs, for a tray over a bright frost to keep a mean relative luminance of at most 0.65.
+ * darkens, as far as it needs, for a tray over a bright frost to keep a mean relative luminance of at most 0.55.
  */
 internal fun DockLook.tint(
     darkSurfaces: Boolean,

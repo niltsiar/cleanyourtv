@@ -24,9 +24,9 @@
   <string name="tile_move">نقل</string>
   <string name="tile_remove_from_home">إزالة من الرئيسية</string>
   <string name="library_save_failed">تعذر حفظ الاختصار</string>
-  <string name="dock_edit">تعديل شريط التطبيقات</string>
+  <string name="dock_edit">اختيار تطبيقات شريط التطبيقات</string>
   <string name="reorder">إعادة ترتيب التطبيقات</string>
-  <string name="power_menu">إعادة التشغيل…</string>
+  <string name="power_menu">إعادة تشغيل التلفاز…</string>
   <string name="reorder_hint">اضغط موافق لالتقاط تطبيق، والأسهم لتحريكه، ورجوع لتثبيته. اضغط رجوع مرة أخرى للإنهاء.</string>
   <string name="dock_edit_hint">اختر الموضع الذي تريد تغييره في الشريط واضغط موافق. اضغط رجوع للإنهاء.</string>
   <string name="dock_edit_pick_app">اختر الآن التطبيق الذي تريد وضعه هناك واضغط موافق. اضغط رجوع لاختيار موضع آخر.</string>
@@ -37,7 +37,6 @@
   <string name="reorder_move">تحريك</string>
   <string name="reorder_key_back">رجوع</string>
   <string name="reorder_drop">تثبيت</string>
-  <string name="reorder_key_back_twice">رجوع ×2</string>
   <string name="reorder_finish">إنهاء</string>
   <plurals name="library_app_count">
     <item quantity="zero">%1$d تطبيق</item>
@@ -59,4 +58,5 @@
     <item quantity="other">%1$d مدخل متصل</item>
   </plurals>
   <string name="habit_usual">عادةً ما تفتحه الآن</string>
+  <string name="never_opened">لم يُفتح أبدًا</string>
 </resources>

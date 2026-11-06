@@ -53,11 +53,11 @@ class DockLookTest {
     }
 
     @Test
-    fun the_light_tray_keeps_a_relative_luminance_of_at_most_075_over_any_frost() {
+    fun the_light_tray_keeps_a_relative_luminance_under_056_over_any_frost() {
         for (lightness in listOf(40f, 75f, 85f, 90f, 95f, 100f)) {
             val tint = DockLook(glass = true).tint(darkSurfaces = true, lightness = lightness)
 
-            assertTrue("L* $lightness gives ${trayLuminance(tint, lightness)}", trayLuminance(tint, lightness) <= 0.751f)
+            assertTrue("L* $lightness gives ${trayLuminance(tint, lightness)}", trayLuminance(tint, lightness) <= 0.56f)
         }
     }
 

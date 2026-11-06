@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -88,6 +89,10 @@ internal val ShelfDetailHeight = MetaGap + MetaSlot + DotsGap + DotSize
 internal val CinematicTextHeight = 66.dp + ShelfDetailHeight
 private val TitleShadow = Color.Black.copy(alpha = 0.55f)
 private val SubtitleShadow = Color.Black.copy(alpha = 0.75f)
+private val SubtitlePillColor = Color.Black.copy(alpha = 0.45f)
+private val SubtitlePillRadius = 8.dp
+private val SubtitlePillAcross = 8.dp
+private val SubtitlePillDown = 3.dp
 private val DotWide = 20.dp
 private val DotSpacing = 6.dp
 private val DotRest = Color(0x4DFFFFFF)
@@ -104,7 +109,8 @@ private class HeldShelf {
  * It fades in with the first dock focus and out when [shelf] is null, keeping the last app's text meanwhile. A new app's
  * name and time cross-fade with the old ones ([TitleSlots]); the dots stay and only their long dot slides. The name
  * draws at [titleAlpha], the time and the dots at [detailAlpha]. Every animated value is read in a layer, placement or
- * draw lambda.
+ * draw lambda. The time sits on a pill while [pill] says so, and [onTextWidth] gets the width of the text block, 0 while
+ * the shelf is hidden.
  */
 @Composable
 internal fun CinematicShelf(
@@ -113,6 +119,8 @@ internal fun CinematicShelf(
     modifier: Modifier = Modifier,
     titleAlpha: () -> Float = { 1f },
     detailAlpha: () -> Float = { 1f },
+    pill: () -> Boolean = { false },
+    onTextWidth: (Int) -> Unit = {},
 ) {
     val current by remember(shelf) { derivedStateOf(shelf) }
     val held = remember { HeldShelf() }
@@ -124,6 +132,9 @@ internal fun CinematicShelf(
         if (layout.animated) alpha.animateTo(target, tween(if (visible) SHOW_MS else HIDE_MS)) else alpha.snapTo(target)
     }
     val shown = held.shelf ?: return
+    val textWidth = remember { mutableIntStateOf(0) }
+    val reportedWidth = if (visible) textWidth.intValue else 0
+    SideEffect { onTextWidth(reportedWidth) }
     val rise = with(LocalDensity.current) { TitleRise.roundToPx() }
     val titleStyle = TvTheme.typography.cinematicTitle.withTitleShadow()
     val metaStyle = TvTheme.typography.cinematicMeta.withSubtitleShadow()
@@ -135,7 +146,13 @@ internal fun CinematicShelf(
                     this.alpha = alpha.value
                 },
         ) {
-            TitleSlots(shown, layout.animated, rise, key = { it.key }) { app, live ->
+            TitleSlots(
+                shown,
+                layout.animated,
+                rise,
+                key = { it.key },
+                modifier = Modifier.onSizeChanged { textWidth.intValue = it.width },
+            ) { app, live ->
                 Column {
                     BasicText(
                         text = if (live) app.label else "",
@@ -148,8 +165,9 @@ internal fun CinematicShelf(
                                 .lineBetween(TitleAscent, TitleDescent)
                                 .graphicsLayer { this.alpha = titleAlpha() },
                     )
+                    val meta = if (live) lastOpenedLine(app.lastOpened, app.usual, app.neverOpened) else AnnotatedString("")
                     BasicText(
-                        text = if (live) lastOpenedLine(app.lastOpened, app.usual) else AnnotatedString(""),
+                        text = meta,
                         style = metaStyle,
                         maxLines = 1,
                         modifier =
@@ -157,6 +175,7 @@ internal fun CinematicShelf(
                                 .padding(start = MetaIndent, top = MetaGap)
                                 .testTag(if (live) "shelf:meta" else "")
                                 .height(MetaSlot)
+                                .subtitlePill { pill() && meta.isNotBlank() }
                                 .drawnAt(detailAlpha),
                     )
                 }
@@ -187,6 +206,7 @@ internal fun <T : Any> TitleSlots(
     target: T,
     animated: Boolean,
     risePx: Int,
+    modifier: Modifier = Modifier,
     key: (T) -> Any = { it },
     inMillis: (from: T, to: T) -> Int = { _, _ -> CINEMATIC_MS },
     content: @Composable (value: T, live: Boolean) -> Unit,
@@ -199,7 +219,7 @@ internal fun <T : Any> TitleSlots(
     LaunchedEffect(slots, generation) {
         if (generation > 0 && animated) slots.run(generation, inMillis(slots.from, slots.values[slots.front]))
     }
-    Box {
+    Box(modifier) {
         for (slot in 0..1) {
             Box(
                 Modifier
@@ -300,16 +320,32 @@ internal fun TextStyle.withSubtitleShadow(): TextStyle {
     return remember(this, density) { copy(shadow = Shadow(SubtitleShadow, Offset(0f, 2 * density), 12 * density)) }
 }
 
+/** Draws a black 0.45 pill 8 dp wider and 3 dp taller than this on each side, while [on], for a subtitle over a bright picture. */
+internal fun Modifier.subtitlePill(on: () -> Boolean): Modifier =
+    drawBehind {
+        if (!on()) return@drawBehind
+        val across = SubtitlePillAcross.toPx()
+        val down = SubtitlePillDown.toPx()
+        drawRoundRect(
+            SubtitlePillColor,
+            topLeft = Offset(-across, -down),
+            size = Size(size.width + 2 * across, size.height + 2 * down),
+            cornerRadius = CornerRadius(SubtitlePillRadius.toPx()),
+        )
+    }
+
 /**
  * "Last opened <time>" with the time in white, then, for the [usual] app of this time of day, "· You usually open it now"
- * (alone when Home never opened it); a space when there is neither, which keeps the line's height.
+ * (alone when Home never opened it). With neither, "Never opened" for an app that has [never] been opened, and a space
+ * for any other line, which keeps its height.
  */
 @Composable
 internal fun lastOpenedLine(
     opened: OpenedAt?,
     usual: Boolean = false,
+    never: Boolean = false,
 ): AnnotatedString {
-    if (opened == null && !usual) return AnnotatedString(" ")
+    if (opened == null && !usual) return AnnotatedString(if (never) stringResource(R.string.never_opened) else " ")
     val context = LocalContext.current
     val relative = remember(opened) { opened?.let { describeLastOpened(context, it) } }
     val last = stringResource(R.string.last_opened, relative.orEmpty())

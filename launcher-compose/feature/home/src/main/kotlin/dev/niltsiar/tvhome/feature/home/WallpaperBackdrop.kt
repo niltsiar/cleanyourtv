@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,11 +56,11 @@ private const val TOP_SCRIM_REACH = 0.45f
 private const val LEFT_SCRIM_REACH = 0.55f
 
 /**
- * The hero block's scrim: [HERO_SCRIM_ALPHA] black at the screen's left edge, gone [HeroScrimWidth] in, feathered
- * [HeroScrimFeather] above and below the block, and held [HeroScrimBelow] past its bottom: the subtitle line ends 12 dp above
- * that edge (22 dp with the cinematic shelf), so 24 dp of full strength lie under it.
+ * The hero block's scrim: [HERO_SCRIM_ALPHA] black from the screen's left edge to the end of the block's longest line, gone
+ * [HeroScrimReach] past it; feathered [HeroScrimFeather] above and below the block, and held [HeroScrimBelow] past its
+ * bottom: the subtitle line ends 12 dp above that edge (22 dp with the cinematic shelf), so 24 dp of full strength lie under it.
  */
-private val HeroScrimWidth = 760.dp
+private val HeroScrimReach = 120.dp
 private val HeroScrimFeather = 48.dp
 private val HeroScrimBelow = 12.dp
 private const val HERO_SCRIM_ALPHA = 0.60f
@@ -173,29 +174,42 @@ private fun DrawScope.drawCover(
 }
 
 /**
- * A soft scrim behind the hero block (the title and its line) while the picture under it is bright
- * ([GlassState.heroBrightShare] at [HERO_BRIGHT_SHARE] or more), over the [boxHeight] of the block, [HeroScrimBelow] more, and a
- * feather above and below it.
+ * Whether the hero block (the title and its line) gets a local scrim and a pill under its subtitle: the theme leaves
+ * header_scrim on auto, and the picture under the block is bright ([GlassState.heroBrightShare] at [HERO_BRIGHT_SHARE] or more).
+ */
+@Composable
+internal fun rememberHeroScrimOn(
+    glass: GlassState,
+    headerScrim: HeaderScrim,
+): State<Boolean> =
+    remember(glass, headerScrim) { derivedStateOf { headerScrim == HeaderScrim.Auto && glass.heroBrightShare >= HERO_BRIGHT_SHARE } }
+
+/**
+ * A soft scrim behind the hero block while [on], over the [boxHeight] of the block, [HeroScrimBelow] more, and a feather
+ * above and below it. It runs from the screen's left edge over [ScreenMargin] and the block's text, [blockWidth] pixels
+ * wide, and fades out [HeroScrimReach] past it.
  * It sits in one cached offscreen layer that [shift] moves in the layer phase, so a move draws nothing again.
  */
 @Composable
 internal fun HeroScrim(
-    glass: GlassState,
+    on: State<Boolean>,
     boxHeight: Dp,
+    blockWidth: () -> Int,
     shift: GraphicsLayerScope.() -> Float,
 ) {
-    val bright by remember(glass) { derivedStateOf { glass.heroBrightShare >= HERO_BRIGHT_SHARE } }
-    if (!bright) return
+    if (!on.value) return
+    val width = with(LocalDensity.current) { ScreenMargin + blockWidth().toDp() + HeroScrimReach }
     Box(
         Modifier
             .padding(top = ContentTop - HeroScrimFeather)
-            .size(HeroScrimWidth, boxHeight + HeroScrimBelow + HeroScrimFeather * 2)
+            .size(width, boxHeight + HeroScrimBelow + HeroScrimFeather * 2)
             .graphicsLayer {
                 compositingStrategy = CompositingStrategy.Offscreen
                 translationY = shift()
             }.drawBehind {
                 val edge = HeroScrimFeather.toPx() / size.height
-                drawRect(Brush.horizontalGradient(0f to Color.Black.copy(alpha = HERO_SCRIM_ALPHA), 1f to Color.Transparent))
+                val strong = Color.Black.copy(alpha = HERO_SCRIM_ALPHA)
+                drawRect(Brush.horizontalGradient(0f to strong, 1f - HeroScrimReach.toPx() / size.width to strong, 1f to Color.Transparent))
                 drawRect(
                     Brush.verticalGradient(0f to Color.Transparent, edge to Color.Black, 1f - edge to Color.Black, 1f to Color.Transparent),
                     blendMode = BlendMode.DstIn,

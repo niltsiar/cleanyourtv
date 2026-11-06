@@ -268,10 +268,10 @@ class DockGlassUiTest {
     }
 
     @Test
-    fun a_light_glass_tray_over_a_white_picture_keeps_a_mean_relative_luminance_of_at_most_065() {
+    fun a_light_glass_tray_over_a_white_picture_keeps_a_mean_relative_luminance_under_057() {
         showHome(white, cinematic.copy(dockGlass = true))
 
-        assertTrue("luminance ${trayLuminance()}", trayLuminance() <= 0.65f)
+        assertTrue("luminance ${trayLuminance()}", trayLuminance() <= 0.57f)
     }
 
     /** The red channel of the screen [px] pixels under the panel's top (or over its bottom) in the gap between the third and fourth tiles. */
@@ -347,7 +347,7 @@ class DockGlassUiTest {
     }
 
     @Test
-    fun dock_glass_draws_a_black_020_edge_1_dp_wide_inside_each_dock_tile() {
+    fun dock_glass_draws_a_black_028_edge_1_dp_wide_inside_each_dock_tile() {
         showHome(uniform, cinematic.copy(dockGlass = true), shown = lightApps)
         val tile = dockTile(2)
         val density = compose.activity.resources.displayMetrics.density
@@ -356,8 +356,8 @@ class DockGlassUiTest {
         val left = (tile.left.value * density).toInt()
         val edge = (left..left + 1).map { image[it, y].green }
 
-        assertEquals("edge $edge", 1f - 0.20f, edge.max(), 0.03f)
-        assertEquals("edge $edge", 1f - 0.20f, edge.min(), 0.03f)
+        assertEquals("edge $edge", 1f - 0.28f, edge.max(), 0.03f)
+        assertEquals("edge $edge", 1f - 0.28f, edge.min(), 0.03f)
         assertEquals(1f, image[left + 3, y].green, 0.01f)
     }
 

@@ -252,7 +252,8 @@ class HomeInputsUiTest {
         compose.onNodeWithTag("input:0").assertIsFocused()
         val button = compose.onNodeWithContentDescription("Inputs").getBoundsInRoot()
         val list = compose.onNodeWithTag("menu").getBoundsInRoot()
-        assertTrue("list $list, button $button", list.top >= button.bottom && list.left >= button.left)
+        // With the Wi-Fi button a round icon the Inputs button sits near the right margin, which keeps the list from reaching past it.
+        assertTrue("list $list, button $button", list.top >= button.bottom && list.left <= button.right && list.right >= button.left)
     }
 
     /** Eight ports, a divider and Live TV: more than the room between the button and the dock's tray. */

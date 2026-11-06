@@ -51,6 +51,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
@@ -126,7 +127,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.niltsiar.tvhome.core.config.HeaderScrim
 import dev.niltsiar.tvhome.core.designsystem.DockEdgeLight
 import dev.niltsiar.tvhome.core.designsystem.DockSurface
 import dev.niltsiar.tvhome.core.designsystem.FocusSurface
@@ -160,6 +160,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.ZoneId
+import kotlin.math.max
 
 internal val ScreenMargin = 40.dp
 internal val TileGap = 24.dp
@@ -189,7 +190,7 @@ private val CaptionTop = TopBarTop + TopBarHeight + 8.dp
 private val TileCorner = 12.dp
 private val TileShape = RoundedCornerShape(TileCorner)
 private val GlassTileStrokeWidth = 1.dp
-private val GlassTileStroke = Color.Black.copy(alpha = 0.20f)
+private val GlassTileStroke = Color.Black.copy(alpha = 0.28f)
 private val DockShape = RoundedCornerShape(32.dp)
 private val GridBottom = 48.dp
 
@@ -342,6 +343,9 @@ public fun HomeScreen(
     val reordering = { state().reorder != null }
     val backdrop = rememberCinematicBackdrop(shelfLayout, shelf = { state().shelf }, heroArt = heroArt, reordering = reordering)
     val titleShift: GraphicsLayerScope.() -> Float = { dim.titleShiftPx(TitleGridDrop.toPx()) }
+    val heroScrimOn = rememberHeroScrimOn(glass, wallpaperLayout.headerScrim)
+    val shelfTextWidth = remember { mutableIntStateOf(0) }
+    val bandTextWidth = remember { mutableIntStateOf(0) }
     val shelfModifier =
         Modifier
             .padding(top = ContentTop, start = ScreenMargin)
@@ -396,9 +400,12 @@ public fun HomeScreen(
                 alpha = band.layers.value
             },
         ) {
-            if (wallpaperLayout.headerScrim == HeaderScrim.Auto) {
-                HeroScrim(glass, boxHeight = shelfHeight - TitleToShelfBottom, shift = titleShift)
-            }
+            HeroScrim(
+                on = heroScrimOn,
+                boxHeight = shelfHeight - TitleToShelfBottom,
+                blockWidth = { max(shelfTextWidth.intValue, bandTextWidth.intValue) },
+                shift = titleShift,
+            )
             HomeContent(
                 glass,
                 dockFocus,
@@ -424,9 +431,19 @@ public fun HomeScreen(
                     modifier = shelfModifier,
                     titleAlpha = { band.title.value },
                     detailAlpha = { band.detail.value },
+                    pill = { heroScrimOn.value },
+                    onTextWidth = { shelfTextWidth.intValue = it },
                 )
             }
-            HeroTitle(state, input, shelfLayout.cinematic, band, shelfModifier)
+            HeroTitle(
+                state,
+                input,
+                shelfLayout.cinematic,
+                band,
+                shelfModifier,
+                pill = { heroScrimOn.value },
+                onTextWidth = { bandTextWidth.intValue = it },
+            )
             WallpaperCaption(
                 caption = { state().wallpaper.caption },
                 crossfade = wallpaperLayout.crossfade,
@@ -1115,13 +1132,15 @@ private fun rememberBandFade(libraryOpen: () -> Boolean): BandFade {
 
 /**
  * What the band over the grid says when the cinematic shelf does not. A [meta] of a space keeps the line's place;
- * [opened] puts when Home last opened the tile there instead, and [usual] adds that the tile is the app of this time of day. [quick] swaps in [LIBRARY_SWAP_MS].
+ * [opened] puts when Home last opened the tile there instead, [never] says Home never opened it, and [usual] adds that the tile is
+ * the app of this time of day. [quick] swaps in [LIBRARY_SWAP_MS].
  */
 @Immutable
 private data class HeroLine(
     val title: String,
     val meta: String = " ",
     val opened: OpenedAt? = null,
+    val never: Boolean = false,
     val usual: Boolean = false,
     val hint: ReorderHint? = null,
     val quick: Boolean = false,
@@ -1142,7 +1161,12 @@ private fun HeroTitle(
     cinematic: Boolean,
     band: BandFade,
     modifier: Modifier = Modifier,
+    pill: () -> Boolean = { false },
+    onTextWidth: (Int) -> Unit = {},
 ) {
+    val textWidth = remember { mutableIntStateOf(0) }
+    val reportedWidth = textWidth.intValue
+    SideEffect { onTextWidth(reportedWidth) }
     val hint by remember(state) { derivedStateOf { state().reorder?.hint } }
     val count by remember(state) { derivedStateOf { state().libraryCount } }
     val control by remember(state, input) { derivedStateOf { input.headerControl(state()) } }
@@ -1162,7 +1186,7 @@ private fun HeroTitle(
             ) {
                 HeroLine("")
             } else {
-                HeroLine(home.focusedLabel, opened = home.focusedOpened, usual = home.focusedUsual)
+                HeroLine(home.focusedLabel, opened = home.focusedOpened, never = home.focusedNeverOpened, usual = home.focusedUsual)
             }
         }
     }
@@ -1187,8 +1211,9 @@ private fun HeroTitle(
             animated,
             rise,
             // A new time for the same tile, as the clock moves on, replaces the old one without a cross-fade.
-            key = { it.copy(opened = null, usual = false) },
+            key = { it.copy(opened = null, never = false, usual = false) },
             inMillis = { from, to -> if (from.quick || to.quick) LIBRARY_SWAP_MS else CINEMATIC_MS },
+            modifier = Modifier.onSizeChanged { textWidth.intValue = it.width },
         ) { shown, live ->
             Column {
                 BasicText(
@@ -1210,15 +1235,21 @@ private fun HeroTitle(
 
                         null -> {
                             val opened = shown.opened
-                            BasicText(
+                            val meta =
                                 when {
                                     !live -> AnnotatedString("")
-                                    opened != null || shown.usual -> lastOpenedLine(opened, shown.usual)
+                                    opened != null || shown.usual || shown.never -> lastOpenedLine(opened, shown.usual, shown.never)
                                     else -> AnnotatedString(shown.meta)
-                                },
+                                }
+                            BasicText(
+                                meta,
                                 style = metaStyle,
                                 maxLines = 1,
-                                modifier = Modifier.testTag(if (live) "shelf:title-meta" else "").height(MetaSlot),
+                                modifier =
+                                    Modifier
+                                        .testTag(if (live) "shelf:title-meta" else "")
+                                        .height(MetaSlot)
+                                        .subtitlePill { pill() && meta.isNotBlank() },
                             )
                         }
 
@@ -1227,7 +1258,7 @@ private fun HeroTitle(
                                 stringResource(keys.label()),
                                 style = metaStyle,
                                 maxLines = 1,
-                                modifier = Modifier.testTag("reorder:hint"),
+                                modifier = Modifier.testTag("reorder:hint").subtitlePill(pill),
                             )
                         }
                     }
@@ -1276,37 +1307,29 @@ private fun barLine(
 private fun libraryCountText(count: Int?): String = count?.let { pluralStringResource(R.plurals.library_app_count, it, it) } ?: " "
 
 /**
- * The keys of reorder mode, one chip each: OK picks up, the arrows move, Back drops, Back twice finishes. The chips of the
- * keys that do something now, given whether a tile is [carried], draw at full alpha and the others dimmer.
+ * The keys of reorder mode that do something now, one chip each. With nothing [carried], OK picks a tile up and Back
+ * finishes the mode. With one carried, the arrows move it and OK and Back both put it down.
  */
 @Composable
 private fun KeyChips(carried: State<String?>) {
     val carrying by remember(carried) { derivedStateOf { carried.value != null } }
     Row(Modifier.testTag("reorder:hint"), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        KeyChip(
-            stringResource(R.string.reorder_key_ok),
-            stringResource(R.string.reorder_pick_up),
-            Modifier.testTag("reorder:chip:ok"),
-            !carrying,
-        )
-        KeyChip(
-            stringResource(R.string.reorder_key_arrows),
-            stringResource(R.string.reorder_move),
-            Modifier.testTag("reorder:chip:arrows"),
-            carrying,
-        )
-        KeyChip(
-            stringResource(R.string.reorder_key_back),
-            stringResource(R.string.reorder_drop),
-            Modifier.testTag("reorder:chip:back"),
-            carrying,
-        )
-        KeyChip(
-            stringResource(R.string.reorder_key_back_twice),
-            stringResource(R.string.reorder_finish),
-            Modifier.testTag("reorder:chip:back-twice"),
-            !carrying,
-        )
+        if (carrying) {
+            KeyChip(
+                stringResource(R.string.reorder_key_arrows),
+                stringResource(R.string.reorder_move),
+                Modifier.testTag("reorder:chip:arrows"),
+            )
+            KeyChip(stringResource(R.string.reorder_key_ok), stringResource(R.string.reorder_drop), Modifier.testTag("reorder:chip:ok"))
+            KeyChip(stringResource(R.string.reorder_key_back), stringResource(R.string.reorder_drop), Modifier.testTag("reorder:chip:back"))
+        } else {
+            KeyChip(stringResource(R.string.reorder_key_ok), stringResource(R.string.reorder_pick_up), Modifier.testTag("reorder:chip:ok"))
+            KeyChip(
+                stringResource(R.string.reorder_key_back),
+                stringResource(R.string.reorder_finish),
+                Modifier.testTag("reorder:chip:back"),
+            )
+        }
     }
 }
 

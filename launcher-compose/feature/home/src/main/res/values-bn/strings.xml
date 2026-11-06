@@ -24,9 +24,9 @@
   <string name="tile_move">সরান</string>
   <string name="tile_remove_from_home">হোম থেকে সরান</string>
   <string name="library_save_failed">শর্টকাটটি সেভ করা যায়নি</string>
-  <string name="dock_edit">এডিট ডক</string>
+  <string name="dock_edit">ডকের অ্যাপ বেছে নিন</string>
   <string name="reorder">অ্যাপ সাজান</string>
-  <string name="power_menu">রিস্টার্ট করুন…</string>
+  <string name="power_menu">টিভি রিস্টার্ট করুন…</string>
   <string name="reorder_hint">OK দিয়ে অ্যাপ তুলুন, তীর দিয়ে সরান, Back দিয়ে বসান। শেষ করতে আবার Back চাপুন।</string>
   <string name="dock_edit_hint">ডকের যে জায়গাটি বদলাতে চান সেটি বেছে OK চাপুন। শেষ হলে Back চাপুন।</string>
   <string name="dock_edit_pick_app">ওই জায়গায় যে অ্যাপ রাখতে চান সেটি বেছে OK চাপুন। অন্য জায়গা বাছতে Back চাপুন।</string>
@@ -37,7 +37,6 @@
   <string name="reorder_move">সরান</string>
   <string name="reorder_key_back">Back</string>
   <string name="reorder_drop">বসান</string>
-  <string name="reorder_key_back_twice">Back ×2</string>
   <string name="reorder_finish">শেষ</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$dটি অ্যাপ</item>
@@ -51,4 +50,5 @@
     <item quantity="other">%1$dটি ইনপুট কানেক্টেড</item>
   </plurals>
   <string name="habit_usual">আপনি সাধারণত এই সময়ে এটি খোলেন</string>
+  <string name="never_opened">কখনও খোলা হয়নি</string>
 </resources>

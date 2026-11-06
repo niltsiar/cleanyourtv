@@ -77,4 +77,11 @@ class ShelfStateTest {
     fun the_last_opened_line_waits_for_a_valid_time() {
         assertNull(shelf("pkg.2", lastOpened = mapOf("pkg.2" to 1_000L), now = null)!!.lastOpened)
     }
+
+    @Test
+    fun an_app_is_never_opened_only_without_a_record_even_while_the_time_is_not_valid() {
+        assertEquals(true, shelf("pkg.2")!!.neverOpened)
+        assertEquals(false, shelf("pkg.2", lastOpened = mapOf("pkg.2" to 1_000L), now = null)!!.neverOpened)
+        assertEquals(false, shelf("pkg.2", lastOpened = mapOf("pkg.2" to 1_000L))!!.neverOpened)
+    }
 }

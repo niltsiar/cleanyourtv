@@ -25,16 +25,15 @@
   <string name="tile_replace_in_dock">Erstat med en anden app</string>
   <string name="tile_move">Flyt</string>
   <string name="tile_remove_from_home">Fjern fra startskærm</string>
-  <string name="dock_edit">Redigér dock</string>
+  <string name="dock_edit">Vælg apps i dock</string>
   <string name="reorder">Flyt apps</string>
-  <string name="power_menu">Genstart…</string>
+  <string name="power_menu">Genstart TV…</string>
   <string name="reorder_key_ok">OK</string>
   <string name="reorder_pick_up">tag</string>
   <string name="reorder_key_arrows">Pile</string>
   <string name="reorder_move">flyt</string>
   <string name="reorder_key_back">Tilbage</string>
   <string name="reorder_drop">slip</string>
-  <string name="reorder_key_back_twice">Tilbage ×2</string>
   <string name="reorder_finish">afslut</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d app</item>
@@ -48,4 +47,5 @@
     <item quantity="other">%1$d indgange tilsluttet</item>
   </plurals>
   <string name="habit_usual">Du åbner den normalt på dette tidspunkt</string>
+  <string name="never_opened">Aldrig åbnet</string>
 </resources>

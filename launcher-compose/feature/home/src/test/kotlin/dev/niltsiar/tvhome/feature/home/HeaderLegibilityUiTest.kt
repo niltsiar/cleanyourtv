@@ -1,5 +1,7 @@
 package dev.niltsiar.tvhome.feature.home
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
@@ -10,6 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PixelMap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
@@ -31,6 +34,8 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
+import dev.niltsiar.tvhome.core.model.AppEntry
+import dev.niltsiar.tvhome.core.model.AppList
 import dev.niltsiar.tvhome.core.model.InputConnection
 import dev.niltsiar.tvhome.core.model.InputIcon
 import dev.niltsiar.tvhome.core.model.InputRow
@@ -52,6 +57,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import java.time.ZoneId
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -90,8 +96,17 @@ class HeaderLegibilityUiTest {
         wallpaperLayout: WallpaperLayout = WallpaperLayout(),
         wallpapers: Flow<Wallpaper> = grey(level).let { flowOf(Wallpaper(picture = it, thumbnail = it)) },
         inputs: Flow<InputsMenu> = emptyFlow(),
+        apps: List<AppEntry> = NineApps,
+        lastOpened: Map<String, Long> = emptyMap(),
     ) {
-        val sources = sources(wallpaper = wallpapers, network = flowOf(wifi), inputs = inputs)
+        val sources =
+            sources(
+                apps = flowOf(AppList(apps)),
+                wallpaper = wallpapers,
+                network = flowOf(wifi),
+                inputs = inputs,
+                lastOpened = flowOf(lastOpened),
+            )
         compose.setContent {
             CompositionLocalProvider(LocalBakeDispatcher provides Dispatchers.Unconfined) {
                 TvTheme(darkTheme = true) {
@@ -157,23 +172,29 @@ class HeaderLegibilityUiTest {
         return Offset(title.left.value + 20f, title.top.value - 60f)
     }
 
-    /** In the subtitle's box, left of its text: the picture there under the page scrim and the local one. */
-    private fun inTheSubtitleBox(): Offset {
+    /** Left of the subtitle's text, 4 dp inside where its pill starts: the picture there under the page scrim, the local one and the pill. */
+    private fun besideTheSubtitle(): Offset {
         val subtitle = compose.onNodeWithTag("shelf:title-meta").getBoundsInRoot()
-        return Offset(subtitle.left.value + 10f, (subtitle.top.value + subtitle.bottom.value) / 2f)
+        return Offset(subtitle.left.value - 4f, (subtitle.top.value + subtitle.bottom.value) / 2f)
     }
 
-    /** What the local scrim leaves of a level: black 0.60 at the left edge of the screen, 0 760 dp in. */
-    private fun heroScrimmed(
-        level: Int,
-        at: Offset,
-    ): Int = Math.round(level * (1f - 0.60f * max(0f, 1f - at.x / 760f)))
+    /** What the local scrim leaves of a level inside the title block: black 0.60. */
+    private fun heroScrimmed(level: Int): Int = Math.round(level * (1f - 0.60f))
+
+    /** What the subtitle's pill leaves of a level: black 0.45. */
+    private fun pilled(level: Int): Int = Math.round(level * (1f - 0.45f))
 
     private fun assertNear(
         expected: Int,
         actual: Int,
         tolerance: Int = 4,
     ) = assertTrue("expected $expected, got $actual", abs(actual - expected) <= tolerance)
+
+    /** Beside the subtitle its own shadow darkens the picture by up to a tenth; a pill would take it down by nearly half. */
+    private fun assertNoPill(
+        expected: Int,
+        actual: Int,
+    ) = assertNear(expected, actual, tolerance = 12)
 
     @Test
     fun a_bright_wallpaper_gets_the_stronger_scrim_behind_the_title() {
@@ -200,43 +221,43 @@ class HeaderLegibilityUiTest {
     }
 
     @Test
-    fun a_bright_wallpaper_gets_a_soft_black_060_scrim_behind_the_subtitle() {
+    fun a_bright_wallpaper_puts_the_subtitle_on_a_black_045_pill_over_the_black_060_scrim() {
         showHome(level = 1f)
-        val at = inTheSubtitleBox()
+        val at = besideTheSubtitle()
 
-        assertNear(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at), at), redAt(at))
+        assertNear(pilled(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at))), redAt(at))
     }
 
     @Test
-    fun a_dark_wallpaper_gets_no_local_scrim_behind_the_subtitle() {
+    fun a_dark_wallpaper_gets_no_local_scrim_and_no_pill_behind_the_subtitle() {
         showHome(level = 0.4f)
-        val at = inTheSubtitleBox()
+        val at = besideTheSubtitle()
 
-        assertNear(scrimmed(102, top = 0.55f, left = 0.40f, at), redAt(at))
+        assertNoPill(scrimmed(102, top = 0.55f, left = 0.40f, at), redAt(at))
     }
 
     @Test
-    fun header_scrim_off_draws_no_local_scrim_behind_the_subtitle() {
+    fun header_scrim_off_draws_no_local_scrim_and_no_pill_behind_the_subtitle() {
         showHome(level = 1f, wallpaperLayout = WallpaperLayout(headerScrim = HeaderScrim.Off))
-        val at = inTheSubtitleBox()
+        val at = besideTheSubtitle()
 
-        assertNear(scrimmed(255, top = 0.55f, left = 0.40f, at), redAt(at))
+        assertNoPill(scrimmed(255, top = 0.55f, left = 0.40f, at), redAt(at))
     }
 
     @Test
-    fun a_busy_light_picture_with_a_quarter_of_its_pixels_bright_gets_the_soft_scrim_behind_the_subtitle() {
+    fun a_busy_light_picture_with_a_quarter_of_its_pixels_bright_gets_the_scrim_and_the_pill_behind_the_subtitle() {
         showHome(wallpapers = flowOf(Wallpaper(picture = grey(1f), thumbnail = stripes(period = 20, white = 5))))
-        val at = inTheSubtitleBox()
+        val at = besideTheSubtitle()
 
-        assertNear(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at), at), redAt(at))
+        assertNear(pilled(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at))), redAt(at))
     }
 
     @Test
-    fun a_dark_picture_with_a_few_bright_spots_gets_no_local_scrim_behind_the_subtitle() {
+    fun a_dark_picture_with_a_few_bright_spots_gets_no_local_scrim_and_no_pill_behind_the_subtitle() {
         showHome(wallpapers = flowOf(Wallpaper(picture = grey(0.4f), thumbnail = stripes(period = 25, white = 2))))
-        val at = inTheSubtitleBox()
+        val at = besideTheSubtitle()
 
-        assertNear(scrimmed(102, top = 0.55f, left = 0.40f, at), redAt(at))
+        assertNoPill(scrimmed(102, top = 0.55f, left = 0.40f, at), redAt(at))
     }
 
     @Test
@@ -245,8 +266,8 @@ class HeaderLegibilityUiTest {
         val thumbnail = grey(1f)
         val wallpapers = MutableStateFlow(Wallpaper(picture = picture, thumbnail = thumbnail))
         showHome(wallpapers = wallpapers)
-        val at = inTheSubtitleBox()
-        val withHeroScrim = heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at), at)
+        val at = besideTheSubtitle()
+        val withHeroScrim = pilled(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at)))
         assertNear(withHeroScrim, redAt(at))
 
         // The thumbnail is the sample's input: darkening it in place and moving focus around must not make Home sample it again.
@@ -258,7 +279,7 @@ class HeaderLegibilityUiTest {
 
         wallpapers.value = Wallpaper(picture = picture, thumbnail = grey(0.4f))
         settle()
-        assertNear(scrimmed(255, top = 0.55f, left = 0.40f, at), redAt(at))
+        assertNoPill(scrimmed(255, top = 0.55f, left = 0.40f, at), redAt(at))
     }
 
     @Test
@@ -277,9 +298,10 @@ class HeaderLegibilityUiTest {
     fun the_local_scrim_keeps_its_full_strength_24_dp_under_the_subtitle_line() {
         showHome(level = 1f)
         val line = compose.onNodeWithTag("shelf:title-meta").getBoundsInRoot()
-        val x = line.left.value + 10f
+        val x = line.left.value - 20f
 
-        val inside = redAt(Offset(x, line.bottom.value - 2f))
+        // 5 dp under the line is below its pill, which reaches 3 dp.
+        val inside = redAt(Offset(x, line.bottom.value + 5f))
         val below = redAt(Offset(x, line.bottom.value + 24f))
 
         assertNear(inside, below, tolerance = 3)
@@ -370,6 +392,59 @@ class HeaderLegibilityUiTest {
         assertTrue("subtitle $subtitle", subtitle >= 4.5f)
     }
 
+    private val longName = "TV Control with Smart Speakers"
+    private val namedApps = listOf(AppEntry(key = "pkg.1", packageName = "pkg.1", label = longName)) + NineApps.drop(1)
+
+    /** The council's wallpaper [name] at half size (960 by 540), with the 120 pixel thumbnail Home samples. */
+    private fun picture(name: String): Wallpaper {
+        val full = checkNotNull(javaClass.getResourceAsStream("/wallpaper/$name.jpg")).use { BitmapFactory.decodeStream(it) }
+        val thumbnail = Bitmap.createScaledBitmap(full, 120, 120 * full.height / full.width, true)
+        return Wallpaper(picture = full.asImageBitmap(), thumbnail = thumbnail.asImageBitmap())
+    }
+
+    /** Home on a black picture, then on [name]: the contrast of the 30-character app name and of its last-opened line, against what is round them. */
+    private fun contrastOver(name: String): Pair<Float, Float> {
+        val wallpapers = MutableStateFlow(Wallpaper(picture = grey(0f), thumbnail = grey(0f)))
+        val yesterday = Evening.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() - 26 * 3_600_000L
+        showHome(wallpapers = wallpapers, apps = namedApps, lastOpened = mapOf("pkg.1" to yesterday))
+        val onBlack = compose.onRoot().captureToImage().toPixelMap()
+
+        wallpapers.value = picture(name)
+        settle()
+        val onPicture = compose.onRoot().captureToImage().toPixelMap()
+
+        return worstContrast("shelf:title", onBlack, onPicture) to worstContrast("shelf:title-meta", onBlack, onPicture)
+    }
+
+    @Test
+    fun over_the_bright_sky_a_long_app_name_holds_3_to_1_and_its_subtitle_4_5_to_1() {
+        val (title, subtitle) = contrastOver("bright")
+
+        assertTrue("title $title", title >= 3f)
+        assertTrue("subtitle $subtitle", subtitle >= 4.5f)
+    }
+
+    @Test
+    fun over_the_busy_light_forest_a_long_app_name_holds_3_to_1_and_its_subtitle_4_5_to_1() {
+        val (title, subtitle) = contrastOver("busy")
+
+        assertTrue("title $title", title >= 3f)
+        assertTrue("subtitle $subtitle", subtitle >= 4.5f)
+    }
+
+    @Test
+    fun the_local_scrim_holds_to_the_end_of_the_title_and_fades_out_over_the_next_120_dp() {
+        showHome(level = 1f, apps = namedApps)
+        val title = compose.onNodeWithTag("shelf:title").getBoundsInRoot()
+        val y = title.bottom.value + 3f
+
+        fun at(beyond: Float) = Offset(title.right.value + beyond, y)
+
+        assertNear(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at(-20f))), redAt(at(-20f)))
+        assertNear(Math.round(scrimmed(255, top = 0.70f, left = 0.60f, at(60f)) * (1f - 0.30f)), redAt(at(60f)))
+        assertNear(scrimmed(255, top = 0.70f, left = 0.60f, at(130f)), redAt(at(130f)))
+    }
+
     @Test
     fun the_subtitle_is_medium_weight_with_a_black_075_shadow_blurred_12_dp() {
         showHome(level = 0.4f)
@@ -440,7 +515,7 @@ class HeaderLegibilityUiTest {
 
     @Test
     fun an_unfocused_network_label_draws_at_three_quarters_and_a_focused_one_in_full() {
-        showHome(level = 0.4f)
+        showHome(level = 0.4f, config = SixColumns.copy(wifiLabelWidth = 180))
         val label = labelBounds()
         val pill = redAt(Offset(label.left.value - 4f, (label.top.value + label.bottom.value) / 2f))
 
@@ -455,7 +530,7 @@ class HeaderLegibilityUiTest {
 
     @Test
     fun the_network_button_with_a_label_has_no_white_rim_where_an_icon_button_keeps_it() {
-        showHome(level = 0.4f)
+        showHome(level = 0.4f, config = SixColumns.copy(wifiLabelWidth = 180))
         val network = networkButton().getBoundsInRoot()
         val settings = compose.onNodeWithContentDescription("Settings").getBoundsInRoot()
 

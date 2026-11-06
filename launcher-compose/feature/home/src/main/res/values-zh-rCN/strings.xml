@@ -25,9 +25,9 @@
   <string name="tile_move">移动</string>
   <string name="tile_remove_from_home">从主屏幕隐藏</string>
   <string name="library_save_failed">无法保存快捷方式</string>
-  <string name="dock_edit">编辑程序坞</string>
+  <string name="dock_edit">选择程序坤应用</string>
   <string name="reorder">调整应用顺序</string>
-  <string name="power_menu">重新启动…</string>
+  <string name="power_menu">重新启动电视…</string>
   <string name="reorder_hint">按确定选中应用，方向键移动，按返回放下。再按一次返回完成。</string>
   <string name="dock_edit_hint">选择要更改的程序坞位置，然后按确定。按返回完成。</string>
   <string name="dock_edit_pick_app">现在选择要放在那里的应用，然后按确定。按返回重新选择位置。</string>
@@ -38,7 +38,6 @@
   <string name="reorder_move">移动</string>
   <string name="reorder_key_back">返回</string>
   <string name="reorder_drop">放下</string>
-  <string name="reorder_key_back_twice">返回 ×2</string>
   <string name="reorder_finish">完成</string>
   <plurals name="library_app_count">
     <item quantity="other">%1$d 个应用</item>
@@ -50,4 +49,5 @@
     <item quantity="other">%1$d 个输入源已连接</item>
   </plurals>
   <string name="habit_usual">你通常在这个时间打开它</string>
+  <string name="never_opened">从未打开</string>
 </resources>
