@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -42,11 +41,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
@@ -97,19 +93,13 @@ private val PlusSize = 12.dp
 private val PlusStroke = 1.5.dp
 private val PlusGap = 4.dp
 private const val NEVER_OPENED_ALPHA = 0.45f
-private val BadgeSize = 24.dp
-
-/** How far the badge's centre lies inside the card's top-right corner, so that it stays clear of the art. */
-private val BadgeInset = 2.dp
-private const val BADGE_ALPHA = 0.90f
-private val BadgeInk = Color(0xFF0B0D12)
 private const val OFF_HOME_ART_ALPHA = 0.5f
 
 /**
  * One card of the grid: the app's art on a small tile and its name of up to [NAME_LINES] lines, in the room above the status
- * slot, which says in one line what is not the usual state. An app on Home has no mark, except in the chooser
- * ([LibraryLayout.selection]), where a check badge hangs on the card's top-right corner and the art of an app that is not on
- * Home is dimmed. An idle card is opaque, so nothing of Home shows through it; a focused one lets the plate [FocusSurface]
+ * slot, which says in one line what is not the usual state. An app on Home has no mark; in the chooser
+ * ([LibraryLayout.selection]) the art of an app that is not on Home is dimmed and the card says "On Home" to accessibility
+ * for one that is. An idle card is opaque, so nothing of Home shows through it; a focused one lets the plate [FocusSurface]
  * draws behind it show. It rises in once per opening, with the delay [CardEntrance] gives it, and pops a little when its
  * Home shortcut changes. Both run in the layer lambda. The status slot keeps its place while the card grows, so it stays
  * level with the cards beside it. [widthPx] is the narrowest the card can be.
@@ -159,6 +149,7 @@ internal fun LibraryCardView(
     val scope = rememberCoroutineScope()
     val ring = remember(artwork, layout) { layout.ringColour(artwork?.accent ?: Color.Unspecified) }
     val ringBlends = remember(ring, artwork) { ringBlendsWith(ring, artwork?.accent ?: Color.Unspecified) }
+    val onHome = stringResource(R.string.library_on_home)
     Box(
         modifier =
             modifier.fillMaxWidth().height(CardHeight).graphicsLayer {
@@ -207,7 +198,7 @@ internal fun LibraryCardView(
                         drawRect(fill, alpha = (1f - focus.value).coerceIn(0f, 1f))
                         drawRect(tint.value)
                     }.border(1.dp, ink.copy(alpha = RIM_ALPHA), CardShape)
-                    .semantics { contentDescription = card.app.label },
+                    .semantics { contentDescription = if (layout.selection && card.onHome) onHome else card.app.label },
             ) {
                 ArtAndName(Modifier.fillMaxSize().padding(start = CardSide, end = CardSide, bottom = CardBottom + StatusHeight)) {
                     Art(card, artwork, layout.selection && !card.onHome, Modifier.padding(horizontal = ArtInset))
@@ -224,7 +215,6 @@ internal fun LibraryCardView(
                 if (card.recent && !card.onHome) RecentDot(Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp))
             }
         }
-        if (layout.selection && card.onHome) OnHomeBadge(key, Modifier.align(Alignment.TopEnd))
     }
 }
 
@@ -285,42 +275,6 @@ private fun Art(
             )
         }
     }
-}
-
-/**
- * A white disc with a check on the top-right corner of the card: the app is on Home. It hangs off the corner, outside the
- * card's shape and clear of the art, over the gap between cards.
- */
-@Composable
-private fun OnHomeBadge(
-    key: String,
-    modifier: Modifier = Modifier,
-) {
-    val description = stringResource(R.string.library_on_home)
-    val hang = BadgeSize / 2 - BadgeInset
-    Box(
-        modifier
-            .offset(x = hang, y = -hang)
-            .size(BadgeSize)
-            .testTag("card:onhome:$key")
-            .semantics { contentDescription = description }
-            .drawBehind {
-                drawCircle(Color.White, alpha = BADGE_ALPHA)
-                drawCheck(BadgeInk)
-            },
-    )
-}
-
-/** A check mark in the middle of the scope, its stroke 2 dp. */
-private fun DrawScope.drawCheck(color: Color) {
-    val side = size.width
-    val path =
-        Path().apply {
-            moveTo(side * 0.28f, side * 0.52f)
-            lineTo(side * 0.44f, side * 0.68f)
-            lineTo(side * 0.74f, side * 0.34f)
-        }
-    drawPath(path, color, style = Stroke(2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
 }
 
 /** A plus of [side], round caps included, in the middle of the scope. */

@@ -541,30 +541,25 @@ class LibraryOverlayLookUiTest {
 
     @Test
     @Config(qualifiers = "+night")
-    fun in_the_chooser_an_app_on_home_has_a_24_dp_white_check_badge_on_the_cards_corner_clear_of_its_art() {
+    fun in_the_chooser_an_app_on_home_has_no_white_mark_on_or_past_its_corner_and_says_on_home_on_the_card() {
         showChooser()
 
-        val badge = compose.onNodeWithTag("card:onhome:${key("Bbb")}", useUnmergedTree = true).getBoundsInRoot()
         val card = card("Bbb")
-        assertNear(24.dp, badge.width)
-        assertNear(24.dp, badge.height)
-        assertNear(card.right - 2.dp, (badge.left + badge.right) / 2)
-        assertNear(card.top + 2.dp, (badge.top + badge.bottom) / 2)
-        compose.onNodeWithTag("card:onhome:${key("Bbb")}", useUnmergedTree = true).assertContentDescriptionEquals("On Home")
-        val middle = rgbAt((badge.left + badge.right) / 2, (badge.top + badge.bottom) / 2)
-        assertTrue("badge $middle", middle.all { it >= 225 })
-        // The tip of the check, 0.44 across and 0.68 down.
-        val check = rgbAt(badge.left + badge.width * 0.44f, badge.top + badge.height * 0.68f)
-        assertTrue("check $check", check.all { it < 90 })
-        val art = art("Bbb")
-        assertTrue("the art shows red only", (0..20).all { rgbAt(art.left + art.width * it / 20, art.top + art.height * 0.5f)[1] < 60 })
-        assertTrue("the badge covers no art", (0..20).all { rgbAt(art.right - 2.dp, art.top + art.height * it / 20)[1] < 60 })
-        assertTrue("the badge covers no art at the corner", rgbAt(art.right - 3.dp, art.top + 3.dp)[1] < 60)
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val density = compose.activity.resources.displayMetrics.density
+        val corner = (-12..12).flatMap { dx -> (-12..12).map { dy -> dx to dy } }
+        val white =
+            corner.filter { (dx, dy) ->
+                val pixel = pixels[((card.right.value + dx) * density).toInt(), ((card.top.value + dy) * density).toInt()]
+                listOf(pixel.red, pixel.green, pixel.blue).all { it >= 0.88f }
+            }
+        assertTrue("white pixels at $white", white.isEmpty())
+        compose.onNodeWithTag("card:${key("Bbb")}").assertContentDescriptionEquals("On Home")
     }
 
     @Test
     @Config(qualifiers = "+night")
-    fun in_the_chooser_the_art_of_an_app_off_home_draws_at_half_alpha_and_it_has_no_badge() {
+    fun in_the_chooser_the_art_of_an_app_off_home_draws_at_half_alpha() {
         showChooser()
 
         val on = art("Bbb")
@@ -573,7 +568,6 @@ class LibraryOverlayLookUiTest {
         val offRed = redAt((off.left + off.right) / 2, (off.top + off.bottom) / 2)
         assertEquals(255, onRed)
         assertEquals("half of the red art over the card", 142f, offRed.toFloat(), 14f)
-        compose.onNodeWithTag("card:onhome:${key("Ccc")}", useUnmergedTree = true).assertDoesNotExist()
     }
 
     @Test
