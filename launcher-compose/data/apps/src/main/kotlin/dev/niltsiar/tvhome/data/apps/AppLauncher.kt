@@ -27,7 +27,8 @@ public sealed interface LaunchResult {
 
 /**
  * Opens an app's tile the way the reference launcher does, honouring launch_actions. With [recordOpened] (the cinematic
- * Home) a tile that opened is noted in [lastOpened]. Every tile that opened is noted in [launchLog], which keeps nothing
+ * Home, library_least_used or unused_fade_days) a tile that opened is noted in [lastOpened], and with [recordLibraryOpened]
+ * (the last two) so is an app opened from the library. Every tile that opened is noted in [launchLog], which keeps nothing
  * unless habit_hint is on.
  */
 public class AppLauncher(
@@ -36,6 +37,7 @@ public class AppLauncher(
     private val lastOpened: LastOpened,
     private val recordOpened: Boolean,
     private val launchLog: LaunchLog,
+    private val recordLibraryOpened: Boolean = false,
 ) {
     /** The TV input a tile's launch_actions "input:<id>" switches to instead of opening the app; null for any other tile. */
     internal fun inputId(app: AppEntry): String? = inputIdOf(launchActions[app.packageName])
@@ -49,7 +51,14 @@ public class AppLauncher(
         return LaunchResult.Opened
     }
 
-    /** True when the system accepted the launch. The library passes false for [useLaunchAction]: it opens the app itself. */
+    /** Opens an app from the App library, which ignores launch_actions. True when the system accepted the launch. */
+    public fun openFromLibrary(app: AppEntry): Boolean {
+        if (!launch(app, useLaunchAction = false)) return false
+        if (recordLibraryOpened) lastOpened.record(app.key)
+        return true
+    }
+
+    /** True when the system accepted the launch. */
     public fun launch(
         app: AppEntry,
         useLaunchAction: Boolean = true,

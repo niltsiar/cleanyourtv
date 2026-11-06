@@ -51,6 +51,8 @@ internal fun sources(
     focusMemory: FocusMemory = FocusMemory(),
     libraryCount: Flow<Int> = emptyFlow(),
     habit: suspend () -> String? = { null },
+    openedSince: Flow<Long?> = flowOf(null),
+    timeMillis: () -> Long = System::currentTimeMillis,
 ) = HomeSources(
     apps,
     clock,
@@ -68,6 +70,8 @@ internal fun sources(
     focusMemory = focusMemory,
     libraryCount = libraryCount,
     habit = habit,
+    openedSince = openedSince,
+    timeMillis = timeMillis,
 )
 
 internal fun port(

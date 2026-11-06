@@ -18,4 +18,8 @@
     <item quantity="many">%1$d تطبيقًا</item>
     <item quantity="other">%1$d تطبيق</item>
   </plurals>
+  <string name="library_order_usual">الترتيب المعتاد</string>
+  <string name="library_order_least_used">الأقل استخدامًا</string>
+  <string name="library_hint_order">القائمة: %1$s</string>
+  <string name="library_never_opened">لم يُفتح أبدًا</string>
 </resources>

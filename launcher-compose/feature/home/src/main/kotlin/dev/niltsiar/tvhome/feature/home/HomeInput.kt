@@ -37,6 +37,8 @@ internal class HomeInput(
     val inputOffered: State<Boolean> = mutableStateOf(false),
     /** The package of the app with the habit mark; null without habit_hint. Read it in effects and draw lambdas only. */
     val habit: State<String?>? = null,
+    /** The keys of the grid tiles drawn faded; null without unused_fade_days. Read it in effects and layer lambdas only. */
+    val faded: State<Set<String>>? = null,
     val hold: OkHold = OkHold(),
 ) {
     /** The colour of the focus ring as it moves from tile to tile. */

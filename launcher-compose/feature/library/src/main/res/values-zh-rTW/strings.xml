@@ -13,4 +13,8 @@
   <plurals name="library_app_count">
     <item quantity="other">%1$d 個應用程式</item>
   </plurals>
+  <string name="library_order_usual">一般順序</string>
+  <string name="library_order_least_used">最少使用</string>
+  <string name="library_hint_order">選單鍵：%1$s</string>
+  <string name="library_never_opened">從未開啟</string>
 </resources>

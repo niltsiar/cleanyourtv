@@ -140,6 +140,8 @@ public data class TvConfig(
     val libraryExcludedApps: List<String> = emptyList(),
     val showLibraryPill: Boolean = true,
     val libraryOkOpens: Boolean = false,
+    /** With [appLibrary]: the MENU key switches the library to a least used first order, and each card says when it was last opened. */
+    val libraryLeastUsed: Boolean = false,
     val inputSources: List<String> = emptyList(),
     val inputAction: String? = null,
     val inputUriScheme: String? = null,
@@ -162,6 +164,8 @@ public data class TvConfig(
     val inputArrival: Boolean = false,
     /** A quiet mark on the app the household usually opens at this time of day; Home keeps a log of its launches for it. */
     val habitHint: Boolean = false,
+    /** Days, 0 to 3650: a grid tile whose app Home has not opened for more than this many days is drawn faded; 0 fades none. */
+    val unusedFadeDays: Int = 0,
     /** Answer the system's VIEW_INPUTS request by opening the Inputs menu. */
     val handleViewInputs: Boolean = false,
     /** Seconds the boot's app waits for a validated network, 0 to 600; 0 opens it at once. */

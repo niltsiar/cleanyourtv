@@ -48,6 +48,7 @@ import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.LibraryApp
 import dev.niltsiar.tvhome.core.model.LibraryArt
+import dev.niltsiar.tvhome.core.model.OpenedRecord
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -89,8 +90,9 @@ class LibraryOverlayLookUiTest {
         art: LibraryArt? = null,
         config: TvConfig = TvConfig(appLibrary = true),
         motion: Motion = Motion(),
+        record: OpenedRecord = OpenedRecord(),
     ) {
-        val library = FakeLibrary(apps)
+        val library = FakeLibrary(apps).apply { this.record = record }
         lateinit var viewModel: MoleculeLibraryViewModel
         compose.setContent {
             TvTheme(motion = motion) {
@@ -326,6 +328,37 @@ class LibraryOverlayLookUiTest {
         assertNear(bottom, text("Add to Home", long).bottom)
         assertNear(bottom, text("On Home", "Gamma").bottom)
         assertEquals(text("Beta", "Beta").height, text("Long enough", long).height)
+    }
+
+    @Test
+    fun in_the_least_used_order_the_opened_line_sits_under_the_status_line_and_the_name_inside_the_card() {
+        val long = "Long enough a name to wrap onto two lines"
+        showLibrary(
+            listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp(long), libraryApp("Gamma", onHome = true)),
+            config = TvConfig(appLibrary = true, libraryLeastUsed = true),
+            record = OpenedRecord(times = mapOf(key("Gamma") to NOW - 3 * DAY), since = NOW - 90 * DAY),
+        )
+        press(Key.Menu)
+
+        fun text(
+            text: String,
+            name: String,
+        ): DpRect =
+            compose
+                .onNode(hasText(text, substring = true) and hasAnyAncestor(hasTestTag("card:${key(name)}")), useUnmergedTree = true)
+                .getBoundsInRoot()
+
+        // Aaa takes the focus, and its growth with it; the cards measured here are idle.
+        compose.onNodeWithTag("card:${key("Aaa")}").assertIsFocused()
+        listOf("Beta" to "Add to Home", long to "Add to Home", "Gamma" to "On Home").forEach { (name, status) ->
+            val card = card(name)
+            val label = text(if (name == long) "Long enough" else name, name)
+            val statusLine = text(status, name)
+            val opened = compose.onNodeWithTag("card:opened:${key(name)}", useUnmergedTree = true).getBoundsInRoot()
+            assertTrue("$name: name $label over status $statusLine", label.bottom <= statusLine.top + 1.dp)
+            assertTrue("$name: status $statusLine over opened $opened", statusLine.bottom <= opened.top + 1.dp)
+            assertNear(card.bottom - 8.dp, opened.bottom)
+        }
     }
 
     @Test

@@ -12,7 +12,8 @@ import dev.niltsiar.tvhome.core.model.showLibraryPill
  * OK opens its App info), [libraryPill] whether the App library pill follows the last row, and [showNames] whether every
  * tile has its name under it (always_show_names), which the dock panel and each grid row grow to hold, and
  * [inputArrival] whether the Inputs button offers a device that was just switched on (input_arrival), and [habitMark]
- * whether the app usually opened at this time of day has a mark under its tile (habit_hint).
+ * whether the app usually opened at this time of day has a mark under its tile (habit_hint), and [unusedFade] whether
+ * grid tiles of apps not opened for a while are drawn faded (unused_fade_days).
  */
 @Immutable
 public data class HomeLayout(
@@ -25,6 +26,7 @@ public data class HomeLayout(
     val showNames: Boolean = false,
     val inputArrival: Boolean = false,
     val habitMark: Boolean = false,
+    val unusedFade: Boolean = false,
 )
 
 public fun TvConfig.homeLayout(): HomeLayout =
@@ -38,6 +40,7 @@ public fun TvConfig.homeLayout(): HomeLayout =
         showNames = alwaysShowNames,
         inputArrival = inputArrival && showInputsPill,
         habitMark = habitHint,
+        unusedFade = unusedFadeDays > 0,
     )
 
 private const val MIN_TILE_SHARE = 0.85f

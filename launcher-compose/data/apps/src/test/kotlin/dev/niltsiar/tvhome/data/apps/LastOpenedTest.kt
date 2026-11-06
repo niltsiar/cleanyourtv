@@ -1,9 +1,15 @@
 package dev.niltsiar.tvhome.data.apps
 
 import android.content.Context
+import dev.niltsiar.tvhome.core.model.OpenedRecord
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -72,4 +78,69 @@ class LastOpenedTest {
         assertEquals(mapOf("a/.A" to 9L, "b/.B" to 2L), opened.times.value)
         assertEquals(9L, prefs.getLong("a/.A", 0L))
     }
+
+    @Test
+    fun the_record_begins_at_the_first_launch_it_notes_and_a_later_launch_does_not_move_it() {
+        val opened = LastOpened(context, Dispatchers.Unconfined)
+        assertNull(opened.since.value)
+
+        opened.record("a/.A", now = 1_000L)
+        opened.record("b/.B", now = 2_000L)
+
+        assertEquals(1_000L, opened.since.value)
+        assertEquals(1_000L, LastOpened(context, Dispatchers.Unconfined).since.value)
+    }
+
+    @Test
+    fun with_startRecord_the_record_begins_when_it_is_first_read_and_a_later_start_keeps_that_moment() {
+        assertEquals(5_000L, LastOpened(context, Dispatchers.Unconfined, startRecord = true, clock = { 5_000L }).since.value)
+
+        assertEquals(5_000L, LastOpened(context, Dispatchers.Unconfined, startRecord = true, clock = { 9_000L }).since.value)
+    }
+
+    @Test
+    fun without_startRecord_an_empty_store_has_no_record_to_date_from() {
+        assertNull(LastOpened(context, Dispatchers.Unconfined, startRecord = false, clock = { 5_000L }).since.value)
+    }
+
+    @Test
+    fun times_stored_before_the_record_had_a_start_date_start_it_at_the_oldest_of_them() {
+        context
+            .getSharedPreferences("last_opened", Context.MODE_PRIVATE)
+            .edit()
+            .putLong("a/.A", 7L)
+            .putLong("b/.B", 3L)
+            .commit()
+
+        val opened = LastOpened(context, Dispatchers.Unconfined)
+
+        assertEquals(3L, opened.since.value)
+        assertEquals(mapOf("a/.A" to 7L, "b/.B" to 3L), opened.times.value)
+    }
+
+    @Test
+    fun the_start_of_the_record_is_not_a_tile_in_the_times() {
+        LastOpened(context, Dispatchers.Unconfined).record("a/.A", now = 1L)
+
+        assertFalse(
+            LastOpened(context, Dispatchers.Unconfined)
+                .times.value.keys
+                .any { it.startsWith("@") },
+        )
+    }
+
+    @Test
+    fun a_snapshot_waits_for_the_disk_and_then_holds_the_times_and_the_start() =
+        runBlocking {
+            val prefs = context.getSharedPreferences("last_opened", Context.MODE_PRIVATE)
+            prefs.edit().putLong("a/.A", 4L).commit()
+            val io = QueuedDispatcher()
+            val opened = LastOpened(context, io)
+
+            val snapshot = async(start = CoroutineStart.UNDISPATCHED) { opened.snapshot() }
+            assertFalse(snapshot.isCompleted)
+            io.runAll()
+
+            assertEquals(OpenedRecord(mapOf("a/.A" to 4L), since = 4L), snapshot.await())
+        }
 }

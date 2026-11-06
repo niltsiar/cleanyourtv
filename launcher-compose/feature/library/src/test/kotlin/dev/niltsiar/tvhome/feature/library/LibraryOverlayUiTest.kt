@@ -7,9 +7,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
@@ -19,6 +22,7 @@ import androidx.compose.ui.unit.width
 import app.cash.molecule.RecompositionMode
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.model.OpenedRecord
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -193,5 +197,60 @@ class LibraryOverlayUiTest {
 
         compose.onNodeWithTag("menu").assertDoesNotExist()
         assertEquals(listOf("pkg.Gamma" to false), library.saved)
+    }
+
+    private val leastUsed = TvConfig(appLibrary = true, libraryLeastUsed = true)
+
+    private fun gammaOpenedThreeDaysAgo() {
+        library.record = OpenedRecord(times = mapOf(key("Gamma") to NOW - 3 * DAY), since = NOW - 90 * DAY)
+    }
+
+    @Test
+    fun the_menu_key_switches_the_order_the_header_and_hint_name_it_and_focus_stays_on_the_same_app() {
+        gammaOpenedThreeDaysAgo()
+        showLibrary(leastUsed)
+        compose.onNodeWithTag("library:order").assertTextEquals("Usual order")
+        compose.onNodeWithTag("library:hint").assertTextContains("Menu: Least used", substring = true)
+        compose.onNodeWithTag("card:${key("Delta")}").assertIsFocused()
+
+        press(Key.Menu)
+
+        compose.onNodeWithTag("library:order").assertTextEquals("Least used")
+        compose.onNodeWithTag("library:hint").assertTextContains("Menu: Usual order", substring = true)
+        compose.onNodeWithTag("card:${key("Delta")}").assertIsFocused()
+        press(Key.DirectionRight)
+        compose.onNodeWithTag("card:${key("Gamma")}").assertIsFocused()
+
+        press(Key.Menu)
+
+        compose.onNodeWithTag("library:order").assertTextEquals("Usual order")
+        compose.onNodeWithTag("card:${key("Gamma")}").assertIsFocused()
+    }
+
+    @Test
+    fun with_the_key_off_the_menu_key_changes_nothing_and_the_header_names_no_order() {
+        showLibrary()
+
+        press(Key.Menu)
+
+        compose.onNodeWithTag("library:order").assertDoesNotExist()
+        compose.onNodeWithTag("library:hint").assertTextEquals("Press to add to Home · Hold for options")
+        compose.onNodeWithTag("card:${key("Delta")}").assertIsFocused()
+        press(Key.DirectionRight)
+        compose.onNodeWithTag("card:${key("Alpha")}").assertIsFocused()
+        compose.onNodeWithTag("card:opened:${key("Alpha")}", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun in_the_least_used_order_a_card_keeps_its_status_and_adds_when_it_was_last_opened() {
+        gammaOpenedThreeDaysAgo()
+        showLibrary(leastUsed)
+        compose.onNodeWithTag("card:opened:${key("Gamma")}", useUnmergedTree = true).assertDoesNotExist()
+
+        press(Key.Menu)
+
+        compose.onNodeWithTag("card:opened:${key("Gamma")}", useUnmergedTree = true).assertTextContains("3 days ago, ", substring = true)
+        compose.onNodeWithTag("card:opened:${key("Alpha")}", useUnmergedTree = true).assertTextEquals("Never opened")
+        compose.onNodeWithText("On Home", useUnmergedTree = true).assertExists()
     }
 }

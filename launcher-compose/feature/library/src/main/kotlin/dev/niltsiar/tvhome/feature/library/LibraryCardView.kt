@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,7 +39,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -56,6 +59,7 @@ import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.holdOk
 import dev.niltsiar.tvhome.core.model.LibraryArt
+import dev.niltsiar.tvhome.core.model.describeLastOpened
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -66,6 +70,9 @@ private val ArtShape = RoundedCornerShape(8.dp)
 private const val ART_ASPECT = 16f / 9f
 private val CardSide = 6.dp
 private val ArtInset = 8.dp
+
+/** With a second status line the art gives up height for it: the card has no room for both at the usual inset. */
+private val ArtInsetWithOpened = 18.dp
 private val CardTop = 8.dp
 private val CardBottom = 8.dp
 private val NameGap = 4.dp
@@ -182,7 +189,7 @@ internal fun LibraryCardView(
                     modifier = Modifier.fillMaxSize().padding(start = CardSide, top = CardTop, end = CardSide),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Art(card, artwork, Modifier.padding(horizontal = ArtInset))
+                    Art(card, artwork, Modifier.padding(horizontal = if (card.opened != null) ArtInsetWithOpened else ArtInset))
                     Name(card.app.label, measurer, widthPx - with(density) { CardSide.roundToPx() * 2 })
                 }
                 Status(
@@ -296,8 +303,38 @@ private fun Status(
             card.recent -> stringResource(R.string.library_recent)
             else -> stringResource(R.string.library_add_home)
         }
-    BasicText(text, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = modifier.fillMaxWidth())
+    val opened = card.opened
+    if (opened == null) {
+        BasicText(text, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = modifier.fillMaxWidth())
+        return
+    }
+    Column(modifier.fillMaxWidth()) {
+        BasicText(text, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth())
+        Opened(card.app.key, opened, style)
+    }
 }
+
+/** When the app was last opened, in the TV's language, shrunk to fit one line; "Never opened" for an app Home never opened. */
+@Composable
+private fun Opened(
+    key: String,
+    opened: CardOpened,
+    style: TextStyle,
+) {
+    val context = LocalContext.current
+    val locale = LocalLocale.current.platformLocale
+    val whenOpened =
+        remember(opened) { opened.at?.let { describeLastOpened(context, it, locale).replaceFirstChar { c -> c.titlecase(locale) } } }
+    BasicText(
+        whenOpened ?: stringResource(R.string.library_never_opened),
+        style = style,
+        maxLines = 1,
+        autoSize = TextAutoSize.StepBased(minFontSize = OPENED_MIN_SIZE, maxFontSize = style.fontSize),
+        modifier = Modifier.fillMaxWidth().testTag("card:opened:$key"),
+    )
+}
+
+private val OPENED_MIN_SIZE = 9.sp
 
 /**
  * Undoes, for the line's place, the growth [FocusSurface] draws about the card's centre: [focus] is the card's own

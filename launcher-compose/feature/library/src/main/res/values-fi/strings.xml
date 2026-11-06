@@ -14,4 +14,8 @@
     <item quantity="one">%1$d sovellus</item>
     <item quantity="other">%1$d sovellusta</item>
   </plurals>
+  <string name="library_order_usual">Tavallinen järjestys</string>
+  <string name="library_order_least_used">Vähiten käytetyt</string>
+  <string name="library_hint_order">Valikko: %1$s</string>
+  <string name="library_never_opened">Ei koskaan avattu</string>
 </resources>

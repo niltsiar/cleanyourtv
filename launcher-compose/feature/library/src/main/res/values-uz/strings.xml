@@ -14,4 +14,8 @@
     <item quantity="one">%1$d ta ilova</item>
     <item quantity="other">%1$d ta ilova</item>
   </plurals>
+  <string name="library_order_usual">Odatiy tartib</string>
+  <string name="library_order_least_used">Eng kam ishlatilgan</string>
+  <string name="library_hint_order">Menyu: %1$s</string>
+  <string name="library_never_opened">Hech ochilmagan</string>
 </resources>

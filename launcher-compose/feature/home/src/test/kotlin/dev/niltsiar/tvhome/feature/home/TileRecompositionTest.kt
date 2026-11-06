@@ -101,6 +101,7 @@ open class TileRecompositionTest {
     private val inputs = MutableStateFlow(FourPorts)
     private var habitApp = "pkg.3"
     private var habitLooks = 0
+    private lateinit var viewModel: MoleculeHomeViewModel
 
     @Before
     fun showHome() {
@@ -115,6 +116,7 @@ open class TileRecompositionTest {
                 alwaysShowNames = alwaysShowNames,
                 inputArrival = true,
                 habitHint = true,
+                unusedFadeDays = 60,
             )
         compose.setContent {
             val home = currentComposer.composition
@@ -124,11 +126,14 @@ open class TileRecompositionTest {
                 onDispose { observing?.dispose() }
             }
             TvTheme {
-                val viewModel =
+                viewModel =
                     rememberHomeViewModel(
-                        sources(apps = flowOf(AppList(apps)), inputs = inputs, habit = {
-                            habitApp.also { habitLooks++ }
-                        }),
+                        sources(
+                            apps = flowOf(AppList(apps)),
+                            inputs = inputs,
+                            habit = { habitApp.also { habitLooks++ } },
+                            openedSince = flowOf(0L),
+                        ),
                         config,
                         mutableListOf(),
                     )
@@ -147,6 +152,7 @@ open class TileRecompositionTest {
         compose.waitForIdle()
         compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
         assertTrue("tiles composed at first: ${tiles.count}", tiles.count >= 12)
+        assertEquals(setOf("pkg.7", "pkg.8", "pkg.9", "pkg.10", "pkg.11", "pkg.12"), viewModel.uiState.value.faded)
         tiles.count = 0
         items.count = 0
     }

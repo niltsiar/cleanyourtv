@@ -16,4 +16,8 @@
     <item quantity="many">%1$d aplikace</item>
     <item quantity="other">%1$d aplikací</item>
   </plurals>
+  <string name="library_order_usual">Obvyklé řazení</string>
+  <string name="library_order_least_used">Nejméně používané</string>
+  <string name="library_hint_order">Menu: %1$s</string>
+  <string name="library_never_opened">Nikdy neotevřeno</string>
 </resources>

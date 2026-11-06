@@ -4,10 +4,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import dev.niltsiar.tvhome.core.model.LibraryApp
+import dev.niltsiar.tvhome.core.model.OpenedAt
+import dev.niltsiar.tvhome.core.model.OpenedRecord
 import dev.niltsiar.tvhome.core.model.isRecent
 import dev.niltsiar.tvhome.core.model.nextAfterRemoval
 import dev.niltsiar.tvhome.core.model.nextFocus
 import dev.niltsiar.tvhome.core.model.okOpens
+import dev.niltsiar.tvhome.core.model.sortLeastUsed
 import dev.niltsiar.tvhome.core.model.sortLibrary
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -16,7 +19,8 @@ import java.text.Collator
 /**
  * The library's state and what each event does to it. Opening starts a load, and so does each change of the installed
  * apps or of the Home choices while it is open; [LibraryLoads] lets only the latest fill the cards, and the panel
- * appears once, when the latest first has.
+ * appears once, when the latest first has. With library_least_used the MENU key switches [order] and sorts the loaded
+ * catalogue again; focus stays on its app.
  */
 internal class LibraryInteraction(
     private val sources: LibrarySources,
@@ -37,6 +41,11 @@ internal class LibraryInteraction(
         private set
     var focusRequest by mutableStateOf<LibraryFocus?>(null)
         private set
+    var order by mutableStateOf(LibraryOrder.Usual)
+        private set
+
+    private var catalogue = emptyList<LibraryApp>()
+    private var record = OpenedRecord()
 
     private val loads = LibraryLoads()
     private var focusToken = 0
@@ -62,6 +71,7 @@ internal class LibraryInteraction(
             is LibraryEvent.Hold -> hold(event.key)
             is LibraryEvent.Pick -> pick(event.row)
             LibraryEvent.Back -> back()
+            LibraryEvent.ToggleOrder -> toggleOrder()
             LibraryEvent.Close -> close()
         }
     }
@@ -82,23 +92,44 @@ internal class LibraryInteraction(
         val number = loads.start(reveal)
         scope.launch {
             val apps = sources.load()
+            val opened = if (layout.leastUsed) sources.opened() else OpenedRecord()
             if (!open || !loads.isLatest(number)) return@launch
-            fill(apps)
+            catalogue = apps
+            record = opened
+            fill()
             if (loads.takeReveal()) shown = true
         }
     }
 
-    private fun fill(apps: List<LibraryApp>) {
+    private fun toggleOrder() {
+        if (!layout.leastUsed || !shown || menu != null) return
+        order = if (order == LibraryOrder.Usual) LibraryOrder.LeastUsed else LibraryOrder.Usual
+        fill()
+    }
+
+    private fun fill() {
         val now = sources.now()
+        val leastUsed = order == LibraryOrder.LeastUsed
+        val sorted = if (leastUsed) sortLeastUsed(catalogue, record, collator) else sortLibrary(catalogue, layout.selection, now, collator)
         cards =
-            sortLibrary(apps, layout.selection, now, collator).map {
-                LibraryCard(it.app, it.onHome, recent = !layout.selection && isRecent(it.installedAt, now))
+            sorted.map {
+                LibraryCard(
+                    it.app,
+                    it.onHome,
+                    recent = !layout.selection && isRecent(it.installedAt, now),
+                    opened = if (leastUsed) openedOn(it.app.key, now) else null,
+                )
             }
         val target = pendingFocus ?: focusedKey?.takeIf { key -> cards.any { it.app.key == key } } ?: cards.firstOrNull()?.app?.key
         pendingFocus = null
         focusedKey = target
         if (target != null) focus(target)
     }
+
+    private fun openedOn(
+        key: String,
+        now: Long,
+    ) = CardOpened(record.times[key]?.let { OpenedAt(it, now, sources.hour24()) })
 
     private fun click(key: String) {
         val card = cards.firstOrNull { it.app.key == key } ?: return
@@ -195,6 +226,9 @@ internal class LibraryInteraction(
         menu = null
         focusRequest = null
         pendingFocus = null
+        order = LibraryOrder.Usual
+        catalogue = emptyList()
+        record = OpenedRecord()
         sources.release()
     }
 

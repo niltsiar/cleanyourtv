@@ -142,6 +142,7 @@ import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
+import dev.niltsiar.tvhome.core.model.OpenedAt
 import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.coroutineScope
@@ -287,6 +288,7 @@ public fun HomeScreen(
                 openLibrary = currentOpenLibrary,
                 inputOffered = derivedStateOf { currentState.value().inputOffer != null },
                 habit = if (layout.habitMark) derivedStateOf { currentState.value().habit } else null,
+                faded = if (layout.unusedFade) derivedStateOf { currentState.value().faded } else null,
             ).also { it.anchor.value = menuAnchor }
         }
     val menu by remember { derivedStateOf { currentState.value().menu } }
@@ -599,6 +601,7 @@ private fun HomeContent(
                     reordering = reordering,
                     tileMenu = layout.tileMenu,
                     showName = layout.showNames,
+                    fadeUnused = true,
                     modifier =
                         Modifier
                             .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = TvTheme.motion.placementSpec)
@@ -1440,6 +1443,7 @@ private fun AppTile(
     modifier: Modifier = Modifier,
     showName: Boolean = false,
     habitMark: Boolean = true,
+    fadeUnused: Boolean = false,
     edge: DockEdgeLight? = null,
     glassStroke: Boolean = false,
 ) {
@@ -1457,6 +1461,7 @@ private fun AppTile(
                 tileMenu,
                 Modifier.fillMaxWidth(),
                 habitMark = false,
+                fadeUnused = fadeUnused,
                 edge = edge,
                 glassStroke = glassStroke,
             )
@@ -1488,7 +1493,7 @@ private fun AppTile(
         accent = accent,
         ring = ringColour,
         modifier =
-            marked
+            (if (fadeUnused) marked.unusedFade(input.faded, key) else marked)
                 .then(if (reordering) Modifier.reorderLook(key, input, TileShape) else Modifier)
                 .aspectRatio(TILE_ASPECT)
                 .then(

@@ -27,7 +27,8 @@ class AppLauncherTest {
     private fun launcher(
         launchActions: Map<String, String> = emptyMap(),
         recordOpened: Boolean = true,
-    ) = AppLauncher(context, launchActions, lastOpened, recordOpened, launchLog)
+        recordLibraryOpened: Boolean = false,
+    ) = AppLauncher(context, launchActions, lastOpened, recordOpened, launchLog, recordLibraryOpened)
 
     private fun intent(
         app: AppEntry = tile,
@@ -110,6 +111,26 @@ class AppLauncherTest {
 
         assertEquals(LaunchResult.Opened, launcher(recordOpened = true).open(tile))
         assertEquals(setOf(tile.key), lastOpened.times.value.keys)
+    }
+
+    @Test
+    fun an_app_opened_from_the_library_is_noted_as_last_opened_only_when_a_usage_key_is_on() {
+        assertTrue(launcher(recordOpened = true, recordLibraryOpened = false).openFromLibrary(tile))
+        assertEquals(emptyMap<String, Long>(), lastOpened.times.value)
+
+        assertTrue(launcher(recordOpened = true, recordLibraryOpened = true).openFromLibrary(tile))
+        assertEquals(setOf(tile.key), lastOpened.times.value.keys)
+    }
+
+    @Test
+    fun the_library_opens_an_app_itself_whatever_its_launch_action_and_a_failed_launch_is_not_noted() {
+        val launcher = launcher(mapOf("com.shop" to "input:HW5"), recordLibraryOpened = true)
+
+        assertFalse(launcher.openFromLibrary(tile.copy(key = "not a component")))
+        assertEquals(emptyMap<String, Long>(), lastOpened.times.value)
+
+        assertTrue(launcher.openFromLibrary(tile))
+        assertEquals("com.shop.Main", shadowOf(context).nextStartedActivity.component?.className)
     }
 
     @Test

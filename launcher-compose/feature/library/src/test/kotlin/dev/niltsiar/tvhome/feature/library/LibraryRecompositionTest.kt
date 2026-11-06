@@ -16,6 +16,7 @@ import androidx.compose.runtime.tooling.ObservableComposition
 import androidx.compose.runtime.tooling.setObserver
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
@@ -43,7 +44,7 @@ import kotlin.coroutines.EmptyCoroutineContext
 @OptIn(InternalComposeTracingApi::class, ExperimentalComposeRuntimeApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
-class LibraryRecompositionTest {
+open class LibraryRecompositionTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
 
@@ -97,11 +98,13 @@ class LibraryRecompositionTest {
             override fun onScopeDisposed(scope: RecomposeScope) = Unit
         }
 
+    protected open val leastUsed = false
+
     @Before
     fun showLibrary() {
         Composer.setTracer(cards)
         val library = FakeLibrary((1..23).map { libraryApp("App %02d".format(it)) })
-        val config = TvConfig(appLibrary = true)
+        val config = TvConfig(appLibrary = true, libraryLeastUsed = leastUsed)
         lateinit var viewModel: MoleculeLibraryViewModel
         compose.setContent {
             val root = currentComposer.composition
@@ -133,6 +136,10 @@ class LibraryRecompositionTest {
         compose.waitForIdle()
         compose.onNodeWithTag("card:${key("App 01")}").assertIsFocused()
         assertTrue("cards composed at first: ${cards.count}", cards.count >= 18)
+        if (leastUsed) {
+            press(Key.Menu)
+            compose.onNodeWithTag("library:order").assertTextEquals("Least used")
+        }
         cards.count = 0
         items.count = 0
         items.why.clear()
@@ -174,6 +181,11 @@ class LibraryRecompositionTest {
             items.count,
         )
     }
+}
+
+/** The cards of the least used order carry a second line, and a focus move still composes none of them again. */
+class LeastUsedLibraryRecompositionTest : LibraryRecompositionTest() {
+    override val leastUsed = true
 }
 
 @OptIn(InternalComposeTracingApi::class)

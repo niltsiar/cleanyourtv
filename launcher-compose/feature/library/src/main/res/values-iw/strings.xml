@@ -15,4 +15,8 @@
     <item quantity="two">שתי אפליקציות</item>
     <item quantity="other">%1$d אפליקציות</item>
   </plurals>
+  <string name="library_order_usual">סדר רגיל</string>
+  <string name="library_order_least_used">הכי פחות בשימוש</string>
+  <string name="library_hint_order">תפריט: %1$s</string>
+  <string name="library_never_opened">מעולם לא נפתחה</string>
 </resources>

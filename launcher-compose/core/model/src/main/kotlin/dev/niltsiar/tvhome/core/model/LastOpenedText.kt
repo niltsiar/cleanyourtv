@@ -1,4 +1,4 @@
-package dev.niltsiar.tvhome.feature.home
+package dev.niltsiar.tvhome.core.model
 
 import android.content.Context
 import android.text.format.DateUtils
@@ -23,7 +23,7 @@ public data class OpenedAt(
  * launcher; the time follows [OpenedAt.hour24]. It follows "Last opened" mid-sentence, so the relative words start in
  * lower case, which Android capitalizes.
  */
-internal fun describeLastOpened(
+public fun describeLastOpened(
     context: Context,
     opened: OpenedAt,
     locale: Locale = Locale.getDefault(),

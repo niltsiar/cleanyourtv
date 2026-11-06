@@ -13,4 +13,8 @@
   <plurals name="library_app_count">
     <item quantity="other">%1$d แอป</item>
   </plurals>
+  <string name="library_order_usual">ลำดับปกติ</string>
+  <string name="library_order_least_used">ใช้น้อยที่สุด</string>
+  <string name="library_hint_order">เมนู: %1$s</string>
+  <string name="library_never_opened">ไม่เคยเปิด</string>
 </resources>

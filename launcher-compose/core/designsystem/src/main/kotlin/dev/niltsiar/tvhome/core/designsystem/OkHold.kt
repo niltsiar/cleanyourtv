@@ -79,7 +79,7 @@ public class OkHold(
 }
 
 /** Whether a MENU key event opens the menu: an UP that is not cancelled, or one with the Xiaomi flags (#1637). */
-internal fun menuReleased(
+public fun menuReleased(
     isUp: Boolean,
     flags: Int,
 ): Boolean = isUp && ((flags and AndroidKeyEvent.FLAG_CANCELED) == 0 || (flags and XIAOMI_SHORT_MENU_FLAGS) == XIAOMI_SHORT_MENU_FLAGS)

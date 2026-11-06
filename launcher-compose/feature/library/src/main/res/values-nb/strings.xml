@@ -14,4 +14,8 @@
     <item quantity="one">%1$d app</item>
     <item quantity="other">%1$d apper</item>
   </plurals>
+  <string name="library_order_usual">Vanlig rekkefølge</string>
+  <string name="library_order_least_used">Minst brukt</string>
+  <string name="library_hint_order">Meny: %1$s</string>
+  <string name="library_never_opened">Aldri åpnet</string>
 </resources>

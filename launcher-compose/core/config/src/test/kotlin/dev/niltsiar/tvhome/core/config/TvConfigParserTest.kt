@@ -44,7 +44,8 @@ class TvConfigParserTest {
         assertTrue(config.appGlow)
         assertTrue(config.dockRow)
         assertFalse(config.reorderButton)
-        assertFalse(config.appLibrarySelection || config.libraryButton || config.libraryOkOpens)
+        assertFalse(config.appLibrarySelection || config.libraryButton || config.libraryOkOpens || config.libraryLeastUsed)
+        assertEquals(0, config.unusedFadeDays)
         assertTrue(config.showLibraryPill)
         assertEquals(emptyList<String>(), config.libraryApps + config.libraryExcludedApps)
         assertEquals(
@@ -116,6 +117,7 @@ class TvConfigParserTest {
             Triple("home_idle_clock_minutes", 0..1440, { it.homeIdleClockMinutes }),
             Triple("clock_wallpaper_dim", 0..90, { it.clockWallpaperDim }),
             Triple("open_on_start_network_wait", 0..600, { it.openOnStartNetworkWait }),
+            Triple("unused_fade_days", 0..3650, { it.unusedFadeDays }),
         )
 
     @Test
@@ -495,6 +497,7 @@ class TvConfigParserTest {
             "library_excluded_apps" to ("""["a.b"]""" to defaults.copy(libraryExcludedApps = listOf("a.b"))),
             "show_library_pill" to ("false" to defaults.copy(showLibraryPill = false)),
             "library_ok_opens" to ("true" to defaults.copy(libraryOkOpens = true)),
+            "library_least_used" to ("true" to defaults.copy(libraryLeastUsed = true)),
             "input_sources" to ("""["HDMI1"]""" to defaults.copy(inputSources = listOf("HDMI1"))),
             "input_action" to (""""a.INPUT"""" to defaults.copy(inputAction = "a.INPUT")),
             "input_uri_scheme" to (""""tv"""" to defaults.copy(inputUriScheme = "tv")),
@@ -510,6 +513,7 @@ class TvConfigParserTest {
             "inputs_cec_state_only" to ("true" to defaults.copy(inputsCecStateOnly = true)),
             "input_arrival" to ("true" to defaults.copy(inputArrival = true)),
             "habit_hint" to ("true" to defaults.copy(habitHint = true)),
+            "unused_fade_days" to ("60" to defaults.copy(unusedFadeDays = 60)),
             "handle_view_inputs" to ("true" to defaults.copy(handleViewInputs = true)),
             "open_on_start_network_wait" to ("30" to defaults.copy(openOnStartNetworkWait = 30)),
             "app_keys" to ("""["172:com.a"]""" to defaults.copy(appKeys = listOf("172:com.a"))),

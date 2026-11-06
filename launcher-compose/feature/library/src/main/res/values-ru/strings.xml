@@ -16,4 +16,8 @@
     <item quantity="many">%1$d приложений</item>
     <item quantity="other">%1$d приложения</item>
   </plurals>
+  <string name="library_order_usual">Обычный порядок</string>
+  <string name="library_order_least_used">Реже всего используются</string>
+  <string name="library_hint_order">Меню: %1$s</string>
+  <string name="library_never_opened">Ни разу не открывалось</string>
 </resources>

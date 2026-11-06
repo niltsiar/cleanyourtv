@@ -239,7 +239,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun launchLibraryApp(app: AppEntry) {
-        if (!graph.appLauncher.launch(app, useLaunchAction = false)) cantOpen(app.label)
+        if (!graph.appLauncher.openFromLibrary(app)) cantOpen(app.label)
     }
 
     private fun librarySaveFailed() {

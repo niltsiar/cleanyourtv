@@ -4,15 +4,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.config.is24Hour
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkState
+import dev.niltsiar.tvhome.core.model.OpenedRecord
 import dev.niltsiar.tvhome.core.model.Wallpaper
+import dev.niltsiar.tvhome.core.model.millisUntilNextDay
+import dev.niltsiar.tvhome.core.model.unusedKeys
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Locale
 
 private val NoNetwork = NetworkState()
@@ -70,11 +78,22 @@ internal fun homePresenter(
             }
         }
     }
+    var today by remember { mutableStateOf<LocalDate?>(null) }
+    LaunchedEffect(interaction, showing) {
+        if (config.unusedFadeDays > 0 && showing) {
+            while (true) {
+                val at = sources.timeMillis()
+                today = Instant.ofEpochMilli(at).atZone(ZoneId.systemDefault()).toLocalDate()
+                delay(millisUntilNextDay(at))
+            }
+        }
+    }
     val now by sources.clock.collectAsState(null)
     val network by sources.network.collectAsState(NoNetwork)
     val wallpaper by sources.wallpaper.collectAsState(NoWallpaper)
     val lastOpened by sources.lastOpened.collectAsState(NoOpened)
     val libraryCount by sources.libraryCount.collectAsState(null)
+    val openedSince by sources.openedSince.collectAsState(null)
     // Read again with each new time, which also follows the TV's 12/24-hour setting after a stop and start of Home.
     val hour24 = remember(now, config.clockFormat) { config.clockFormat.is24Hour(sources.systemHour24) }
     val header =
@@ -82,8 +101,13 @@ internal fun homePresenter(
             HeaderStyle(hour24, datePattern, config.showGreeting, config.greetingName)
         }
     val session = interaction.session
+    val shown = interaction.shown
+    val faded =
+        remember(shown, lastOpened, openedSince, today) {
+            today?.let { OpenedRecord(lastOpened, openedSince).unusedKeys(shown.grid.map { it.key }, config.unusedFadeDays, it) }.orEmpty()
+        }
     return homeUiState(
-        interaction.shown,
+        shown,
         now,
         interaction.focusedKey,
         locale,
@@ -101,5 +125,6 @@ internal fun homePresenter(
         inputOffer = interaction.offer,
         libraryCount = libraryCount,
         habit = interaction.habit,
+        faded = faded,
     )
 }

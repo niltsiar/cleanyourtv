@@ -78,7 +78,10 @@ interface AppGraph {
         config: TvConfig,
         lastOpened: LastOpened,
         launchLog: LaunchLog,
-    ): AppLauncher = AppLauncher(application, config.launchActions, lastOpened, config.cinematicHome, launchLog)
+    ): AppLauncher {
+        val usage = config.libraryLeastUsed || config.unusedFadeDays > 0
+        return AppLauncher(application, config.launchActions, lastOpened, config.cinematicHome || usage, launchLog, usage)
+    }
 
     @Provides
     @SingleIn(AppScope::class)
@@ -89,7 +92,10 @@ interface AppGraph {
 
     @Provides
     @SingleIn(AppScope::class)
-    fun provideLastOpened(application: Application): LastOpened = LastOpened(application)
+    fun provideLastOpened(
+        application: Application,
+        config: TvConfig,
+    ): LastOpened = LastOpened(application, startRecord = config.libraryLeastUsed || config.unusedFadeDays > 0)
 
     @Provides
     @SingleIn(AppScope::class)
@@ -176,6 +182,7 @@ interface AppGraph {
             wallpaper = wallpaperProvider.wallpaper(minuteClock.now),
             systemHour24 = { DateFormat.is24HourFormat(application) },
             lastOpened = lastOpened.times,
+            openedSince = lastOpened.since,
             habit = { launchLog.habit(System.currentTimeMillis()) },
             heroArt = appsProvider::heroArt,
             hasAppInfo = systemSettings::hasAppInfo,
@@ -199,8 +206,10 @@ interface AppGraph {
     @Provides
     @SingleIn(AppScope::class)
     fun provideLibrarySources(
+        application: Application,
         libraryCatalog: LibraryCatalog,
         systemSettings: SystemSettings,
+        lastOpened: LastOpened,
     ): LibrarySources =
         LibrarySources(
             load = libraryCatalog::load,
@@ -209,6 +218,8 @@ interface AppGraph {
             setOnHome = libraryCatalog::setOnHome,
             hasAppInfo = systemSettings::hasAppInfo,
             release = libraryCatalog::release,
+            opened = lastOpened::snapshot,
+            hour24 = { DateFormat.is24HourFormat(application) },
         )
 
     @DependencyGraph.Factory

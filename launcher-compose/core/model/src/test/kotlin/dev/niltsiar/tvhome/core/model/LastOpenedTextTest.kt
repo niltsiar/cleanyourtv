@@ -1,4 +1,4 @@
-package dev.niltsiar.tvhome.feature.home
+package dev.niltsiar.tvhome.core.model
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

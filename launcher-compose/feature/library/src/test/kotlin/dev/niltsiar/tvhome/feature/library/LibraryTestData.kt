@@ -3,6 +3,7 @@ package dev.niltsiar.tvhome.feature.library
 import app.cash.turbine.ReceiveTurbine
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.LibraryApp
+import dev.niltsiar.tvhome.core.model.OpenedRecord
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableSharedFlow
 
@@ -27,6 +28,10 @@ internal class FakeLibrary(
     var released = 0
     var loads = 0
 
+    /** When Home last opened each app, and how often the library asked. */
+    var record = OpenedRecord()
+    var recordReads = 0
+
     /** While set, a load waits for it. */
     var gate: CompletableDeferred<Unit>? = null
     var appInfoFor: Set<String> = emptySet()
@@ -50,6 +55,11 @@ internal class FakeLibrary(
             hasAppInfo = { it in appInfoFor },
             release = { released++ },
             now = { NOW },
+            opened = {
+                recordReads++
+                record
+            },
+            hour24 = { true },
         )
 }
 

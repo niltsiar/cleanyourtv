@@ -16,4 +16,8 @@
     <item quantity="many">%1$d застосунків</item>
     <item quantity="other">%1$d застосунка</item>
   </plurals>
+  <string name="library_order_usual">Звичайний порядок</string>
+  <string name="library_order_least_used">Найменш використовувані</string>
+  <string name="library_hint_order">Меню: %1$s</string>
+  <string name="library_never_opened">Ніколи не відкривався</string>
 </resources>

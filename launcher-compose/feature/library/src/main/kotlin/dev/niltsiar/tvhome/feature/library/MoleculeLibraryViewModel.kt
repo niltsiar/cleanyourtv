@@ -27,6 +27,8 @@ public class LibraryActions(
     public val onHold: (String) -> Unit = {},
     public val onPick: (LibraryRow) -> Unit = {},
     public val onBack: () -> Unit = {},
+    /** The MENU key: switch to the other order. */
+    public val onOrder: () -> Unit = {},
 )
 
 /** Hosts [libraryPresenter] with Molecule: an event Flow in, a StateFlow out. */
@@ -64,6 +66,7 @@ public class MoleculeLibraryViewModel(
             onHold = { events.trySend(LibraryEvent.Hold(it)) },
             onPick = { events.trySend(LibraryEvent.Pick(it)) },
             onBack = { events.trySend(LibraryEvent.Back) },
+            onOrder = { events.trySend(LibraryEvent.ToggleOrder) },
         )
 
     /** Open the library over Home. Nothing happens while it is open. */

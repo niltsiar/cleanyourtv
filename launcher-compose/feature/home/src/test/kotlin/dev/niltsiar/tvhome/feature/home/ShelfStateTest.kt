@@ -2,6 +2,7 @@ package dev.niltsiar.tvhome.feature.home
 
 import androidx.compose.ui.graphics.Color
 import dev.niltsiar.tvhome.core.model.AppEntry
+import dev.niltsiar.tvhome.core.model.OpenedAt
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

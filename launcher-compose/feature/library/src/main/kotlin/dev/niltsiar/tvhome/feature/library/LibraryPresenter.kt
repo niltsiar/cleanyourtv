@@ -38,5 +38,6 @@ internal fun libraryPresenter(
         hint = interaction.hint,
         menu = interaction.menu,
         focusRequest = interaction.focusRequest,
+        order = interaction.order,
     )
 }

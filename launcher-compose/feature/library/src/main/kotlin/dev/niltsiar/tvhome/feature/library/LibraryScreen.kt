@@ -79,6 +79,7 @@ import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.OverlaySurface
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.eatsOkUp
+import dev.niltsiar.tvhome.core.designsystem.menuReleased
 import dev.niltsiar.tvhome.core.model.LibraryArt
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -156,7 +157,7 @@ internal fun LibraryScreen(
             modifier
                 .fillMaxSize()
                 .testTag("library")
-                .onPreviewKeyEvent { hold.eatsOkUp(it) }
+                .onPreviewKeyEvent { hold.eatsOkUp(it) || (layout.leastUsed && it.switchesOrder(actions)) }
                 .focusProperties { exit = { FocusRequester.Cancel } }
                 .focusGroup(),
         contentAlignment = Alignment.Center,
@@ -184,7 +185,7 @@ internal fun LibraryScreen(
                         .fillMaxSize()
                         .padding(start = PanelSide, top = PanelTop, end = PanelSide, bottom = PanelBottom),
             ) {
-                Header(state, showHint = !empty)
+                Header(state, layout, showHint = !empty)
                 if (empty) Empty() else Cards(state, layout, actions, art, entrance, hold) { anchor.value = it }
             }
         }
@@ -211,13 +212,22 @@ private fun LibraryRow.label(): Int =
         LibraryRow.AppInfo -> R.string.library_app_info
     }
 
+/** The MENU key switches the order when it is released, as it opens a tile menu in Home; its press is eaten too. */
+private fun KeyEvent.switchesOrder(actions: LibraryActions): Boolean {
+    if (key != Key.Menu) return false
+    if (type == KeyEventType.KeyUp && menuReleased(isUp = true, flags = nativeKeyEvent.flags)) actions.onOrder()
+    return true
+}
+
 @Composable
 private fun Header(
     state: () -> LibraryUiState,
+    layout: LibraryLayout,
     showHint: Boolean,
 ) {
     val count by remember { derivedStateOf { state().cards.size } }
     val hint by remember { derivedStateOf { state().hint } }
+    val order by remember { derivedStateOf { state().order } }
     val typography = TvTheme.typography
     val title = remember(typography) { typography.shelfTitle.copy(fontSize = 26.sp) }
     val countStyle = remember(typography) { typography.date.copy(fontSize = 18.sp) }
@@ -225,11 +235,41 @@ private fun Header(
     Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
         Row(Modifier.height(HeaderTitleHeight), verticalAlignment = Alignment.CenterVertically) {
             BasicText(stringResource(R.string.app_library), style = title, maxLines = 1, modifier = Modifier.weight(1f))
+            if (layout.leastUsed) {
+                BasicText(
+                    stringResource(order.label()),
+                    style = countStyle,
+                    maxLines = 1,
+                    modifier = Modifier.padding(end = 16.dp).testTag("library:order"),
+                )
+            }
             BasicText(pluralStringResource(R.plurals.library_app_count, count, count), style = countStyle, maxLines = 1)
         }
-        if (showHint) BasicText(hintText(hint), style = muted, maxLines = 1, modifier = Modifier.height(HeaderHintHeight))
+        if (showHint) {
+            val text = hintText(hint)
+            val orderHint =
+                if (layout.leastUsed) {
+                    stringResource(
+                        R.string.library_hint_order,
+                        stringResource(order.other().label()),
+                    )
+                } else {
+                    null
+                }
+            val shown = if (orderHint != null) "$text · $orderHint" else text
+            BasicText(shown, style = muted, maxLines = 1, modifier = Modifier.height(HeaderHintHeight).testTag("library:hint"))
+        }
     }
 }
+
+@StringRes
+private fun LibraryOrder.label(): Int =
+    when (this) {
+        LibraryOrder.Usual -> R.string.library_order_usual
+        LibraryOrder.LeastUsed -> R.string.library_order_least_used
+    }
+
+private fun LibraryOrder.other(): LibraryOrder = if (this == LibraryOrder.Usual) LibraryOrder.LeastUsed else LibraryOrder.Usual
 
 @Composable
 private fun hintText(hint: LibraryHint): String =

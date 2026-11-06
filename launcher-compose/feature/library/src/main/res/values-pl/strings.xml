@@ -16,4 +16,8 @@
     <item quantity="many">%1$d aplikacji</item>
     <item quantity="other">%1$d aplikacji</item>
   </plurals>
+  <string name="library_order_usual">Zwykła kolejność</string>
+  <string name="library_order_least_used">Najrzadziej używane</string>
+  <string name="library_hint_order">Menu: %1$s</string>
+  <string name="library_never_opened">Nigdy nieotwierana</string>
 </resources>

@@ -9,6 +9,7 @@ import dev.niltsiar.tvhome.core.model.InputArrival
 import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkState
+import dev.niltsiar.tvhome.core.model.OpenedAt
 import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -29,7 +30,7 @@ import java.util.Locale
  * [inputOffer] is the device switched on since Home came on screen that the button offers, null when none is.
  * [libraryCount] is how many apps the App library lists, null until it is known.
  * [habit] is the package of the app the household usually opens at this time of day (habit_hint), null when none is, and
- * [focusedUsual] whether the focused app is it.
+ * [focusedUsual] whether the focused app is it. [faded] holds the keys of the grid tiles drawn faded (unused_fade_days).
  */
 @Immutable
 public data class HomeUiState(
@@ -55,6 +56,7 @@ public data class HomeUiState(
     val libraryCount: Int? = null,
     val habit: String? = null,
     val focusedUsual: Boolean = false,
+    val faded: Set<String> = emptySet(),
 )
 
 /** Focus goes to the tile with this key, or to the Settings button for [SETTINGS_FOCUS]. A new [token] asks again. */
@@ -174,6 +176,10 @@ public class HomeSources(
     public val libraryCount: Flow<Int> = emptyFlow(),
     /** The package the household usually opens now (habit_hint); null when no app is one. Runs off the main thread. */
     public val habit: suspend () -> String? = { null },
+    /** Milliseconds since the epoch when [lastOpened] began, null while it has not; never opened apps count from then. */
+    public val openedSince: Flow<Long?> = flowOf(null),
+    /** The time, for the day unused_fade_days counts from and for the wait until the next midnight. */
+    public val timeMillis: () -> Long = System::currentTimeMillis,
 )
 
 internal sealed interface HomeEvent {
@@ -299,6 +305,7 @@ internal fun homeUiState(
     inputOffer: InputArrival? = null,
     libraryCount: Int? = null,
     habit: String? = null,
+    faded: Set<String> = emptySet(),
 ): HomeUiState {
     val focused = apps.all.firstOrNull { it.key == focusedKey } ?: apps.all.firstOrNull()
     return HomeUiState(
@@ -324,6 +331,7 @@ internal fun homeUiState(
         libraryCount = libraryCount,
         habit = habit,
         focusedUsual = habit != null && focused?.packageName == habit,
+        faded = faded,
     )
 }
 

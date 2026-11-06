@@ -7,13 +7,15 @@ import dev.niltsiar.tvhome.core.designsystem.focusRingColour
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.LibraryApp
 import dev.niltsiar.tvhome.core.model.LibraryArt
+import dev.niltsiar.tvhome.core.model.OpenedAt
+import dev.niltsiar.tvhome.core.model.OpenedRecord
 import kotlinx.coroutines.flow.Flow
 
 /**
  * How the library behaves, from the theme. [selection] is app_library_selection: OK changes an app's Home shortcut and
  * a held OK opens nothing. [okOpens] is library_ok_opens, which selection overrides. [appGlow] and [whiteFocus] decide the
  * colour of a focused card's ring as they do in Home's grid. [animated] is false for a theme without animations or with
- * reduced motion.
+ * reduced motion. [leastUsed] is library_least_used: the MENU key switches to the least used first order.
  */
 @Immutable
 public data class LibraryLayout(
@@ -22,6 +24,7 @@ public data class LibraryLayout(
     val appGlow: Boolean = false,
     val whiteFocus: Boolean = false,
     val animated: Boolean = true,
+    val leastUsed: Boolean = false,
 )
 
 /** The ring of a focused card whose art gives [art]. */
@@ -34,6 +37,7 @@ public fun TvConfig.libraryLayout(): LibraryLayout =
         appGlow = appGlow,
         whiteFocus = cinematicWhiteFocus,
         animated = animations && !reducedMotion,
+        leastUsed = libraryLeastUsed,
     )
 
 /** What the host feeds the library: its catalogue and the choices it saves. */
@@ -52,15 +56,32 @@ public class LibrarySources(
     public val release: () -> Unit = {},
     /** The time, in milliseconds since the epoch, that decides which installs are recent. */
     public val now: () -> Long = System::currentTimeMillis,
+    /** When Home last opened each app, read off the main thread; only the least used order asks. */
+    public val opened: suspend () -> OpenedRecord = { OpenedRecord() },
+    /** Whether the TV is set to the 24-hour clock, for the time on a card. */
+    public val hour24: () -> Boolean = { true },
 )
 
-/** One card: an app, whether it is on Home, and whether it is a recent install. */
+/** One card: an app, whether it is on Home, whether it is a recent install and, in the least used order, when it was opened. */
 @Immutable
 public data class LibraryCard(
     val app: AppEntry,
     val onHome: Boolean,
     val recent: Boolean,
+    val opened: CardOpened? = null,
 )
+
+/** When Home last opened a card's app, [at] null for an app it never opened. */
+@Immutable
+public data class CardOpened(
+    val at: OpenedAt?,
+)
+
+/** The order of the cards: the usual one, or with library_least_used the least used first. */
+public enum class LibraryOrder {
+    Usual,
+    LeastUsed,
+}
 
 /** What the line under the title says for the focused card. */
 public enum class LibraryHint {
@@ -101,7 +122,7 @@ public data class LibraryFocus(
 
 /**
  * What the screen shows. [open] is true from asking to open until closing; [shown] once the catalogue first loaded,
- * which is when the panel appears. [cards] are in the library's order; [focusedKey] is the card with focus.
+ * which is when the panel appears. [cards] are in the library's [order]; [focusedKey] is the card with focus.
  */
 @Immutable
 public data class LibraryUiState(
@@ -112,6 +133,7 @@ public data class LibraryUiState(
     val hint: LibraryHint = LibraryHint.Add,
     val menu: LibraryMenu? = null,
     val focusRequest: LibraryFocus? = null,
+    val order: LibraryOrder = LibraryOrder.Usual,
 )
 
 /** One-shot results the host handles outside the UI state. */
@@ -151,6 +173,9 @@ internal sealed interface LibraryEvent {
     ) : LibraryEvent
 
     data object Back : LibraryEvent
+
+    /** The MENU key: the other order. */
+    data object ToggleOrder : LibraryEvent
 
     /** Home left the screen or the Home key was pressed. */
     data object Close : LibraryEvent

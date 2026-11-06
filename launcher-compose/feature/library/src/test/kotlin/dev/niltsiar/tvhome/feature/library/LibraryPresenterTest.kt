@@ -4,6 +4,8 @@ import app.cash.molecule.RecompositionMode
 import app.cash.molecule.moleculeFlow
 import app.cash.turbine.test
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.model.OpenedAt
+import dev.niltsiar.tvhome.core.model.OpenedRecord
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -335,6 +337,166 @@ class LibraryPresenterTest {
 
                 assertEquals(emptyList<LibraryCard>(), shown.cards)
                 assertEquals(null, shown.focusRequest)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    private val leastUsed = TvConfig(appLibrary = true, libraryLeastUsed = true)
+
+    /** Fresh and Home were opened, Beta and Alpha never; the record began 90 days ago. */
+    private fun opened() =
+        OpenedRecord(
+            times = mapOf(key("Home") to NOW - 2 * DAY, key("Fresh") to NOW - 30 * DAY),
+            since = NOW - 90 * DAY,
+        )
+
+    @Test
+    fun the_least_used_order_lists_apps_never_opened_first_then_the_oldest_open_with_ties_by_label() =
+        runTest {
+            val library = FakeLibrary(catalogue).apply { record = opened() }
+            presenter(library, leastUsed).test {
+                events.send(LibraryEvent.Open)
+                val usual = awaitMatching { it.shown }
+                assertEquals(LibraryOrder.Usual, usual.order)
+                assertEquals(listOf("Fresh", "Alpha", "Beta", "Zeta", "Home"), usual.labels())
+
+                events.send(LibraryEvent.ToggleOrder)
+                val least = awaitMatching { it.order == LibraryOrder.LeastUsed }
+
+                assertEquals(listOf("Alpha", "Beta", "Zeta", "Fresh", "Home"), least.labels())
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun in_the_least_used_order_a_card_says_when_its_app_was_opened_or_that_it_never_was() =
+        runTest {
+            val library = FakeLibrary(catalogue).apply { record = opened() }
+            presenter(library, leastUsed).test {
+                events.send(LibraryEvent.Open)
+                val usual = awaitMatching { it.shown }
+                assertEquals(List(5) { null }, usual.cards.map { it.opened })
+
+                events.send(LibraryEvent.ToggleOrder)
+                val least = awaitMatching { it.order == LibraryOrder.LeastUsed }
+
+                assertEquals(
+                    listOf(
+                        CardOpened(null),
+                        CardOpened(null),
+                        CardOpened(null),
+                        CardOpened(OpenedAt(NOW - 30 * DAY, NOW, hour24 = true)),
+                        CardOpened(OpenedAt(NOW - 2 * DAY, NOW, hour24 = true)),
+                    ),
+                    least.cards.map { it.opened },
+                )
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun the_other_order_keeps_each_cards_status_and_the_usual_order_shows_no_opened_line() =
+        runTest {
+            val library = FakeLibrary(catalogue).apply { record = opened() }
+            presenter(library, leastUsed).test {
+                events.send(LibraryEvent.Open)
+                val usual = awaitMatching { it.shown }
+                events.send(LibraryEvent.ToggleOrder)
+                val least = awaitMatching { it.order == LibraryOrder.LeastUsed }
+                events.send(LibraryEvent.ToggleOrder)
+                val back = awaitMatching { it.order == LibraryOrder.Usual }
+
+                assertEquals(
+                    usual.cards.associate { it.app.label to (it.onHome to it.recent) },
+                    least.cards.associate {
+                        it.app.label to
+                            (it.onHome to it.recent)
+                    },
+                )
+                assertEquals(usual.cards, back.cards)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun switching_the_order_keeps_focus_on_the_same_app_and_asks_the_grid_to_scroll_to_it_again() =
+        runTest {
+            val library = FakeLibrary(catalogue).apply { record = opened() }
+            presenter(library, leastUsed).test {
+                events.send(LibraryEvent.Open)
+                awaitMatching { it.shown }
+                events.send(LibraryEvent.Focus(key("Zeta")))
+                val before = awaitMatching { it.focusedKey == key("Zeta") }
+
+                events.send(LibraryEvent.ToggleOrder)
+                val least = awaitMatching { it.order == LibraryOrder.LeastUsed }
+
+                assertEquals(key("Zeta"), least.focusedKey)
+                assertEquals(key("Zeta"), least.focusRequest?.key)
+                assertTrue(least.focusRequest!!.token != before.focusRequest?.token)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun a_package_change_while_the_least_used_order_is_on_keeps_that_order_and_closing_resets_it() =
+        runTest {
+            val library = FakeLibrary(catalogue).apply { record = opened() }
+            presenter(library, leastUsed).test {
+                events.send(LibraryEvent.Open)
+                awaitMatching { it.shown }
+                events.send(LibraryEvent.ToggleOrder)
+                awaitMatching { it.order == LibraryOrder.LeastUsed }
+                runCurrent()
+
+                library.apps = catalogue + libraryApp("Aaa")
+                library.changes.emit(1)
+                val refreshed = awaitMatching { it.cards.size == 6 }
+                assertEquals(LibraryOrder.LeastUsed, refreshed.order)
+                assertEquals("Aaa", refreshed.labels().first())
+
+                events.send(LibraryEvent.Close)
+                awaitMatching { !it.open }
+                events.send(LibraryEvent.Open)
+                assertEquals(LibraryOrder.Usual, awaitMatching { it.shown }.order)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun the_order_does_not_switch_while_a_card_menu_is_open() =
+        runTest {
+            val library = FakeLibrary(catalogue).apply { record = opened() }
+            presenter(library, leastUsed).test {
+                events.send(LibraryEvent.Open)
+                awaitMatching { it.shown }
+                events.send(LibraryEvent.Hold(key("Beta")))
+                awaitMatching { it.menu != null }
+
+                events.send(LibraryEvent.ToggleOrder)
+                events.send(LibraryEvent.Back)
+                val closed = awaitMatching { it.menu == null }
+
+                assertEquals(LibraryOrder.Usual, closed.order)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun with_library_least_used_off_the_order_event_changes_nothing_and_the_record_is_never_read() =
+        runTest {
+            val library = FakeLibrary(catalogue).apply { record = opened() }
+            presenter(library).test {
+                events.send(LibraryEvent.Open)
+                val shown = awaitMatching { it.shown }
+
+                events.send(LibraryEvent.ToggleOrder)
+                events.send(LibraryEvent.Focus(key("Beta")))
+                val later = awaitMatching { it.focusedKey == key("Beta") }
+
+                assertEquals(shown.cards, later.cards)
+                assertEquals(LibraryOrder.Usual, later.order)
+                assertEquals(0, library.recordReads)
                 cancelAndIgnoreRemainingEvents()
             }
         }

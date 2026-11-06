@@ -2,6 +2,8 @@ package dev.niltsiar.tvhome.data.apps
 
 import android.content.Context
 import android.content.SharedPreferences
+import dev.niltsiar.tvhome.core.model.OpenedRecord
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,6 +16,9 @@ import kotlinx.coroutines.launch
 
 private const val PREFS = "last_opened"
 
+/** The preference that holds when the record began. No tile key starts with "@". */
+private const val SINCE = "@since"
+
 /**
  * When Home last opened each app, for the cinematic shelf's "Last opened" line: Home notes the time whenever it opens
  * an app. It reads nothing from other apps, so an app started some other way shows the last time Home opened it.
@@ -22,20 +27,38 @@ private const val PREFS = "last_opened"
 public class LastOpened(
     context: Context,
     io: CoroutineDispatcher = Dispatchers.IO,
+    private val startRecord: Boolean = false,
+    private val clock: () -> Long = System::currentTimeMillis,
 ) {
     private val appContext = context.applicationContext
     private val scope = CoroutineScope(SupervisorJob() + io)
     private val prefs: SharedPreferences by lazy { appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
     private val saved = MutableStateFlow<Map<String, Long>>(emptyMap())
+    private val began = MutableStateFlow<Long?>(null)
+    private val loaded = CompletableDeferred<Unit>()
 
     /** Tile key to the milliseconds since the epoch of the last launch; a tile Home never opened is missing. */
     public val times: StateFlow<Map<String, Long>> = saved.asStateFlow()
 
+    /** Milliseconds since the epoch when the record began, null while it has not. */
+    public val since: StateFlow<Long?> = began.asStateFlow()
+
     init {
         scope.launch {
             val stored = prefs.all.mapNotNull { (key, value) -> (value as? Long)?.let { key to it } }.toMap()
-            saved.update { stored + it }
+            val times = stored - SINCE
+            val start = stored[SINCE] ?: times.values.minOrNull() ?: clock().takeIf { startRecord }
+            if (start != null && SINCE !in stored) prefs.edit().putLong(SINCE, start).apply()
+            saved.update { times + it }
+            began.update { listOfNotNull(it, start).minOrNull() }
+            loaded.complete(Unit)
         }
+    }
+
+    /** The times and the start of the record, once they are read from the disk. */
+    public suspend fun snapshot(): OpenedRecord {
+        loaded.await()
+        return OpenedRecord(saved.value, began.value)
     }
 
     /** Notes that Home just opened the tile [key]. Main thread. */
@@ -44,6 +67,11 @@ public class LastOpened(
         now: Long = System.currentTimeMillis(),
     ) {
         saved.update { it + (key to now) }
-        scope.launch { prefs.edit().putLong(key, now).apply() }
+        began.update { it ?: now }
+        scope.launch {
+            val edit = prefs.edit().putLong(key, now)
+            if (!prefs.contains(SINCE)) edit.putLong(SINCE, began.value ?: now)
+            edit.apply()
+        }
     }
 }
