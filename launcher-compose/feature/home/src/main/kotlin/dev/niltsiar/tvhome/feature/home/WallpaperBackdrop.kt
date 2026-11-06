@@ -62,8 +62,9 @@ private const val HERO_SCRIM_ALPHA = 0.40f
 /** The width of the hero block's box, from the screen margin, whose picture the scrim's brightness is read from. */
 internal val HeroSampleWidth = 480.dp
 
-/** The mean relative luminance above which the picture under the hero block counts as bright. */
-internal const val HERO_BRIGHT = 0.45f
+/** A pixel of the picture under the hero block is bright above this relative luminance, and the block gets its scrim from this share of them. */
+internal const val HERO_BRIGHT_LUMINANCE = 0.5f
+internal const val HERO_BRIGHT_SHARE = 0.12f
 
 /**
  * What is behind Home, drawn in the draw phase only: the picture, the time-of-day sky, then the scrim that keeps the
@@ -168,7 +169,7 @@ private fun DrawScope.drawCover(
 
 /**
  * A soft scrim behind the hero block (the title and its line) while the picture under it is bright
- * ([GlassState.heroLuminance] over [HERO_BRIGHT]), over the [boxHeight] of the block and a feather above and below it.
+ * ([GlassState.heroBrightShare] at [HERO_BRIGHT_SHARE] or more), over the [boxHeight] of the block and a feather above and below it.
  * It sits in one cached offscreen layer that [shift] moves in the layer phase, so a move draws nothing again.
  */
 @Composable
@@ -177,7 +178,7 @@ internal fun HeroScrim(
     boxHeight: Dp,
     shift: GraphicsLayerScope.() -> Float,
 ) {
-    val bright by remember(glass) { derivedStateOf { glass.heroLuminance > HERO_BRIGHT } }
+    val bright by remember(glass) { derivedStateOf { glass.heroBrightShare >= HERO_BRIGHT_SHARE } }
     if (!bright) return
     Box(
         Modifier

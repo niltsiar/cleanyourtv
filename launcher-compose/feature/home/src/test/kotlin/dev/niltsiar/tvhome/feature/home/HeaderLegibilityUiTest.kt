@@ -1,6 +1,7 @@
 package dev.niltsiar.tvhome.feature.home
 
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -31,6 +32,7 @@ import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.Wallpaper
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -58,6 +60,18 @@ class HeaderLegibilityUiTest {
             Canvas(image).drawRect(Rect(0f, 0f, 16f, 9f), Paint().apply { color = Color(level, level, level) })
         }
 
+    /** A 100 by 10 thumbnail, dark except for [white] columns out of every [period]: that share of its pixels is bright, anywhere. */
+    private fun stripes(
+        period: Int,
+        white: Int,
+    ) = ImageBitmap(100, 10).also { image ->
+        val canvas = Canvas(image)
+        canvas.drawRect(Rect(0f, 0f, 100f, 10f), Paint().apply { color = Color(0.1f, 0.1f, 0.1f) })
+        for (x in 0 until 100) {
+            if (x % period < white) canvas.drawRect(Rect(x.toFloat(), 0f, x + 1f, 10f), Paint().apply { color = Color.White })
+        }
+    }
+
     private lateinit var glass: GlassState
     private val ssid = "Living room"
     private val wifi = NetworkState(NetworkLink.Wifi, ssid = ssid, validated = true)
@@ -70,20 +84,22 @@ class HeaderLegibilityUiTest {
     ) {
         val sources = sources(wallpaper = wallpapers, network = flowOf(wifi))
         compose.setContent {
-            TvTheme(darkTheme = true) {
-                glass = rememberGlassState()
-                val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
-                val state = viewModel.uiState.collectAsState()
-                HomeScreen(
-                    state = { state.value },
-                    layout = config.homeLayout(),
-                    onFocus = viewModel::onFocus,
-                    onClick = {},
-                    topBar = config.topBarLayout(),
-                    wallpaperLayout = wallpaperLayout,
-                    actions = viewModel.actions,
-                    glass = glass,
-                )
+            CompositionLocalProvider(LocalBakeDispatcher provides Dispatchers.Unconfined) {
+                TvTheme(darkTheme = true) {
+                    glass = rememberGlassState()
+                    val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
+                    val state = viewModel.uiState.collectAsState()
+                    HomeScreen(
+                        state = { state.value },
+                        layout = config.homeLayout(),
+                        onFocus = viewModel::onFocus,
+                        onClick = {},
+                        topBar = config.topBarLayout(),
+                        wallpaperLayout = wallpaperLayout,
+                        actions = viewModel.actions,
+                        glass = glass,
+                    )
+                }
             }
         }
         // A TV has no touch screen; the native graphics mode starts in touch mode, where nothing takes key focus.
@@ -196,6 +212,22 @@ class HeaderLegibilityUiTest {
         val at = inTheSubtitleBox()
 
         assertNear(scrimmed(255, top = 0.55f, left = 0.40f, at), redAt(at))
+    }
+
+    @Test
+    fun a_busy_light_picture_with_a_quarter_of_its_pixels_bright_gets_the_soft_scrim_behind_the_subtitle() {
+        showHome(wallpapers = flowOf(Wallpaper(picture = grey(1f), thumbnail = stripes(period = 20, white = 5))))
+        val at = inTheSubtitleBox()
+
+        assertNear(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at), at), redAt(at))
+    }
+
+    @Test
+    fun a_dark_picture_with_a_few_bright_spots_gets_no_local_scrim_behind_the_subtitle() {
+        showHome(wallpapers = flowOf(Wallpaper(picture = grey(0.4f), thumbnail = stripes(period = 25, white = 2))))
+        val at = inTheSubtitleBox()
+
+        assertNear(scrimmed(102, top = 0.55f, left = 0.40f, at), redAt(at))
     }
 
     @Test

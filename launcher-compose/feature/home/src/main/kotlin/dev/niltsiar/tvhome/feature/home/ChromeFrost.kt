@@ -3,6 +3,7 @@ package dev.niltsiar.tvhome.feature.home
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Canvas
@@ -14,6 +15,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.model.SkyPalette
 import dev.niltsiar.tvhome.core.model.Wallpaper
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -49,20 +51,23 @@ private val TopBarButtonsBand =
         bottom = (TopBarTop + TopBarHeight).value / DESIGN_HEIGHT_DP,
     )
 
+/** Where the wallpaper's chrome measurements run: off the main thread, unless a test runs them in line. */
+internal val LocalBakeDispatcher = staticCompositionLocalOf<CoroutineDispatcher> { Dispatchers.Default }
+
 private class Baked(
     val frost: ImageBitmap,
     val dockFrost: ImageBitmap?,
     val dockLightness: Float,
     val headerLightness: Float,
     val topBarLightness: Float,
-    val heroLuminance: Float,
+    val heroBrightShare: Float,
 )
 
 /**
  * Keeps [glass]'s frost on the wallpaper's [Wallpaper.thumbnail] and sky, baked off the main thread each time either
  * changes, and [GlassState.dockLightness] on the part of it under the [dock] (as fractions of the screen). It also keeps
  * [GlassState.headerLightness] and [GlassState.topBarLightness], measured on the thumbnail and sky before the scrim, and
- * [GlassState.heroLuminance] on the [hero] box (as fractions of the screen), in the same pass. No
+ * [GlassState.heroBrightShare] on the [hero] box (as fractions of the screen), in the same pass on [LocalBakeDispatcher]. No
  * thumbnail, no frost and a lightness of 0, which gives the base tint and the fixed scrims. With [dockGlass] it also
  * keeps [GlassState.dockFrost], the frost with its HSL saturation held to 0.35.
  */
@@ -75,11 +80,12 @@ internal fun ChromeFrostEffect(
     hero: Rect,
     dockGlass: Boolean,
 ) {
-    LaunchedEffect(glass, skyIntensity, dock, hero, dockGlass) {
+    val bakeDispatcher = LocalBakeDispatcher.current
+    LaunchedEffect(glass, skyIntensity, dock, hero, dockGlass, bakeDispatcher) {
         snapshotFlow { wallpaper().let { it.thumbnail to it.sky } }.distinctUntilChanged().collectLatest { (thumbnail, sky) ->
             val baked =
                 thumbnail?.let {
-                    withContext(Dispatchers.Default) {
+                    withContext(bakeDispatcher) {
                         val frost = bakeFrost(it, sky, skyIntensity / 100f)
                         val pixels = IntArray(frost.width * frost.height).also { buffer -> frost.readPixels(buffer) }
                         val base = unscrimmedPixels(it, sky, skyIntensity / 100f)
@@ -99,7 +105,7 @@ internal fun ChromeFrostEffect(
                             dockLightness = meanLightness(pixels, frost.width, frost.height, dock),
                             headerLightness = lightnessPercentile(base, it.width, it.height, HeaderBand, LIGHTNESS_PERCENTILE),
                             topBarLightness = lightnessPercentile(base, it.width, it.height, TopBarButtonsBand, LIGHTNESS_PERCENTILE),
-                            heroLuminance = meanLuminance(base, it.width, it.height, hero),
+                            heroBrightShare = brightShare(base, it.width, it.height, hero, HERO_BRIGHT_LUMINANCE),
                         )
                     }
                 }
@@ -108,7 +114,7 @@ internal fun ChromeFrostEffect(
             glass.dockLightness = baked?.dockLightness ?: 0f
             glass.headerLightness = baked?.headerLightness ?: 0f
             glass.topBarLightness = baked?.topBarLightness ?: 0f
-            glass.heroLuminance = baked?.heroLuminance ?: 0f
+            glass.heroBrightShare = baked?.heroBrightShare ?: 0f
         }
     }
 }
@@ -278,20 +284,21 @@ internal fun meanLightness(
     return sum / count
 }
 
-/** The mean relative luminance (0 black to 1 white) of the opaque [pixels] inside [band]; [meanLightness] has the rest of the contract. */
-internal fun meanLuminance(
+/** The share (0 to 1) of the opaque [pixels] inside [band] whose relative luminance is above [above]; [meanLightness] has the rest of the contract. */
+internal fun brightShare(
     pixels: IntArray,
     width: Int,
     height: Int,
     band: Rect,
+    above: Float,
 ): Float {
-    var sum = 0f
+    var bright = 0
     var count = 0
     forEachPixel(pixels, width, height, band) {
-        sum += luminanceOf(it)
+        if (luminanceOf(it) > above) bright++
         count++
     }
-    return sum / count
+    return bright.toFloat() / count
 }
 
 /** The CIE L* below which [percentile] (0 to 1) of the pixels inside [band] lie; [meanLightness] has the rest of the contract. */
