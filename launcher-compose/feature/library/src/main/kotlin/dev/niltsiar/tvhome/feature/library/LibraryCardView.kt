@@ -37,6 +37,8 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -70,12 +72,9 @@ private val ArtShape = RoundedCornerShape(8.dp)
 private const val ART_ASPECT = 16f / 9f
 private val CardSide = 6.dp
 private val ArtInset = 8.dp
-
-/** With a second status line the art gives up height for it: the card has no room for both at the usual inset. */
-private val ArtInsetWithOpened = 18.dp
 private val CardTop = 8.dp
-private val CardBottom = 8.dp
-private val NameGap = 4.dp
+private val CardBottom = 6.dp
+private val NameGap = 2.dp
 private val NameHeight = 32.dp
 internal const val NAME_LINES = 2
 private val EnterRise = 28.dp
@@ -84,13 +83,19 @@ private const val FOCUSED_SCALE = 1.08f
 private val OnHomeTint = Color(0x1475BBA4)
 private const val RIM_ALPHA = 0.09f
 private val RecentGreen = Color(0xFF70D9A0)
+private val BadgeSize = 20.dp
+private val BadgeInset = 4.dp
+private val BadgeGlyph = 12.dp
+private val BadgeBacking = Color.Black.copy(alpha = 0.55f)
+private const val NEVER_OPENED_ALPHA = 0.6f
 
 /**
- * One card of the grid: the app's art on a small tile, its name in a box of [NAME_LINES] lines and, right under it, where
- * the app stands. An idle card is opaque, so nothing of Home shows through it; a focused one lets the plate [FocusSurface]
- * draws behind it show. It rises in once per opening, with the delay [CardEntrance] gives it, and pops a little when its
- * Home shortcut changes. Both run in the layer lambda. The status line keeps its place while the card grows, so it stays level with
- * the cards beside it. [widthPx] is the narrowest the card can be.
+ * One card of the grid: the app's art on a small tile, with a house badge on it when the app is on Home, its name in a box
+ * of [NAME_LINES] lines and, right under it, one status line for what is not the usual state. An idle card is opaque, so
+ * nothing of Home shows through it; a focused one lets the plate [FocusSurface] draws behind it show. It rises in once per
+ * opening, with the delay [CardEntrance] gives it, and pops a little when its Home shortcut changes. Both run in the layer
+ * lambda. The status line keeps its place while the card grows, so it stays level with the cards beside it. [widthPx] is
+ * the narrowest the card can be.
  */
 @Composable
 internal fun LibraryCardView(
@@ -189,7 +194,7 @@ internal fun LibraryCardView(
                     modifier = Modifier.fillMaxSize().padding(start = CardSide, top = CardTop, end = CardSide),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Art(card, artwork, Modifier.padding(horizontal = if (card.opened != null) ArtInsetWithOpened else ArtInset))
+                    Art(card, artwork, Modifier.padding(horizontal = ArtInset))
                     Name(card.app.label, measurer, widthPx - with(density) { CardSide.roundToPx() * 2 })
                 }
                 Status(
@@ -220,7 +225,8 @@ private fun Art(
                 .fillMaxWidth()
                 .aspectRatio(ART_ASPECT)
                 .clip(ArtShape)
-                .background(TvTheme.colors.surface),
+                .background(TvTheme.colors.surface)
+                .testTag("card:art:${card.app.key}"),
         contentAlignment = Alignment.Center,
     ) {
         val image = artwork?.image
@@ -234,7 +240,50 @@ private fun Art(
                 style = TvTheme.typography.shelfTitle.copy(fontSize = 28.sp),
             )
         }
+        if (card.onHome) HomeBadge(Modifier.align(Alignment.TopEnd).padding(BadgeInset))
     }
+}
+
+/** A house in a dark circle: the app is on Home. */
+@Composable
+private fun HomeBadge(modifier: Modifier = Modifier) {
+    val description = stringResource(R.string.library_on_home)
+    Box(
+        modifier =
+            modifier
+                .size(BadgeSize)
+                .semantics { contentDescription = description }
+                .drawBehind {
+                    drawCircle(BadgeBacking)
+                    drawHouse(Color.White, BadgeGlyph.toPx())
+                },
+    )
+}
+
+/** A house of [side] in the middle of the scope: a roof over a body with a door. */
+private fun DrawScope.drawHouse(
+    color: Color,
+    side: Float,
+) {
+    val left = (size.width - side) / 2f
+    val top = (size.height - side) / 2f
+    val eaves = top + side * 0.46f
+    val roof =
+        Path().apply {
+            moveTo(left + side / 2f, top)
+            lineTo(left + side, eaves)
+            lineTo(left + side * 0.86f, eaves)
+            lineTo(left + side * 0.86f, top + side)
+            lineTo(left + side * 0.58f, top + side)
+            lineTo(left + side * 0.58f, top + side * 0.68f)
+            lineTo(left + side * 0.42f, top + side * 0.68f)
+            lineTo(left + side * 0.42f, top + side)
+            lineTo(left + side * 0.14f, top + side)
+            lineTo(left + side * 0.14f, eaves)
+            lineTo(left, eaves)
+            close()
+        }
+    drawPath(roof, color)
 }
 
 /** The first character, whole: a letter outside the Basic Multilingual Plane is two chars. */
@@ -288,6 +337,10 @@ internal fun shownName(
     return label.substring(0, laidOut.getLineEnd(last, visibleEnd = true)).trimEnd() + Ellipsis
 }
 
+/**
+ * The line under the name, which says only what the badge and the name do not: in the least used order when the app was last
+ * opened, else the recent-install text, else "Add to Home" for an app that is not on Home, else nothing.
+ */
 @Composable
 private fun Status(
     card: LibraryCard,
@@ -296,41 +349,39 @@ private fun Status(
 ) {
     val typography = TvTheme.typography
     val style = remember(typography) { typography.date.copy(fontSize = 11.sp, lineHeight = 13.sp, textAlign = TextAlign.Center) }
+    val opened = card.opened
+    if (opened != null) {
+        Opened(card.app.key, opened, style, modifier)
+        return
+    }
     val text =
         when {
-            card.onHome -> stringResource(R.string.library_on_home)
-            layout.okOpens -> ""
+            card.onHome || layout.okOpens -> null
             card.recent -> stringResource(R.string.library_recent)
             else -> stringResource(R.string.library_add_home)
         }
-    val opened = card.opened
-    if (opened == null) {
-        BasicText(text, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = modifier.fillMaxWidth())
-        return
-    }
-    Column(modifier.fillMaxWidth()) {
-        BasicText(text, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth())
-        Opened(card.app.key, opened, style)
-    }
+    if (text != null) BasicText(text, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = modifier.fillMaxWidth())
 }
 
-/** When the app was last opened, in the TV's language, shrunk to fit one line; "Never opened" for an app Home never opened. */
+/** When the app was last opened, in the TV's language, shrunk to fit one line; "Never opened", dimmer, for an app Home never opened. */
 @Composable
 private fun Opened(
     key: String,
     opened: CardOpened,
     style: TextStyle,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val locale = LocalLocale.current.platformLocale
     val whenOpened =
         remember(opened) { opened.at?.let { describeLastOpened(context, it, locale).replaceFirstChar { c -> c.titlecase(locale) } } }
+    val shown = if (whenOpened == null) style.copy(color = style.color.copy(alpha = style.color.alpha * NEVER_OPENED_ALPHA)) else style
     BasicText(
         whenOpened ?: stringResource(R.string.library_never_opened),
-        style = style,
+        style = shown,
         maxLines = 1,
         autoSize = TextAutoSize.StepBased(minFontSize = OPENED_MIN_SIZE, maxFontSize = style.fontSize),
-        modifier = Modifier.fillMaxWidth().testTag("card:opened:$key"),
+        modifier = modifier.fillMaxWidth().testTag("card:opened:$key"),
     )
 }
 

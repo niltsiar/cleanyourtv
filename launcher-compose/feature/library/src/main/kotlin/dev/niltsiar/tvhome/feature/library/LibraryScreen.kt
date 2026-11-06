@@ -6,6 +6,8 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.BringIntoViewSpec
@@ -29,6 +31,7 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -48,6 +51,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -74,6 +78,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.designsystem.BesideAnchor
+import dev.niltsiar.tvhome.core.designsystem.FocusSurface
 import dev.niltsiar.tvhome.core.designsystem.GlassMenu
 import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.OverlaySurface
@@ -152,6 +157,10 @@ internal fun LibraryScreen(
     }
     val menu by remember { derivedStateOf { state().menu } }
     val empty by remember { derivedStateOf { state().cards.isEmpty() } }
+    val gridState = rememberLazyGridState()
+    val cardFocus = remember { CardFocus() }
+    val chip = remember { ChipFocus() }
+    val scope = rememberCoroutineScope()
     Box(
         modifier =
             modifier
@@ -185,8 +194,12 @@ internal fun LibraryScreen(
                         .fillMaxSize()
                         .padding(start = PanelSide, top = PanelTop, end = PanelSide, bottom = PanelBottom),
             ) {
-                Header(state, layout, showHint = !empty)
-                if (empty) Empty() else Cards(state, layout, actions, art, entrance, hold) { anchor.value = it }
+                Header(state, layout, actions, chip, empty) {
+                    val cards = state().cards
+                    val index = cards.indexOfFirst { it.app.key == state().focusedKey }.coerceAtLeast(0)
+                    cards.getOrNull(index)?.let { scope.launch { cardFocus.arrive(gridState, index, it.app.key) } }
+                }
+                if (empty) Empty() else Cards(state, layout, actions, art, entrance, hold, gridState, cardFocus, chip) { anchor.value = it }
             }
         }
         menu?.let { open ->
@@ -223,7 +236,10 @@ private fun KeyEvent.switchesOrder(actions: LibraryActions): Boolean {
 private fun Header(
     state: () -> LibraryUiState,
     layout: LibraryLayout,
-    showHint: Boolean,
+    actions: LibraryActions,
+    chip: ChipFocus,
+    empty: Boolean,
+    onChipDown: () -> Unit,
 ) {
     val count by remember { derivedStateOf { state().cards.size } }
     val hint by remember { derivedStateOf { state().hint } }
@@ -236,16 +252,16 @@ private fun Header(
         Row(Modifier.height(HeaderTitleHeight), verticalAlignment = Alignment.CenterVertically) {
             BasicText(stringResource(R.string.app_library), style = title, maxLines = 1, modifier = Modifier.weight(1f))
             if (layout.leastUsed) {
-                BasicText(
-                    stringResource(order.label()),
-                    style = countStyle,
-                    maxLines = 1,
-                    modifier = Modifier.padding(end = 16.dp).testTag("library:order"),
-                )
+                val end = Modifier.padding(end = 16.dp)
+                if (empty) {
+                    BasicText(stringResource(order.label()), style = countStyle, maxLines = 1, modifier = end)
+                } else {
+                    OrderChip(stringResource(order.label()), actions.onOrder, chip, onChipDown, end)
+                }
             }
             BasicText(pluralStringResource(R.plurals.library_app_count, count, count), style = countStyle, maxLines = 1)
         }
-        if (showHint) {
+        if (!empty) {
             val text = hintText(hint)
             val orderHint =
                 if (layout.leastUsed) {
@@ -261,6 +277,64 @@ private fun Header(
         }
     }
 }
+
+/** Whether the order chip has focus: a card's focus request waits while it does, so a new order leaves focus where it is. */
+private class ChipFocus {
+    val requester = FocusRequester()
+    var focused = false
+}
+
+/**
+ * The order's name as a chip: OK switches the order, as the MENU key does. Up from the first row of cards reaches it and
+ * Down returns to the card that had focus, through [onDown]; no other key leaves it.
+ */
+@Composable
+private fun OrderChip(
+    label: String,
+    onClick: () -> Unit,
+    focus: ChipFocus,
+    onDown: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val typography = TvTheme.typography
+    val ink = TvTheme.colors.onSurface
+    FocusSurface(
+        onClick = onClick,
+        shape = CircleShape,
+        glow = false,
+        focusedScale = 1f,
+        modifier =
+            modifier
+                .height(ChipHeight)
+                .testTag("library:order")
+                .focusRequester(focus.requester)
+                .focusProperties {
+                    up = FocusRequester.Cancel
+                    left = FocusRequester.Cancel
+                    right = FocusRequester.Cancel
+                }.onFocusChanged { focus.focused = it.isFocused }
+                .onPreviewKeyEvent {
+                    if (it.key != Key.DirectionDown) return@onPreviewKeyEvent false
+                    if (it.type == KeyEventType.KeyDown) onDown()
+                    true
+                },
+    ) {
+        Box(
+            Modifier
+                .fillMaxHeight()
+                .background(ink.copy(alpha = CHIP_FILL_ALPHA), CircleShape)
+                .border(1.dp, ink.copy(alpha = CHIP_RIM_ALPHA), CircleShape)
+                .padding(horizontal = 14.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            BasicText(label, style = typography.chipLabel, maxLines = 1)
+        }
+    }
+}
+
+private val ChipHeight = 32.dp
+private const val CHIP_FILL_ALPHA = 0.10f
+private const val CHIP_RIM_ALPHA = 0.20f
 
 @StringRes
 private fun LibraryOrder.label(): Int =
@@ -321,10 +395,11 @@ private fun Cards(
     art: suspend (String) -> LibraryArt?,
     entrance: CardEntrance,
     hold: OkHold,
+    gridState: LazyGridState,
+    focus: CardFocus,
+    chip: ChipFocus,
     anchor: (Rect) -> Unit,
 ) {
-    val gridState = rememberLazyGridState()
-    val focus = remember { CardFocus() }
     val density = LocalDensity.current
     val windowWidth = LocalWindowInfo.current.containerSize.width
     // The narrowest a column comes out: the grid shares what is left of its width in whole pixels.
@@ -343,11 +418,8 @@ private fun Cards(
     LaunchedEffect(gridState) {
         snapshotFlow { state().focusRequest }.filterNotNull().collect { request ->
             val index = state().cards.indexOfFirst { it.app.key == request.key }
-            if (index < 0) return@collect
-            if (gridState.layoutInfo.visibleItemsInfo.none { it.index == index }) gridState.scrollToItem(index)
-            withFrameNanos { }
-            withFrameNanos { }
-            focus.request(request.key)
+            if (index < 0 || chip.focused) return@collect
+            focus.arrive(gridState, index, request.key)
         }
     }
     Box(Modifier.fillMaxWidth().fillMaxHeight()) {
@@ -367,6 +439,8 @@ private fun Cards(
                         if (to != null) {
                             val sign = if (to > from) 1f else -1f
                             scope.launch { focus.moveTo(gridState, to, cards[to].app.key, sign * pitch) }
+                        } else if (layout.leastUsed && move == GridMove.Up && from in 0 until COLUMNS) {
+                            chip.requester.requestFocus()
                         }
                         true
                     },
@@ -497,6 +571,18 @@ private class CardFocus {
     private val requesters = HashMap<String, FocusRequester>()
 
     fun requester(key: String): FocusRequester = requesters.getOrPut(key) { FocusRequester() }
+
+    /** Focuses the card at [index], whose key is [key], once the grid has scrolled it in and attached it. */
+    suspend fun arrive(
+        grid: LazyGridState,
+        index: Int,
+        key: String,
+    ) {
+        if (grid.layoutInfo.visibleItemsInfo.none { it.index == index }) grid.scrollToItem(index)
+        withFrameNanos { }
+        withFrameNanos { }
+        request(key)
+    }
 
     /** Focuses the card; nothing happens when it is not built (any more). */
     fun request(key: String) {

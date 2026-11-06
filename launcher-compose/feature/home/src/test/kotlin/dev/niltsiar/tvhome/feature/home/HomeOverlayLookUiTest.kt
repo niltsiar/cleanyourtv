@@ -204,16 +204,32 @@ class HomeOverlayLookUiTest {
         assertNear(255, redAt(centreOf("tile:pkg.6")), 2)
     }
 
+    /** The brightest red channel, 0 to 255, anywhere on the screen. */
+    private fun brightestOnScreen(): Int {
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        var most = 0f
+        for (y in 0 until pixels.height) for (x in 0 until pixels.width) most = maxOf(most, pixels[x, y].red)
+        return Math.round(most * 255)
+    }
+
     @Test
     @Config(qualifiers = "+night")
-    fun the_app_library_dims_home_behind_it_to_22_percent() {
+    fun the_app_library_hides_every_layer_of_home_behind_it_and_closing_it_brings_them_back() {
         showHome()
         val far = centreOf("tile:pkg.6")
+        assertNear(255, redAt(far), 2)
 
         libraryOpen = true
         settle()
 
-        assertNear(Math.round(255 * 0.22f + 0x07 * 0.78f), redAt(far), 3)
+        // The wallpaper under the library's scrim, and nothing of Home's top bar, band, dock or grid over it.
+        val scrimmed = Math.round(0x07 * 0.78f)
+        assertNear(scrimmed, brightestOnScreen(), 2)
+
+        libraryOpen = false
+        settle()
+
+        assertNear(255, redAt(far), 2)
     }
 
     @Test

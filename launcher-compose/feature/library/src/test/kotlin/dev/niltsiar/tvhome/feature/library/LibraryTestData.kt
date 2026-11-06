@@ -1,5 +1,10 @@
 package dev.niltsiar.tvhome.feature.library
 
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsNodeInteractionsProvider
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
 import app.cash.turbine.ReceiveTurbine
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.LibraryApp
@@ -17,6 +22,13 @@ internal fun libraryApp(
 ) = LibraryApp(AppEntry(key = "pkg.$name/.Main", packageName = "pkg.$name", label = name), onHome, installedAt)
 
 internal fun key(name: String) = "pkg.$name/.Main"
+
+/** The texts drawn on the card of [name], top to bottom: its name, then its status line when it has one. */
+internal fun SemanticsNodeInteractionsProvider.textsOnCard(name: String): List<String> =
+    onAllNodes(hasAnyAncestor(hasTestTag("card:${key(name)}")), useUnmergedTree = true)
+        .fetchSemanticsNodes()
+        .flatMap { it.config.getOrNull(SemanticsProperties.Text).orEmpty() }
+        .map { it.text }
 
 /** The host side of the library: a catalogue that a saved choice changes and announces, as the real one does. */
 internal class FakeLibrary(

@@ -255,8 +255,8 @@ private const val GRID_ITEMS_BEFORE = 2
  * OK on the Inputs button hangs the TV's input list under it; Back closes the list and returns focus to the button.
  * Each rise of [inputsRequests] (the system asked for the input list) opens the list.
  * The menus, the input list and [overlays] (the host's, such as the App library, open while [libraryOpen]) sit in one
- * [OverlayHost] over everything else on Home. The tile a menu acts on stays undimmed under it, and the library dims Home
- * more than a menu does.
+ * [OverlayHost] over everything else on Home. The tile a menu acts on stays undimmed under it. While the library is open
+ * every layer of Home above the wallpaper fades out, so only the wallpaper and the library's scrim are behind its panel.
  */
 @Composable
 public fun HomeScreen(
@@ -380,58 +380,66 @@ public fun HomeScreen(
             hero = dim.hero,
             dockGlass = dockLook.band && dockLook.glass,
         )
-        if (wallpaperLayout.headerScrim == HeaderScrim.Auto) {
-            HeroScrim(glass, boxHeight = shelfHeight - TitleToShelfBottom, shift = titleShift)
-        }
-        HomeContent(
-            glass,
-            dockFocus,
-            gridState,
-            input,
-            dim,
-            state,
-            layout,
-            shelfLayout,
-            dockLook,
-            edge,
-            shelfBottom,
-            onFocus,
-            onClick,
-            homePresses,
-            libraryOpen,
-            onOpenLibrary,
-        )
-        if (shelfLayout.cinematic) {
-            CinematicShelf(
-                shelf = { state().takeIf { it.reorder == null && !input.pillFocused && input.headerControl(it) == null }?.shelf },
-                layout = shelfLayout,
-                modifier = shelfModifier,
-                titleAlpha = { band.title.value },
-                detailAlpha = { band.detail.value },
+        // Every layer above the wallpaper draws at the fade's alpha, so none draws while the App library's panel is up.
+        Box(
+            Modifier.fillMaxSize().graphicsLayer {
+                compositingStrategy = CompositingStrategy.ModulateAlpha
+                alpha = band.layers.value
+            },
+        ) {
+            if (wallpaperLayout.headerScrim == HeaderScrim.Auto) {
+                HeroScrim(glass, boxHeight = shelfHeight - TitleToShelfBottom, shift = titleShift)
+            }
+            HomeContent(
+                glass,
+                dockFocus,
+                gridState,
+                input,
+                dim,
+                state,
+                layout,
+                shelfLayout,
+                dockLook,
+                edge,
+                shelfBottom,
+                onFocus,
+                onClick,
+                homePresses,
+                libraryOpen,
+                onOpenLibrary,
+            )
+            if (shelfLayout.cinematic) {
+                CinematicShelf(
+                    shelf = { state().takeIf { it.reorder == null && !input.pillFocused && input.headerControl(it) == null }?.shelf },
+                    layout = shelfLayout,
+                    modifier = shelfModifier,
+                    titleAlpha = { band.title.value },
+                    detailAlpha = { band.detail.value },
+                )
+            }
+            HeroTitle(state, input, shelfLayout.cinematic, band, shelfModifier)
+            WallpaperCaption(
+                caption = { state().wallpaper.caption },
+                crossfade = wallpaperLayout.crossfade,
+                modifier = Modifier.align(Alignment.TopEnd).padding(top = CaptionTop, end = ScreenMargin),
+            )
+            TopBar(
+                glass = glass,
+                dockFocus = dockFocus,
+                state = state,
+                layout = topBar,
+                onAppClick = onClick,
+                onOpenSettings = onOpenSettings,
+                onOpenNetwork = onOpenNetwork,
+                onOpenWifiSettings = onOpenWifiSettings,
+                onOpenLibrary = {
+                    input.fromTopBar = true
+                    onOpenLibrary()
+                },
+                input = input,
+                modifier = Modifier.align(Alignment.TopCenter),
             )
         }
-        HeroTitle(state, input, shelfLayout.cinematic, band, shelfModifier)
-        WallpaperCaption(
-            caption = { state().wallpaper.caption },
-            crossfade = wallpaperLayout.crossfade,
-            modifier = Modifier.align(Alignment.TopEnd).padding(top = CaptionTop, end = ScreenMargin),
-        )
-        TopBar(
-            glass = glass,
-            dockFocus = dockFocus,
-            state = state,
-            layout = topBar,
-            onAppClick = onClick,
-            onOpenSettings = onOpenSettings,
-            onOpenNetwork = onOpenNetwork,
-            onOpenWifiSettings = onOpenWifiSettings,
-            onOpenLibrary = {
-                input.fromTopBar = true
-                onOpenLibrary()
-            },
-            input = input,
-            modifier = Modifier.align(Alignment.TopCenter),
-        )
         OverlayHost(
             open = { currentState.value().let { it.menu != null || it.inputsOpen } || libraryOpen() },
             strength = { if (libraryOpen()) LIBRARY_SCRIM else MENU_SCRIM },
@@ -996,23 +1004,28 @@ private fun Modifier.dockLayer(
         translationY = dim.lowPx()
     }
 
-/** How the band over the grid shows: whole, or gone under the App library, whose panel would cut through it. */
+/** How Home shows: whole, or gone under the App library, whose panel would cut through it. */
 private enum class BandLook(
     val title: Float,
     val detail: Float,
+    val layers: Float,
 ) {
-    Whole(1f, 1f),
-    Gone(0f, 0f),
+    Whole(1f, 1f, 1f),
+    Gone(0f, 0f, 0f),
 }
 
-/** The band's two fades: its title, and the meta line, the page dots and the key chips under it. Read them in layer lambdas only. */
+/**
+ * Home's fades: the band's title, the meta line, the page dots and the key chips under it, and [layers], every layer of Home
+ * above the wallpaper. Read them in layer lambdas only.
+ */
 @Stable
 private class BandFade {
     val title = Animatable(1f)
     val detail = Animatable(1f)
+    val layers = Animatable(1f)
 }
 
-/** The band's fades, following the App library: out with its scrim in [BAND_IN_MS], back in [BAND_OUT_MS]. */
+/** The fades, following the App library: out with its scrim in [BAND_IN_MS], back in [BAND_OUT_MS]. */
 @Composable
 private fun rememberBandFade(libraryOpen: () -> Boolean): BandFade {
     val motion = TvTheme.motion
@@ -1025,6 +1038,7 @@ private fun rememberBandFade(libraryOpen: () -> Boolean): BandFade {
             shown = look
             coroutineScope {
                 launch { band.title.animateTo(look.title, spec) }
+                launch { band.layers.animateTo(look.layers, spec) }
                 band.detail.animateTo(look.detail, spec)
             }
         }

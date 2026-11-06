@@ -12,7 +12,6 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
@@ -251,6 +250,73 @@ class LibraryOverlayUiTest {
 
         compose.onNodeWithTag("card:opened:${key("Gamma")}", useUnmergedTree = true).assertTextContains("3 days ago, ", substring = true)
         compose.onNodeWithTag("card:opened:${key("Alpha")}", useUnmergedTree = true).assertTextEquals("Never opened")
-        compose.onNodeWithText("On Home", useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun the_status_line_names_only_what_the_card_does_not_already_say() {
+        showLibrary()
+
+        assertEquals(listOf("Alpha", "Add to Home"), compose.textsOnCard("Alpha"))
+        assertEquals(listOf("Delta", "New · Add to Home"), compose.textsOnCard("Delta"))
+        assertEquals(listOf("Gamma"), compose.textsOnCard("Gamma"))
+    }
+
+    @Test
+    fun with_library_ok_opens_a_card_off_home_has_no_status_text_either() {
+        showLibrary(TvConfig(appLibrary = true, libraryOkOpens = true))
+
+        assertEquals(listOf("Alpha"), compose.textsOnCard("Alpha"))
+        assertEquals(listOf("Delta"), compose.textsOnCard("Delta"))
+    }
+
+    @Test
+    fun in_the_least_used_order_a_card_shows_the_opened_line_alone_whatever_its_home_state() {
+        gammaOpenedThreeDaysAgo()
+        showLibrary(leastUsed)
+
+        press(Key.Menu)
+
+        assertEquals(listOf("Alpha", "Never opened"), compose.textsOnCard("Alpha"))
+        assertEquals(listOf("Delta", "Never opened"), compose.textsOnCard("Delta"))
+        assertEquals(2, compose.textsOnCard("Gamma").size)
+        assertTrue(compose.textsOnCard("Gamma")[1].startsWith("3 days ago, "))
+    }
+
+    private fun orderChip() = compose.onNodeWithTag("library:order")
+
+    @Test
+    fun up_from_the_first_row_focuses_the_order_chip_and_down_returns_to_the_card_that_had_focus() {
+        showLibrary(leastUsed)
+        press(Key.DirectionRight)
+        compose.onNodeWithTag("card:${key("Alpha")}").assertIsFocused()
+
+        press(Key.DirectionUp)
+
+        orderChip().assertIsFocused()
+        listOf(Key.DirectionLeft, Key.DirectionRight, Key.DirectionUp).forEach { press(it) }
+        orderChip().assertIsFocused()
+
+        press(Key.DirectionDown)
+
+        compose.onNodeWithTag("card:${key("Alpha")}").assertIsFocused()
+    }
+
+    @Test
+    fun ok_on_the_order_chip_switches_the_order_and_focus_stays_on_the_chip() {
+        gammaOpenedThreeDaysAgo()
+        showLibrary(leastUsed)
+        press(Key.DirectionUp)
+        orderChip().assertIsFocused()
+        orderChip().assertTextEquals("Usual order")
+
+        press(Key.DirectionCenter)
+
+        orderChip().assertIsFocused()
+        orderChip().assertTextEquals("Least used")
+        compose.onNodeWithTag("library:hint").assertTextContains("Menu: Usual order", substring = true)
+
+        press(Key.DirectionDown)
+
+        compose.onNodeWithTag("card:${key("Delta")}").assertIsFocused()
     }
 }

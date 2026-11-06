@@ -25,6 +25,7 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
@@ -148,6 +149,8 @@ class LibraryOverlayLookUiTest {
     private fun bounds(tag: String): DpRect = compose.onNodeWithTag(tag).getBoundsInRoot()
 
     private fun card(name: String): DpRect = bounds("card:${key(name)}")
+
+    private fun art(name: String): DpRect = compose.onNodeWithTag("card:art:${key(name)}", useUnmergedTree = true).getBoundsInRoot()
 
     /** The focused card's bounds: its focus growth is drawn, so they are its size before it. */
     private fun focusedCard(name: String): DpRect {
@@ -312,53 +315,121 @@ class LibraryOverlayLookUiTest {
     fun the_status_line_sits_at_the_bottom_of_every_card_on_one_baseline() {
         val long = "Long enough a name to wrap onto two lines"
         // Aaa takes the focus, and its growth with it; the cards measured here are idle.
-        showLibrary(listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp(long), libraryApp("Gamma", onHome = true)))
-
-        fun text(
-            text: String,
-            name: String,
-        ): DpRect =
-            compose
-                .onNode(hasText(text, substring = true) and hasAnyAncestor(hasTestTag("card:${key(name)}")), useUnmergedTree = true)
-                .getBoundsInRoot()
+        showLibrary(listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp(long)))
 
         compose.onNodeWithTag("card:${key("Aaa")}").assertIsFocused()
-        val bottom = card("Beta").bottom - 8.dp
-        assertNear(bottom, text("Add to Home", "Beta").bottom)
-        assertNear(bottom, text("Add to Home", long).bottom)
-        assertNear(bottom, text("On Home", "Gamma").bottom)
-        assertEquals(text("Beta", "Beta").height, text("Long enough", long).height)
+        val bottom = card("Beta").bottom - 6.dp
+        assertNear(bottom, statusText("Add to Home", "Beta").bottom)
+        assertNear(bottom, statusText("Add to Home", long).bottom)
+        assertEquals(statusText("Beta", "Beta").height, statusText("Long enough", long).height)
+    }
+
+    /** The layout bounds of the text of the card of [name] that holds [text]. */
+    private fun statusText(
+        text: String,
+        name: String,
+    ): DpRect =
+        compose
+            .onNode(hasText(text, substring = true) and hasAnyAncestor(hasTestTag("card:${key(name)}")), useUnmergedTree = true)
+            .getBoundsInRoot()
+
+    private val longNames = listOf("Long enough a name to wrap onto two lines", "Many words in a name that wraps onto two lines")
+
+    /** The layout bottom of the last line of the name on the card of [name], in the root's dp. */
+    private fun lastLineBottom(name: String): Dp {
+        val first = name.substringBefore(' ')
+        val node =
+            compose.onNode(
+                hasText(first, substring = true) and hasAnyAncestor(hasTestTag("card:${key(name)}")),
+                useUnmergedTree = true,
+            )
+        val layout = nameLayout(name)
+        assertEquals("$name wraps onto two lines", 2, layout.lineCount)
+        return node.getBoundsInRoot().top + (layout.getLineBottom(1) / compose.activity.resources.displayMetrics.density).dp
+    }
+
+    /** The top of the highest text under the name on the card of [name]: where its status lines begin. */
+    private fun statusTop(name: String): Dp {
+        val density = compose.activity.resources.displayMetrics.density
+        val texts =
+            compose
+                .onAllNodes(hasAnyAncestor(hasTestTag("card:${key(name)}")) and hasText("", substring = true), useUnmergedTree = true)
+                .fetchSemanticsNodes()
+        return (texts.drop(1).minOf { it.boundsInRoot.top } / density).dp
+    }
+
+    private fun assertNameClearsStatus() {
+        val (focused, idle) = longNames
+        compose.onNodeWithTag("card:${key(focused)}").assertIsFocused()
+        val statusAt = statusTop(idle)
+        assertTrue("idle: name ends ${lastLineBottom(idle)}, status starts $statusAt", statusAt - lastLineBottom(idle) >= 4.dp - 0.05.dp)
+        // The focused card's name grows about the card's centre while its status line stays level with its neighbours'.
+        val middle = (card(focused).top + card(focused).bottom) / 2
+        val grownBottom = middle + (lastLineBottom(focused) - middle) * FOCUSED_SCALE
+        assertTrue("focused: name ends $grownBottom, status starts $statusAt", statusAt - grownBottom >= 2.dp)
     }
 
     @Test
-    fun in_the_least_used_order_the_opened_line_sits_under_the_status_line_and_the_name_inside_the_card() {
-        val long = "Long enough a name to wrap onto two lines"
+    fun a_two_line_name_ends_at_least_4_dp_above_the_status_line_and_a_focused_one_at_least_2_dp() {
+        showLibrary(longNames.map { libraryApp(it) })
+
+        assertNameClearsStatus()
+    }
+
+    @Test
+    fun in_the_least_used_order_a_two_line_name_ends_at_least_4_dp_above_the_opened_line_and_a_focused_one_at_least_2_dp() {
+        showLibrary(longNames.map { libraryApp(it) }, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
+        press(Key.Menu)
+
+        assertNameClearsStatus()
+    }
+
+    @Test
+    fun in_the_least_used_order_the_status_line_is_the_opened_text_alone_and_the_art_keeps_the_usual_inset() {
         showLibrary(
-            listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp(long), libraryApp("Gamma", onHome = true)),
+            listOf(libraryApp("Aaa"), libraryApp("Beta", installedAt = NOW - DAY), libraryApp("Gamma", onHome = true)),
+            config = TvConfig(appLibrary = true, libraryLeastUsed = true),
+            record = OpenedRecord(times = mapOf(key("Gamma") to NOW - 3 * DAY), since = NOW - 90 * DAY),
+        )
+        val inset = { name: String -> art(name).left - card(name).left }
+        assertNear(14.dp, inset("Beta"))
+
+        press(Key.Menu)
+
+        assertNear(14.dp, inset("Beta"))
+        assertNear(14.dp, inset("Gamma"))
+        assertEquals(listOf("Beta", "Never opened"), compose.textsOnCard("Beta"))
+        assertEquals(listOf("Gamma"), compose.textsOnCard("Gamma").take(1))
+        assertEquals(2, compose.textsOnCard("Gamma").size)
+        assertTrue(compose.textsOnCard("Gamma")[1].startsWith("3 days ago, "))
+    }
+
+    /** The brightest red, 0 to 255, in the text line of [area] and the red of the card beside it. */
+    private fun lineBrightness(area: DpRect): Pair<Int, Int> {
+        val density = compose.activity.resources.displayMetrics.density
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val xs = (area.left.value * density).toInt() until (area.right.value * density).toInt()
+        val ys = (area.top.value * density).toInt() until (area.bottom.value * density).toInt()
+        val peak = ys.maxOf { y -> xs.maxOf { x -> pixels[x, y].red } }
+        return Math.round(peak * 255) to Math.round(pixels[xs.first, ys.first].red * 255)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun never_opened_draws_at_60_percent_of_the_alpha_of_a_last_opened_line() {
+        showLibrary(
+            listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp("Gamma")),
             config = TvConfig(appLibrary = true, libraryLeastUsed = true),
             record = OpenedRecord(times = mapOf(key("Gamma") to NOW - 3 * DAY), since = NOW - 90 * DAY),
         )
         press(Key.Menu)
 
-        fun text(
-            text: String,
-            name: String,
-        ): DpRect =
-            compose
-                .onNode(hasText(text, substring = true) and hasAnyAncestor(hasTestTag("card:${key(name)}")), useUnmergedTree = true)
-                .getBoundsInRoot()
-
-        // Aaa takes the focus, and its growth with it; the cards measured here are idle.
-        compose.onNodeWithTag("card:${key("Aaa")}").assertIsFocused()
-        listOf("Beta" to "Add to Home", long to "Add to Home", "Gamma" to "On Home").forEach { (name, status) ->
-            val card = card(name)
-            val label = text(if (name == long) "Long enough" else name, name)
-            val statusLine = text(status, name)
-            val opened = compose.onNodeWithTag("card:opened:${key(name)}", useUnmergedTree = true).getBoundsInRoot()
-            assertTrue("$name: name $label over status $statusLine", label.bottom <= statusLine.top + 1.dp)
-            assertTrue("$name: status $statusLine over opened $opened", statusLine.bottom <= opened.top + 1.dp)
-            assertNear(card.bottom - 8.dp, opened.bottom)
+        fun lift(name: String): Float {
+            val (peak, ground) = lineBrightness(compose.onNodeWithTag("card:opened:${key(name)}", useUnmergedTree = true).getBoundsInRoot())
+            return (peak - ground).toFloat()
         }
+        val ratio = lift("Beta") / lift("Gamma")
+        assertTrue("never opened is $ratio of the opened line", ratio in 0.5f..0.7f)
     }
 
     @Test
@@ -403,6 +474,34 @@ class LibraryOverlayLookUiTest {
         val onHome = card("Beta")
         val (red, green) = rgbAt(onHome.right - 15.dp, onHome.top + 15.dp)
         assertTrue("red $red, green $green", green - red < 20)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun an_app_on_home_has_a_house_badge_darkening_the_top_right_corner_of_its_art_and_an_app_off_home_has_none() {
+        showLibrary(listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp("Gamma", onHome = true)), art = LibraryArt(white, Color.Gray))
+
+        val art = art("Gamma")
+        val badge =
+            compose
+                .onNode(hasContentDescription("On Home") and hasAnyAncestor(hasTestTag("card:${key("Gamma")}")), useUnmergedTree = true)
+                .getBoundsInRoot()
+        assertNear(art.right - 4.dp, badge.right)
+        assertNear(art.top + 4.dp, badge.top)
+        assertNear(20.dp, badge.width)
+        assertNear(20.dp, badge.height)
+        compose
+            .onNode(
+                hasContentDescription("On Home") and hasAnyAncestor(hasTestTag("card:${key("Beta")}")),
+                useUnmergedTree = true,
+            ).assertDoesNotExist()
+
+        // In the circle, left of the 12 dp glyph: black at 0.55 over the white art, or the plain art.
+        val beside = { card: DpRect -> rgbAt(card.right - 4.dp - 20.dp + 1.5.dp, card.top + 4.dp + 10.dp) }
+        val darkened = beside(art)
+        val plain = beside(art("Beta"))
+        assertTrue("on home $darkened", darkened.all { it in 100..130 })
+        assertTrue("off home $plain", plain.all { it >= 250 })
     }
 
     /** The layout bounds of the status line of the card of [name]. */
