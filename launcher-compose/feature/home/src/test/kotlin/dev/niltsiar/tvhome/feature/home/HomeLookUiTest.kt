@@ -175,6 +175,18 @@ class HomeLookUiTest {
         assertDrawnAt(0f, centreOf(dockTile(6)), centreOf(dockTile(5)))
     }
 
+    @Test
+    fun the_row_above_the_last_grid_row_draws_at_alpha_0_with_the_library_pill_focused() {
+        showHome(apps = whiteApps(30), config = SixColumns.copy(appLibrary = true))
+        repeat(5) { press(Key.DirectionDown) }
+        compose.onNodeWithTag("library:pill").assertIsFocused()
+
+        // The layer multiplies each draw: the white art, and the tile's own fill under it.
+        val fill = 0x1B * 0.85f
+        assertNear(0, redAt(centreOf(bounds("tile:pkg.19"))), 2)
+        assertNear(Math.round(0.85f * 255 + 0.15f * fill), redAt(centreOf(bounds("tile:pkg.25"))), 4)
+    }
+
     /** How far under the top bar the title's capitals start: its line box top, 36 sp to the baseline, less the capitals' 0.72 of 48 sp. */
     private fun titleGap() = bounds("shelf:title").top.value + 36f - 0.72f * 48f - (TopBarTop + TopBarHeight).value
 

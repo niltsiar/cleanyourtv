@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -252,5 +253,53 @@ class HomeInputsUiTest {
         val button = compose.onNodeWithContentDescription("Inputs").getBoundsInRoot()
         val list = compose.onNodeWithTag("menu").getBoundsInRoot()
         assertTrue("list $list, button $button", list.top >= button.bottom && list.left >= button.left)
+    }
+
+    /** Eight ports, a divider and Live TV: more than the room between the button and the dock's tray. */
+    private val longList =
+        InputsMenu(
+            available = true,
+            rows = (1..8).map { port(it) } + InputRow.Separator() + InputRow.LiveTv,
+        )
+
+    /** The rows of [longList] by position; the divider at 8 has no tag. */
+    private fun rowTags() = ((0..7) + 9).map { "input:$it" }
+
+    @Test
+    fun a_list_taller_than_its_room_shows_whole_rows_only_at_rest() {
+        showHome(longList)
+
+        openList()
+
+        val list = compose.onNodeWithTag("menu").getBoundsInRoot()
+        val rows = rowTags().map { compose.onNodeWithTag(it).getUnclippedBoundsInRoot() }
+        val shown = rows.filter { it.bottom > list.top && it.top < list.bottom }
+        assertTrue("shown $shown in $list", shown.isNotEmpty() && shown.size < rows.size)
+        shown.forEach { assertTrue("$it is cut by $list", it.top >= list.top && it.bottom <= list.bottom) }
+    }
+
+    @Test
+    fun a_list_taller_than_its_room_still_ends_24_dp_above_the_docks_tray() {
+        showHome(longList)
+
+        openList()
+
+        val list = compose.onNodeWithTag("menu").getBoundsInRoot()
+        val tray = compose.onNodeWithTag("dock").getBoundsInRoot()
+        assertTrue("list $list, tray $tray", list.bottom <= tray.top - 24.dp)
+    }
+
+    @Test
+    fun the_focused_row_stays_inside_the_list_as_focus_walks_down_it() {
+        showHome(longList)
+        openList()
+
+        rowTags().forEachIndexed { step, tag ->
+            if (step > 0) press(Key.DirectionDown)
+            compose.onNodeWithTag(tag).assertIsFocused()
+            val list = compose.onNodeWithTag("menu").getBoundsInRoot()
+            val row = compose.onNodeWithTag(tag).getUnclippedBoundsInRoot()
+            assertTrue("$tag $row is outside $list", row.top >= list.top && row.bottom <= list.bottom)
+        }
     }
 }

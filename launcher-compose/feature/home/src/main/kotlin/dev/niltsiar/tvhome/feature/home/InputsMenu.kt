@@ -63,6 +63,7 @@ import dev.niltsiar.tvhome.core.model.visible
 private val MinListWidth = 150.dp
 private val MaxListWidth = 360.dp
 private val RowHeight = 46.dp
+private val SeparatorHeight = 5.dp
 private val RowShape = RoundedCornerShape(14.dp)
 private const val ICON_ALPHA = 0.9f
 private const val NO_DEVICE_ALPHA = 0.5f
@@ -87,7 +88,7 @@ private const val SEPARATOR_ALPHA = 0.12f
 
 /**
  * The TV's input list hanging under the Inputs button at [anchor]: as wide as the button, or 150 dp, and wider for a
- * long name up to 360 dp. It ends at or above [bottomLimit] and scrolls when its rows are taller. Each
+ * long name up to 360 dp. It ends at or above [bottomLimit], between two rows, and scrolls when its rows are taller. Each
  * [InputRow.Port] row shows a green capsule while its port is connected, its dot ringed
  * by a pulse unless [animated] is off. "More inputs" shows the rows [rows] folds. The Live TV row comes last.
  * Focus opens on the first connected port, as the TV does not say which input is active, else on the first row.
@@ -122,6 +123,7 @@ internal fun InputsMenu(
             if (connected >= 0) connected else shown.indexOfFirst { it !is InputRow.Separator }
         }
     val firstFolded = remember(shown) { shown.indexOfFirst { it is InputRow.Port && it.folded } }
+    val childHeights = remember(shown) { shown.map { if (it is InputRow.Separator) SeparatorHeight else RowHeight } }
     GlassDropdown(
         anchor = anchor,
         alignEnd = false,
@@ -131,6 +133,7 @@ internal fun InputsMenu(
         maxWidth = maxOf(minWidth, MaxListWidth),
         edgeMargin = ScreenMargin,
         bottomLimit = bottomLimit,
+        childHeights = childHeights,
     ) {
         shown.forEachIndexed { index, row ->
             val focus =
@@ -187,8 +190,8 @@ internal fun InputsMenu(
                     Box(
                         Modifier
                             .fillMaxWidth()
+                            .height(SeparatorHeight)
                             .padding(horizontal = 12.dp, vertical = 2.dp)
-                            .height(1.dp)
                             .background(TvTheme.colors.onSurface.copy(alpha = SEPARATOR_ALPHA)),
                     )
                 }

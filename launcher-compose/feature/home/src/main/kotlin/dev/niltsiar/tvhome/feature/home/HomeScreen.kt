@@ -212,10 +212,9 @@ private val CinematicShelfHeight = CinematicTextHeight + TitleToShelfBottom
 
 /** A 48 sp title line (its ascent and descent), then the meta line or the key chips. */
 private val ShelfHeight = 52.dp + MetaGap + ChipHeight + TitleToShelfBottom
-private const val ROW_ABOVE_ALPHA = 0f
 
-/** With focus on the library pill the grid is not a ghost above it: its tiles stay nearly whole. */
-private const val ROW_ABOVE_PILL_ALPHA = 0.85f
+/** The alpha of the last grid row with focus on the library pill: the grid is not a ghost above it. Rows above that one are gone. */
+private const val LAST_ROW_PILL_ALPHA = 0.85f
 
 /** How far the title and its line move down while the grid is up, so its capitals stand 36 dp under the top bar. */
 private val TitleGridDrop = 16.dp
@@ -764,10 +763,9 @@ private fun pillUp(
 }
 
 /**
- * The row focus is on, animated: [DOCK_ROW] for the dock, the grid row of a grid tile, the row after the last for the
- * library pill, and [DOCK_ROW] while focus is outside the grid. [floor] is the alpha of the rows above it, animated with
- * it. [low] is 1 while the band and the dock sit [lowering] pixels lower (focus in the dock or on the top bar) and 0 in
- * the grid layout; the grid's items, the band and the pill draw that far down. Read them in layer lambdas only.
+ * The row focus is on, animated: [DOCK_ROW] for the dock, the grid row of a grid tile, [LAST_ROW_PILL_ALPHA] short of the
+ * row after the last for the library pill, and [DOCK_ROW] while focus is outside the grid. [low] is 1 while the band and
+ * the dock sit [lowering] pixels lower (focus in the dock or on the top bar) and 0 in the grid layout; the grid's items, the band and the pill draw that far down. Read them in layer lambdas only.
  */
 @Stable
 private class FocusDim(
@@ -782,11 +780,10 @@ private class FocusDim(
     val hero: Rect get() = heroBand.value
 
     val row = Animatable(DOCK_ROW.toFloat())
-    val floor = Animatable(ROW_ABOVE_ALPHA)
     val low = Animatable(1f)
 
-    /** The alpha of [row]: [floor] while focus is a row or more below it, 1 from the focused row down. */
-    fun alphaOf(row: Int): Float = 1f - (1f - floor.value) * (this.row.value - row).coerceIn(0f, 1f)
+    /** The alpha of [row]: 0 while focus is a row or more below it, 1 from the focused row down. */
+    fun alphaOf(row: Int): Float = 1f - (this.row.value - row).coerceIn(0f, 1f)
 
     /** How far down the group is drawn now, in pixels. */
     fun lowPx(): Float = low.value * lowering.value
@@ -912,7 +909,7 @@ private fun groupLowFor(
     }
 
 /**
- * Runs [dim]: its row and floor follow focus in [ROW_DIM_MS], and its group goes low or up as [groupLowFor] says, in
+ * Runs [dim]: its row follows focus in [ROW_DIM_MS], and its group goes low or up as [groupLowFor] says, in
  * [GROUP_MS], at once without motion. It stays where it is while the App library is open.
  */
 @Composable
@@ -926,12 +923,11 @@ private fun FocusDimEffects(
     val motion = TvTheme.motion
     val currentLibraryOpen = rememberUpdatedState(libraryOpen)
     LaunchedEffect(state, input, layout, motion) {
-        snapshotFlow { focusRowOf(state.value(), input, layout) }
-            .collectLatest { dim.row.animateTo(it.toFloat(), motion.tweenSpec(ROW_DIM_MS)) }
-    }
-    LaunchedEffect(input, motion) {
-        snapshotFlow { if (input.pillFocused) ROW_ABOVE_PILL_ALPHA else ROW_ABOVE_ALPHA }
-            .collectLatest { dim.floor.animateTo(it, motion.tweenSpec(ROW_DIM_MS)) }
+        snapshotFlow {
+            val row = focusRowOf(state.value(), input, layout)
+            // Short of the pill's row, the last grid row draws at LAST_ROW_PILL_ALPHA and the rows above it at 0.
+            if (input.pillFocused) row - LAST_ROW_PILL_ALPHA else row.toFloat()
+        }.collectLatest { dim.row.animateTo(it, motion.tweenSpec(ROW_DIM_MS)) }
     }
     LaunchedEffect(state, input, layout, motion) {
         var low = true

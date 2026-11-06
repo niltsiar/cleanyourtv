@@ -3,7 +3,11 @@ package dev.niltsiar.tvhome.core.designsystem
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -19,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -29,14 +34,21 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -57,6 +69,9 @@ private val RowSpacing = 8.dp
 private val RowHeight = 46.dp
 private const val TITLE_ALPHA = 0.75f
 private val TitlePadding = 8.dp
+
+/** How far a scrolling panel fades its content out at an edge with more content past it. */
+private val EdgeFade = 24.dp
 
 /** Rounding a tile's width to whole pixels can leave a panel a pixel or two past the column edge it should end on. */
 private const val EDGE_SLACK_PX = 2
@@ -131,13 +146,15 @@ public fun <T> GlassMenu(
  * inside the panel's edge. It rises and fades in with a spring, then focus goes to [firstFocus], which the caller puts on
  * one of the rows; focus cannot leave the panel. With [above] the panel sits 10 dp above the anchor when it fits
  * there, before it tries below; [anchorGap] is that distance, 10 dp by default. With [bottomLimit] (in the root's
- * coordinates) a panel that hangs below the anchor ends at or above it, and scrolls when its content is taller. With
- * [columnGap] the anchor is one column of a grid whose columns are [columnGap] apart: the panel is a whole number of
+ * coordinates) a panel that hangs below the anchor ends at or above it, and scrolls when its content is taller: it
+ * fades its content over 24 dp at an edge with more content past it, and a focused child scrolls clear of that fade.
+ * With [childHeights], the heights of [content]'s children, such a panel ends between two children rather than through
+ * one. With [columnGap] the anchor is one column of a grid whose columns are [columnGap] apart: the panel is a whole number of
  * columns wide, plus the gaps between them, and starts at the anchor's left edge (or ends at its right edge when it
  * would pass [edgeMargin] from the screen's side); [beside] it, [BesideAnchor.gap] should be [columnGap] so that the
  * panel starts on the next column and ends on the one before.
  */
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 public fun GlassDropdown(
     anchor: State<Rect>,
@@ -154,10 +171,13 @@ public fun GlassDropdown(
     anchorGap: Dp = MenuGap,
     bottomLimit: Dp = Dp.Unspecified,
     columnGap: Dp? = null,
+    childHeights: List<Dp>? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val motion = TvTheme.motion
     val scroll = rememberScrollState()
+    val density = LocalDensity.current
+    val clearOfFade = remember(density) { ClearOfFade(with(density) { EdgeFade.toPx() }) }
     val columnWidth by remember(anchor) { derivedStateOf { anchor.value.width } }
     val reveal = remember { Animatable(if (motion.animations) 0f else 1f) }
     LaunchedEffect(Unit) {
@@ -178,19 +198,21 @@ public fun GlassDropdown(
                         scaleY = scale
                     },
             ) {
-                Column(
-                    modifier =
-                        Modifier
-                            .then(if (columnGap != null) Modifier.fillMaxWidth() else Modifier)
-                            .widthIn(min = minWidth, max = maxWidth)
-                            .width(IntrinsicSize.Max)
-                            .then(if (bottomLimit.isSpecified) Modifier.verticalScroll(scroll) else Modifier)
-                            .padding(padding)
-                            .focusProperties { exit = { FocusRequester.Cancel } }
-                            .focusGroup(),
-                    verticalArrangement = Arrangement.spacedBy(RowSpacing),
-                    content = content,
-                )
+                CompositionLocalProvider(LocalBringIntoViewSpec provides clearOfFade) {
+                    Column(
+                        modifier =
+                            Modifier
+                                .then(if (columnGap != null) Modifier.fillMaxWidth() else Modifier)
+                                .widthIn(min = minWidth, max = maxWidth)
+                                .width(IntrinsicSize.Max)
+                                .then(if (bottomLimit.isSpecified) Modifier.fadeScrolledEdges(scroll).verticalScroll(scroll) else Modifier)
+                                .padding(padding)
+                                .focusProperties { exit = { FocusRequester.Cancel } }
+                                .focusGroup(),
+                        verticalArrangement = Arrangement.spacedBy(RowSpacing),
+                        content = content,
+                    )
+                }
             }
         },
         modifier = modifier.fillMaxSize(),
@@ -208,7 +230,13 @@ public fun GlassDropdown(
         val gap = anchorGap.roundToPx()
         val limited = bottomLimit.isSpecified && beside == null
         val room = if (limited) bottomLimit.roundToPx() - anchor.value.bottom.toInt() - gap else Int.MAX_VALUE
-        val panel = measurable.measure(limits.copy(maxHeight = minOf(limits.maxHeight, maxOf(room, 0))))
+        val height =
+            if (limited && childHeights != null) {
+                wholeChildrenHeight(childHeights.map { it.roundToPx() }, padding.roundToPx(), RowSpacing.roundToPx(), maxOf(room, 0))
+            } else {
+                room
+            }
+        val panel = measurable.measure(limits.copy(maxHeight = minOf(limits.maxHeight, maxOf(height, 0))))
         layout(constraints.maxWidth, constraints.maxHeight) {
             val at = anchor.value
             if (beside != null) {
@@ -237,6 +265,78 @@ public fun GlassDropdown(
                 )
             val y = dropdownTop(at.top.toInt(), at.bottom.toInt(), panel.height, constraints.maxHeight, gap, topLimit.roundToPx(), above)
             panel.place(x, y)
+        }
+    }
+}
+
+/**
+ * The height of a scrolling panel with [padding] around children [heights] tall and [spacing] apart, in [room]: it ends
+ * halfway down the gap under the last child that fits whole. [room] when the first child does not fit.
+ */
+internal fun wholeChildrenHeight(
+    heights: List<Int>,
+    padding: Int,
+    spacing: Int,
+    room: Int,
+): Int {
+    var end = padding
+    var height = room
+    for (child in heights) {
+        end += child
+        val cut = end + spacing / 2
+        if (cut > room) break
+        height = cut
+        end += spacing
+    }
+    return height
+}
+
+/** Fades the content over [EdgeFade] at the top and at the bottom as far as [scroll] has content hidden past that edge. */
+private fun Modifier.fadeScrolledEdges(scroll: ScrollState): Modifier =
+    graphicsLayer {
+        val hidden = scroll.value > 0 || scroll.value < scroll.maxValue
+        compositingStrategy = if (hidden) CompositingStrategy.Offscreen else CompositingStrategy.Auto
+    }.drawWithContent {
+        drawContent()
+        val fade = EdgeFade.toPx()
+        val above = (scroll.value / fade).coerceIn(0f, 1f)
+        val below = ((scroll.maxValue - scroll.value) / fade).coerceIn(0f, 1f)
+        val mask = Size(size.width, fade)
+        if (above > 0f) {
+            drawRect(
+                Brush.verticalGradient(listOf(Color.Black.copy(alpha = 1f - above), Color.Black), 0f, fade),
+                size = mask,
+                blendMode = BlendMode.DstIn,
+            )
+        }
+        if (below > 0f) {
+            translate(top = size.height - fade) {
+                drawRect(
+                    Brush.verticalGradient(listOf(Color.Black, Color.Black.copy(alpha = 1f - below)), 0f, fade),
+                    size = mask,
+                    blendMode = BlendMode.DstIn,
+                )
+            }
+        }
+    }
+
+/** Scrolls a focused child at least [fade] clear of the edge it moves towards; a scroll that cannot go further leaves it nearer. */
+@OptIn(ExperimentalFoundationApi::class)
+private class ClearOfFade(
+    private val fade: Float,
+) : BringIntoViewSpec {
+    override fun calculateScrollDistance(
+        offset: Float,
+        size: Float,
+        containerSize: Float,
+    ): Float {
+        val clear = minOf(fade, (containerSize - size).coerceAtLeast(0f) / 2f)
+        val before = offset - clear
+        val after = offset + size + clear - containerSize
+        return when {
+            before < 0f -> before
+            after > 0f -> after
+            else -> 0f
         }
     }
 }
