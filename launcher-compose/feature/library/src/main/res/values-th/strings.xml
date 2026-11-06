@@ -17,4 +17,6 @@
   <string name="library_order_least_used">ใช้น้อยที่สุด</string>
   <string name="library_hint_order">เมนู: %1$s</string>
   <string name="library_never_opened">ไม่เคยเปิด</string>
+  <string name="library_title_choose">เลือกแอปในหน้าหลัก</string>
+  <string name="library_no_usage_yet">ยังไม่มีข้อมูลการใช้งาน</string>
 </resources>

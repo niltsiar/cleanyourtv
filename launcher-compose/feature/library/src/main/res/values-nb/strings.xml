@@ -18,4 +18,6 @@
   <string name="library_order_least_used">Minst brukt</string>
   <string name="library_hint_order">Meny: %1$s</string>
   <string name="library_never_opened">Aldri åpnet</string>
+  <string name="library_title_choose">Velg apper til startskjermen</string>
+  <string name="library_no_usage_yet">Ingen bruksdata ennå</string>
 </resources>

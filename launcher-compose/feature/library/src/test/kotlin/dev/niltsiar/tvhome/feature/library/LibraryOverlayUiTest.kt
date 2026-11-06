@@ -10,13 +10,18 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
 import app.cash.molecule.RecompositionMode
 import dev.niltsiar.tvhome.core.config.TvConfig
@@ -282,6 +287,79 @@ class LibraryOverlayUiTest {
         assertTrue(compose.textsOnCard("Gamma")[1].startsWith("3 days ago, "))
     }
 
+    @Test
+    fun with_no_open_time_for_any_app_the_least_used_order_shows_no_opened_text_and_the_hint_says_so() {
+        showLibrary(leastUsed)
+        compose.onNodeWithTag("library:hint").assertTextEquals("Press to add to Home · Hold for options · Menu: Least used")
+
+        press(Key.Menu)
+
+        compose
+            .onNodeWithTag(
+                "library:hint",
+            ).assertTextEquals("Press to add to Home · Hold for options · Menu: Usual order · No usage data yet")
+        compose.onNodeWithTag("card:opened:${key("Alpha")}", useUnmergedTree = true).assertDoesNotExist()
+        assertEquals(listOf("Alpha", "Add to Home"), compose.textsOnCard("Alpha"))
+    }
+
+    @Test
+    fun with_an_open_time_the_hint_does_not_say_there_is_no_usage_data() {
+        gammaOpenedThreeDaysAgo()
+        showLibrary(leastUsed)
+
+        press(Key.Menu)
+
+        compose.onNodeWithTag("library:hint").assertTextEquals("Press to add to Home · Hold for options · Menu: Usual order")
+    }
+
+    @Test
+    fun in_selection_mode_the_panel_is_titled_choose_home_apps() {
+        showLibrary(TvConfig(appLibrary = true, appLibrarySelection = true))
+        compose.onNodeWithText("Choose Home apps").assertExists()
+        compose.onNodeWithText("App library").assertDoesNotExist()
+    }
+
+    @Test
+    fun in_browse_mode_the_panel_is_titled_app_library() {
+        showLibrary()
+        compose.onNodeWithText("App library").assertExists()
+        compose.onNodeWithText("Choose Home apps").assertDoesNotExist()
+    }
+
+    @Test
+    fun while_the_order_chip_has_focus_the_hint_says_what_ok_does_on_it() {
+        gammaOpenedThreeDaysAgo()
+        showLibrary(leastUsed)
+
+        press(Key.DirectionUp)
+        orderChip().assertIsFocused()
+        compose.onNodeWithTag("library:hint").assertTextEquals("OK: Least used")
+
+        press(Key.DirectionCenter)
+        compose.onNodeWithTag("library:hint").assertTextEquals("OK: Usual order")
+
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("library:hint").assertTextContains("Menu: Usual order", substring = true)
+    }
+
+    @Test
+    fun the_order_chip_shows_a_sort_glyph_14_dp_before_its_text() {
+        showLibrary(leastUsed)
+
+        val chip = orderChip().getBoundsInRoot()
+        val glyph = compose.onNodeWithTag("library:order:glyph", useUnmergedTree = true).getBoundsInRoot()
+        assertEquals(14f, glyph.width.value, 1f)
+        assertEquals(14f, glyph.height.value, 1f)
+        assertTrue("glyph $glyph inside chip $chip", glyph.left >= chip.left && glyph.right <= chip.right)
+        assertTrue("glyph ends ${glyph.right}, text starts ${textLeft()}", glyph.right <= textLeft())
+    }
+
+    private fun textLeft() =
+        compose
+            .onNode(hasText("Usual order") and hasAnyAncestor(hasTestTag("library:order")), useUnmergedTree = true)
+            .getBoundsInRoot()
+            .left
+
     private fun orderChip() = compose.onNodeWithTag("library:order")
 
     @Test
@@ -313,7 +391,7 @@ class LibraryOverlayUiTest {
 
         orderChip().assertIsFocused()
         orderChip().assertTextEquals("Least used")
-        compose.onNodeWithTag("library:hint").assertTextContains("Menu: Usual order", substring = true)
+        compose.onNodeWithTag("library:hint").assertTextEquals("OK: Usual order")
 
         press(Key.DirectionDown)
 

@@ -19,4 +19,6 @@
   <string name="library_order_least_used">Najmanje korišćene</string>
   <string name="library_hint_order">Meni: %1$s</string>
   <string name="library_never_opened">Nikad otvorena</string>
+  <string name="library_title_choose">Izaberi aplikacije za početni ekran</string>
+  <string name="library_no_usage_yet">Još nema podataka o korišćenju</string>
 </resources>

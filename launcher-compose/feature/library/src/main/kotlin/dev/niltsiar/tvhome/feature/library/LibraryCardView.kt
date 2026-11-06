@@ -12,12 +12,16 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
@@ -53,6 +57,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -72,7 +77,6 @@ private val ArtShape = RoundedCornerShape(8.dp)
 private const val ART_ASPECT = 16f / 9f
 private val CardSide = 6.dp
 private val ArtInset = 8.dp
-private val CardTop = 8.dp
 private val CardBottom = 6.dp
 private val NameGap = 2.dp
 private val NameHeight = 32.dp
@@ -83,19 +87,20 @@ private const val FOCUSED_SCALE = 1.08f
 private val OnHomeTint = Color(0x1475BBA4)
 private const val RIM_ALPHA = 0.09f
 private val RecentGreen = Color(0xFF70D9A0)
-private val BadgeSize = 20.dp
-private val BadgeInset = 4.dp
-private val BadgeGlyph = 12.dp
-private val BadgeBacking = Color.Black.copy(alpha = 0.55f)
-private const val NEVER_OPENED_ALPHA = 0.6f
+private val StatusHeight = 14.dp
+private val GlyphAlone = 14.dp
+private val GlyphBeforeText = 12.dp
+private val GlyphGap = 4.dp
+private const val GLYPH_ALONE_ALPHA = 0.55f
+private const val NEVER_OPENED_ALPHA = 0.45f
 
 /**
- * One card of the grid: the app's art on a small tile, with a house badge on it when the app is on Home, its name in a box
- * of [NAME_LINES] lines and, right under it, one status line for what is not the usual state. An idle card is opaque, so
- * nothing of Home shows through it; a focused one lets the plate [FocusSurface] draws behind it show. It rises in once per
- * opening, with the delay [CardEntrance] gives it, and pops a little when its Home shortcut changes. Both run in the layer
- * lambda. The status line keeps its place while the card grows, so it stays level with the cards beside it. [widthPx] is
- * the narrowest the card can be.
+ * One card of the grid: the app's art on a small tile and its name of up to [NAME_LINES] lines, together centred in the room
+ * above the status slot, which says in one line what is not the usual state and shows a house when the app is on Home. An
+ * idle card is opaque, so nothing of Home shows through it; a focused one lets the plate [FocusSurface] draws behind it
+ * show. It rises in once per opening, with the delay [CardEntrance] gives it, and pops a little when its Home shortcut
+ * changes. Both run in the layer lambda. The status slot keeps its place while the card grows, so it stays level with the
+ * cards beside it. [widthPx] is the narrowest the card can be.
  */
 @Composable
 internal fun LibraryCardView(
@@ -191,7 +196,8 @@ internal fun LibraryCardView(
                     .semantics { contentDescription = card.app.label },
             ) {
                 Column(
-                    modifier = Modifier.fillMaxSize().padding(start = CardSide, top = CardTop, end = CardSide),
+                    modifier = Modifier.fillMaxSize().padding(start = CardSide, end = CardSide, bottom = CardBottom + StatusHeight),
+                    verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Art(card, artwork, Modifier.padding(horizontal = ArtInset))
@@ -240,23 +246,21 @@ private fun Art(
                 style = TvTheme.typography.shelfTitle.copy(fontSize = 28.sp),
             )
         }
-        if (card.onHome) HomeBadge(Modifier.align(Alignment.TopEnd).padding(BadgeInset))
     }
 }
 
-/** A house in a dark circle: the app is on Home. */
+/** A house of [side], the app is on Home. */
 @Composable
-private fun HomeBadge(modifier: Modifier = Modifier) {
+private fun HomeGlyph(
+    side: Dp,
+    color: Color,
+) {
     val description = stringResource(R.string.library_on_home)
     Box(
-        modifier =
-            modifier
-                .size(BadgeSize)
-                .semantics { contentDescription = description }
-                .drawBehind {
-                    drawCircle(BadgeBacking)
-                    drawHouse(Color.White, BadgeGlyph.toPx())
-                },
+        Modifier
+            .size(side)
+            .semantics { contentDescription = description }
+            .drawBehind { drawHouse(color, size.width) },
     )
 }
 
@@ -305,7 +309,7 @@ private fun Name(
         maxLines = NAME_LINES,
         overflow = TextOverflow.Ellipsis,
         autoSize = if (shown == label) fit else null,
-        modifier = Modifier.padding(top = NameGap).fillMaxWidth().height(NameHeight),
+        modifier = Modifier.padding(top = NameGap).fillMaxWidth().heightIn(max = NameHeight),
     )
 }
 
@@ -338,8 +342,9 @@ internal fun shownName(
 }
 
 /**
- * The line under the name, which says only what the badge and the name do not: in the least used order when the app was last
- * opened, else the recent-install text, else "Add to Home" for an app that is not on Home, else nothing.
+ * The status slot, one baseline for every card: a house when the app is on Home, then the line that says what the name does
+ * not. That line is, in the least used order when the app was last opened, else the recent-install text, else "Add to
+ * Home" for an app that is not on Home, else nothing. The house stands alone, centred, when there is no line.
  */
 @Composable
 private fun Status(
@@ -350,20 +355,38 @@ private fun Status(
     val typography = TvTheme.typography
     val style = remember(typography) { typography.date.copy(fontSize = 11.sp, lineHeight = 13.sp, textAlign = TextAlign.Center) }
     val opened = card.opened
-    if (opened != null) {
-        Opened(card.app.key, opened, style, modifier)
-        return
-    }
     val text =
         when {
-            card.onHome || layout.okOpens -> null
+            opened != null || card.onHome || layout.okOpens -> null
             card.recent -> stringResource(R.string.library_recent)
             else -> stringResource(R.string.library_add_home)
         }
-    if (text != null) BasicText(text, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = modifier.fillMaxWidth())
+    val hasText = opened != null || text != null
+    val never = opened != null && opened.at == null
+    val shown = if (never) style.copy(color = style.color.copy(alpha = style.color.alpha * NEVER_OPENED_ALPHA)) else style
+    Row(
+        modifier = modifier.fillMaxWidth().height(StatusHeight),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (card.onHome) {
+            if (hasText) {
+                HomeGlyph(GlyphBeforeText, shown.color)
+                Spacer(Modifier.width(GlyphGap))
+            } else {
+                HomeGlyph(GlyphAlone, TvTheme.colors.onSurface.copy(alpha = GLYPH_ALONE_ALPHA))
+            }
+        }
+        val line = Modifier.weight(1f, fill = false)
+        if (opened != null) {
+            Opened(card.app.key, opened, shown, line)
+        } else if (text != null) {
+            BasicText(text, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = line)
+        }
+    }
 }
 
-/** When the app was last opened, in the TV's language, shrunk to fit one line; "Never opened", dimmer, for an app Home never opened. */
+/** When the app was last opened, in the TV's language, shrunk to fit one line; "Never opened" for an app Home never opened. */
 @Composable
 private fun Opened(
     key: String,
@@ -375,13 +398,12 @@ private fun Opened(
     val locale = LocalLocale.current.platformLocale
     val whenOpened =
         remember(opened) { opened.at?.let { describeLastOpened(context, it, locale).replaceFirstChar { c -> c.titlecase(locale) } } }
-    val shown = if (whenOpened == null) style.copy(color = style.color.copy(alpha = style.color.alpha * NEVER_OPENED_ALPHA)) else style
     BasicText(
         whenOpened ?: stringResource(R.string.library_never_opened),
-        style = shown,
+        style = style,
         maxLines = 1,
         autoSize = TextAutoSize.StepBased(minFontSize = OPENED_MIN_SIZE, maxFontSize = style.fontSize),
-        modifier = modifier.fillMaxWidth().testTag("card:opened:$key"),
+        modifier = modifier.testTag("card:opened:$key"),
     )
 }
 

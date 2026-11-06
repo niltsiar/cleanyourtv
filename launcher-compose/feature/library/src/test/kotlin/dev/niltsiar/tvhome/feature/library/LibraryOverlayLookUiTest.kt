@@ -321,7 +321,6 @@ class LibraryOverlayLookUiTest {
         val bottom = card("Beta").bottom - 6.dp
         assertNear(bottom, statusText("Add to Home", "Beta").bottom)
         assertNear(bottom, statusText("Add to Home", long).bottom)
-        assertEquals(statusText("Beta", "Beta").height, statusText("Long enough", long).height)
     }
 
     /** The layout bounds of the text of the card of [name] that holds [text]. */
@@ -336,16 +335,20 @@ class LibraryOverlayLookUiTest {
     private val longNames = listOf("Long enough a name to wrap onto two lines", "Many words in a name that wraps onto two lines")
 
     /** The layout bottom of the last line of the name on the card of [name], in the root's dp. */
-    private fun lastLineBottom(name: String): Dp {
-        val first = name.substringBefore(' ')
+    private fun nameBottom(name: String): Dp {
         val node =
             compose.onNode(
-                hasText(first, substring = true) and hasAnyAncestor(hasTestTag("card:${key(name)}")),
+                hasText(name.substringBefore(' '), substring = true) and hasAnyAncestor(hasTestTag("card:${key(name)}")),
                 useUnmergedTree = true,
             )
         val layout = nameLayout(name)
-        assertEquals("$name wraps onto two lines", 2, layout.lineCount)
-        return node.getBoundsInRoot().top + (layout.getLineBottom(1) / compose.activity.resources.displayMetrics.density).dp
+        return node.getBoundsInRoot().top +
+            (layout.getLineBottom(layout.lineCount - 1) / compose.activity.resources.displayMetrics.density).dp
+    }
+
+    private fun lastLineBottom(name: String): Dp {
+        assertEquals("$name wraps onto two lines", 2, nameLayout(name).lineCount)
+        return nameBottom(name)
     }
 
     /** The top of the highest text under the name on the card of [name]: where its status lines begin. */
@@ -378,7 +381,11 @@ class LibraryOverlayLookUiTest {
 
     @Test
     fun in_the_least_used_order_a_two_line_name_ends_at_least_4_dp_above_the_opened_line_and_a_focused_one_at_least_2_dp() {
-        showLibrary(longNames.map { libraryApp(it) }, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
+        showLibrary(
+            longNames.map { libraryApp(it) },
+            config = TvConfig(appLibrary = true, libraryLeastUsed = true),
+            record = OpenedRecord(times = mapOf(key(longNames[0]) to NOW - 3 * DAY), since = NOW - 90 * DAY),
+        )
         press(Key.Menu)
 
         assertNameClearsStatus()
@@ -416,7 +423,7 @@ class LibraryOverlayLookUiTest {
 
     @Test
     @Config(qualifiers = "+night")
-    fun never_opened_draws_at_60_percent_of_the_alpha_of_a_last_opened_line() {
+    fun never_opened_draws_at_45_percent_of_the_alpha_of_a_last_opened_line() {
         showLibrary(
             listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp("Gamma")),
             config = TvConfig(appLibrary = true, libraryLeastUsed = true),
@@ -429,7 +436,7 @@ class LibraryOverlayLookUiTest {
             return (peak - ground).toFloat()
         }
         val ratio = lift("Beta") / lift("Gamma")
-        assertTrue("never opened is $ratio of the opened line", ratio in 0.5f..0.7f)
+        assertTrue("never opened is $ratio of the opened line", ratio in 0.38f..0.52f)
     }
 
     @Test
@@ -476,32 +483,91 @@ class LibraryOverlayLookUiTest {
         assertTrue("red $red, green $green", green - red < 20)
     }
 
+    private fun houseGlyph(name: String): DpRect =
+        compose
+            .onNode(hasContentDescription("On Home") and hasAnyAncestor(hasTestTag("card:${key(name)}")), useUnmergedTree = true)
+            .getBoundsInRoot()
+
     @Test
     @Config(qualifiers = "+night")
-    fun an_app_on_home_has_a_house_badge_darkening_the_top_right_corner_of_its_art_and_an_app_off_home_has_none() {
-        showLibrary(listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp("Gamma", onHome = true)), art = LibraryArt(white, Color.Gray))
+    fun an_app_on_home_has_no_badge_on_its_art() {
+        showLibrary(listOf(libraryApp("Aaa"), libraryApp("Gamma", onHome = true)), art = LibraryArt(white, Color.Gray))
 
         val art = art("Gamma")
-        val badge =
-            compose
-                .onNode(hasContentDescription("On Home") and hasAnyAncestor(hasTestTag("card:${key("Gamma")}")), useUnmergedTree = true)
-                .getBoundsInRoot()
-        assertNear(art.right - 4.dp, badge.right)
-        assertNear(art.top + 4.dp, badge.top)
-        assertNear(20.dp, badge.width)
-        assertNear(20.dp, badge.height)
-        compose
-            .onNode(
-                hasContentDescription("On Home") and hasAnyAncestor(hasTestTag("card:${key("Beta")}")),
-                useUnmergedTree = true,
-            ).assertDoesNotExist()
+        val corner = rgbAt(art.right - 22.5.dp, art.top + 14.dp)
+        assertTrue("art corner $corner", corner.all { it >= 250 })
+        assertTrue("glyph ${houseGlyph("Gamma")} on the art $art", houseGlyph("Gamma").top >= art.bottom)
+    }
 
-        // In the circle, left of the 12 dp glyph: black at 0.55 over the white art, or the plain art.
-        val beside = { card: DpRect -> rgbAt(card.right - 4.dp - 20.dp + 1.5.dp, card.top + 4.dp + 10.dp) }
-        val darkened = beside(art)
-        val plain = beside(art("Beta"))
-        assertTrue("on home $darkened", darkened.all { it in 100..130 })
-        assertTrue("off home $plain", plain.all { it >= 250 })
+    @Test
+    @Config(qualifiers = "+night")
+    fun an_app_on_home_with_no_status_text_shows_a_14_dp_house_glyph_centred_in_the_status_slot() {
+        showLibrary(listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp("Gamma", onHome = true)))
+
+        val glyph = houseGlyph("Gamma")
+        val card = card("Gamma")
+        assertNear(14.dp, glyph.width)
+        assertNear(14.dp, glyph.height)
+        assertNear((card.left + card.right) / 2, (glyph.left + glyph.right) / 2)
+        assertNear((statusText("Add to Home", "Beta").top + statusText("Add to Home", "Beta").bottom) / 2, (glyph.top + glyph.bottom) / 2)
+        assertNear(card.bottom - 6.dp - 7.dp, (glyph.top + glyph.bottom) / 2)
+        val (peak, ground) = lineBrightness(glyph)
+        assertTrue("glyph peaks at $peak over $ground", peak - ground in 60..170)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun an_app_on_home_with_a_status_text_shows_a_12_dp_house_glyph_4_dp_before_it() {
+        showLibrary(
+            listOf(libraryApp("Aaa"), libraryApp("Gamma", onHome = true)),
+            config = TvConfig(appLibrary = true, libraryLeastUsed = true),
+            record = OpenedRecord(times = mapOf(key("Gamma") to NOW - 3 * DAY), since = NOW - 90 * DAY),
+        )
+        press(Key.Menu)
+
+        val glyph = houseGlyph("Gamma")
+        val text = compose.onNodeWithTag("card:opened:${key("Gamma")}", useUnmergedTree = true).getBoundsInRoot()
+        assertNear(12.dp, glyph.width)
+        assertNear(12.dp, glyph.height)
+        assertNear(4.dp, text.left - glyph.right)
+        assertNear((text.top + text.bottom) / 2, (glyph.top + glyph.bottom) / 2)
+    }
+
+    /** The darkest red, 0 to 255, in [area]. */
+    private fun darkestRed(area: DpRect): Int {
+        val density = compose.activity.resources.displayMetrics.density
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val xs = (area.left.value * density).toInt() until (area.right.value * density).toInt()
+        val ys = (area.top.value * density).toInt() until (area.bottom.value * density).toInt()
+        return Math.round(ys.minOf { y -> xs.minOf { x -> pixels[x, y].red } } * 255)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun a_focused_order_chip_is_filled_white_with_dark_text_and_a_dark_glyph() {
+        showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
+        val chip = bounds("library:order")
+        val middle = (chip.top + chip.bottom) / 2
+        val glyph = compose.onNodeWithTag("library:order:glyph", useUnmergedTree = true).getBoundsInRoot()
+        assertTrue("idle fill ${rgbAt(chip.left + 3.dp, middle)}", rgbAt(chip.left + 3.dp, middle).all { it < 120 })
+
+        press(Key.DirectionUp)
+
+        compose.onNodeWithTag("library:order").assertIsFocused()
+        assertTrue("focused fill ${rgbAt(chip.left + 3.dp, middle)}", rgbAt(chip.left + 3.dp, middle).all { it >= 230 })
+        assertTrue("glyph is dark", darkestRed(glyph) < 90)
+        assertTrue("text is dark", darkestRed(DpRect(glyph.right + 4.dp, chip.top + 6.dp, chip.right - 14.dp, chip.bottom - 6.dp)) < 90)
+    }
+
+    @Test
+    fun a_card_with_a_one_line_name_has_as_much_room_above_its_art_as_below_its_name() {
+        showLibrary(listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp(longNames[0])))
+
+        listOf("Beta", longNames[0]).forEach { name ->
+            val above = art(name).top - card(name).top
+            val below = statusTop(name) - nameBottom(name)
+            assertTrue("$name: $above above the art, $below under the name", abs(above.value - below.value) <= 4f)
+        }
     }
 
     /** The layout bounds of the status line of the card of [name]. */

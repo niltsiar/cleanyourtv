@@ -22,4 +22,6 @@
   <string name="library_order_least_used">الأقل استخدامًا</string>
   <string name="library_hint_order">القائمة: %1$s</string>
   <string name="library_never_opened">لم يُفتح أبدًا</string>
+  <string name="library_title_choose">اختيار تطبيقات الرئيسية</string>
+  <string name="library_no_usage_yet">لا توجد بيانات استخدام بعد</string>
 </resources>

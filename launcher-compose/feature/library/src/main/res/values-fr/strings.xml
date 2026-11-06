@@ -19,4 +19,6 @@
   <string name="library_order_least_used">Les moins utilisées</string>
   <string name="library_hint_order">Menu : %1$s</string>
   <string name="library_never_opened">Jamais ouverte</string>
+  <string name="library_title_choose">Choisir les applis de l\'accueil</string>
+  <string name="library_no_usage_yet">Aucune donnée d\'utilisation pour l\'instant</string>
 </resources>

@@ -25,6 +25,7 @@ import androidx.compose.ui.test.pressKey
 import app.cash.molecule.RecompositionMode
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.model.OpenedRecord
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -103,7 +104,10 @@ open class LibraryRecompositionTest {
     @Before
     fun showLibrary() {
         Composer.setTracer(cards)
-        val library = FakeLibrary((1..23).map { libraryApp("App %02d".format(it)) })
+        val library =
+            FakeLibrary((1..23).map { libraryApp("App %02d".format(it)) }).apply {
+                record = OpenedRecord(times = mapOf(key("App 23") to NOW - 3 * DAY), since = NOW - 90 * DAY)
+            }
         val config = TvConfig(appLibrary = true, libraryLeastUsed = leastUsed)
         lateinit var viewModel: MoleculeLibraryViewModel
         compose.setContent {
@@ -183,7 +187,7 @@ open class LibraryRecompositionTest {
     }
 }
 
-/** The cards of the least used order carry a second line, and a focus move still composes none of them again. */
+/** The cards of the least used order carry an opened line, and a focus move still composes none of them again. */
 class LeastUsedLibraryRecompositionTest : LibraryRecompositionTest() {
     override val leastUsed = true
 }

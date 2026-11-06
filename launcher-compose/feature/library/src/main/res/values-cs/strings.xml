@@ -20,4 +20,6 @@
   <string name="library_order_least_used">Nejméně používané</string>
   <string name="library_hint_order">Menu: %1$s</string>
   <string name="library_never_opened">Nikdy neotevřeno</string>
+  <string name="library_title_choose">Vybrat aplikace na domovské obrazovce</string>
+  <string name="library_no_usage_yet">Zatím žádná data o používání</string>
 </resources>

@@ -395,6 +395,41 @@ class LibraryPresenterTest {
         }
 
     @Test
+    fun when_no_app_of_the_catalogue_has_an_open_time_the_least_used_order_says_so_and_no_card_has_an_opened_line() =
+        runTest {
+            val gone = OpenedRecord(times = mapOf(key("Gone") to NOW - DAY), since = NOW - 90 * DAY)
+            val library = FakeLibrary(catalogue).apply { record = gone }
+            presenter(library, leastUsed).test {
+                events.send(LibraryEvent.Open)
+                assertFalse(awaitMatching { it.shown }.noUsageYet)
+
+                events.send(LibraryEvent.ToggleOrder)
+                val least = awaitMatching { it.order == LibraryOrder.LeastUsed }
+
+                assertTrue(least.noUsageYet)
+                assertEquals(List(5) { null }, least.cards.map { it.opened })
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun one_open_time_among_the_catalogue_keeps_the_opened_lines_and_the_header_quiet() =
+        runTest {
+            val library = FakeLibrary(catalogue).apply { record = opened() }
+            presenter(library, leastUsed).test {
+                events.send(LibraryEvent.Open)
+                awaitMatching { it.shown }
+
+                events.send(LibraryEvent.ToggleOrder)
+                val least = awaitMatching { it.order == LibraryOrder.LeastUsed }
+
+                assertFalse(least.noUsageYet)
+                assertTrue(least.cards.all { it.opened != null })
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
     fun the_other_order_keeps_each_cards_status_and_the_usual_order_shows_no_opened_line() =
         runTest {
             val library = FakeLibrary(catalogue).apply { record = opened() }

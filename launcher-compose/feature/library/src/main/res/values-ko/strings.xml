@@ -17,4 +17,6 @@
   <string name="library_order_least_used">적게 사용한 순</string>
   <string name="library_hint_order">메뉴: %1$s</string>
   <string name="library_never_opened">열어 본 적 없음</string>
+  <string name="library_title_choose">홈 앱 선택</string>
+  <string name="library_no_usage_yet">아직 사용 데이터 없음</string>
 </resources>

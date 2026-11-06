@@ -19,4 +19,6 @@
   <string name="library_order_least_used">הכי פחות בשימוש</string>
   <string name="library_hint_order">תפריט: %1$s</string>
   <string name="library_never_opened">מעולם לא נפתחה</string>
+  <string name="library_title_choose">בחירת אפליקציות למסך הבית</string>
+  <string name="library_no_usage_yet">עדיין אין נתוני שימוש</string>
 </resources>

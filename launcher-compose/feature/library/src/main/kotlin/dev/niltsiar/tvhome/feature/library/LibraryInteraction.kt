@@ -20,7 +20,8 @@ import java.text.Collator
  * The library's state and what each event does to it. Opening starts a load, and so does each change of the installed
  * apps or of the Home choices while it is open; [LibraryLoads] lets only the latest fill the cards, and the panel
  * appears once, when the latest first has. With library_least_used the MENU key switches [order] and sorts the loaded
- * catalogue again; focus stays on its app.
+ * catalogue again; focus stays on its app. While no app of the catalogue has an open time, no card gets an opened line
+ * and [noUsageYet] says so.
  */
 internal class LibraryInteraction(
     private val sources: LibrarySources,
@@ -42,6 +43,8 @@ internal class LibraryInteraction(
     var focusRequest by mutableStateOf<LibraryFocus?>(null)
         private set
     var order by mutableStateOf(LibraryOrder.Usual)
+        private set
+    var noUsageYet by mutableStateOf(false)
         private set
 
     private var catalogue = emptyList<LibraryApp>()
@@ -111,13 +114,15 @@ internal class LibraryInteraction(
         val now = sources.now()
         val leastUsed = order == LibraryOrder.LeastUsed
         val sorted = if (leastUsed) sortLeastUsed(catalogue, record, collator) else sortLibrary(catalogue, layout.selection, now, collator)
+        val usageKnown = catalogue.any { it.app.key in record.times }
+        noUsageYet = leastUsed && !usageKnown
         cards =
             sorted.map {
                 LibraryCard(
                     it.app,
                     it.onHome,
                     recent = !layout.selection && isRecent(it.installedAt, now),
-                    opened = if (leastUsed) openedOn(it.app.key, now) else null,
+                    opened = if (leastUsed && usageKnown) openedOn(it.app.key, now) else null,
                 )
             }
         val target = pendingFocus ?: focusedKey?.takeIf { key -> cards.any { it.app.key == key } } ?: cards.firstOrNull()?.app?.key
@@ -227,6 +232,7 @@ internal class LibraryInteraction(
         focusRequest = null
         pendingFocus = null
         order = LibraryOrder.Usual
+        noUsageYet = false
         catalogue = emptyList()
         record = OpenedRecord()
         sources.release()

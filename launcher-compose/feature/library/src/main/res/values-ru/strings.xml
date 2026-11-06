@@ -20,4 +20,6 @@
   <string name="library_order_least_used">Реже всего используются</string>
   <string name="library_hint_order">Меню: %1$s</string>
   <string name="library_never_opened">Ни разу не открывалось</string>
+  <string name="library_title_choose">Выбор приложений главного экрана</string>
+  <string name="library_no_usage_yet">Данных об использовании пока нет</string>
 </resources>

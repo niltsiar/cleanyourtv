@@ -20,4 +20,6 @@
   <string name="library_order_least_used">Menos usadas</string>
   <string name="library_hint_order">Menú: %1$s</string>
   <string name="library_never_opened">Nunca abierta</string>
+  <string name="library_title_choose">Elegir apps de Inicio</string>
+  <string name="library_no_usage_yet">Aún no hay datos de uso</string>
 </resources>

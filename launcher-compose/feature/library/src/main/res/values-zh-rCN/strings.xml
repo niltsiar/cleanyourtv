@@ -17,4 +17,6 @@
   <string name="library_order_least_used">最少使用</string>
   <string name="library_hint_order">菜单键：%1$s</string>
   <string name="library_never_opened">从未打开</string>
+  <string name="library_title_choose">选择主屏幕应用</string>
+  <string name="library_no_usage_yet">暂无使用数据</string>
 </resources>

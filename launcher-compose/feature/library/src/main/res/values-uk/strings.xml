@@ -20,4 +20,6 @@
   <string name="library_order_least_used">Найменш використовувані</string>
   <string name="library_hint_order">Меню: %1$s</string>
   <string name="library_never_opened">Ніколи не відкривався</string>
+  <string name="library_title_choose">Вибір застосунків головного екрана</string>
+  <string name="library_no_usage_yet">Даних про використання ще немає</string>
 </resources>

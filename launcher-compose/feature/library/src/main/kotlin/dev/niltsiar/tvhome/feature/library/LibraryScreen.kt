@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
@@ -42,6 +44,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -74,11 +77,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.designsystem.BesideAnchor
-import dev.niltsiar.tvhome.core.designsystem.FocusSurface
+import dev.niltsiar.tvhome.core.designsystem.FocusPill
 import dev.niltsiar.tvhome.core.designsystem.GlassMenu
 import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.OverlaySurface
@@ -244,13 +248,20 @@ private fun Header(
     val count by remember { derivedStateOf { state().cards.size } }
     val hint by remember { derivedStateOf { state().hint } }
     val order by remember { derivedStateOf { state().order } }
+    val noUsage by remember { derivedStateOf { state().noUsageYet } }
     val typography = TvTheme.typography
     val title = remember(typography) { typography.shelfTitle.copy(fontSize = 26.sp) }
     val countStyle = remember(typography) { typography.date.copy(fontSize = 18.sp) }
     val muted = remember(typography) { typography.date.copy(fontSize = 14.sp) }
     Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
         Row(Modifier.height(HeaderTitleHeight), verticalAlignment = Alignment.CenterVertically) {
-            BasicText(stringResource(R.string.app_library), style = title, maxLines = 1, modifier = Modifier.weight(1f))
+            BasicText(
+                stringResource(if (layout.selection) R.string.library_title_choose else R.string.app_library),
+                style = title,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
             if (layout.leastUsed) {
                 val end = Modifier.padding(end = 16.dp)
                 if (empty) {
@@ -262,18 +273,23 @@ private fun Header(
             BasicText(pluralStringResource(R.plurals.library_app_count, count, count), style = countStyle, maxLines = 1)
         }
         if (!empty) {
-            val text = hintText(hint)
-            val orderHint =
-                if (layout.leastUsed) {
-                    stringResource(
-                        R.string.library_hint_order,
-                        stringResource(order.other().label()),
-                    )
+            val other = stringResource(order.other().label())
+            val keys =
+                if (layout.leastUsed && chip.focused) {
+                    stringResource(R.string.library_hint_select, stringResource(android.R.string.ok), other)
+                } else if (layout.leastUsed) {
+                    "${hintText(hint)} · ${stringResource(R.string.library_hint_order, other)}"
                 } else {
-                    null
+                    hintText(hint)
                 }
-            val shown = if (orderHint != null) "$text · $orderHint" else text
-            BasicText(shown, style = muted, maxLines = 1, modifier = Modifier.height(HeaderHintHeight).testTag("library:hint"))
+            val shown = if (noUsage) "$keys · ${stringResource(R.string.library_no_usage_yet)}" else keys
+            BasicText(
+                shown,
+                style = muted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.height(HeaderHintHeight).testTag("library:hint"),
+            )
         }
     }
 }
@@ -281,12 +297,13 @@ private fun Header(
 /** Whether the order chip has focus: a card's focus request waits while it does, so a new order leaves focus where it is. */
 private class ChipFocus {
     val requester = FocusRequester()
-    var focused = false
+    var focused by mutableStateOf(false)
 }
 
 /**
- * The order's name as a chip: OK switches the order, as the MENU key does. Up from the first row of cards reaches it and
- * Down returns to the card that had focus, through [onDown]; no other key leaves it.
+ * The order's name as a chip, with a sort glyph before it: OK switches the order, as the MENU key does. It fills like a
+ * focused menu row. Up from the first row of cards reaches it and Down returns to the card that had focus, through
+ * [onDown]; no other key leaves it.
  */
 @Composable
 private fun OrderChip(
@@ -297,12 +314,10 @@ private fun OrderChip(
     modifier: Modifier = Modifier,
 ) {
     val typography = TvTheme.typography
-    val ink = TvTheme.colors.onSurface
-    FocusSurface(
+    val rest = TvTheme.colors.onSurface
+    FocusPill(
         onClick = onClick,
         shape = CircleShape,
-        glow = false,
-        focusedScale = 1f,
         modifier =
             modifier
                 .height(ChipHeight)
@@ -318,21 +333,47 @@ private fun OrderChip(
                     if (it.type == KeyEventType.KeyDown) onDown()
                     true
                 },
-    ) {
-        Box(
-            Modifier
-                .fillMaxHeight()
-                .background(ink.copy(alpha = CHIP_FILL_ALPHA), CircleShape)
-                .border(1.dp, ink.copy(alpha = CHIP_RIM_ALPHA), CircleShape)
-                .padding(horizontal = 14.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            BasicText(label, style = typography.chipLabel, maxLines = 1)
+        background = {
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .background(rest.copy(alpha = CHIP_FILL_ALPHA), CircleShape)
+                    .border(1.dp, rest.copy(alpha = CHIP_RIM_ALPHA), CircleShape),
+            )
+        },
+    ) { ink ->
+        Row(Modifier.align(Alignment.Center).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(ChipGlyph).testTag("library:order:glyph").drawBehind { drawSortArrows(ink.content(), size.width) })
+            Spacer(Modifier.width(ChipGlyphGap))
+            BasicText(label, style = typography.chipLabel, maxLines = 1, color = ink.content)
         }
     }
 }
 
+/** Two opposed arrows, the first up and the second down, filling a square of [side]. */
+private fun DrawScope.drawSortArrows(
+    color: Color,
+    side: Float,
+) {
+    val arrows =
+        Path().apply {
+            // Each arrow: its x, the end of its tail and its tip, in fractions of the side.
+            listOf(Triple(0.27f, 0.9f, 0.1f), Triple(0.73f, 0.1f, 0.9f)).forEach { (x, tail, tip) ->
+                val arm = if (tail > tip) tip + 0.2f else tip - 0.2f
+                moveTo(x * side, tail * side)
+                lineTo(x * side, tip * side)
+                moveTo((x - 0.17f) * side, arm * side)
+                lineTo(x * side, tip * side)
+                lineTo((x + 0.17f) * side, arm * side)
+            }
+        }
+    drawPath(arrows, color, style = Stroke(ChipGlyphStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+}
+
 private val ChipHeight = 32.dp
+private val ChipGlyph = 14.dp
+private val ChipGlyphGap = 6.dp
+private val ChipGlyphStroke = 1.5.dp
 private const val CHIP_FILL_ALPHA = 0.10f
 private const val CHIP_RIM_ALPHA = 0.20f
 

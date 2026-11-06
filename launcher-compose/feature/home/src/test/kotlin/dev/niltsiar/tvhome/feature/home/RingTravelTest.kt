@@ -4,7 +4,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.TestMonotonicFrameClock
 import dev.niltsiar.tvhome.core.designsystem.Motion
-import dev.niltsiar.tvhome.core.designsystem.oklch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
@@ -16,8 +15,8 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.abs
-import kotlin.math.cos
-import kotlin.math.sin
+import kotlin.math.cbrt
+import kotlin.math.pow
 
 /** How the focus ring's colour goes from one tile to the next. */
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTestApi::class)
@@ -28,10 +27,21 @@ class RingTravelTest {
 
     private fun TestScope.frames() = CoroutineScope(coroutineContext + TestMonotonicFrameClock(this))
 
+    private fun toLinear(channel: Float): Float = if (channel <= 0.04045f) channel / 12.92f else ((channel + 0.055f) / 1.055f).pow(2.4f)
+
+    /** The colour as OKLab: lightness, then the two opponent axes. */
     private fun lab(color: Color): FloatArray {
-        val lch = oklch(color)
-        val hue = Math.toRadians(lch.h.toDouble())
-        return floatArrayOf(lch.l, lch.c * cos(hue).toFloat(), lch.c * sin(hue).toFloat())
+        val r = toLinear(color.red)
+        val g = toLinear(color.green)
+        val b = toLinear(color.blue)
+        val l = cbrt(0.4122214708f * r + 0.5363325363f * g + 0.0514459929f * b)
+        val m = cbrt(0.2119034982f * r + 0.6806995451f * g + 0.1073969566f * b)
+        val s = cbrt(0.0883024619f * r + 0.2817188376f * g + 0.6299787005f * b)
+        return floatArrayOf(
+            0.2104542553f * l + 0.7936177850f * m - 0.0040720468f * s,
+            1.9779984951f * l - 2.4285922050f * m + 0.4505937099f * s,
+            0.0259040371f * l + 0.7827717662f * m - 0.8086757660f * s,
+        )
     }
 
     private fun assertNear(

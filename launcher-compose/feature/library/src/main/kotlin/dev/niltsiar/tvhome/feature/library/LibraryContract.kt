@@ -123,6 +123,8 @@ public data class LibraryFocus(
 /**
  * What the screen shows. [open] is true from asking to open until closing; [shown] once the catalogue first loaded,
  * which is when the panel appears. [cards] are in the library's [order]; [focusedKey] is the card with focus.
+ * [noUsageYet] is true in the least used order while Home has no open time for any app of the catalogue; no card has an
+ * opened line then.
  */
 @Immutable
 public data class LibraryUiState(
@@ -134,6 +136,7 @@ public data class LibraryUiState(
     val menu: LibraryMenu? = null,
     val focusRequest: LibraryFocus? = null,
     val order: LibraryOrder = LibraryOrder.Usual,
+    val noUsageYet: Boolean = false,
 )
 
 /** One-shot results the host handles outside the UI state. */

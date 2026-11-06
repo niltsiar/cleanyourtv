@@ -19,4 +19,6 @@
   <string name="library_order_least_used">Least used</string>
   <string name="library_hint_order">Menu: %1$s</string>
   <string name="library_never_opened">Never opened</string>
+  <string name="library_title_choose">Choose Home apps</string>
+  <string name="library_no_usage_yet">No usage data yet</string>
 </resources>

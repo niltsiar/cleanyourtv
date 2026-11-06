@@ -17,4 +17,6 @@
   <string name="library_order_least_used">最少使用</string>
   <string name="library_hint_order">選單鍵：%1$s</string>
   <string name="library_never_opened">從未開啟</string>
+  <string name="library_title_choose">選擇主畫面應用程式</string>
+  <string name="library_no_usage_yet">尚無使用資料</string>
 </resources>
