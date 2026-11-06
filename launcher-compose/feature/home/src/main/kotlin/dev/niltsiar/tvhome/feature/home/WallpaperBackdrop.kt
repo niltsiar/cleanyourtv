@@ -5,6 +5,8 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -18,19 +20,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.config.HeaderScrim
+import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.SkyPalette
 import dev.niltsiar.tvhome.core.model.Wallpaper
@@ -47,6 +53,17 @@ private const val MAX_ALPHA = 255f
 private val CaptionMaxWidth = 520.dp
 private const val TOP_SCRIM_REACH = 0.45f
 private const val LEFT_SCRIM_REACH = 0.55f
+
+/** The hero block's scrim: [HERO_SCRIM_ALPHA] black at the screen's left edge, gone [HeroScrimWidth] in, feathered [HeroScrimFeather] above and below the block. */
+private val HeroScrimWidth = 760.dp
+private val HeroScrimFeather = 48.dp
+private const val HERO_SCRIM_ALPHA = 0.40f
+
+/** The width of the hero block's box, from the screen margin, whose picture the scrim's brightness is read from. */
+internal val HeroSampleWidth = 480.dp
+
+/** The mean relative luminance above which the picture under the hero block counts as bright. */
+internal const val HERO_BRIGHT = 0.45f
 
 /**
  * What is behind Home, drawn in the draw phase only: the picture, the time-of-day sky, then the scrim that keeps the
@@ -146,6 +163,37 @@ private fun DrawScope.drawCover(
         srcSize = IntSize(sourceWidth, sourceHeight),
         dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
         alpha = alpha,
+    )
+}
+
+/**
+ * A soft scrim behind the hero block (the title and its line) while the picture under it is bright
+ * ([GlassState.heroLuminance] over [HERO_BRIGHT]), over the [boxHeight] of the block and a feather above and below it.
+ * It sits in one cached offscreen layer that [shift] moves in the layer phase, so a move draws nothing again.
+ */
+@Composable
+internal fun HeroScrim(
+    glass: GlassState,
+    boxHeight: Dp,
+    shift: GraphicsLayerScope.() -> Float,
+) {
+    val bright by remember(glass) { derivedStateOf { glass.heroLuminance > HERO_BRIGHT } }
+    if (!bright) return
+    Box(
+        Modifier
+            .padding(top = ContentTop - HeroScrimFeather)
+            .size(HeroScrimWidth, boxHeight + HeroScrimFeather * 2)
+            .graphicsLayer {
+                compositingStrategy = CompositingStrategy.Offscreen
+                translationY = shift()
+            }.drawBehind {
+                val edge = HeroScrimFeather.toPx() / size.height
+                drawRect(Brush.horizontalGradient(0f to Color.Black.copy(alpha = HERO_SCRIM_ALPHA), 1f to Color.Transparent))
+                drawRect(
+                    Brush.verticalGradient(0f to Color.Transparent, edge to Color.Black, 1f - edge to Color.Black, 1f to Color.Transparent),
+                    blendMode = BlendMode.DstIn,
+                )
+            },
     )
 }
 

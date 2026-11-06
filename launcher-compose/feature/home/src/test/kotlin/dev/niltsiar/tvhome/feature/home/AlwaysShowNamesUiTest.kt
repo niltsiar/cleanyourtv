@@ -2,7 +2,11 @@ package dev.niltsiar.tvhome.feature.home
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
@@ -20,6 +24,7 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
+import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -39,10 +44,18 @@ class AlwaysShowNamesUiTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
 
+    private val white =
+        ImageBitmap(16, 9).also { image ->
+            Canvas(image).drawRect(Rect(0f, 0f, 16f, 9f), Paint().apply { color = Color.White })
+        }
+
     private val apps = (1..18).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") }
 
-    private fun showHome(config: TvConfig) {
-        val sources = sources(apps = flowOf(AppList(apps)))
+    private fun showHome(
+        config: TvConfig,
+        wallpaper: Wallpaper = Wallpaper(),
+    ) {
+        val sources = sources(apps = flowOf(AppList(apps)), wallpaper = flowOf(wallpaper))
         compose.setContent {
             TvTheme {
                 val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
@@ -111,15 +124,15 @@ class AlwaysShowNamesUiTest {
     }
 
     @Test
-    fun the_name_under_an_unfocused_dock_tile_shows_at_three_quarters_and_at_full_when_focused() {
+    fun the_name_under_an_unfocused_dock_tile_shows_at_85_percent_and_at_full_when_focused() {
         showHome(SixColumns.copy(alwaysShowNames = true))
         val focused = contrast("name:pkg.1")
 
-        assertEquals(0.75f, contrast("name:pkg.2") / focused, 0.05f)
+        assertEquals(0.85f, contrast("name:pkg.2") / focused, 0.04f)
         press(Key.DirectionRight)
         compose.onNodeWithTag("tile:pkg.2").assertIsFocused()
         assertEquals(focused, contrast("name:pkg.2"), 0.02f)
-        assertEquals(0.75f, contrast("name:pkg.1") / focused, 0.05f)
+        assertEquals(0.85f, contrast("name:pkg.1") / focused, 0.04f)
     }
 
     @Test
@@ -130,6 +143,54 @@ class AlwaysShowNamesUiTest {
         compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
 
         assertEquals(0.75f, contrast("name:pkg.8") / contrast("name:pkg.7"), 0.05f)
+    }
+
+    private fun redAt(
+        x: Float,
+        y: Float,
+    ): Int {
+        val density = compose.activity.resources.displayMetrics.density
+        return Math.round(
+            compose
+                .onRoot()
+                .captureToImage()
+                .toPixelMap()[(x * density).toInt(), (y * density).toInt()]
+                .red * 255,
+        )
+    }
+
+    /** The red channel [out] dp left of the name's text, and [out] dp right of it, over the middle of its line. */
+    private fun besideName(
+        tag: String,
+        out: Float,
+    ): Pair<Int, Int> {
+        val name = compose.onNodeWithTag(tag).getBoundsInRoot()
+        val middle = (name.top.value + name.bottom.value) / 2f
+        return redAt(name.left.value - out, middle) to redAt(name.right.value + out, middle)
+    }
+
+    @Test
+    fun a_grid_name_sits_on_a_black_045_pill_6_dp_wider_than_its_text_on_each_side() {
+        showHome(SixColumns.copy(alwaysShowNames = true), wallpaper = Wallpaper(picture = white))
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+
+        val (bareLeft, bareRight) = besideName("name:pkg.9", out = 9f)
+        val (padLeft, padRight) = besideName("name:pkg.9", out = 3f)
+
+        // The text's own shadow darkens its padding a little too, so the pill is "under two thirds of the bare picture".
+        assertTrue("left $padLeft of $bareLeft", padLeft < bareLeft * 0.65f)
+        assertTrue("right $padRight of $bareRight", padRight < bareRight * 0.65f)
+    }
+
+    @Test
+    fun a_dock_name_has_no_pill() {
+        showHome(SixColumns.copy(alwaysShowNames = true), wallpaper = Wallpaper(picture = white))
+
+        val (bareLeft, _) = besideName("name:pkg.4", out = 9f)
+        val (padLeft, _) = besideName("name:pkg.4", out = 3f)
+
+        assertTrue("left $padLeft of $bareLeft", padLeft > bareLeft * 0.9f)
     }
 
     @Test

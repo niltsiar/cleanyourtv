@@ -55,12 +55,14 @@ private class Baked(
     val dockLightness: Float,
     val headerLightness: Float,
     val topBarLightness: Float,
+    val heroLuminance: Float,
 )
 
 /**
  * Keeps [glass]'s frost on the wallpaper's [Wallpaper.thumbnail] and sky, baked off the main thread each time either
  * changes, and [GlassState.dockLightness] on the part of it under the [dock] (as fractions of the screen). It also keeps
- * [GlassState.headerLightness] and [GlassState.topBarLightness], measured on the thumbnail and sky before the scrim. No
+ * [GlassState.headerLightness] and [GlassState.topBarLightness], measured on the thumbnail and sky before the scrim, and
+ * [GlassState.heroLuminance] on the [hero] box (as fractions of the screen), in the same pass. No
  * thumbnail, no frost and a lightness of 0, which gives the base tint and the fixed scrims. With [dockGlass] it also
  * keeps [GlassState.dockFrost], the frost with its HSL saturation held to 0.35.
  */
@@ -70,9 +72,10 @@ internal fun ChromeFrostEffect(
     wallpaper: () -> Wallpaper,
     skyIntensity: Int,
     dock: Rect,
+    hero: Rect,
     dockGlass: Boolean,
 ) {
-    LaunchedEffect(glass, skyIntensity, dock, dockGlass) {
+    LaunchedEffect(glass, skyIntensity, dock, hero, dockGlass) {
         snapshotFlow { wallpaper().let { it.thumbnail to it.sky } }.distinctUntilChanged().collectLatest { (thumbnail, sky) ->
             val baked =
                 thumbnail?.let {
@@ -96,6 +99,7 @@ internal fun ChromeFrostEffect(
                             dockLightness = meanLightness(pixels, frost.width, frost.height, dock),
                             headerLightness = lightnessPercentile(base, it.width, it.height, HeaderBand, LIGHTNESS_PERCENTILE),
                             topBarLightness = lightnessPercentile(base, it.width, it.height, TopBarButtonsBand, LIGHTNESS_PERCENTILE),
+                            heroLuminance = meanLuminance(base, it.width, it.height, hero),
                         )
                     }
                 }
@@ -104,6 +108,7 @@ internal fun ChromeFrostEffect(
             glass.dockLightness = baked?.dockLightness ?: 0f
             glass.headerLightness = baked?.headerLightness ?: 0f
             glass.topBarLightness = baked?.topBarLightness ?: 0f
+            glass.heroLuminance = baked?.heroLuminance ?: 0f
         }
     }
 }
@@ -273,6 +278,22 @@ internal fun meanLightness(
     return sum / count
 }
 
+/** The mean relative luminance (0 black to 1 white) of the opaque [pixels] inside [band]; [meanLightness] has the rest of the contract. */
+internal fun meanLuminance(
+    pixels: IntArray,
+    width: Int,
+    height: Int,
+    band: Rect,
+): Float {
+    var sum = 0f
+    var count = 0
+    forEachPixel(pixels, width, height, band) {
+        sum += luminanceOf(it)
+        count++
+    }
+    return sum / count
+}
+
 /** The CIE L* below which [percentile] (0 to 1) of the pixels inside [band] lie; [meanLightness] has the rest of the contract. */
 internal fun lightnessPercentile(
     pixels: IntArray,
@@ -322,15 +343,25 @@ private inline fun forEachLightness(
     height: Int,
     band: Rect,
     action: (Float) -> Unit,
+) = forEachPixel(pixels, width, height, band) { action(lightnessOf(it)) }
+
+private inline fun forEachPixel(
+    pixels: IntArray,
+    width: Int,
+    height: Int,
+    band: Rect,
+    action: (Int) -> Unit,
 ) {
     for (y in bandRows(height, band)) {
-        for (x in bandColumns(width, band)) action(lightnessOf(pixels[y * width + x]))
+        for (x in bandColumns(width, band)) action(pixels[y * width + x])
     }
 }
 
+private fun luminanceOf(pixel: Int): Float =
+    0.2126f * linear(pixel shr 16 and CHANNEL) + 0.7152f * linear(pixel shr 8 and CHANNEL) + 0.0722f * linear(pixel and CHANNEL)
+
 private fun lightnessOf(pixel: Int): Float {
-    val luminance =
-        0.2126f * linear(pixel shr 16 and CHANNEL) + 0.7152f * linear(pixel shr 8 and CHANNEL) + 0.0722f * linear(pixel and CHANNEL)
+    val luminance = luminanceOf(pixel)
     return if (luminance > LAB_EPSILON) 116f * cbrt(luminance) - 16f else LAB_KAPPA * luminance
 }
 

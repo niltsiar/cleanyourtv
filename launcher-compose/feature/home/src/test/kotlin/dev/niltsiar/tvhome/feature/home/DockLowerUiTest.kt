@@ -139,7 +139,7 @@ class DockLowerUiTest {
     ) = assertTrue("expected $expected, got $actual", abs(expected.value - actual.value) <= tolerance)
 
     @Test
-    fun in_dock_focus_the_band_and_the_dock_sit_120_dp_lower_than_in_the_grid_layout() {
+    fun in_dock_focus_the_dock_sits_120_dp_and_the_band_104_dp_lower_than_in_the_grid_layout() {
         showHome()
         val dock = top("dock")
         val title = bottom("shelf:name")
@@ -147,7 +147,8 @@ class DockLowerUiTest {
         press(Key.DirectionDown)
         compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
 
-        assertNear(title - 120.dp, bottom("shelf:title"))
+        // The title and its line stand 16 dp lower in the grid layout, 36 dp under the top bar.
+        assertNear(title - 104.dp, bottom("shelf:title"))
         press(Key.DirectionUp)
         assertNear(dock, top("dock"))
         assertNear(title, bottom("shelf:name"))
@@ -233,7 +234,7 @@ class DockLowerUiTest {
         assertTrue("risen $early dp after 100 ms", early in 1f..110f)
 
         compose.mainClock.advanceTimeBy(500)
-        assertNear(low - 120.dp, bottom("shelf:title"))
+        assertNear(low - 104.dp, bottom("shelf:title"))
     }
 
     @Test
@@ -264,7 +265,7 @@ class DockLowerUiTest {
         compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
         compose.mainClock.advanceTimeBy(64)
 
-        assertNear(low - 120.dp, bottom("shelf:title"))
+        assertNear(low - 104.dp, bottom("shelf:title"))
     }
 
     @Test
@@ -276,7 +277,7 @@ class DockLowerUiTest {
         compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
         compose.mainClock.advanceTimeBy(64)
 
-        assertNear(low - 120.dp, bottom("shelf:title"))
+        assertNear(low - 104.dp, bottom("shelf:title"))
     }
 
     @Test
@@ -407,7 +408,7 @@ class DockLowerUiTest {
             }
 
         compose.onNodeWithContentDescription("Inputs").assertIsFocused()
-        assertNear(up + 120.dp, bottoms.last())
+        assertNear(up + 104.dp, bottoms.last())
         assertTrue(
             "the group moved back up on the way: $bottoms",
             bottoms.zipWithNext().all { (before, after) -> after.value >= before.value },

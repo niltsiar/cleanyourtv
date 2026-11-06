@@ -69,13 +69,16 @@ private val CapsuleHeight = 24.dp
 private val DotSize = 6.dp
 private val Connected = Color(0xFF34C759)
 
-/** The "Connected" capsule on a dark background, and on a light one: a focused row in night mode, an idle row on the light surface. */
+/** The "Connected" capsule of an idle row, on the dark surface and on the light one. */
 private val CapsuleFillOnDark = Color(0x2934C759)
 private val CapsuleRimOnDark = Color(0x6634C759)
 private val CapsuleTextOnDark = Color(0xFF6EE787)
 private val CapsuleFillOnLight = Color(0x2E34C759)
 private val CapsuleRimOnLight = Color(0x8034C759)
 private val CapsuleTextOnLight = Color(0xFF1B7A35)
+
+/** On the focused row, whose fill is white or black, the capsule is a solid green pill with white text. */
+private val CapsuleSolid = Color(0xFF146C2E)
 private const val PULSE_MS = 1800
 private const val HALO_ALPHA = 0.4f
 private const val HALO_GROWTH = 1.8f
@@ -256,8 +259,8 @@ private fun InputItem(
 }
 
 /**
- * "Connected" in a green capsule. Its colours follow what is behind it, the row's fill or the surface: the light ones
- * while that is light, crossing over as the row's [ink] fills.
+ * "Connected" in a green capsule: faint on the idle row, in the colours of the surface behind it, and a solid [CapsuleSolid]
+ * pill with white text as the row's [ink] fills.
  */
 @Composable
 private fun ConnectedCapsule(
@@ -267,18 +270,18 @@ private fun ConnectedCapsule(
     val dark = TvTheme.surfaces.dark
     val typography = TvTheme.typography
     val style = remember(typography) { typography.chipKey.copy(fontSize = 12.sp) }
-    val light = { if (dark) ink.progress() else 1f - ink.progress() }
+    val idleLight = if (dark) 0f else 1f
     Row(
         modifier =
             Modifier
                 .height(CapsuleHeight)
                 .drawBehind {
-                    val t = light()
+                    val focus = ink.progress()
                     val radius = CornerRadius(size.height / 2f)
-                    drawRoundRect(lerp(CapsuleFillOnDark, CapsuleFillOnLight, t), cornerRadius = radius)
+                    drawRoundRect(lerp(lerp(CapsuleFillOnDark, CapsuleFillOnLight, idleLight), CapsuleSolid, focus), cornerRadius = radius)
                     val rim = 1.dp.toPx()
                     drawRoundRect(
-                        lerp(CapsuleRimOnDark, CapsuleRimOnLight, t),
+                        lerp(lerp(CapsuleRimOnDark, CapsuleRimOnLight, idleLight), CapsuleSolid, focus),
                         topLeft = Offset(rim / 2f, rim / 2f),
                         size = Size(size.width - rim, size.height - rim),
                         cornerRadius = CornerRadius(size.height / 2f - rim / 2f),
@@ -293,7 +296,7 @@ private fun ConnectedCapsule(
             stringResource(R.string.input_connected),
             style = style,
             maxLines = 1,
-            color = { lerp(CapsuleTextOnDark, CapsuleTextOnLight, light()) },
+            color = { lerp(lerp(CapsuleTextOnDark, CapsuleTextOnLight, idleLight), Color.White, ink.progress()) },
         )
     }
 }

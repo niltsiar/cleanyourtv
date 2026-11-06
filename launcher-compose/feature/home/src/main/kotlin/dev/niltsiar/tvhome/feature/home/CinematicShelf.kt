@@ -87,7 +87,7 @@ internal val ShelfDetailHeight = MetaGap + MetaSlot + DotsGap + DotSize
 /** The cinematic title line (its ascent and descent at the default font scale) and [ShelfDetailHeight]. */
 internal val CinematicTextHeight = 66.dp + ShelfDetailHeight
 private val TitleShadow = Color.Black.copy(alpha = 0.45f)
-private val SubtitleShadow = Color.Black.copy(alpha = 0.6f)
+private val SubtitleShadow = Color.Black.copy(alpha = 0.75f)
 private val DotWide = 20.dp
 private val DotSpacing = 6.dp
 private val DotRest = Color(0x4DFFFFFF)

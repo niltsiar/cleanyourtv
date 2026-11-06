@@ -4,6 +4,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextStyle
 import app.cash.molecule.RecompositionMode
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
@@ -109,4 +114,15 @@ internal fun rememberHomeViewModel(
         }
     LaunchedEffect(viewModel) { viewModel.effects.collect { effects += it } }
     return viewModel
+}
+
+/** The style the text of this node was laid out with. */
+internal fun SemanticsNodeInteraction.textStyle(): TextStyle {
+    val layouts = mutableListOf<TextLayoutResult>()
+    fetchSemanticsNode()
+        .config
+        .getOrNull(SemanticsActions.GetTextLayoutResult)
+        ?.action
+        ?.invoke(layouts)
+    return layouts.single().layoutInput.style
 }

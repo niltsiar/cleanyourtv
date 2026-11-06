@@ -110,7 +110,7 @@ class HeroBandUiTest {
     ) = assertTrue("expected $expected, got $actual", abs(expected.value - actual.value) < 1f)
 
     @Test
-    fun the_title_baseline_and_the_meta_slot_stand_where_the_dock_apps_do_120_dp_higher_in_grid_focus() {
+    fun the_title_baseline_and_the_meta_slot_stand_104_dp_above_where_the_dock_apps_do_in_grid_focus() {
         showHome()
         val dockTitle = bounds("shelf:name")
         val dockMeta = bounds("shelf:meta")
@@ -119,12 +119,13 @@ class HeroBandUiTest {
         compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
         compose.mainClock.advanceTimeBy(1_000)
 
-        assertNear(dockTitle.bottom - 120.dp, bounds("shelf:title").bottom)
-        assertNear(dockMeta.top - 120.dp, bounds("shelf:title-meta").top)
+        // The group rises 120 dp; the title and its line rise 16 dp less, to stand 36 dp under the top bar.
+        assertNear(dockTitle.bottom - 104.dp, bounds("shelf:title").bottom)
+        assertNear(dockMeta.top - 104.dp, bounds("shelf:title-meta").top)
     }
 
     @Test
-    fun a_focused_grid_tile_says_when_home_last_opened_it_where_the_dock_does() {
+    fun a_focused_grid_tile_says_when_home_last_opened_it_where_the_dock_does_less_the_title_drop() {
         val opened =
             Evening
                 .minusHours(2)
@@ -139,7 +140,7 @@ class HeroBandUiTest {
         compose.mainClock.advanceTimeBy(1_000)
 
         assertTrue(textOf("shelf:title-meta"), textOf("shelf:title-meta").startsWith("Last opened "))
-        assertNear(dockMeta.top - 120.dp, bounds("shelf:title-meta").top)
+        assertNear(dockMeta.top - 104.dp, bounds("shelf:title-meta").top)
     }
 
     @Test

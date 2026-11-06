@@ -43,7 +43,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.roundToIntRect
-import androidx.compose.ui.unit.sp
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -53,7 +52,7 @@ private const val MENU_START_SCALE = 0.94f
 private val PanelPadding = 14.dp
 private val RowSpacing = 8.dp
 private val RowHeight = 46.dp
-private const val TITLE_ALPHA = 0.7f
+private const val TITLE_ALPHA = 0.75f
 private val TitlePadding = 8.dp
 
 /** Rounding a tile's width to whole pixels can leave a panel a pixel or two past the column edge it should end on. */
@@ -290,8 +289,7 @@ internal fun besideAnchor(
 @Composable
 private fun MenuTitle(text: String) {
     val typography = TvTheme.typography
-    val style =
-        remember(typography) { typography.pillLabel.copy(fontSize = 14.sp, color = typography.pillLabel.color.copy(alpha = TITLE_ALPHA)) }
+    val style = remember(typography) { typography.chipKey.copy(color = typography.chipKey.color.copy(alpha = TITLE_ALPHA)) }
     BasicText(
         text,
         style = style,

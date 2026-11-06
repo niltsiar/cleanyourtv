@@ -193,15 +193,15 @@ class HomeBandLookUiTest {
     }
 
     @Test
-    fun rows_above_the_focused_library_pill_draw_at_55_percent() {
+    fun rows_above_the_focused_library_pill_draw_at_85_percent() {
         showHome()
         press(Key.DirectionDown, times = 3)
         compose.onNodeWithTag("library:pill").assertIsFocused()
 
         // The layer multiplies each draw: the white art, and the tile's own fill under it.
         val above = tile(13)
-        val fill = 0x1B * 0.55f
-        assertNear(Math.round(0.55f * 255 + 0.45f * fill), redAt((above.left + above.right) / 2, (above.top + above.bottom) / 2), 4)
+        val fill = 0x1B * 0.85f
+        assertNear(Math.round(0.85f * 255 + 0.15f * fill), redAt((above.left + above.right) / 2, (above.top + above.bottom) / 2), 4)
     }
 
     @Test

@@ -21,6 +21,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpRect
 import dev.niltsiar.tvhome.core.config.HeaderScrim
 import dev.niltsiar.tvhome.core.config.TvConfig
@@ -30,7 +31,10 @@ import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.Wallpaper
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -62,9 +66,9 @@ class HeaderLegibilityUiTest {
         level: Float = 1f,
         config: TvConfig = SixColumns,
         wallpaperLayout: WallpaperLayout = WallpaperLayout(),
+        wallpapers: Flow<Wallpaper> = grey(level).let { flowOf(Wallpaper(picture = it, thumbnail = it)) },
     ) {
-        val picture = grey(level)
-        val sources = sources(wallpaper = flowOf(Wallpaper(picture = picture, thumbnail = picture)), network = flowOf(wifi))
+        val sources = sources(wallpaper = wallpapers, network = flowOf(wifi))
         compose.setContent {
             TvTheme(darkTheme = true) {
                 glass = rememberGlassState()
@@ -122,11 +126,23 @@ class HeaderLegibilityUiTest {
         return Math.round(level * (1f - fromTop) * (1f - fromLeft))
     }
 
-    /** Above the title, out of reach of its shadow, at the title's left: the scrim there is what the title's glyphs sit on. */
+    /** Above the title, out of reach of its shadow and of the local scrim's 48 dp feather, at the title's left. */
     private fun aboveTheTitle(): Offset {
         val title = compose.onNodeWithTag("shelf:title").getBoundsInRoot()
-        return Offset(title.left.value + 20f, title.top.value - 40f)
+        return Offset(title.left.value + 20f, title.top.value - 60f)
     }
+
+    /** In the subtitle's box, left of its text: the picture there under the page scrim and the local one. */
+    private fun inTheSubtitleBox(): Offset {
+        val subtitle = compose.onNodeWithTag("shelf:title-meta").getBoundsInRoot()
+        return Offset(subtitle.left.value + 10f, (subtitle.top.value + subtitle.bottom.value) / 2f)
+    }
+
+    /** What the local scrim leaves of a level: black 0.40 at the left edge of the screen, 0 760 dp in. */
+    private fun heroScrimmed(
+        level: Int,
+        at: Offset,
+    ): Int = Math.round(level * (1f - 0.40f * max(0f, 1f - at.x / 760f)))
 
     private fun assertNear(
         expected: Int,
@@ -156,6 +172,65 @@ class HeaderLegibilityUiTest {
         val at = aboveTheTitle()
 
         assertNear(scrimmed(255, top = 0.55f, left = 0.40f, at), redAt(at))
+    }
+
+    @Test
+    fun a_bright_wallpaper_gets_a_soft_black_040_scrim_behind_the_subtitle() {
+        showHome(level = 1f)
+        val at = inTheSubtitleBox()
+
+        assertNear(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at), at), redAt(at))
+    }
+
+    @Test
+    fun a_dark_wallpaper_gets_no_local_scrim_behind_the_subtitle() {
+        showHome(level = 0.4f)
+        val at = inTheSubtitleBox()
+
+        assertNear(scrimmed(102, top = 0.55f, left = 0.40f, at), redAt(at))
+    }
+
+    @Test
+    fun header_scrim_off_draws_no_local_scrim_behind_the_subtitle() {
+        showHome(level = 1f, wallpaperLayout = WallpaperLayout(headerScrim = HeaderScrim.Off))
+        val at = inTheSubtitleBox()
+
+        assertNear(scrimmed(255, top = 0.55f, left = 0.40f, at), redAt(at))
+    }
+
+    @Test
+    fun the_picture_is_sampled_once_per_wallpaper_and_again_for_the_next_one() {
+        val picture = grey(1f)
+        val thumbnail = grey(1f)
+        val wallpapers = MutableStateFlow(Wallpaper(picture = picture, thumbnail = thumbnail))
+        showHome(wallpapers = wallpapers)
+        val at = inTheSubtitleBox()
+        val withHeroScrim = heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at), at)
+        assertNear(withHeroScrim, redAt(at))
+
+        // The thumbnail is the sample's input: darkening it in place and moving focus around must not make Home sample it again.
+        Canvas(thumbnail).drawRect(Rect(0f, 0f, 16f, 9f), Paint().apply { color = Color.Black })
+        press(Key.DirectionDown)
+        press(Key.DirectionUp)
+        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+        assertNear(withHeroScrim, redAt(at))
+
+        wallpapers.value = Wallpaper(picture = picture, thumbnail = grey(0.4f))
+        settle()
+        assertNear(scrimmed(255, top = 0.55f, left = 0.40f, at), redAt(at))
+    }
+
+    @Test
+    fun the_subtitle_is_medium_weight_with_a_black_075_shadow_blurred_12_dp() {
+        showHome(level = 0.4f)
+
+        val style = compose.onNodeWithTag("shelf:title-meta").textStyle()
+        val shadow = checkNotNull(style.shadow)
+        val density = compose.activity.resources.displayMetrics.density
+
+        assertEquals(FontWeight.Medium, style.fontWeight)
+        assertEquals(Color.Black.copy(alpha = 0.75f), shadow.color)
+        assertEquals(12 * density, shadow.blurRadius, 0.01f)
     }
 
     @Test

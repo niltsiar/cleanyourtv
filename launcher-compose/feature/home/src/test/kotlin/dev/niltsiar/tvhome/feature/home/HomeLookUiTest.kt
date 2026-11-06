@@ -165,14 +165,33 @@ class HomeLookUiTest {
     }
 
     @Test
-    fun rows_above_the_focused_row_draw_at_forty_percent() {
+    fun rows_above_the_focused_row_draw_at_fifteen_percent() {
         showHome(apps = whiteAppsAndOneClear())
         assertNear(255, redAt(centreOf(dockTile(6))), 2)
 
         press(Key.DirectionDown)
         compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
 
-        assertDrawnAt(0.40f, centreOf(dockTile(6)), centreOf(dockTile(5)))
+        assertDrawnAt(0.15f, centreOf(dockTile(6)), centreOf(dockTile(5)))
+    }
+
+    /** How far under the top bar the title's capitals start: its line box top, 36 sp to the baseline, less the capitals' 0.72 of 48 sp. */
+    private fun titleGap() = bounds("shelf:title").top.value + 36f - 0.72f * 48f - (TopBarTop + TopBarHeight).value
+
+    @Test
+    fun with_focus_in_the_grid_the_title_stands_36_dp_under_the_top_bar() {
+        showHome()
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+
+        assertTrue("the title is ${titleGap()} dp under the top bar", titleGap() >= 36f)
+    }
+
+    @Test
+    fun in_a_single_row_the_title_stands_36_dp_under_the_top_bar() {
+        showHome(config = SixColumns.copy(singleRow = true))
+
+        assertTrue("the title is ${titleGap()} dp under the top bar", titleGap() >= 36f)
     }
 
     /** The red channel over the middle of tile [tag], [below] dp under its top edge. */
@@ -238,10 +257,10 @@ class HomeLookUiTest {
         val above = bounds("tile:pkg.8")
         assertTrue("the row above ends at ${above.bottom}", above.bottom.value < row)
 
-        // The row above the focused one draws at 0.40; the fade is 0 60 dp above its end and 1 at its end.
+        // The row above the focused one draws at 0.15; the fade is 0 60 dp above its end and 1 at its end.
         val x = (above.left.value + above.right.value) / 2
         val bottom = redAt(Offset(x, above.bottom.value - 1f))
-        assertNear(Math.round(255 * 0.40f * (row - 8f - 60f).let { (above.bottom.value - 1f - it) / 60f }), bottom, 8)
+        assertNear(Math.round(255 * 0.15f * (row - 8f - 60f).let { (above.bottom.value - 1f - it) / 60f }), bottom, 8)
         assertTrue("above the fade ${redAt(Offset(x, row - 70f))}", redAt(Offset(x, row - 70f)) < 6)
     }
 

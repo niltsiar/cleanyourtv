@@ -20,7 +20,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
@@ -262,6 +264,19 @@ class HomeMenuUiTest {
 
         compose.onNodeWithTag("menu").assertExists()
         compose.onNodeWithTag("menu:title").assertDoesNotExist()
+    }
+
+    @Test
+    fun a_dock_tiles_menu_header_is_15_sp_semi_bold_at_three_quarters_of_the_text_colour() {
+        showHome()
+
+        holdOk()
+        releaseOk()
+
+        val style = compose.onNodeWithTag("menu:title").textStyle()
+        assertEquals(15.sp, style.fontSize)
+        assertEquals(FontWeight.SemiBold, style.fontWeight)
+        assertEquals(0.75f, style.color.alpha, 0.005f)
     }
 
     private fun gap() = with(compose.density) { TileGap.toPx() }

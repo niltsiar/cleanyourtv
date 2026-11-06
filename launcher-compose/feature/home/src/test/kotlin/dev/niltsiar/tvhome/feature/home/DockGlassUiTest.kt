@@ -257,17 +257,18 @@ class DockGlassUiTest {
     }
 
     @Test
-    fun dock_glass_draws_a_black_012_edge_inside_each_dock_tile() {
+    fun dock_glass_draws_a_black_012_edge_1_dp_wide_inside_each_dock_tile() {
         showHome(uniform, cinematic.copy(dockGlass = true), shown = lightApps)
         val tile = dockTile(2)
         val density = compose.activity.resources.displayMetrics.density
         val image = compose.onRoot().captureToImage().toPixelMap()
         val y = ((tile.top.value + tile.bottom.value) / 2f * density).toInt()
         val left = (tile.left.value * density).toInt()
-        val edge = (left..left + 2).map { image[it, y].green }
+        val edge = (left..left + 1).map { image[it, y].green }
 
+        assertEquals("edge $edge", 1f - 0.12f, edge.max(), 0.03f)
         assertEquals("edge $edge", 1f - 0.12f, edge.min(), 0.03f)
-        assertEquals(1f, image[left + 20, y].green, 0.01f)
+        assertEquals(1f, image[left + 3, y].green, 0.01f)
     }
 
     @Test

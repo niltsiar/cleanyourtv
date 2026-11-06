@@ -307,11 +307,27 @@ class HomeOverlayLookUiTest {
         assertCapsuleFill(row = 1, fillAlpha = 0x29)
     }
 
+    /** The brightest red channel, 0 to 255, inside [box] (in dp): a glyph's stem shows its ink at full strength. */
+    private fun brightestRedIn(box: DpRect): Int {
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val density = compose.activity.resources.displayMetrics.density
+        return (box.top.value * density).toInt().until((box.bottom.value * density).toInt()).maxOf { y ->
+            (box.left.value * density).toInt().until((box.right.value * density).toInt()).maxOf { x -> Math.round(pixels[x, y].red * 255) }
+        }
+    }
+
     @Test
     @Config(qualifiers = "+night")
-    fun a_focused_connected_row_shows_the_stronger_green_capsule_on_its_light_pill_in_night_mode() {
+    fun a_focused_connected_row_shows_a_solid_146C2E_capsule_with_white_text() {
         openInputs()
-        assertCapsuleFill(row = 0, fillAlpha = 0x2E)
+        val text =
+            compose
+                .onNode(hasText("Connected") and hasAnyAncestor(hasTestTag("input:0")), useUnmergedTree = true)
+                .getBoundsInRoot()
+
+        // The row's own fill is the light pill, red F2; the capsule's solid fill is red 14.
+        assertNear(0x14, redAt(Offset(text.right.value + 4f, (text.top.value + text.bottom.value) / 2)), 3)
+        assertTrue("ink ${brightestRedIn(text)}", brightestRedIn(text) >= 0xE8)
     }
 
     @Test
