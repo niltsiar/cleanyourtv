@@ -5,7 +5,10 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -21,6 +24,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -30,14 +34,12 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.constrain
 import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.config.HeaderScrim
 import dev.niltsiar.tvhome.core.designsystem.GlassState
@@ -193,9 +195,10 @@ internal fun rememberHeroScrimOn(
 /**
  * A soft scrim behind the hero block while [on], over the [boxHeight] of the block, [HeroScrimBelow] more, and the falls above and
  * below it. It runs from the screen's left edge over [ScreenMargin] and the block's text, as wide as [shelf] and [band] say
- * they are drawn now, and fades out [HeroScrimReach] past it. That width is read in the draw phase, so it follows a title's
- * cross-fade without recomposing. It sits in one cached offscreen layer, as wide as the widest the text can be, that [shift]
- * moves in the layer phase, so a move draws nothing again.
+ * they are drawn now, and fades out [HeroScrimReach] past it. That width is read in the draw and layer phases, so it follows
+ * a title's cross-fade without recomposing. The full-strength part is a gradient-filled rect; the falloff is one cached
+ * offscreen layer of fixed width that the width moves in the layer phase, so a cross-fade draws no gradient again and no
+ * layer bound depends on the width. [shift] moves both in the layer phase.
  */
 @Composable
 internal fun HeroScrim(
@@ -207,43 +210,47 @@ internal fun HeroScrim(
 ) {
     if (!on.value) return
     val height = HeroScrimAbove + boxHeight + HeroScrimBelow + HeroScrimFall
+    val solid: Density.() -> Float = { (ScreenMargin.toPx() + max(shelf.px(), band.px())).roundToInt().toFloat() }
     Box(
         Modifier
             .padding(top = ContentTop - HeroScrimAbove)
-            .layout { measurable, constraints ->
-                val wide = ScreenMargin.roundToPx() + max(shelf.ceiling(), band.ceiling()) + HeroScrimReach.roundToPx()
-                val size = constraints.constrain(IntSize(wide, height.roundToPx()))
-                val placeable = measurable.measure(Constraints.fixed(size.width, size.height))
-                layout(size.width, size.height) { placeable.place(0, 0) }
-            }.graphicsLayer {
-                compositingStrategy = CompositingStrategy.Offscreen
-                translationY = shift()
-            }.drawWithCache {
+            .fillMaxWidth()
+            .height(height)
+            .graphicsLayer { translationY = shift() }
+            .drawWithCache {
                 val above = HeroScrimAbove.toPx()
-                val reach = HeroScrimReach.toPx()
                 val bottom = above + boxHeight.toPx() + HeroScrimBelow.toPx()
-                val mask =
-                    Brush.verticalGradient(
-                        *
-                            smoothStops(0f, above / size.height, rising = true, Color.Black) +
-                                smoothStops(bottom / size.height, 1f, rising = false, Color.Black),
-                    )
-                onDrawBehind {
-                    val solid = ScreenMargin.toPx() + max(shelf.px(), band.px())
-                    val strong = Color.Black.copy(alpha = HERO_SCRIM_ALPHA)
-                    val end = solid + reach
-                    drawRect(
-                        Brush.horizontalGradient(
-                            0f to strong,
-                            *smoothStops(solid / end, 1f, rising = false, strong),
-                            startX = 0f,
-                            endX = end,
-                        ),
-                    )
-                    drawRect(mask, blendMode = BlendMode.DstIn)
-                }
+                val strong = Color.Black.copy(alpha = HERO_SCRIM_ALPHA)
+                val rise = smoothStops(0f, above / size.height, rising = true, strong)
+                val fall = smoothStops(bottom / size.height, 1f, rising = false, strong)
+                val body = Brush.verticalGradient(*rise, *fall)
+                onDrawBehind { drawRect(body, size = Size(solid(), size.height)) }
             },
-    )
+    ) {
+        Box(
+            Modifier
+                .size(HeroScrimReach, height)
+                .graphicsLayer {
+                    compositingStrategy = CompositingStrategy.Offscreen
+                    translationX = solid()
+                }.drawWithCache {
+                    val above = HeroScrimAbove.toPx()
+                    val bottom = above + boxHeight.toPx() + HeroScrimBelow.toPx()
+                    val strong = Color.Black.copy(alpha = HERO_SCRIM_ALPHA)
+                    val across = Brush.horizontalGradient(*smoothStops(0f, 1f, rising = false, strong), startX = 0f, endX = size.width)
+                    val mask =
+                        Brush.verticalGradient(
+                            *
+                                smoothStops(0f, above / size.height, rising = true, Color.Black) +
+                                    smoothStops(bottom / size.height, 1f, rising = false, Color.Black),
+                        )
+                    onDrawBehind {
+                        drawRect(across)
+                        drawRect(mask, blendMode = BlendMode.DstIn)
+                    }
+                },
+        )
+    }
 }
 
 /**

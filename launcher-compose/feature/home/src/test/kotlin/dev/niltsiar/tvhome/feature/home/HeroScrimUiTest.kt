@@ -60,6 +60,9 @@ class HeroScrimUiTest {
         /** The biggest darkening change, in 255ths per 10 dp, the scrim may make along the title and down its end. */
         const val LIMIT_ALONG = 13f
         const val LIMIT_DOWN = 11f
+
+        /** The biggest darkening change, in 255ths between two neighbouring pixels, the smooth falloff makes across the scrim's end. */
+        const val LIMIT_EDGE = 3
     }
 
     @get:Rule
@@ -201,6 +204,71 @@ class HeroScrimUiTest {
         press(Key.DirectionRight)
         assertMovesSmoothly(redsWhileMoving(Key.DirectionLeft, at))
     }
+
+    private val shortTitled = AppEntry(key = "pkg.1", packageName = "pkg.1", label = "Plezy")
+    private val longTitled = AppEntry(key = "pkg.2", packageName = "pkg.2", label = "SmartTube")
+
+    /** The biggest change in red between two neighbouring pixels of pixel row [row], from pixel [from] on, on the screen now. */
+    private fun sharpestStepAlong(
+        row: Int,
+        from: Int,
+    ): Int {
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        return (from until pixels.width - 1).maxOf {
+            abs(
+                Math.round(pixels[it + 1, row].red * 255) - Math.round(pixels[it, row].red * 255),
+            )
+        }
+    }
+
+    /**
+     * Moves the focus [key] between a short and a long name and reads, on each frame of the swap, the row through the title
+     * past the end of the longer text block, where only the scrim is drawn.
+     */
+    private fun assertNoHardEdgeWhileMoving(
+        cinematic: Boolean,
+        key: Key,
+    ) {
+        val density = compose.activity.resources.displayMetrics.density
+        showHome(cinematic, shown = listOf(shortTitled, longTitled) + NineApps.drop(2))
+        press(Key.DirectionRight)
+        val tags = if (cinematic) listOf("shelf:name", "shelf:meta") else listOf("shelf:title", "shelf:title-meta")
+        val long = tags.map(::titleBounds)
+        val row = ((long[0].top.value + long[0].bottom.value) / 2 * density).toInt()
+        val from = ((long.maxOf { it.right.value } + 10f) * density).toInt()
+        if (key == Key.DirectionRight) press(Key.DirectionLeft)
+        compose.mainClock.autoAdvance = false
+        compose.onRoot().performKeyInput { pressKey(key) }
+        val steps =
+            (1..30).map {
+                compose.mainClock.advanceTimeByFrame()
+                sharpestStepAlong(row, from)
+            }
+        compose.mainClock.autoAdvance = true
+        settle()
+        assertTrue("the sharpest step in a frame, in 255ths between two pixels: $steps", steps.all { it <= LIMIT_EDGE })
+        val under = ((long[1].bottom.value + 5f) * density).toInt()
+        assertTrue(
+            "the whole row under the settled block has a step of ${sharpestStepAlong(under, 0)}",
+            sharpestStepAlong(under, 0) <= LIMIT_EDGE,
+        )
+    }
+
+    @Test
+    fun a_longer_band_title_fading_in_leaves_no_hard_edge_in_the_scrim_on_any_frame() =
+        assertNoHardEdgeWhileMoving(cinematic = false, key = Key.DirectionRight)
+
+    @Test
+    fun a_shorter_band_title_fading_in_leaves_no_hard_edge_in_the_scrim_on_any_frame() =
+        assertNoHardEdgeWhileMoving(cinematic = false, key = Key.DirectionLeft)
+
+    @Test
+    fun a_longer_shelf_name_fading_in_leaves_no_hard_edge_in_the_scrim_on_any_frame() =
+        assertNoHardEdgeWhileMoving(cinematic = true, key = Key.DirectionRight)
+
+    @Test
+    fun a_shorter_shelf_name_fading_in_leaves_no_hard_edge_in_the_scrim_on_any_frame() =
+        assertNoHardEdgeWhileMoving(cinematic = true, key = Key.DirectionLeft)
 
     @Test
     fun the_local_scrim_grows_with_a_longer_band_title_over_its_cross_fade_and_does_not_jump() = growing(cinematic = false)

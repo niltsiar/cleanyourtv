@@ -104,14 +104,13 @@ private const val SHOW_MS = 260
 private const val HIDE_MS = 160
 
 /**
- * What a title block tells the hero scrim: [width] is how wide the block is drawn now, [shown] how much of it is visible and
- * [ceiling] the widest it can be drawn without a new layout. Read [width] and [shown] in draw lambdas, [ceiling] in layout ones.
+ * What a title block tells the hero scrim: [width] is how wide the block is drawn now and [shown] how much of it is visible.
+ * Read them in draw and layer lambdas.
  */
 @Stable
 internal class TitleExtent {
     var width: () -> Float = { 0f }
     var shown: () -> Float = { 1f }
-    var ceiling: () -> Int = { 0 }
 
     fun px(): Float = width() * shown()
 }
@@ -231,10 +230,7 @@ internal fun <T : Any> TitleSlots(
 ) {
     val slots = remember { TitleSlotsState(target) }
     slots.show(target, key)
-    if (extent != null) {
-        extent.width = slots::blockWidth
-        extent.ceiling = slots::widest
-    }
+    if (extent != null) extent.width = slots::blockWidth
     val generation = slots.generation
     val cleared = slots.cleared
     SideEffect { slots.start(generation, animated, risePx.toFloat()) }
@@ -280,9 +276,6 @@ private class TitleSlotsState<T : Any>(
 
     /** How wide the block is drawn now. Read it in draw lambdas. */
     fun blockWidth(): Float = swapFrom.floatValue + (widths[front].intValue - swapFrom.floatValue) * alpha[front].floatValue
-
-    /** The width no part of [blockWidth] goes past. Read it in layout lambdas. */
-    fun widest(): Int = max(swapFrom.floatValue.toInt(), widths[front].intValue)
 
     fun show(
         target: T,
