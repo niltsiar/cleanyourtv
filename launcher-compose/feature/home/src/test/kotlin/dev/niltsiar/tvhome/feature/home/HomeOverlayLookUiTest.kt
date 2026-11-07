@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
@@ -589,6 +590,56 @@ class HomeOverlayLookUiTest {
         // The row's own fill is the light pill, red F2; the capsule's solid fill is red 14.
         assertNear(0x14, redAt(Offset(text.right.value + 4f, (text.top.value + text.bottom.value) / 2)), 3)
         assertTrue("ink ${brightestRedIn(text)}", brightestRedIn(text) >= 0xE8)
+    }
+
+    /**
+     * The contrast ratio of the "No device" ink of the Inputs row 2 against the row beside the label, which has the focus
+     * when [focused]. A glyph's stem shows its ink at full strength: it is the pixel farthest in luminance from the row.
+     */
+    private fun noDeviceContrast(focused: Boolean): Float {
+        openInputs()
+        if (focused) repeat(2) { press(Key.DirectionDown) }
+        val text =
+            compose
+                .onNode(hasText("No device") and hasAnyAncestor(hasTestTag("input:2")), useUnmergedTree = true)
+                .getBoundsInRoot()
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val density = compose.activity.resources.displayMetrics.density
+        val row =
+            pixels[((text.right.value + 6f) * density).toInt(), (((text.top.value + text.bottom.value) / 2) * density).toInt()]
+                .luminance()
+        val ink =
+            (text.top.value * density).toInt().until((text.bottom.value * density).toInt()).flatMap { y ->
+                (text.left.value * density).toInt().until((text.right.value * density).toInt()).map { x -> pixels[x, y].luminance() }
+            }
+        val far = ink.maxBy { abs(it - row) }
+        return (maxOf(far, row) + 0.05f) / (minOf(far, row) + 0.05f)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_no_device_label_is_at_least_5_to_1_against_the_dark_menu() {
+        val ratio = noDeviceContrast(focused = false)
+        assertTrue("contrast $ratio", ratio >= 5f)
+    }
+
+    @Test
+    fun the_no_device_label_is_at_least_5_to_1_against_the_light_menu() {
+        val ratio = noDeviceContrast(focused = false)
+        assertTrue("contrast $ratio", ratio >= 5f)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_no_device_label_is_at_least_5_to_1_against_the_focused_row_of_the_dark_menu() {
+        val ratio = noDeviceContrast(focused = true)
+        assertTrue("contrast $ratio", ratio >= 5f)
+    }
+
+    @Test
+    fun the_no_device_label_is_at_least_5_to_1_against_the_focused_row_of_the_light_menu() {
+        val ratio = noDeviceContrast(focused = true)
+        assertTrue("contrast $ratio", ratio >= 5f)
     }
 
     @Test
