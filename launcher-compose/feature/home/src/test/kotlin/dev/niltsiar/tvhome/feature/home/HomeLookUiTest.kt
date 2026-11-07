@@ -9,7 +9,9 @@ import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.PixelMap
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertCountEquals
@@ -566,8 +568,9 @@ class HomeLookUiTest {
     private fun carriedClearances(
         tiles: Int,
         slot: Int,
+        config: TvConfig,
     ): List<Float> {
-        showHome(apps = clearApps(1) + whiteApps(tiles).drop(1))
+        showHome(apps = clearApps(1) + whiteApps(tiles).drop(1), config = config)
         val rest = restTiles(tiles)
         // Below the chevrons and clear of the tile's rounded corners.
         val artRow = (rest[1].top.value + rest[1].bottom.value) / 2f + 14f
@@ -601,14 +604,15 @@ class HomeLookUiTest {
     private fun assertCarriedClearances(
         tiles: Int,
         slot: Int,
+        config: TvConfig = SixColumns,
     ) {
-        val clearances = carriedClearances(tiles, slot)
+        val clearances = carriedClearances(tiles, slot, config)
 
         val (ringRight, nextRight, ringLeft, nextLeft) = clearances
         val underRim = clearances[4]
         val footprint = clearances[5]
-        assertTrue("chevron clearance from the ring, right then left: $ringRight $ringLeft", ringRight >= 3.5f && ringLeft >= 3.5f)
-        assertTrue("chevron clearance from the next tile, right then left: $nextRight $nextLeft", nextRight >= -4f && nextLeft >= -4f)
+        assertTrue("chevron clearance from the ring, right then left: $ringRight $ringLeft", ringRight >= 3f && ringLeft >= 3f)
+        assertTrue("chevron clearance from the next tile, right then left: $nextRight $nextLeft", nextRight >= 3f && nextLeft >= 3f)
         assertTrue("the ring is $underRim dp under the rim", underRim >= 7.5f)
         assertTrue("the chevron is $footprint dp wide with its outline", footprint in 8.5f..9.5f)
     }
@@ -633,20 +637,28 @@ class HomeLookUiTest {
     }
 
     @Test
-    fun a_chevron_stands_on_a_20_dp_disc_of_black_at_055_that_fades_with_the_chevron() {
-        val image = ImageBitmap(80, 80)
-        Canvas(image).drawRect(Rect(0f, 0f, 80f, 80f), Paint().apply { color = Color.White })
-        CanvasDrawScope().draw(Density(2f), LayoutDirection.Ltr, Canvas(image), Size(80f, 80f)) {
-            drawChevronOnDisc(Offset(20f, 40f), pointsLeft = false, alpha = 1f)
-            drawChevronOnDisc(Offset(60f, 40f), pointsLeft = false, alpha = 0.5f)
+    fun a_chevron_holds_3_to_1_a_white_stroke_on_a_near_black_tile_and_its_outline_on_a_white_one() {
+        fun drawnOn(ground: Color): PixelMap {
+            val image = ImageBitmap(80, 80)
+            Canvas(image).drawRect(Rect(0f, 0f, 80f, 80f), Paint().apply { color = ground })
+            CanvasDrawScope().draw(Density(2f), LayoutDirection.Ltr, Canvas(image), Size(80f, 80f)) {
+                drawChevron(Offset(40f, 40f), pointsLeft = false, alpha = 1f)
+            }
+            return image.toPixelMap()
         }
 
-        // At 2 pixels to a dp the disc's radius is 20 pixels. Row 56 is 8 dp under the middle, past the glyph, inside the disc;
-        // row 62 is 11 dp under it, outside.
-        val pixels = image.toPixelMap()
-        assertEquals("inside the disc", 0.45f, pixels[20, 56].red, 0.02f)
-        assertEquals("outside the disc", 1f, pixels[20, 62].red, 0.01f)
-        assertEquals("a half faded disc", 1f - 0.55f * 0.5f, pixels[60, 56].red, 0.02f)
+        fun contrast(
+            first: Color,
+            second: Color,
+        ) = (maxOf(first.luminance(), second.luminance()) + 0.05f) / (minOf(first.luminance(), second.luminance()) + 0.05f)
+
+        val nearBlack = Color(0xFF0F1115)
+        val white = Color(0xFFF5F5F5)
+
+        // The stroke's cap at row 29 and the outline's at row 27, as in the glyph test above.
+        val stroke = contrast(drawnOn(nearBlack)[35, 29], nearBlack)
+        val outline = contrast(drawnOn(white)[35, 27], white)
+        assertTrue("the stroke on near black: $stroke, the outline on white: $outline", stroke >= 3f && outline >= 3f)
     }
 
     @Test
@@ -671,6 +683,12 @@ class HomeLookUiTest {
     @Config(qualifiers = "+night")
     fun the_chevrons_keep_their_clearances_with_the_carried_tile_in_the_middle_of_a_full_dock() {
         assertCarriedClearances(tiles = 6, slot = 4)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun with_four_columns_a_carried_tiles_chevrons_keep_their_clearances() {
+        assertCarriedClearances(tiles = 4, slot = 2, config = TvConfig(columns = 4))
     }
 
     /** The left edge, in dp, of the white art that covers [x] dp at [row] dp. */

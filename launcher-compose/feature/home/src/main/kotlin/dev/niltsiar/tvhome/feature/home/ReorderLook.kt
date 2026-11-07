@@ -57,26 +57,24 @@ private val LiftShadowColor = Color.Black.copy(alpha = 0.55f)
 private val LiftHeight = TileGap - FocusRingReach - TrayRimClear
 
 /**
- * The chevron: its glyph is [ChevronHeight] tall and [ChevronDepth] wide, drawn with a [ChevronStroke] stroke and an outline
- * [ChevronOutline] wide round it, on a [ChevronDiscDiameter] disc. It stands [ChevronRingClear] past the ring, and its disc
- * may reach into the next tile.
+ * The chevron: [ChevronHeight] tall and [ChevronDepth] wide, drawn with a [ChevronStroke] stroke and an outline
+ * [ChevronOutline] wide round it. It stands in the middle of the gutter between a carried tile's ring and the next
+ * tile, [ChevronRingClear] from each.
  */
 private val ChevronHeight = 10.dp
 private val ChevronDepth = 5.dp
 private val ChevronStroke = 2.dp
 private val ChevronOutline = 1.dp
-private val ChevronRingClear = 4.dp
 private val ChevronFootprint = ChevronDepth + ChevronStroke + ChevronOutline * 2
+private val ChevronRingClear = (TileGap - FocusRingReach - ChevronFootprint) / 2
 private val ChevronColor = Color.White.copy(alpha = 0.90f)
 private val ChevronOutlineColor = Color.Black.copy(alpha = 0.45f)
-private val ChevronDiscDiameter = 20.dp
-private val ChevronDiscColor = Color.Black.copy(alpha = 0.55f)
 
 /**
  * A tile's look in reorder and edit-dock modes: dimmed unless it is the carried one, which lifts, is drawn at its rest size
  * (a focused tile is grown), casts a shadow in its [shape], wiggles a little and shows a white chevron in the gutter beside
- * each edge it can still move towards, clear of its ring; it settles back with a spring when it is put down. No other tile
- * moves. The animated values are read in the layer and draw lambdas only.
+ * each edge it can still move towards, clear of its ring and of the next tile; it settles back with a spring when it is put
+ * down. No other tile moves. The animated values are read in the layer and draw lambdas only.
  */
 @Composable
 internal fun Modifier.reorderLook(
@@ -145,8 +143,8 @@ internal fun Modifier.reorderLook(
             val centre = chevronCentre(size.width, grown * raised)
             scale(1f / raised, Offset(size.width / 2f, size.height / 2f)) {
                 val middle = size.height / 2f
-                if (onLeft > 0f) drawChevronOnDisc(Offset(-centre, middle), pointsLeft = true, alpha = onLeft)
-                if (onRight > 0f) drawChevronOnDisc(Offset(size.width + centre, middle), pointsLeft = false, alpha = onRight)
+                if (onLeft > 0f) drawChevron(Offset(-centre, middle), pointsLeft = true, alpha = onLeft)
+                if (onRight > 0f) drawChevron(Offset(size.width + centre, middle), pointsLeft = false, alpha = onRight)
             }
         }
     }
@@ -165,16 +163,6 @@ private fun HomeInput.badgeAtStart(
     key: String,
     side: State<Boolean>,
 ): Float = Snapshot.withoutReadObservation { if (carried.value == key && side.value) 1f else 0f }
-
-/** A chevron on its [ChevronDiscDiameter] disc, so that it reads over a tile's edge and the dock behind it. */
-internal fun DrawScope.drawChevronOnDisc(
-    center: Offset,
-    pointsLeft: Boolean,
-    alpha: Float,
-) {
-    drawCircle(ChevronDiscColor, ChevronDiscDiameter.toPx() / 2f, center, alpha)
-    drawChevron(center, pointsLeft, alpha)
-}
 
 /** A chevron centred on [center], pointing left or right, at [alpha]: its outline, then its stroke. */
 internal fun DrawScope.drawChevron(
