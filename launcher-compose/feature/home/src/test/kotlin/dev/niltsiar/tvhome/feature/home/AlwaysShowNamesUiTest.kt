@@ -276,7 +276,7 @@ class AlwaysShowNamesUiTest {
             .bottom.value - bounds(tag).top.value
 
     @Test
-    @Config(qualifiers = "w960dp-h610dp-xhdpi")
+    @Config(qualifiers = "w960dp-h595dp-xhdpi")
     fun with_names_a_grid_row_with_under_48_dp_visible_draws_nothing_and_leaves_no_band() {
         showHome(named4, apps = whiteApps)
 
@@ -286,7 +286,7 @@ class AlwaysShowNamesUiTest {
     }
 
     @Test
-    @Config(qualifiers = "w960dp-h620dp-xhdpi")
+    @Config(qualifiers = "w960dp-h605dp-xhdpi")
     fun with_names_a_grid_row_with_48_dp_above_the_edge_but_less_left_after_the_bottom_fade_draws_nothing() {
         showHome(named4, apps = whiteApps)
 
@@ -392,17 +392,53 @@ class AlwaysShowNamesUiTest {
     }
 
     @Test
-    fun the_focused_ring_ends_6_dp_or_more_above_the_name_pill_in_four_columns() {
+    fun the_focused_ring_ends_8_dp_or_more_above_the_name_pill_in_four_columns() {
         showHome(named4)
 
-        assertTrue("the ring ends ${ringToPill("pkg.1")} dp above the pill", ringToPill("pkg.1") >= 6f)
+        assertTrue("the ring ends ${ringToPill("pkg.1")} dp above the pill", ringToPill("pkg.1") >= 8f - 0.01f)
     }
 
     @Test
-    fun the_focused_ring_ends_6_dp_or_more_above_the_name_pill_on_a_large_tile() {
+    fun the_focused_ring_ends_8_dp_or_more_above_the_name_pill_on_a_large_tile() {
         showHome(SixColumns.copy(columns = 2, alwaysShowNames = true))
 
-        assertTrue("the ring ends ${ringToPill("pkg.1")} dp above the pill", ringToPill("pkg.1") >= 6f)
+        assertTrue("the ring ends ${ringToPill("pkg.1")} dp above the pill", ringToPill("pkg.1") >= 8f - 0.01f)
+    }
+
+    /** From the bottom of tile [key] to the top of its name's pill, in dp. */
+    private fun tileToPill(key: String): Float = bounds("name:$key").top.value - 2f - bounds("tile:$key").bottom.value
+
+    @Test
+    fun an_unfocused_grid_tiles_name_pill_is_within_6_dp_of_its_tile() {
+        showHome(named4)
+        press(Key.DirectionDown)
+
+        assertTrue("the pill is ${tileToPill("pkg.2")} dp under its tile", tileToPill("pkg.2") <= 6.01f)
+        assertTrue("the pill is ${tileToPill("pkg.6")} dp under its tile", tileToPill("pkg.6") <= 6.01f)
+    }
+
+    @Test
+    fun an_unfocused_dock_tiles_name_pill_is_within_6_dp_of_its_tile() {
+        showHome(named4)
+
+        assertTrue("the pill is ${tileToPill("pkg.2")} dp under its tile", tileToPill("pkg.2") <= 6.01f)
+    }
+
+    @Test
+    fun the_space_under_an_unfocused_grid_name_pill_is_at_least_twice_the_space_over_it() {
+        showHome(named4)
+        press(Key.DirectionDown)
+
+        val under = bounds("tile:pkg.10").top.value - (bounds("name:pkg.6").bottom.value + 2f)
+        assertTrue("$under dp under the pill, ${tileToPill("pkg.6")} over it", under >= 2f * tileToPill("pkg.6"))
+    }
+
+    @Test
+    fun the_space_under_an_unfocused_dock_name_pill_is_at_least_twice_the_space_over_it() {
+        showHome(named4)
+
+        val under = bounds("dock").bottom.value - (bounds("name:pkg.2").bottom.value + 2f)
+        assertTrue("$under dp under the pill, ${tileToPill("pkg.2")} over it", under >= 2f * tileToPill("pkg.2"))
     }
 
     private fun bounds(tag: String): DpRect = compose.onNodeWithTag(tag).getBoundsInRoot()

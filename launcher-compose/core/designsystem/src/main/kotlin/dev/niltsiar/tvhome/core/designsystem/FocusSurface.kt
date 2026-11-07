@@ -1,6 +1,7 @@
 package dev.niltsiar.tvhome.core.designsystem
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -71,6 +72,7 @@ public val FocusRingReach: Dp = RingGap + RingWidth + HairlineWidth + OuterStrok
  * a translucent surface, as a dark patch. The animation starts in the focus callback and is read in the layer and draw
  * lambdas, so a focus change neither recomposes nor relays out. [focusedScale] is the size it grows to. The growth is
  * drawn, not a layer scale, so the surface's bounds stay put while it grows and accessibility has nothing to update.
+ * [focusProgress], from 0 to 1, is the animation that grows it, for a caller that moves something else with it.
  */
 @Composable
 public fun FocusSurface(
@@ -85,10 +87,11 @@ public fun FocusSurface(
     ring: ColorProducer? = null,
     ringBlends: Boolean = false,
     plate: Color = Color.Unspecified,
+    focusProgress: Animatable<Float, AnimationVector1D>? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val motion = TvTheme.motion
-    val focus = remember { Animatable(0f) }
+    val focus = focusProgress ?: remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val grownScale = motion.focusScale(focusedScale)
     val glowColor = accent.takeOrElse { TvTheme.colors.accent }

@@ -163,17 +163,16 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.ZoneId
-import kotlin.math.roundToInt
 
 internal val ScreenMargin = 40.dp
 internal val TileGap = 24.dp
 
 /**
- * The gap under a tile that its focus ring clears by [NameRingClearance], for tiles up to 132 dp high (four columns or
- * more on a TV); [nameGap] gives taller tiles more.
+ * The gap between a tile and its name's pill at rest. The pill of the focused tile slides down with the focus growth until
+ * it clears the grown ring by [NameRingClearance].
  */
-private val TileNameGap = 21.dp
-private val NameRingClearance = 6.dp
+private val TileNameGap = 6.dp
+private val NameRingClearance = 8.dp
 
 /** One line of a tile's name and the padding of its pill. */
 private val NameLine = 20.dp
@@ -1741,10 +1740,11 @@ private fun AppTile(
     edge: DockEdgeLight? = null,
     lightEdge: (() -> Boolean)? = null,
     bannerName: Boolean = true,
+    focus: Animatable<Float, AnimationVector1D>? = null,
 ) {
     val marked = if (habitMark) modifier.habitMark(input.habit, app.packageName) else modifier
     if (showName) {
-        NameUnder(app, marked) {
+        NameUnder(app, marked) { grown ->
             AppTile(
                 app,
                 accent,
@@ -1760,6 +1760,7 @@ private fun AppTile(
                 edge = edge,
                 lightEdge = lightEdge,
                 bannerName = false,
+                focus = grown,
             )
         }
         return
@@ -1790,6 +1791,7 @@ private fun AppTile(
         accent = accent,
         ring = ringColour,
         ringBlends = ringBlends,
+        focusProgress = focus,
         modifier =
             (if (fadeUnused) marked.unusedFade(input.faded, key) else marked)
                 .then(if (reordering) Modifier.reorderLook(key, input, TileShape) else Modifier)
@@ -1859,39 +1861,43 @@ private fun AppTile(
 
 /**
  * [tile] with [app]'s name under it, on one line, on a pill as wide as the text and no wider than the tile, which looks the same
- * with focus or without. The pill is [nameGap] under the tile.
+ * with focus or without. The pill is [TileNameGap] under the tile and slides down with the tile's focus growth, which [tile]
+ * gets as its argument, until it clears the grown ring.
  */
 @Composable
 private fun NameUnder(
     app: AppEntry,
     modifier: Modifier = Modifier,
-    tile: @Composable () -> Unit,
+    tile: @Composable (focus: Animatable<Float, AnimationVector1D>) -> Unit,
 ) {
     val grownScale = TvTheme.motion.focusScale(TILE_FOCUSED_SCALE)
+    val focus = remember { Animatable(0f) }
     Layout(
         content = {
-            tile()
+            tile(focus)
             NameChip(app)
         },
         modifier = modifier,
     ) { measurables, constraints ->
         val art = measurables[0].measure(constraints)
         val name = measurables[1].measure(Constraints(maxWidth = art.width))
-        val gap = nameGap(art.height, grownScale)
+        val gap = TileNameGap.roundToPx()
+        val slide = nameSlide(art.height, grownScale, gap)
         layout(art.width, art.height + gap + name.height) {
             art.place(0, 0)
-            name.place((art.width - name.width) / 2, art.height + gap)
+            name.placeWithLayer((art.width - name.width) / 2, art.height + gap) { translationY = slide * focus.value }
         }
     }
 }
 
-/** The gap under a tile [tileHeight] pixels high that the ring of its focus, grown by [scale], clears by [NameRingClearance]. */
-private fun Density.nameGap(
+/** How far the pill, [gap] under a tile [tileHeight] high, slides down to clear the ring grown by [scale] by [NameRingClearance]. */
+private fun Density.nameSlide(
     tileHeight: Int,
     scale: Float,
-): Int {
+    gap: Int,
+): Float {
     val ringEnd = tileHeight * (scale - 1f) / 2f + FocusRingReach.toPx() * scale
-    return maxOf(TileNameGap.roundToPx(), (ringEnd + NameRingClearance.toPx()).roundToInt())
+    return maxOf(0f, ringEnd + NameRingClearance.toPx() - gap)
 }
 
 /** [app]'s name in a pill of one line, [NameLine] high. */

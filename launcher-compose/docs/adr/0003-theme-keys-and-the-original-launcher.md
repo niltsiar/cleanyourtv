@@ -22,7 +22,7 @@ Behaviour that differs:
 
 - `single_row` works without `dock_row`. The Java launcher needs both.
 - `dock_row` does not change the layout, which always has a dock row. With `dock_row: false`, the tile menu and the Settings menu leave out their dock rows.
-- `always_show_names` puts the app's name under every tile of the dock, the grid and the single row, at alpha 0.75 and at 1 on the focused tile, as the Java launcher does. The name is one line with an ellipsis, in the tile label style, and takes 36 dp: a 14 dp gap that clears the focus ring and a 22 dp line. The dock panel and each grid row grow by that only with the key on. The Java launcher takes 29 dp for the name and grows the dock band by 22 dp. With the key off, the Java launcher names the focused grid tile under it. Here the band over the grid names the focused tile, so no tile has a name under it.
+- `always_show_names` puts the app's name under every tile of the dock, the grid and the single row, at alpha 0.75 and at 1 on the focused tile, as the Java launcher does. The name is one line with an ellipsis, in the tile label style, and takes 30 dp: a 6 dp gap under the tile, then a 24 dp pill (a 20 dp line and 2 dp of padding above and below). The pill of the focused tile slides down with the focus growth until it clears the grown ring by 8 dp. The dock panel and each grid row grow by that only with the key on. The Java launcher takes 29 dp for the name and grows the dock band by 22 dp. With the key off, the Java launcher names the focused grid tile under it. Here the band over the grid names the focused tile, so no tile has a name under it.
 
 Keys that this launcher adds:
 
