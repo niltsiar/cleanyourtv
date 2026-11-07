@@ -15,8 +15,8 @@ class DockLookTest {
 
     @Test
     fun the_dark_tint_is_016_and_the_light_one_020_on_a_dim_wallpaper() {
-        assertEquals(dark.copy(alpha = 0.16f), DockLook().tint(darkSurfaces = true, lightness = 40f))
-        assertEquals(light.copy(alpha = 0.20f), DockLook().tint(darkSurfaces = false, lightness = 40f))
+        assertEquals(dark.copy(alpha = 0.16f), DockLook().tint(darkSurfaces = true, lightness = 60f))
+        assertEquals(light.copy(alpha = 0.20f), DockLook().tint(darkSurfaces = false, lightness = 60f))
     }
 
     @Test
@@ -28,7 +28,7 @@ class DockLookTest {
 
     @Test
     fun dock_glass_takes_the_light_tint_in_night_mode() {
-        assertEquals(light.copy(alpha = 0.20f), DockLook(glass = true).tint(darkSurfaces = true, lightness = 40f))
+        assertEquals(light.copy(alpha = 0.20f), DockLook(glass = true).tint(darkSurfaces = true, lightness = 60f))
     }
 
     @Test
@@ -85,8 +85,40 @@ class DockLookTest {
     }
 
     @Test
-    fun a_light_tray_keeps_all_its_gloss_on_a_frost_of_L_45_or_more_or_with_no_frost_and_a_dark_one_always() {
-        for (lightness in listOf(0f, 45f, 60f, 100f)) {
+    fun over_a_frost_of_L_35_to_50_the_light_tray_lifts_it_by_at_most_004() {
+        for (lightness in listOf(35f, 40f, 45f, 50f)) {
+            val tint = DockLook(glass = true).tint(darkSurfaces = true, lightness = lightness)
+            val lift = trayLuminance(tint, lightness) - ((lightness + 16f) / 116f).pow(3)
+
+            assertTrue("L* $lightness lifts the picture by $lift", lift <= 0.041f)
+        }
+    }
+
+    @Test
+    fun over_a_frost_of_L_65_or_more_the_light_tray_is_the_base_tint_or_at_the_055_cap() {
+        for (lightness in listOf(65f, 70f, 75f, 80f, 90f, 100f)) {
+            val tint = DockLook(glass = true).tint(darkSurfaces = true, lightness = lightness)
+            val base = light.copy(alpha = 0.20f + 0.06f * ((lightness - 60f) / 15f).coerceIn(0f, 1f))
+
+            assertEquals("L* $lightness", minOf(trayLuminance(base, lightness), 0.55f), trayLuminance(tint, lightness), 0.005f)
+        }
+    }
+
+    @Test
+    fun the_light_tray_never_gets_darker_as_the_frost_gets_lighter_from_L_30_to_80() {
+        var before = 0f
+        for (lightness in 30..80) {
+            val tint = DockLook(glass = true).tint(darkSurfaces = true, lightness = lightness.toFloat())
+            val tray = trayLuminance(tint, lightness.toFloat())
+
+            assertTrue("L* $lightness gives $tray after $before", tray >= before - 0.0005f)
+            before = tray
+        }
+    }
+
+    @Test
+    fun a_light_tray_keeps_all_its_gloss_on_a_frost_of_L_60_or_more_or_with_no_frost_and_a_dark_one_always() {
+        for (lightness in listOf(0f, 60f, 80f, 100f)) {
             assertEquals("L* $lightness", 1f, DockLook(glass = true).gloss(darkSurfaces = true, lightness = lightness), 0f)
         }
         for (lightness in listOf(1f, 30f, 40f, 100f)) {
@@ -95,10 +127,11 @@ class DockLookTest {
     }
 
     @Test
-    fun a_light_tray_over_a_frost_of_L_30_or_less_keeps_a_quarter_of_its_gloss_and_more_up_to_L_45() {
+    fun a_light_tray_over_a_frost_of_L_30_or_less_keeps_a_quarter_of_its_gloss_and_more_up_to_L_60() {
         assertEquals(0.25f, DockLook(glass = true).gloss(darkSurfaces = true, lightness = 30f), 0.001f)
         assertEquals(0.25f, DockLook(glass = true).gloss(darkSurfaces = true, lightness = 10f), 0.001f)
-        assertEquals(0.625f, DockLook(glass = true).gloss(darkSurfaces = true, lightness = 37.5f), 0.001f)
+        assertEquals(0.625f, DockLook(glass = true).gloss(darkSurfaces = true, lightness = 45f), 0.001f)
+        assertTrue(DockLook(glass = true).gloss(darkSurfaces = true, lightness = 45f) < 0.75f)
     }
 
     @Test
@@ -110,8 +143,8 @@ class DockLookTest {
     fun on_a_bright_picture_the_light_tint_keeps_its_alpha_and_colour() {
         val kept =
             listOf(
-                Triple(40f, 0.20f, 0.95686275f),
                 Triple(60f, 0.20f, 0.95686275f),
+                Triple(65f, 0.22f, 0.95686275f),
                 Triple(70f, 0.23921569f, 0.95686275f),
                 Triple(75f, 0.25882354f, 0.88235295f),
                 Triple(85f, 0.25882354f, 0.5764706f),
