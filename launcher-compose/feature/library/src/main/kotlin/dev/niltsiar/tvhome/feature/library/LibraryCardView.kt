@@ -100,6 +100,8 @@ private val PlusSize = 12.dp
 private val PlusStroke = 1.5.dp
 private val PlusGap = 4.dp
 private val CheckSize = 18.dp
+private val MarkOverhang = (CheckSize - StatusHeight) / 2
+private val NameToMark = 6.dp
 private val CheckStroke = 1.75.dp
 private const val CHECK_DISC_ALPHA = 0.90f
 private const val CHECK_REST_DISC_ALPHA = 0.85f
@@ -245,8 +247,9 @@ internal fun LibraryCardView(
 private const val CARD_TINT_MS = 300
 
 /**
- * The art, then the name, in the room above the status slot. The art sits where it would for a name of [NAME_LINES] lines
- * centred with it, so every card in a row has its art at one height, and the name is centred in what is left below the art.
+ * The art, then the name, in the room above the status slot. The name's box ends [NameToMark] above the top of the check or
+ * ring, which [CheckSize] makes overhang the slot; the art sits where it would for a name of [NAME_LINES] lines ending there,
+ * so every card in a row has its art at one height. A shorter name is centred in what is left below the art.
  */
 @Composable
 private fun ArtAndName(
@@ -258,8 +261,10 @@ private fun ArtAndName(
         val loose = constraints.copy(minWidth = 0, minHeight = 0)
         val art = measurables[0].measure(loose)
         val name = measurables[1].measure(loose)
-        val artTop = ((constraints.maxHeight - art.height - nameRoom.roundToPx()) / 2).coerceAtLeast(0)
-        val nameTop = artTop + art.height + (constraints.maxHeight - artTop - art.height - name.height) / 2
+        val nameLimit = constraints.maxHeight - (MarkOverhang + NameToMark).roundToPx()
+        val artTop = (nameLimit - art.height - nameRoom.roundToPx()).coerceAtLeast(0)
+        val centred = artTop + art.height + (constraints.maxHeight - artTop - art.height - name.height) / 2
+        val nameTop = minOf(centred, nameLimit - name.height)
         layout(constraints.maxWidth, constraints.maxHeight) {
             art.place((constraints.maxWidth - art.width) / 2, artTop)
             name.place((constraints.maxWidth - name.width) / 2, nameTop)

@@ -467,6 +467,33 @@ class LibraryOverlayLookUiTest {
         assertNameClearsStatus()
     }
 
+    private val describedName = "Lista de títulos grabados con altavoces"
+
+    @Test
+    fun in_the_chooser_a_two_line_name_with_a_descender_ends_at_least_6_dp_above_the_check_and_above_the_ring() {
+        showLibrary(
+            listOf(libraryApp("Aaa"), libraryApp("Bbb $describedName", onHome = true), libraryApp("Ccc $describedName")),
+            art = LibraryArt(red, Color.Red),
+            config = chooser,
+        )
+
+        for ((mark, name) in listOf("card:check" to "Bbb $describedName", "card:ring" to "Ccc $describedName")) {
+            val top = compose.onNodeWithTag("$mark:${key(name)}", useUnmergedTree = true).getBoundsInRoot().top
+            val room = top - lastLineBottom(name)
+            assertTrue("the name ends $room above the $mark", room >= 6.dp - 0.05.dp)
+        }
+    }
+
+    @Test
+    fun a_card_keeps_its_outer_size_of_113_dp_tall_and_a_sixth_of_the_grid_wide() {
+        showLibrary(listOf(libraryApp("Aaa"), libraryApp("Bbb $describedName")), art = LibraryArt(red, Color.Red), config = chooser)
+
+        for (name in listOf("Aaa", "Bbb $describedName")) {
+            assertEquals(113f, card(name).height.value, 0.5f)
+            assertEquals(108.3f, card(name).width.value, 0.5f)
+        }
+    }
+
     @Test
     fun in_the_least_used_order_a_two_line_name_ends_at_least_4_dp_above_the_opened_line_and_a_focused_one_at_least_2_dp() {
         showLibrary(
