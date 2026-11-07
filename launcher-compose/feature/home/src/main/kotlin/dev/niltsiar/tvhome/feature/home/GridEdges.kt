@@ -29,8 +29,8 @@ private const val BOTTOM_FADE_LIMIT = 1060f
 private const val TOP_FADE_RUN = 120f
 
 /**
- * A row counts as fully visible once it is this far inside the edge, and is counted in over this much travel, so a row
- * that scrolls past an edge does not make the fade jump.
+ * A row at the top counts as fully visible once it is this far inside the edge. At the bottom a row counts as whole once it
+ * ends at the edge. Both are counted in over this much travel, so a row that scrolls past an edge does not make the fade jump.
  */
 private const val SETTLE = 24f
 private const val MASK_STOPS = 32
@@ -128,14 +128,14 @@ internal fun bottomFade(
         if (item.key == SHELF_KEY) continue
         val itemTop = item.offset.y + shift
         val itemBottom = itemTop + item.size.height
-        if (itemBottom <= height - SETTLE * unit) {
+        if (itemBottom <= height) {
             if (solidBottom.isNaN() || itemBottom > solidBottom) solidBottom = itemBottom
         } else {
             if (itemBottom < nextBottom) nextBottom = itemBottom
             if (item.key != LIBRARY_FOCUS && itemTop + minVisible <= lowest + FADE_GAP * unit) shownRow = true
         }
     }
-    val joined = if (nextBottom.isInfinite()) 1f else ((height - nextBottom) / (SETTLE * unit)).coerceIn(0f, 1f)
+    val joined = if (nextBottom.isInfinite()) 1f else ((height + SETTLE * unit - nextBottom) / (SETTLE * unit)).coerceIn(0f, 1f)
     val anchor =
         when {
             solidBottom.isNaN() -> lowest
