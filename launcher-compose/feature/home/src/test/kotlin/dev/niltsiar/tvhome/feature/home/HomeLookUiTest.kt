@@ -633,6 +633,23 @@ class HomeLookUiTest {
     }
 
     @Test
+    fun a_chevron_stands_on_a_20_dp_disc_of_black_at_055_that_fades_with_the_chevron() {
+        val image = ImageBitmap(80, 80)
+        Canvas(image).drawRect(Rect(0f, 0f, 80f, 80f), Paint().apply { color = Color.White })
+        CanvasDrawScope().draw(Density(2f), LayoutDirection.Ltr, Canvas(image), Size(80f, 80f)) {
+            drawChevronOnDisc(Offset(20f, 40f), pointsLeft = false, alpha = 1f)
+            drawChevronOnDisc(Offset(60f, 40f), pointsLeft = false, alpha = 0.5f)
+        }
+
+        // At 2 pixels to a dp the disc's radius is 20 pixels. Row 56 is 8 dp under the middle, past the glyph, inside the disc;
+        // row 62 is 11 dp under it, outside.
+        val pixels = image.toPixelMap()
+        assertEquals("inside the disc", 0.45f, pixels[20, 56].red, 0.02f)
+        assertEquals("outside the disc", 1f, pixels[20, 62].red, 0.01f)
+        assertEquals("a half faded disc", 1f - 0.55f * 0.5f, pixels[60, 56].red, 0.02f)
+    }
+
+    @Test
     @Config(qualifiers = "+night")
     fun with_four_dock_tiles_a_carried_tiles_chevrons_fit_its_gutter_and_its_ring_stays_8_dp_under_the_rim() {
         assertCarriedClearances(tiles = 4, slot = 2)

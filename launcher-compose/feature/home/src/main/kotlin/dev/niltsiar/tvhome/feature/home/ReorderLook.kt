@@ -58,7 +58,8 @@ private val LiftHeight = TileGap - FocusRingReach - TrayRimClear
 
 /**
  * The chevron: its glyph is [ChevronHeight] tall and [ChevronDepth] wide, drawn with a [ChevronStroke] stroke and an outline
- * [ChevronOutline] wide round it. It stands [ChevronRingClear] past the ring and may reach into the next tile.
+ * [ChevronOutline] wide round it, on a [ChevronDiscDiameter] disc. It stands [ChevronRingClear] past the ring, and its disc
+ * may reach into the next tile.
  */
 private val ChevronHeight = 10.dp
 private val ChevronDepth = 5.dp
@@ -68,6 +69,8 @@ private val ChevronRingClear = 4.dp
 private val ChevronFootprint = ChevronDepth + ChevronStroke + ChevronOutline * 2
 private val ChevronColor = Color.White.copy(alpha = 0.90f)
 private val ChevronOutlineColor = Color.Black.copy(alpha = 0.45f)
+private val ChevronDiscDiameter = 20.dp
+private val ChevronDiscColor = Color.Black.copy(alpha = 0.55f)
 
 /**
  * A tile's look in reorder and edit-dock modes: dimmed unless it is the carried one, which lifts, is drawn at its rest size
@@ -142,8 +145,8 @@ internal fun Modifier.reorderLook(
             val centre = chevronCentre(size.width, grown * raised)
             scale(1f / raised, Offset(size.width / 2f, size.height / 2f)) {
                 val middle = size.height / 2f
-                if (onLeft > 0f) drawChevron(Offset(-centre, middle), pointsLeft = true, alpha = onLeft)
-                if (onRight > 0f) drawChevron(Offset(size.width + centre, middle), pointsLeft = false, alpha = onRight)
+                if (onLeft > 0f) drawChevronOnDisc(Offset(-centre, middle), pointsLeft = true, alpha = onLeft)
+                if (onRight > 0f) drawChevronOnDisc(Offset(size.width + centre, middle), pointsLeft = false, alpha = onRight)
             }
         }
     }
@@ -162,6 +165,16 @@ private fun HomeInput.badgeAtStart(
     key: String,
     side: State<Boolean>,
 ): Float = Snapshot.withoutReadObservation { if (carried.value == key && side.value) 1f else 0f }
+
+/** A chevron on its [ChevronDiscDiameter] disc, so that it reads over a tile's edge and the dock behind it. */
+internal fun DrawScope.drawChevronOnDisc(
+    center: Offset,
+    pointsLeft: Boolean,
+    alpha: Float,
+) {
+    drawCircle(ChevronDiscColor, ChevronDiscDiameter.toPx() / 2f, center, alpha)
+    drawChevron(center, pointsLeft, alpha)
+}
 
 /** A chevron centred on [center], pointing left or right, at [alpha]: its outline, then its stroke. */
 internal fun DrawScope.drawChevron(
