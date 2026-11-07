@@ -295,6 +295,37 @@ class DockGlassUiTest {
     }
 
     @Test
+    fun focus_in_the_top_bar_darkens_a_light_tray_and_its_tiles_over_a_white_picture() {
+        showHome(
+            white,
+            cinematic.copy(dockGlass = true),
+            wallpaper = flowOf(Wallpaper(picture = white, thumbnail = white)),
+            shown = lightApps,
+        )
+        val tray = trayLuminance()
+        val tile = tileLuminance("tile:pkg.3")
+
+        press(Key.DirectionUp)
+
+        assertTrue("the tray goes from $tray to ${trayLuminance()}", trayLuminance() <= 0.8f * tray)
+        assertTrue("a tile goes from $tile to ${tileLuminance("tile:pkg.3")}", tileLuminance("tile:pkg.3") <= 0.8f * tile)
+    }
+
+    private fun tileLuminance(tag: String): Float {
+        val tile = compose.onNodeWithTag(tag).getBoundsInRoot()
+        val density = compose.activity.resources.displayMetrics.density
+        return compose
+            .onRoot()
+            .captureToImage()
+            .toPixelMap()[
+            ((tile.left.value + tile.right.value) / 2f * density).toInt(), (
+                (tile.top.value + tile.bottom.value) / 2f *
+                    density
+            ).toInt(),
+        ].luminance()
+    }
+
+    @Test
     fun a_light_glass_tray_over_a_white_picture_keeps_a_mean_relative_luminance_under_057() {
         showHome(white, cinematic.copy(dockGlass = true))
 
@@ -435,8 +466,8 @@ class DockGlassUiTest {
         level: Float,
     ) {
         val (edge, inside) = edgeOf(tag)
-        assertEquals("edge $edge", level * (1f - 0.28f), edge.max(), 0.03f)
-        assertEquals("edge $edge", level * (1f - 0.28f), edge.min(), 0.03f)
+        assertEquals("edge $edge", level * (1f - 0.32f), edge.max(), 0.03f)
+        assertEquals("edge $edge", level * (1f - 0.32f), edge.min(), 0.03f)
         assertEquals(level, inside, 0.01f)
     }
 
@@ -453,10 +484,36 @@ class DockGlassUiTest {
     private val level245 = 245f / 255f
 
     @Test
-    fun dock_glass_draws_a_black_028_edge_1_dp_wide_inside_each_light_dock_tile() {
+    fun dock_glass_draws_a_black_032_edge_1_dp_wide_inside_each_light_dock_tile() {
         showHome(uniform, cinematic.copy(dockGlass = true), shown = lightApps)
 
         assertEdge("tile:pkg.2", level245)
+    }
+
+    private val whiteApps = (1..9).map { lightApps[it - 1].copy(image = bitmap(16, 9) { _, _ -> grey(255) }) }
+
+    /** The relative luminance of the lighter of the two pixels of the 1 dp edge of tile [tag], of its art 3 px inside, and of the tray 4 dp outside it. */
+    private fun edgeAndNeighbours(tag: String): Triple<Float, Float, Float> {
+        val tile = compose.onNodeWithTag(tag).getBoundsInRoot()
+        val density = compose.activity.resources.displayMetrics.density
+        val image = compose.onRoot().captureToImage().toPixelMap()
+        val y = ((tile.top.value + tile.bottom.value) / 2f * density).toInt()
+        val left = (tile.left.value * density).toInt()
+        val edge = maxOf(image[left, y].luminance(), image[left + 1, y].luminance())
+        return Triple(edge, image[left + 3, y].luminance(), image[left - (4 * density).toInt(), y].luminance())
+    }
+
+    @Test
+    fun on_the_lightest_tray_the_edge_of_a_white_tile_is_at_least_008_darker_than_its_art_and_the_tray() {
+        showHome(
+            white,
+            cinematic.copy(dockGlass = true),
+            wallpaper = flowOf(Wallpaper(picture = white, thumbnail = white)),
+            shown = whiteApps,
+        )
+
+        val (edge, art, tray) = edgeAndNeighbours("tile:pkg.3")
+        assertTrue("the edge is $edge, its art $art, the tray $tray", edge <= art - 0.08f && edge <= tray - 0.08f)
     }
 
     @Test

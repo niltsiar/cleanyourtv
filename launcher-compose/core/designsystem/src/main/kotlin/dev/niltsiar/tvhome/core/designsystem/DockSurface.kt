@@ -59,7 +59,7 @@ private val DockShadowDrop = 6.dp
  * than the panel. With an [edgeLight] the focused tile lights the rim and the floor. With [outerHairline] a 1 dp black 0.30 line
  * runs round the outside of the panel, so a light panel keeps its edge on a bright picture. [gloss] (read in the draw phase,
  * 0 to 1) scales the sheen and the rim: at less than 1 a white 0.30 line, [TopLineWidth] thick, takes over the rim's top edge
- * as it fades.
+ * as it fades. [shade] (read in the draw phase, 0 to 1) is the alpha of a black layer over the whole panel, content included.
  */
 @Composable
 public fun DockSurface(
@@ -70,6 +70,7 @@ public fun DockSurface(
     edgeLight: DockEdgeLight? = null,
     outerHairline: Boolean = false,
     gloss: () -> Float = { 1f },
+    shade: () -> Float = { 0f },
     content: @Composable BoxScope.() -> Unit,
 ) {
     Box(
@@ -99,6 +100,8 @@ public fun DockSurface(
                         drawOutline(outline.grownBy(-width / 2f), BottomEdge, style = Stroke(width))
                     }
                     edgeLight?.run { drawRim() }
+                    val shaded = shade()
+                    if (shaded > 0f) drawOutline(outline, Color.Black, alpha = shaded)
                 }.then(if (edgeLight != null) Modifier.onGloballyPositioned { edgeLight.panelLeft = it.positionInRoot().x } else Modifier),
     ) {
         SurfaceContent { content() }

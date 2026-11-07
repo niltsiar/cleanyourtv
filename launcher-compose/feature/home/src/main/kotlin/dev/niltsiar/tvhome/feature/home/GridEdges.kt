@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 
 /**
  * The fades are specified on a screen 1080 pixels high; every distance below is in those pixels and is scaled by the
@@ -34,6 +35,9 @@ private const val TOP_FADE_RUN = 120f
 private const val SETTLE = 24f
 private const val MASK_STOPS = 32
 private const val SHELF_KEY = "shelf"
+
+/** The least a grid row's tile shows above the bottom fade for the row to draw: a smaller part reads as a rendering fault. */
+internal val GridRowMinVisible = 48.dp
 
 /** The [SETTLE] distance on a screen [height] pixels high, in pixels. */
 internal fun settleOf(height: Float): Float = SETTLE * height / FRAME_HEIGHT
@@ -83,7 +87,7 @@ internal fun Modifier.gridEdges(
                 if (item.key != SHELF_KEY && itemTop < topEnd && itemTop + item.size.height > topStart) topHasContent = true
             }
 
-            val wanted = bottomFade(info, shift, size.height)
+            val wanted = bottomFade(info, shift, size.height, GridRowMinVisible.toPx())
             val bottomStart = wanted.start
             val bottomMask =
                 cached?.takeIf { it.first == wanted }?.second
@@ -105,34 +109,40 @@ internal fun Modifier.gridEdges(
 /**
  * The bottom fade of the grid whose items [info] lists, [shift] lower than laid out, in a viewport [height] pixels high: it
  * starts [FADE_GAP] under the last row that ends [SETTLE] inside the edge, and moves to the next row's bottom as that row comes
- * to within [SETTLE] of the edge.
+ * to within [SETTLE] of the edge. A row that is not whole but whose tile has [minVisible] above the fade at its lowest place
+ * puts it there, so the row draws.
  */
 internal fun bottomFade(
     info: LazyGridLayoutInfo,
     shift: Float,
     height: Float,
+    minVisible: Float,
 ): BottomMask {
     val unit = height / FRAME_HEIGHT
+    val lowest = height * BOTTOM_FADE_LIMIT / FRAME_HEIGHT - (BOTTOM_FADE_RUN + FADE_GAP) * unit
     var solidBottom = Float.NaN
     var nextBottom = Float.POSITIVE_INFINITY
+    var shownRow = false
     for (i in info.visibleItemsInfo.indices) {
         val item = info.visibleItemsInfo[i]
         if (item.key == SHELF_KEY) continue
-        val itemBottom = item.offset.y + shift + item.size.height
+        val itemTop = item.offset.y + shift
+        val itemBottom = itemTop + item.size.height
         if (itemBottom <= height - SETTLE * unit) {
             if (solidBottom.isNaN() || itemBottom > solidBottom) solidBottom = itemBottom
-        } else if (itemBottom < nextBottom) {
-            nextBottom = itemBottom
+        } else {
+            if (itemBottom < nextBottom) nextBottom = itemBottom
+            if (item.key != LIBRARY_FOCUS && itemTop + minVisible <= lowest + FADE_GAP * unit) shownRow = true
         }
     }
     val joined = if (nextBottom.isInfinite()) 1f else ((height - nextBottom) / (SETTLE * unit)).coerceIn(0f, 1f)
     val anchor =
         when {
-            solidBottom.isNaN() -> height * BOTTOM_FADE_LIMIT / FRAME_HEIGHT - (BOTTOM_FADE_RUN + FADE_GAP) * unit
+            solidBottom.isNaN() -> lowest
             nextBottom.isInfinite() -> solidBottom
             else -> solidBottom + joined * (nextBottom - solidBottom)
         }
-    val start = minOf(anchor + FADE_GAP * unit, height)
+    val start = minOf((if (shownRow) maxOf(anchor, lowest) else anchor) + FADE_GAP * unit, height)
     return BottomMask(start = start, end = minOf(start + BOTTOM_FADE_RUN * unit, height * BOTTOM_FADE_LIMIT / FRAME_HEIGHT))
 }
 

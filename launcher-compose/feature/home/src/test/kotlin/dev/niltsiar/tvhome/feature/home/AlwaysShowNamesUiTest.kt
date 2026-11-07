@@ -330,6 +330,24 @@ class AlwaysShowNamesUiTest {
     fun with_names_no_grid_row_shows_a_strip_of_under_48_dp_of_its_tile_at_any_scroll_step() = assertNoStripAtAnyScrollStep(named4)
 
     @Test
+    fun with_names_on_a_1080p_screen_with_focus_on_the_first_grid_row_the_second_draws_with_at_least_48_dp_of_its_tile() {
+        showHome(named4, apps = whiteApps)
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
+
+        assertTrue("the second row draws ${drawnDp("tile:pkg.9")} dp of its tile", drawnDp("tile:pkg.9") >= 48f)
+    }
+
+    @Test
+    fun without_names_on_a_1080p_screen_with_focus_on_the_first_grid_row_the_second_draws_whole() {
+        showHome(SixColumns.copy(columns = 4), apps = whiteApps)
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
+
+        assertTrue("the second row draws ${drawnDp("tile:pkg.9")} dp of its tile", drawnDp("tile:pkg.9") >= height("tile:pkg.9").value - 1f)
+    }
+
+    @Test
     fun without_names_no_grid_row_shows_a_strip_of_under_48_dp_of_its_tile_at_any_scroll_step() =
         assertNoStripAtAnyScrollStep(SixColumns.copy(columns = 4))
 

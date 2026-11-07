@@ -203,7 +203,7 @@ private val CaptionTop = TopBarTop + TopBarHeight + 8.dp
 private val TileCorner = 12.dp
 private val TileShape = RoundedCornerShape(TileCorner)
 private val LightTileEdgeWidth = 1.dp
-private val LightTileEdge = Color.Black.copy(alpha = 0.28f)
+private val LightTileEdge = Color.Black.copy(alpha = 0.32f)
 
 /** The mean L* of the frost from which the wallpaper counts as bright under a tile: the mark where the top-bar buttons thicken their tint. */
 private const val BRIGHT_WALLPAPER_LIGHTNESS = 70f
@@ -375,7 +375,7 @@ public fun HomeScreen(
             .graphicsLayer { translationY = titleShift() }
     val band = rememberBandFade(libraryOpen, tileMenuOpen = { currentState.value().menu?.tileKey != null })
     val gridState = rememberLazyGridState()
-    FocusDimEffects(dim, currentState, input, layout, libraryOpen, gridState, shelfBottom - ShelfToFade)
+    FocusDimEffects(dim, currentState, input, layout, libraryOpen, gridState, shelfBottom - ShelfToFade, dockLook.band)
     val scope = rememberCoroutineScope()
     val edge = remember(dockLook.edgeLight) { if (dockLook.edgeLight) DockEdgeLight(scope) else null }
     if (edge != null) DockEdgeEffect(edge, currentState, input, layout, libraryOpen)
@@ -653,6 +653,7 @@ private fun HomeContent(
                     shelfLayout = shelfLayout,
                     look = dockLook,
                     edge = edge,
+                    shade = remember(dim) { { dim.shade.value } },
                     rowTileWidth = rowTileWidth,
                     onFocus = onFocus,
                     onClick = onClick,
@@ -843,8 +844,11 @@ private class FocusDim(
     /** The alpha every grid row draws at: [LAST_ROW_PILL_ALPHA] with focus on the library pill, else 1. */
     val pill = Animatable(1f)
 
-    /** The dock band's alpha: [POPUP_DOCK_ALPHA] while a top-bar popup is open, [TOP_BAR_DOCK_ALPHA] while focus is in the top bar, else 1. */
+    /** The dock's alpha: [POPUP_DOCK_ALPHA] while a top-bar popup is open, [TOP_BAR_DOCK_ALPHA] while focus is in the top bar of a dock with no panel, else 1. */
     val bar = Animatable(1f)
+
+    /** The alpha of the black layer over the dock panel while focus is in the top bar: [TOP_BAR_DOCK_SHADE], else 0. */
+    val shade = Animatable(0f)
 
     /** The dock's alpha: 0 while focus is on a grid row or the library pill, 1 with it in the dock or outside the grid. */
     fun dockAlpha(): Float = 1f - (row.value - DOCK_ROW).coerceIn(0f, 1f)
@@ -1008,6 +1012,7 @@ private fun FocusDimEffects(
     libraryOpen: () -> Boolean,
     grid: LazyGridState,
     cutoff: Dp,
+    dockPanel: Boolean,
 ) {
     val motion = TvTheme.motion
     val currentLibraryOpen = rememberUpdatedState(libraryOpen)
@@ -1057,24 +1062,27 @@ private fun FocusDimEffects(
             first = false
         }
     }
-    LaunchedEffect(state, input, dim, motion) {
+    LaunchedEffect(state, input, dim, motion, dockPanel) {
         var popup = false
         snapshotFlow {
             val popupOpen = state.value().let { it.inputsOpen || (it.menu != null && it.menu.tileKey == null) }
             when {
-                popupOpen -> POPUP_DOCK_ALPHA
-                input.topBarFocused -> TOP_BAR_DOCK_ALPHA
-                else -> 1f
+                popupOpen -> DockDim(alpha = POPUP_DOCK_ALPHA)
+                input.topBarFocused -> if (dockPanel) DockDim(shade = TOP_BAR_DOCK_SHADE) else DockDim(alpha = TOP_BAR_DOCK_ALPHA)
+                else -> DockDim()
             }
-        }.collectLatest { alpha ->
+        }.collectLatest { dock ->
             val millis =
                 when {
-                    alpha == POPUP_DOCK_ALPHA -> BAND_IN_MS
+                    dock.alpha == POPUP_DOCK_ALPHA -> BAND_IN_MS
                     popup -> BAND_OUT_MS
                     else -> TOP_BAR_DOCK_MS
                 }
-            popup = alpha == POPUP_DOCK_ALPHA
-            dim.bar.animateTo(alpha, motion.tweenSpec(millis))
+            popup = dock.alpha == POPUP_DOCK_ALPHA
+            coroutineScope {
+                launch { dim.bar.animateTo(dock.alpha, motion.tweenSpec(millis)) }
+                launch { dim.shade.animateTo(dock.shade, motion.tweenSpec(millis)) }
+            }
         }
     }
 }
@@ -1104,15 +1112,22 @@ private fun DockEdgeEffect(
 
 private const val ROW_DIM_MS = 160
 
-/** The least a grid row's tile shows above the bottom edge for the row to draw: a smaller part reads as a rendering fault. */
-private val GridRowMinVisible = 48.dp
-
 /** The dock's alpha under a top-bar popup, so that the popup is what looks active. */
 private const val POPUP_DOCK_ALPHA = 0.55f
 
-/** The dock's alpha while focus is in the top bar, and how long it takes to get there and back. */
+/**
+ * How the dock dims while focus is in the top bar, and how long it takes to get there and back: a black layer over its panel,
+ * which darkens a light tray on any picture, or without a panel its alpha.
+ */
+private const val TOP_BAR_DOCK_SHADE = 0.25f
 private const val TOP_BAR_DOCK_ALPHA = 0.75f
 private const val TOP_BAR_DOCK_MS = 150
+
+/** The dock's alpha and the alpha of the black layer over its panel that one cause of dimming asks for. */
+private data class DockDim(
+    val alpha: Float = 1f,
+    val shade: Float = 0f,
+)
 
 /**
  * The first grid row whose tile shows under [minVisible] pixels (or under its whole height, if that is less) above the end of the
@@ -1124,7 +1139,7 @@ private fun FocusDim.hiddenFromRow(
     minVisible: Float,
 ): Int {
     val shift = lowPx() - info.viewportStartOffset
-    val end = bottomFade(info, shift, info.viewportSize.height.toFloat()).end
+    val end = bottomFade(info, shift, info.viewportSize.height.toFloat(), minVisible).end
     var first = Int.MAX_VALUE
     for (i in info.visibleItemsInfo.indices) {
         val item = info.visibleItemsInfo[i]
@@ -1481,6 +1496,7 @@ private fun Dock(
     shelfLayout: ShelfLayout,
     look: DockLook,
     edge: DockEdgeLight?,
+    shade: () -> Float,
     rowTileWidth: Dp,
     onFocus: (String) -> Unit,
     onClick: (String) -> Unit,
@@ -1493,7 +1509,7 @@ private fun Dock(
     val width = if (shrunk) Modifier.wrapContentWidth() else Modifier.fillMaxWidth()
     val darkSurfaces = TvTheme.surfaces.dark
     val onLight = remember(look, darkSurfaces, glass) { dockOnLight(look, darkSurfaces, glass) }
-    DockPanel(glass, look, edge, modifier.outset(TileGap).then(width).testTag("dock")) {
+    DockPanel(glass, look, edge, shade, modifier.outset(TileGap).then(width).testTag("dock")) {
         if (layout.singleRow) {
             // The grid's pivot scroll is vertical; this row scrolls sideways the usual way.
             CompositionLocalProvider(LocalBringIntoViewSpec provides RevealBringIntoViewSpec) {
@@ -1614,12 +1630,13 @@ private fun Modifier.upToOffer(
         focusProperties { if (input.inputOffered.value) up = input.requester(INPUTS_FOCUS) }
     }
 
-/** The dock's panel, or with the theme's dock_band off nothing but the room it takes. */
+/** The dock's panel, under a black layer of alpha [shade], or with the theme's dock_band off nothing but the room it takes. */
 @Composable
 private fun DockPanel(
     glass: GlassState,
     look: DockLook,
     edge: DockEdgeLight?,
+    shade: () -> Float,
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit,
 ) {
@@ -1627,7 +1644,17 @@ private fun DockPanel(
         val dark = TvTheme.surfaces.dark
         val tint = remember(look, dark, glass) { { look.tint(dark, glass.dockLightness) } }
         val gloss = remember(look, dark, glass) { { look.gloss(dark, glass.dockLightness) } }
-        DockSurface(glass, tint, DockShape, modifier, edge, outerHairline = look.light(dark), gloss = gloss, content = content)
+        DockSurface(
+            glass,
+            tint,
+            DockShape,
+            modifier,
+            edge,
+            outerHairline = look.light(dark),
+            gloss = gloss,
+            shade = shade,
+            content = content,
+        )
     } else {
         Box(modifier, content = content)
     }
