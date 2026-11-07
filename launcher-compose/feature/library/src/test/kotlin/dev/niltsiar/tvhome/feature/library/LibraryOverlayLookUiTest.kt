@@ -251,8 +251,8 @@ class LibraryOverlayLookUiTest {
         showLibrary(twentyThree)
         val grid = bounds("library:cards")
         val middle = (grid.left + grid.right) / 2
-        // The bottom chevron's tip: its pill is centred 8 dp under the grid and the chevron is 9 dp tall.
-        val bottomTip = grid.bottom + 12.5.dp
+        // The bottom chevron's tip: its pill is centred 9 dp under the grid and the chevron is 9 dp tall.
+        val bottomTip = grid.bottom + 13.5.dp
         val topTip = grid.top + 3.5.dp
 
         assertTrue("bottom cue at the start", cueAt(middle, bottomTip))
@@ -285,7 +285,7 @@ class LibraryOverlayLookUiTest {
     fun the_bottom_chevron_sits_in_a_36_dp_wide_20_dp_tall_pill_of_15_percent_white_centred_under_the_grid() {
         showLibrary(twentyThree)
         val grid = bounds("library:cards")
-        val centre = grid.bottom + 8.dp
+        val centre = grid.bottom + 9.dp
 
         // 15 % white over the panel's 0x14 is 20 + 0.15 x 235 = 55; 18 is half of what it adds. Only the middle row spans the whole pill.
         val pill = lighterColumns(centre, level = 18)
@@ -297,10 +297,36 @@ class LibraryOverlayLookUiTest {
 
     @Test
     @Config(qualifiers = "+night")
+    fun the_bottom_chevron_pill_has_12_dp_clear_above_it_to_the_last_row_and_12_dp_below_it_to_the_panel() {
+        showLibrary(twentyThree)
+        val grid = bounds("library:cards")
+        val lastRow = card(app(18)).bottom
+        val panel = bounds("library:panel").bottom
+        val middle = (grid.left + grid.right) / 2
+        val density = compose.activity.resources.displayMetrics.density
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val x = (middle.value * density).toInt()
+        val ground = pixels[x, ((lastRow.value + 3f) * density).toInt()].red * 255
+
+        // The pill, at the centre column, is the rows lighter than the panel's inside by half of what 15 % white adds; the panel's own rim is not.
+        val lit =
+            (((lastRow.value + 1f) * density).toInt() until ((panel.value - 1.5f) * density).toInt()).filter {
+                pixels[x, it].red * 255 -
+                    ground >=
+                    18
+            }
+
+        val above = lit.min() / density - lastRow.value
+        val below = panel.value - (lit.max() + 1) / density
+        assertTrue("$above dp above the pill and $below dp below it", above >= 11.5f && below >= 11.5f)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
     fun the_bottom_chevron_is_18_dp_wide() {
         showLibrary(twentyThree)
         val grid = bounds("library:cards")
-        val centre = grid.bottom + 8.dp
+        val centre = grid.bottom + 9.dp
 
         // The arms are 18 dp apart at their tops, 4.5 dp over the pill's middle, and 2 dp of stroke widen that to 20 dp.
         val tops = lighterColumns(centre - 4.dp, level = 70)
@@ -309,14 +335,14 @@ class LibraryOverlayLookUiTest {
     }
 
     @Test
-    fun the_panel_keeps_20_dp_under_the_grid_and_ends_where_it_did_over_the_screens_bottom() {
+    fun the_panel_keeps_31_dp_under_the_grid_and_ends_12_dp_over_the_screens_bottom() {
         showLibrary(twentyThree)
 
         val panel = bounds("library:panel")
         val screen = compose.onRoot().getBoundsInRoot()
 
-        assertEquals(20f, (panel.bottom - bounds("library:cards").bottom).value, 0.5f)
-        assertEquals(17.5f, (screen.bottom - panel.bottom).value, 0.5f)
+        assertEquals(31f, (panel.bottom - bounds("library:cards").bottom).value, 0.5f)
+        assertEquals(12.5f, (screen.bottom - panel.bottom).value, 0.5f)
     }
 
     @Test

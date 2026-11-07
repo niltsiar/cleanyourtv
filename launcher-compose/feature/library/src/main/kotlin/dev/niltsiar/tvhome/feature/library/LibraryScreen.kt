@@ -106,11 +106,11 @@ import kotlinx.coroutines.launch
 
 private val PanelMaxWidth = 800.dp
 private val PanelMargin = 32.dp
-private val PanelEdge = 16.dp
+private val PanelEdge = 12.dp
 private val EmptyPanelHeight = 282.dp
 private val PanelSide = 12.dp
 private val PanelTop = 0.dp
-private val PanelBottom = 20.dp
+private val PanelBottom = 31.dp
 private val HeaderTitleHeight = 48.dp
 private val HeaderHintHeight = KeyChipHeight
 private val PanelRise = 56.dp
@@ -556,8 +556,8 @@ private val CuePillWidth = 36.dp
 private val CuePillHeight = 20.dp
 private const val CUE_PILL_ALPHA = 0.15f
 
-/** The bottom pill's middle is this far under the grid: its top, [CuePillHeight] / 2 above it, is 2 dp inside the grid's bottom edge. */
-private val CuePillDrop = 8.dp
+/** The bottom pill's middle is this far under the grid: its top, [CuePillHeight] / 2 above it, is 1 dp inside the grid's bottom edge. */
+private val CuePillDrop = 9.dp
 
 /**
  * A chevron in a pill under the grid while cards lie below the view, and a smaller one in its top padding while cards lie
