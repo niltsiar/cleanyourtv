@@ -113,8 +113,11 @@ private val EmptyPanelHeight = 282.dp
 private val PanelSide = 12.dp
 private val PanelTop = 0.dp
 private val PanelBottom = 31.dp
-private val HeaderTitleHeight = 48.dp
+private val HeaderTitleHeight = 42.dp
 private val HeaderHintHeight = KeyChipHeight
+
+/** Under the hint row: a focused top-row card's ring starts at the grid's top edge, and this keeps the key caps 16 dp clear of it. */
+private val HeaderGridGap = 12.dp
 private val PanelRise = 56.dp
 private const val PANEL_START_SCALE = 0.92f
 
@@ -127,7 +130,7 @@ private val CardGap = 20.dp
 private val GridEdge = 13.dp
 
 private val PanelHeight =
-    PanelTop + HeaderTitleHeight + HeaderHintHeight + GridEdge * 2 + CardHeight * ROWS + CardGap * (ROWS - 1) + PanelBottom
+    PanelTop + HeaderTitleHeight + HeaderHintHeight + HeaderGridGap + GridEdge * 2 + CardHeight * ROWS + CardGap * (ROWS - 1) + PanelBottom
 private val MenuEdge = 48.dp
 
 /**
@@ -308,6 +311,7 @@ private fun Header(
                 }
             }
         }
+        Spacer(Modifier.height(HeaderGridGap))
     }
 }
 

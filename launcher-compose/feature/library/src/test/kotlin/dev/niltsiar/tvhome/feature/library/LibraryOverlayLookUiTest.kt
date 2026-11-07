@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
 import app.cash.molecule.RecompositionMode
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.designsystem.FocusRingReach
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
@@ -357,6 +358,34 @@ class LibraryOverlayLookUiTest {
         assertTrue(redAt((grown.left + grown.right) / 2, grown.top - out) >= WHITE)
     }
 
+    /** The room between the hint row's key caps and the outer edge of the focused card's ring, as the grid shows it. */
+    private fun ringRoomUnderKeyCaps(name: String): Dp {
+        val ringTop = maxOf(grownCard(name).top - FocusRingReach * FOCUSED_SCALE, bounds("library:cards").top)
+        return ringTop - hintPart("OK").getBoundsInRoot().bottom
+    }
+
+    @Test
+    fun a_focused_top_row_card_has_its_ring_at_least_16_dp_below_the_hint_row_key_caps() {
+        showLibrary(nineApps)
+
+        assertTrue("${ringRoomUnderKeyCaps("App 1")}", ringRoomUnderKeyCaps("App 1") >= 16.dp)
+    }
+
+    @Test
+    fun a_focused_top_row_card_has_its_ring_at_least_16_dp_below_the_key_caps_with_the_order_chip_shown() {
+        showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
+        press(Key.DirectionRight)
+
+        assertTrue("${ringRoomUnderKeyCaps("App 2")}", ringRoomUnderKeyCaps("App 2") >= 16.dp)
+    }
+
+    @Test
+    fun in_the_chooser_a_focused_top_row_card_has_its_ring_at_least_16_dp_below_the_hint_row_key_caps() {
+        showChooser()
+
+        assertTrue("${ringRoomUnderKeyCaps("Aaa")}", ringRoomUnderKeyCaps("Aaa") >= 16.dp)
+    }
+
     /** The names of the apps whose cards have focus: one, when the focus is in the grid. */
     private fun focusedApps(): List<String> =
         compose.onAllNodes(isFocused()).fetchSemanticsNodes().map { it.config[SemanticsProperties.ContentDescription].single() }
@@ -485,11 +514,11 @@ class LibraryOverlayLookUiTest {
     }
 
     @Test
-    fun a_card_keeps_its_outer_size_of_113_dp_tall_and_a_sixth_of_the_grid_wide() {
+    fun a_card_keeps_its_outer_size_of_111_dp_tall_and_a_sixth_of_the_grid_wide() {
         showLibrary(listOf(libraryApp("Aaa"), libraryApp("Bbb $describedName")), art = LibraryArt(red, Color.Red), config = chooser)
 
         for (name in listOf("Aaa", "Bbb $describedName")) {
-            assertEquals(113f, card(name).height.value, 0.5f)
+            assertEquals(111f, card(name).height.value, 0.5f)
             assertEquals(108.3f, card(name).width.value, 0.5f)
         }
     }
@@ -514,12 +543,12 @@ class LibraryOverlayLookUiTest {
             record = OpenedRecord(times = mapOf(key("Gamma") to NOW - 3 * DAY), since = NOW - 90 * DAY),
         )
         val inset = { name: String -> art(name).left - card(name).left }
-        assertNear(14.dp, inset("Beta"))
+        assertNear(15.8.dp, inset("Beta"))
 
         press(Key.Menu)
 
-        assertNear(14.dp, inset("Beta"))
-        assertNear(14.dp, inset("Gamma"))
+        assertNear(15.8.dp, inset("Beta"))
+        assertNear(15.8.dp, inset("Gamma"))
         assertEquals(listOf("Beta", "Never opened"), compose.textsOnCard("Beta"))
         assertEquals(listOf("Gamma"), compose.textsOnCard("Gamma").take(1))
         assertEquals(2, compose.textsOnCard("Gamma").size)

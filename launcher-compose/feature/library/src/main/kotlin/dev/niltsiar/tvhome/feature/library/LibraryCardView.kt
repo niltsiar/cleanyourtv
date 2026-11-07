@@ -79,12 +79,14 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
-internal val CardHeight = 113.dp
+internal val CardHeight = 111.dp
 private val CardShape = RoundedCornerShape(16.dp)
 private val ArtShape = RoundedCornerShape(8.dp)
 private const val ART_ASPECT = 16f / 9f
 private val CardSide = 6.dp
-private val ArtInset = 8.dp
+
+/** The art is 2 dp shorter than with an 8 dp inset: each side gives up half of 2 dp times the aspect. */
+private val ArtInset = 8.dp + ART_ASPECT.dp
 private val CardBottom = 6.dp
 private val NameGap = 2.dp
 private val NameHeight = 32.dp
