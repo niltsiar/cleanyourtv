@@ -200,7 +200,7 @@ private val CaptionTop = TopBarTop + TopBarHeight + 8.dp
 private val TileCorner = 12.dp
 private val TileShape = RoundedCornerShape(TileCorner)
 private val LightTileEdgeWidth = 1.dp
-private val LightTileEdge = Color.Black.copy(alpha = 0.32f)
+private val LightTileEdge = Color.Black.copy(alpha = 0.58f)
 
 /** The mean L* of the frost from which the wallpaper counts as bright under a tile: the mark where the top-bar buttons thicken their tint. */
 private const val BRIGHT_WALLPAPER_LIGHTNESS = 70f
@@ -1606,15 +1606,14 @@ private fun Dock(
     }
 }
 
-/** Whether the surface under a dock tile is light: its tray, or with no tray the wallpaper. Read it in a draw lambda. */
+/** Whether the surface under a dock tile is light: a light tray, or with a dark tray or none the wallpaper. Read it in a draw lambda. */
 private fun dockOnLight(
     look: DockLook,
     darkSurfaces: Boolean,
     glass: GlassState,
 ): () -> Boolean {
-    if (!look.band) return { glass.dockLightness >= BRIGHT_WALLPAPER_LIGHTNESS }
-    val light = look.light(darkSurfaces)
-    return { light }
+    if (!look.band || !look.light(darkSurfaces)) return { glass.dockLightness >= BRIGHT_WALLPAPER_LIGHTNESS }
+    return { true }
 }
 
 /** With input_arrival, Up from a dock tile goes to the Inputs button while it offers a device. Read when focus moves. */

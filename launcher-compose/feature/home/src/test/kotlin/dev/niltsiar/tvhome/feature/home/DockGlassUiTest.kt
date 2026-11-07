@@ -466,8 +466,8 @@ class DockGlassUiTest {
         level: Float,
     ) {
         val (edge, inside) = edgeOf(tag)
-        assertEquals("edge $edge", level * (1f - 0.32f), edge.max(), 0.03f)
-        assertEquals("edge $edge", level * (1f - 0.32f), edge.min(), 0.03f)
+        assertEquals("edge $edge", level * (1f - 0.58f), edge.max(), 0.03f)
+        assertEquals("edge $edge", level * (1f - 0.58f), edge.min(), 0.03f)
         assertEquals(level, inside, 0.01f)
     }
 
@@ -484,7 +484,7 @@ class DockGlassUiTest {
     private val level245 = 245f / 255f
 
     @Test
-    fun dock_glass_draws_a_black_032_edge_1_dp_wide_inside_each_light_dock_tile() {
+    fun dock_glass_draws_a_black_058_edge_1_dp_wide_inside_each_light_dock_tile() {
         showHome(uniform, cinematic.copy(dockGlass = true), shown = lightApps)
 
         assertEdge("tile:pkg.2", level245)
@@ -514,6 +514,44 @@ class DockGlassUiTest {
 
         val (edge, art, tray) = edgeAndNeighbours("tile:pkg.3")
         assertTrue("the edge is $edge, its art $art, the tray $tray", edge <= art - 0.08f && edge <= tray - 0.08f)
+    }
+
+    private val brightWallpaper get() = flowOf(Wallpaper(picture = white, thumbnail = white))
+
+    @Test
+    fun a_light_dock_tile_over_a_bright_wallpaper_gets_the_edge_on_the_dark_tray() {
+        showHome(white, wallpaper = brightWallpaper, shown = lightApps)
+
+        assertEdge("tile:pkg.2", level245)
+    }
+
+    /** The 1 dp edge of the white tile [tag] holds 3 to 1 against the surface 4 dp outside it. */
+    private fun assertEdgeHolds(tag: String) {
+        val (edge, _, outside) = edgeAndNeighbours(tag)
+        val contrast = (outside + 0.05f) / (edge + 0.05f)
+        assertTrue("the edge is $edge, the surface $outside: $contrast", contrast >= 3f)
+    }
+
+    @Test
+    fun the_edge_of_a_white_dock_tile_holds_3_to_1_against_the_dark_tray_over_a_bright_wallpaper() {
+        showHome(white, wallpaper = brightWallpaper, shown = whiteApps)
+
+        assertEdgeHolds("tile:pkg.6")
+    }
+
+    @Test
+    fun the_edge_of_a_white_dock_tile_holds_3_to_1_against_the_glass_tray_over_a_bright_wallpaper() {
+        showHome(white, cinematic.copy(dockGlass = true), wallpaper = brightWallpaper, shown = whiteApps)
+
+        assertEdgeHolds("tile:pkg.6")
+    }
+
+    @Test
+    fun the_edge_of_a_white_grid_tile_holds_3_to_1_against_a_bright_wallpaper() {
+        showHome(white, wallpaper = brightWallpaper, shown = whiteApps)
+        press(Key.DirectionDown)
+
+        assertEdgeHolds("tile:pkg.9")
     }
 
     @Test
