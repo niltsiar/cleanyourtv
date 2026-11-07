@@ -253,19 +253,19 @@ class HomeOverlayLookUiTest {
 
     @Test
     @Config(qualifiers = "+night")
-    fun the_inputs_list_draws_the_dock_at_055_under_its_dim_and_closing_it_brings_the_dock_back_to_full() {
+    fun the_inputs_list_draws_the_dock_at_055_under_its_dim_and_closing_it_leaves_the_dock_at_075_with_focus_back_on_the_top_bar() {
         openInputs()
 
         assertNear(dimmedDock(0.55f), redAt(centreOf("tile:pkg.2")), 4)
 
         back()
         compose.onNodeWithTag("input:0").assertDoesNotExist()
-        assertNear(255, redAt(centreOf("tile:pkg.2")), 2)
+        assertNear(Math.round(255 * 0.75f), redAt(centreOf("tile:pkg.2")), 6)
     }
 
     @Test
     @Config(qualifiers = "+night")
-    fun the_settings_menu_draws_the_dock_at_055_under_its_dim_and_closing_it_brings_the_dock_back_to_full() {
+    fun the_settings_menu_draws_the_dock_at_055_under_its_dim_and_closing_it_leaves_the_dock_at_075_with_focus_back_on_the_top_bar() {
         showHome()
         press(Key.DirectionUp)
         repeat(2) { press(Key.DirectionRight) }
@@ -276,7 +276,7 @@ class HomeOverlayLookUiTest {
 
         back()
         compose.onNodeWithTag("menu").assertDoesNotExist()
-        assertNear(255, redAt(centreOf("tile:pkg.2")), 2)
+        assertNear(Math.round(255 * 0.75f), redAt(centreOf("tile:pkg.2")), 6)
     }
 
     @Test
@@ -595,36 +595,76 @@ class HomeOverlayLookUiTest {
             redAt(Offset(it.left.value + inset, (it.top.value + it.bottom.value) / 2))
         }
 
-    /** [opener] shows a 25 percent white fill and a white edge; [idle], a button next to it, shows neither. */
-    private fun assertLit(
+    /** The darkest red channel, 0 to 255, over the button described as [description]: its glyph's ink when the fill is light. */
+    private fun darkestRedOver(description: String): Int {
+        val box = compose.onNodeWithContentDescription(description).getBoundsInRoot()
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val density = compose.activity.resources.displayMetrics.density
+        return (box.top.value * density).toInt().until((box.bottom.value * density).toInt()).minOf { y ->
+            (box.left.value * density).toInt().until((box.right.value * density).toInt()).minOf { x -> Math.round(pixels[x, y].red * 255) }
+        }
+    }
+
+    /** A red channel read through the menu's scrim (half of 07080C over it) as it was under it. */
+    private fun withoutMenuScrim(red: Int): Float = (red - 7 * 0.5f) / 0.5f
+
+    /**
+     * While its panel is open, [opener] is drawn as when focused, with the white fill at 0.60: its fill, 4 dp in from its edge, is
+     * 60 percent of the way from the idle [idle] button's to what [opener] read when focused, and its glyph is dark.
+     */
+    private fun assertFocusedLookAtSixtyPercent(
         opener: String,
         idle: String,
+        focusedFill: Int,
     ) {
-        val fill = buttonRed(opener, 4f)
-        val rest = buttonRed(idle, 4f)
-        assertTrue("fill $fill, idle button $rest", fill >= rest + 20)
-        val edge = buttonRed(opener, 0.5f)
-        assertTrue("edge $edge, fill $fill", edge >= fill + 40)
+        val fill = withoutMenuScrim(buttonRed(opener, 4f))
+        val rest = withoutMenuScrim(buttonRed(idle, 4f))
+        val share = (fill - rest) / (focusedFill - rest)
+        assertTrue("fill $fill of idle $rest and focused $focusedFill: $share", share in 0.52f..0.68f)
+        assertTrue("the glyph's darkest red ${darkestRedOver(opener)}, fill $fill", darkestRedOver(opener) < fill / 2 - 30)
     }
 
     @Test
     @Config(qualifiers = "+night")
-    fun the_inputs_button_stays_lit_while_its_list_is_open() {
-        openInputs()
+    fun the_inputs_button_keeps_its_focused_look_at_a_fill_of_060_while_its_list_is_open() {
+        showHome()
+        press(Key.DirectionUp)
+        compose.onNodeWithContentDescription("Inputs").assertIsFocused()
+        val focusedFill = buttonRed("Inputs", 4f)
+        press(Key.DirectionCenter)
+        compose.onNodeWithTag("input:0").assertIsFocused()
 
-        assertLit(opener = "Inputs", idle = "Settings")
+        assertFocusedLookAtSixtyPercent(opener = "Inputs", idle = "Settings", focusedFill = focusedFill)
     }
 
     @Test
     @Config(qualifiers = "+night")
-    fun the_settings_button_stays_lit_while_its_menu_is_open() {
+    fun the_settings_button_keeps_its_focused_look_at_a_fill_of_060_while_its_menu_is_open() {
         showHome()
         press(Key.DirectionUp)
         repeat(2) { press(Key.DirectionRight) }
         compose.onNodeWithContentDescription("Settings").assertIsFocused()
+        val focusedFill = buttonRed("Settings", 4f)
         openTileMenu()
 
-        assertLit(opener = "Settings", idle = "Inputs")
+        assertFocusedLookAtSixtyPercent(opener = "Settings", idle = "Inputs", focusedFill = focusedFill)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_dock_draws_at_075_while_focus_is_in_the_top_bar_and_whole_again_once_focus_leaves_it() {
+        showHome()
+        val whole = redAt(centreOf("tile:pkg.2"))
+        press(Key.DirectionUp)
+        compose.onNodeWithContentDescription("Inputs").assertIsFocused()
+        val dimmed = redAt(centreOf("tile:pkg.2"))
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+
+        assertNear(255, whole, 2)
+        // White art at 0.75 over the dark panel: 255 * 0.75 plus a quarter of what is behind it.
+        assertTrue("a white tile reads $dimmed in top-bar focus", dimmed in 188..206)
+        assertNear(255, redAt(centreOf("tile:pkg.2")), 2)
     }
 
     @Test

@@ -55,8 +55,8 @@ public class GlassState internal constructor() {
     /** The same under the top-bar buttons. */
     public var topBarLightness: Float by mutableStateOf(0f)
 
-    /** The share (0 to 1) of bright pixels in the wallpaper, before Home's scrim, in the box of the hero block's title and subtitle. */
-    public var heroBrightShare: Float by mutableStateOf(0f)
+    /** The mean relative luminance (0 to 1) of the wallpaper, before Home's scrim, in the box of the hero block's title and subtitle. */
+    public var heroLuminance: Float by mutableStateOf(0f)
 }
 
 @Composable

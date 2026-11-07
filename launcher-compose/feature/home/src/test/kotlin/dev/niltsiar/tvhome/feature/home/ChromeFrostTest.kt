@@ -110,21 +110,18 @@ class ChromeFrostTest {
     }
 
     @Test
-    fun the_bright_share_under_the_hero_block_is_the_share_of_pixels_above_the_luminance_inside_its_box() {
-        // A picture 10 wide: white on its left half, black on its right.
+    fun the_luminance_under_the_hero_block_is_the_mean_relative_luminance_of_the_pixels_inside_its_box() {
+        // A picture 10 wide: white on its left half, black on its right; the relative luminance of white is 1 and of black 0.
         val pixels = IntArray(10 * 4) { if (it % 10 < 5) rgb(255, 255, 255) else rgb(0, 0, 0) }
 
-        assertEquals(1f, brightShare(pixels, 10, 4, Rect(0.1f, 0.2f, 0.4f, 0.9f), above = 0.5f), 0.001f)
-        assertEquals(0f, brightShare(pixels, 10, 4, Rect(0.6f, 0.2f, 0.9f, 0.9f), above = 0.5f), 0.001f)
-        assertEquals(0.5f, brightShare(pixels, 10, 4, Rect(0f, 0f, 1f, 1f), above = 0.5f), 0.001f)
+        assertEquals(1f, meanLuminance(pixels, 10, 4, Rect(0.1f, 0.2f, 0.4f, 0.9f)), 0.001f)
+        assertEquals(0f, meanLuminance(pixels, 10, 4, Rect(0.6f, 0.2f, 0.9f, 0.9f)), 0.001f)
+        assertEquals(0.5f, meanLuminance(pixels, 10, 4, Rect(0f, 0f, 1f, 1f)), 0.001f)
     }
 
     @Test
-    fun a_pixel_is_bright_above_relative_luminance_05_which_lies_between_the_greys_187_and_189() {
-        fun share(grey: Int) = brightShare(intArrayOf(rgb(grey, grey, grey)), 1, 1, Rect(0f, 0f, 1f, 1f), HERO_BRIGHT_LUMINANCE)
-
-        assertEquals(0f, share(187), 0f)
-        assertEquals(1f, share(189), 0f)
+    fun a_mid_grey_has_a_relative_luminance_of_021_not_05() {
+        assertEquals(0.216f, meanLuminance(intArrayOf(rgb(128, 128, 128)), 1, 1, Rect(0f, 0f, 1f, 1f)), 0.002f)
     }
 
     @Test

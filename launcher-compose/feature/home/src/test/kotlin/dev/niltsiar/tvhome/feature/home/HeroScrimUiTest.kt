@@ -9,12 +9,14 @@ import androidx.compose.runtime.CompositionTracer
 import androidx.compose.runtime.ExperimentalComposeRuntimeApi
 import androidx.compose.runtime.InternalComposeTracingApi
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
@@ -29,6 +31,7 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
+import dev.niltsiar.tvhome.core.config.HeaderScrim
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
@@ -70,6 +73,8 @@ class HeroScrimUiTest {
 
     private val bodies = mutableMapOf<String, Int>()
 
+    private val scrimMode = mutableStateOf(HeaderScrim.Auto)
+
     /** Counts, by composable, the bodies that run; the compiler calls it for each composable that does not skip. */
     private val tracer =
         object : CompositionTracer {
@@ -104,7 +109,9 @@ class HeroScrimUiTest {
         cinematic: Boolean,
         wallpaper: Wallpaper = solid(1f).let { Wallpaper(picture = it, thumbnail = it) },
         shown: List<AppEntry> = apps,
+        headerScrim: HeaderScrim = HeaderScrim.Auto,
     ) {
+        scrimMode.value = headerScrim
         val config = SixColumns.copy(cinematicHome = cinematic)
         val sources = sources(apps = flowOf(AppList(shown)), wallpaper = flowOf(wallpaper))
         compose.setContent {
@@ -119,6 +126,7 @@ class HeroScrimUiTest {
                         onClick = {},
                         topBar = config.topBarLayout(),
                         shelfLayout = config.shelfLayout().copy(scrimAlpha = 0f),
+                        wallpaperLayout = WallpaperLayout(headerScrim = scrimMode.value),
                         actions = viewModel.actions,
                     )
                 }
@@ -324,15 +332,24 @@ class HeroScrimUiTest {
         to: Int,
     ): Float = (from until minOf(to, profile.size) - 20).maxOf { abs(profile[it + 20] - profile[it]) } * 255f
 
-    /** The biggest step per 10 dp along the row under the subtitle and down the column just past the end of the title, over [name]. */
-    private fun stepsOver(name: String): Pair<Float, Float> {
+    /** Home over the council's wallpaper [name], with [titled] focused; returns the picture. */
+    private fun showCouncil(
+        name: String,
+        cinematic: Boolean = false,
+    ): Bitmap {
         val picture = council(name)
         val thumbnail = Bitmap.createScaledBitmap(picture, 120, 120 * picture.height / picture.width, true)
         showHome(
-            cinematic = false,
+            cinematic,
             Wallpaper(picture = picture.asImageBitmap(), thumbnail = thumbnail.asImageBitmap()),
             listOf(titled) + NineApps.drop(1),
         )
+        return picture
+    }
+
+    /** The biggest step per 10 dp along the row under the subtitle and down the column just past the end of the title, over [name]. */
+    private fun stepsOver(name: String): Pair<Float, Float> {
+        val picture = showCouncil(name)
         val density = compose.activity.resources.displayMetrics.density
         val screenWidth =
             (
@@ -370,6 +387,147 @@ class HeroScrimUiTest {
         val (along, down) = stepsOver("busy")
 
         assertTrue("along the title $along/255, down the title's end $down/255", along <= LIMIT_ALONG && down <= LIMIT_DOWN)
+    }
+
+    private fun relativeLuminance(color: Color): Float {
+        fun linear(c: Float) = if (c <= 0.04045f) c / 12.92f else Math.pow(((c + 0.055f) / 1.055f).toDouble(), 2.4).toFloat()
+        return 0.2126f * linear(color.red) + 0.7152f * linear(color.green) + 0.0722f * linear(color.blue)
+    }
+
+    /**
+     * The relative luminance of the background right behind the title: the median over the gap between the title's box and the
+     * subtitle's pill, which has no glyph, and which the scrim holds at full strength.
+     */
+    private fun heroBackground(): Float {
+        val density = compose.activity.resources.displayMetrics.density
+        val title = titleBounds("shelf:title")
+        val subtitle = titleBounds("shelf:title-meta")
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val values =
+            (title.left.value * density).toInt().until((title.right.value * density).toInt()).flatMap { x ->
+                ((title.bottom.value + 1f) * density).toInt().until(((subtitle.top.value - 4f) * density).toInt()).map { y ->
+                    relativeLuminance(pixels[x, y])
+                }
+            }
+        return values.sorted()[values.size / 2]
+    }
+
+    @Test
+    fun over_the_bright_sky_the_background_behind_the_hero_title_is_neither_near_black_nor_too_light_for_white_text() {
+        showCouncil("bright")
+        val luminance = heroBackground()
+
+        assertTrue("the background behind the hero title has relative luminance $luminance", luminance in 0.12f..0.20f)
+    }
+
+    @Test
+    fun over_the_busy_light_forest_the_background_behind_the_hero_title_is_neither_near_black_nor_too_light_for_white_text() {
+        showCouncil("busy")
+        val luminance = heroBackground()
+
+        assertTrue("the background behind the hero title has relative luminance $luminance", luminance in 0.12f..0.20f)
+    }
+
+    @Test
+    fun the_hero_scrim_is_none_up_to_a_luminance_of_018_and_at_most_half_strong_over_a_white_picture() {
+        assertEquals(0f, heroScrimDarkening(0f), 0f)
+        assertEquals(0f, heroScrimDarkening(0.10f), 0f)
+        assertEquals(0f, heroScrimDarkening(0.18f), 0.01f)
+        assertTrue("over a half-bright picture ${heroScrimDarkening(0.5f)}", heroScrimDarkening(0.5f) in 0.3f..0.4f)
+        assertEquals(0.5f, heroScrimDarkening(1f), 0f)
+        val steps = (0..100).map { heroScrimDarkening(it / 100f) }
+        assertTrue("the strength falls somewhere: $steps", steps.zipWithNext().all { (a, b) -> b >= a })
+    }
+
+    @Test
+    fun a_dark_picture_gets_no_hero_scrim_so_the_screen_is_the_same_with_header_scrim_off() {
+        val dark = solid(0.3f).let { Wallpaper(picture = it, thumbnail = it) }
+        showHome(cinematic = false, dark)
+        val auto = compose.onRoot().captureToImage().toPixelMap()
+        scrimMode.value = HeaderScrim.Off
+        settle()
+        val off = compose.onRoot().captureToImage().toPixelMap()
+
+        val differing = (0 until auto.width).sumOf { x -> (0 until auto.height).count { y -> auto[x, y] != off[x, y] } }
+        assertEquals("pixels that differ with the hero scrim possible", 0, differing)
+    }
+
+    private fun titleShadow(cinematic: Boolean) = compose.onNodeWithTag(titleTag(cinematic)).textStyle().shadow
+
+    private fun assertTightShadowOnBright(cinematic: Boolean) {
+        val density = compose.activity.resources.displayMetrics.density
+        showCouncil("bright", cinematic)
+        assertEquals(Shadow(Color.Black.copy(alpha = 0.35f), Offset(0f, density), 3 * density), titleShadow(cinematic))
+    }
+
+    private fun assertWideShadowOnDark(cinematic: Boolean) {
+        val density = compose.activity.resources.displayMetrics.density
+        showHome(cinematic, solid(0.3f).let { Wallpaper(picture = it, thumbnail = it) })
+        assertEquals(9 * density, titleShadow(cinematic)?.blurRadius)
+    }
+
+    @Test
+    fun the_band_title_has_a_tight_shadow_while_the_hero_scrim_is_on() = assertTightShadowOnBright(cinematic = false)
+
+    @Test
+    fun the_shelf_name_has_a_tight_shadow_while_the_hero_scrim_is_on() = assertTightShadowOnBright(cinematic = true)
+
+    @Test
+    fun the_band_title_keeps_its_wide_shadow_without_a_hero_scrim() = assertWideShadowOnDark(cinematic = false)
+
+    @Test
+    fun the_shelf_name_keeps_its_wide_shadow_without_a_hero_scrim() = assertWideShadowOnDark(cinematic = true)
+
+    /** How much brighter the pill's 1 dp stroke at the subtitle's left end is than the background just outside it, in 0 to 1. */
+    private fun pillStroke(): Float {
+        val density = compose.activity.resources.displayMetrics.density
+        val meta = titleBounds("shelf:meta")
+        val y = ((meta.top.value + meta.bottom.value) / 2 * density).toInt()
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        return pixels[((meta.left.value - 9.5f) * density).toInt(), y].red - pixels[((meta.left.value - 14f) * density).toInt(), y].red
+    }
+
+    private fun pressMenuKey() = compose.onRoot().performKeyInput { pressKey(Key.Menu) }
+
+    @Test
+    fun while_a_tile_menu_is_open_the_subtitle_pill_does_not_show_past_its_edge_and_it_comes_back_after() {
+        showCouncil("bright", cinematic = true)
+        assertTrue("the pill's stroke is ${pillStroke()} brighter", pillStroke() > 0.05f)
+
+        pressMenuKey()
+        compose.mainClock.advanceTimeBy(160)
+        compose.waitForIdle()
+        val menu = compose.onNodeWithTag("menu").getBoundsInRoot()
+        assertTrue("the menu starts at ${menu.left}, the pill's end is 10 dp before 44", menu.left.value > 36f)
+        assertTrue("the pill's stroke is ${pillStroke()} brighter", pillStroke() < 0.02f)
+
+        compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.mainClock.advanceTimeBy(160)
+        compose.waitForIdle()
+        assertTrue("the pill's stroke is ${pillStroke()} brighter", pillStroke() > 0.05f)
+    }
+
+    @Test
+    fun a_title_swap_does_not_draw_the_hero_scrims_body_again_on_any_frame_of_its_cross_fade() {
+        showHome(cinematic = false)
+        compose.onRoot().captureToImage()
+        var draws = 0
+        onHeroBodyDraw = { draws++ }
+        try {
+            compose.mainClock.autoAdvance = false
+            compose.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
+            repeat(30) {
+                compose.mainClock.advanceTimeByFrame()
+                // Rendering the frame is what draws the layers.
+                compose.onRoot().captureToImage()
+            }
+            compose.mainClock.autoAdvance = true
+            settle()
+        } finally {
+            onHeroBodyDraw = {}
+        }
+
+        assertEquals("the body was drawn again", 0, draws)
     }
 
     @Test

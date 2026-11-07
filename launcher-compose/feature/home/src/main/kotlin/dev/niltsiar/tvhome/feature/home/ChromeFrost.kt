@@ -61,7 +61,7 @@ private class Baked(
     val gridLightness: Float,
     val headerLightness: Float,
     val topBarLightness: Float,
-    val heroBrightShare: Float,
+    val heroLuminance: Float,
 )
 
 /**
@@ -69,7 +69,7 @@ private class Baked(
  * changes, and [GlassState.dockLightness] on the part of it under the [dock] and [GlassState.gridLightness] on the part under
  * the [grid] (as fractions of the screen). It also keeps
  * [GlassState.headerLightness] and [GlassState.topBarLightness], measured on the thumbnail and sky before the scrim, and
- * [GlassState.heroBrightShare] on the [hero] box (as fractions of the screen), in the same pass on [LocalBakeDispatcher]. No
+ * [GlassState.heroLuminance] on the [hero] box (as fractions of the screen), in the same pass on [LocalBakeDispatcher]. No
  * thumbnail, no frost and a lightness of 0, which gives the base tint and the fixed scrims. With [dockGlass] it also
  * keeps [GlassState.dockFrost], the frost with its HSL saturation held to 0.35.
  */
@@ -109,7 +109,7 @@ internal fun ChromeFrostEffect(
                             gridLightness = meanLightness(pixels, frost.width, frost.height, grid),
                             headerLightness = lightnessPercentile(base, it.width, it.height, HeaderBand, LIGHTNESS_PERCENTILE),
                             topBarLightness = lightnessPercentile(base, it.width, it.height, TopBarButtonsBand, LIGHTNESS_PERCENTILE),
-                            heroBrightShare = brightShare(base, it.width, it.height, hero, HERO_BRIGHT_LUMINANCE),
+                            heroLuminance = meanLuminance(base, it.width, it.height, hero),
                         )
                     }
                 }
@@ -119,7 +119,7 @@ internal fun ChromeFrostEffect(
             glass.gridLightness = baked?.gridLightness ?: 0f
             glass.headerLightness = baked?.headerLightness ?: 0f
             glass.topBarLightness = baked?.topBarLightness ?: 0f
-            glass.heroBrightShare = baked?.heroBrightShare ?: 0f
+            glass.heroLuminance = baked?.heroLuminance ?: 0f
         }
     }
 }
@@ -289,21 +289,20 @@ internal fun meanLightness(
     return sum / count
 }
 
-/** The share (0 to 1) of the opaque [pixels] inside [band] whose relative luminance is above [above]; [meanLightness] has the rest of the contract. */
-internal fun brightShare(
+/** The mean relative luminance (0 to 1) of the opaque [pixels] inside [band]; [meanLightness] has the rest of the contract. */
+internal fun meanLuminance(
     pixels: IntArray,
     width: Int,
     height: Int,
     band: Rect,
-    above: Float,
 ): Float {
-    var bright = 0
+    var sum = 0f
     var count = 0
     forEachPixel(pixels, width, height, band) {
-        if (luminanceOf(it) > above) bright++
+        sum += luminanceOf(it)
         count++
     }
-    return bright.toFloat() / count
+    return sum / count
 }
 
 /** The CIE L* below which [percentile] (0 to 1) of the pixels inside [band] lie; [meanLightness] has the rest of the contract. */

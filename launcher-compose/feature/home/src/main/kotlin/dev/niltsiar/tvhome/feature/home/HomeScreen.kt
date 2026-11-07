@@ -243,6 +243,9 @@ private const val BAND_IN_MS = 160
 private const val BAND_OUT_MS = 120
 private const val LIBRARY_SWAP_MS = 150
 
+/** How long the hero block takes to fade out as a tile menu opens, and back in as it closes. */
+private const val HERO_MENU_MS = 120
+
 /** The row the dock is in; rows count from 0 at the first grid row. */
 private const val DOCK_ROW = -1
 private val ReorderRing = Color(0xFFFF6B4A)
@@ -362,7 +365,7 @@ public fun HomeScreen(
     val reordering = { state().reorder != null }
     val backdrop = rememberCinematicBackdrop(shelfLayout, shelf = { state().shelf }, heroArt = heroArt, reordering = reordering)
     val titleShift: GraphicsLayerScope.() -> Float = { dim.titleShiftPx(TitleGridDrop.toPx()) }
-    val heroScrimOn = rememberHeroScrimOn(glass, wallpaperLayout.headerScrim)
+    val heroScrim = rememberHeroScrim(glass, wallpaperLayout.headerScrim)
     val shelfExtent = remember { TitleExtent() }
     val bandExtent = remember { TitleExtent() }
     val shelfModifier =
@@ -370,7 +373,7 @@ public fun HomeScreen(
             .padding(top = ContentTop, start = ScreenMargin)
             .height(shelfHeight - TitleToShelfBottom)
             .graphicsLayer { translationY = titleShift() }
-    val band = rememberBandFade(libraryOpen)
+    val band = rememberBandFade(libraryOpen, tileMenuOpen = { currentState.value().menu?.tileKey != null })
     val gridState = rememberLazyGridState()
     FocusDimEffects(dim, currentState, input, layout, libraryOpen, gridState, shelfBottom - ShelfToFade)
     val scope = rememberCoroutineScope()
@@ -421,7 +424,7 @@ public fun HomeScreen(
             },
         ) {
             HeroScrim(
-                on = heroScrimOn,
+                look = heroScrim,
                 boxHeight = shelfHeight - TitleToShelfBottom,
                 shelf = shelfExtent,
                 band = bandExtent,
@@ -452,7 +455,7 @@ public fun HomeScreen(
                     modifier = shelfModifier,
                     titleAlpha = { band.title.value },
                     detailAlpha = { band.detail.value },
-                    pill = { heroScrimOn.value },
+                    pill = { heroScrim.value.darkening > 0f },
                     extent = shelfExtent,
                 )
             }
@@ -462,7 +465,7 @@ public fun HomeScreen(
                 shelfLayout.cinematic,
                 band,
                 shelfModifier,
-                pill = { heroScrimOn.value },
+                pill = { heroScrim.value.darkening > 0f },
                 extent = bandExtent,
             )
             WallpaperCaption(
@@ -840,8 +843,8 @@ private class FocusDim(
     /** The alpha every grid row draws at: [LAST_ROW_PILL_ALPHA] with focus on the library pill, else 1. */
     val pill = Animatable(1f)
 
-    /** The dock band's alpha: [POPUP_DOCK_ALPHA] while a top-bar popup is open, else 1. */
-    val popup = Animatable(1f)
+    /** The dock band's alpha: [POPUP_DOCK_ALPHA] while a top-bar popup is open, [TOP_BAR_DOCK_ALPHA] while focus is in the top bar, else 1. */
+    val bar = Animatable(1f)
 
     /** The dock's alpha: 0 while focus is on a grid row or the library pill, 1 with it in the dock or outside the grid. */
     fun dockAlpha(): Float = 1f - (row.value - DOCK_ROW).coerceIn(0f, 1f)
@@ -993,7 +996,8 @@ private fun groupLowFor(
 /**
  * Runs [dim]: its row follows focus in [ROW_DIM_MS], and its group goes low or up as [groupLowFor] says, in
  * [GROUP_MS], at once without motion. It stays where it is while the App library is open. Its [FocusDim.fold] follows the
- * [grid]'s bottom edge in [ROW_DIM_MS], and its [FocusDim.popup] a top-bar popup in [BAND_IN_MS] and [BAND_OUT_MS].
+ * [grid]'s bottom edge in [ROW_DIM_MS], and its [FocusDim.bar] a top-bar popup in [BAND_IN_MS] and [BAND_OUT_MS], or focus in the top bar
+ * in [TOP_BAR_DOCK_MS].
  */
 @Composable
 private fun FocusDimEffects(
@@ -1053,9 +1057,24 @@ private fun FocusDimEffects(
             first = false
         }
     }
-    LaunchedEffect(state, dim, motion) {
-        snapshotFlow { state.value().let { it.inputsOpen || (it.menu != null && it.menu.tileKey == null) } }.collectLatest { open ->
-            dim.popup.animateTo(if (open) POPUP_DOCK_ALPHA else 1f, motion.tweenSpec(if (open) BAND_IN_MS else BAND_OUT_MS))
+    LaunchedEffect(state, input, dim, motion) {
+        var popup = false
+        snapshotFlow {
+            val popupOpen = state.value().let { it.inputsOpen || (it.menu != null && it.menu.tileKey == null) }
+            when {
+                popupOpen -> POPUP_DOCK_ALPHA
+                input.topBarFocused -> TOP_BAR_DOCK_ALPHA
+                else -> 1f
+            }
+        }.collectLatest { alpha ->
+            val millis =
+                when {
+                    alpha == POPUP_DOCK_ALPHA -> BAND_IN_MS
+                    popup -> BAND_OUT_MS
+                    else -> TOP_BAR_DOCK_MS
+                }
+            popup = alpha == POPUP_DOCK_ALPHA
+            dim.bar.animateTo(alpha, motion.tweenSpec(millis))
         }
     }
 }
@@ -1091,9 +1110,13 @@ private val GridRowMinVisible = 48.dp
 /** The dock's alpha under a top-bar popup, so that the popup is what looks active. */
 private const val POPUP_DOCK_ALPHA = 0.55f
 
+/** The dock's alpha while focus is in the top bar, and how long it takes to get there and back. */
+private const val TOP_BAR_DOCK_ALPHA = 0.75f
+private const val TOP_BAR_DOCK_MS = 150
+
 /**
- * The first grid row whose tile shows under [minVisible] pixels (or under its whole height, if that is less) above the bottom
- * edge, or [Int.MAX_VALUE].
+ * The first grid row whose tile shows under [minVisible] pixels (or under its whole height, if that is less) above the end of the
+ * bottom fade ([bottomFade]), where nothing is drawn, or [Int.MAX_VALUE].
  */
 private fun FocusDim.hiddenFromRow(
     info: LazyGridLayoutInfo,
@@ -1101,12 +1124,13 @@ private fun FocusDim.hiddenFromRow(
     minVisible: Float,
 ): Int {
     val shift = lowPx() - info.viewportStartOffset
+    val end = bottomFade(info, shift, info.viewportSize.height.toFloat()).end
     var first = Int.MAX_VALUE
     for (i in info.visibleItemsInfo.indices) {
         val item = info.visibleItemsInfo[i]
         val index = item.index - GRID_ITEMS_BEFORE
         if (index < 0 || item.key == LIBRARY_FOCUS) continue
-        val shown = info.viewportSize.height - (item.offset.y + shift)
+        val shown = end - (item.offset.y + shift)
         if (shown < minOf(minVisible, item.size.width / TILE_ASPECT)) first = minOf(first, index / columns)
     }
     return first
@@ -1164,7 +1188,7 @@ private fun Modifier.dockLayer(
                 val bottom = dock.offset.y - info.viewportStartOffset + dock.size.height + dim.lowPx()
                 ((bottom - shelfBottomPx) / DockFadeOut.toPx()).coerceIn(0f, 1f)
             }
-        alpha = dim.dockAlpha() * shown * dim.popup.value
+        alpha = dim.dockAlpha() * shown * dim.bar.value
         translationY = dim.lowPx()
     }
 
@@ -1175,6 +1199,7 @@ private enum class BandLook(
     val layers: Float,
 ) {
     Whole(1f, 1f, 1f),
+    NoHero(0f, 0f, 1f),
     Gone(0f, 0f, 0f),
 }
 
@@ -1189,16 +1214,35 @@ private class BandFade {
     val layers = Animatable(1f)
 }
 
-/** The fades, following the App library: out with its scrim in [BAND_IN_MS], back in [BAND_OUT_MS]. */
+/**
+ * The fades, following the App library: out with its scrim in [BAND_IN_MS], back in [BAND_OUT_MS]. While a tile menu is
+ * [tileMenuOpen] the hero block (title, subtitle and dots) is out and the layers stay, in [HERO_MENU_MS] both ways.
+ */
 @Composable
-private fun rememberBandFade(libraryOpen: () -> Boolean): BandFade {
+private fun rememberBandFade(
+    libraryOpen: () -> Boolean,
+    tileMenuOpen: () -> Boolean,
+): BandFade {
     val motion = TvTheme.motion
     val band = remember { BandFade() }
     val currentLibraryOpen = rememberUpdatedState(libraryOpen)
+    val currentTileMenuOpen = rememberUpdatedState(tileMenuOpen)
     LaunchedEffect(motion) {
         var shown = BandLook.Whole
-        snapshotFlow { if (currentLibraryOpen.value()) BandLook.Gone else BandLook.Whole }.collectLatest { look ->
-            val spec = motion.tweenSpec<Float>(if (shown == BandLook.Gone && look != BandLook.Gone) BAND_OUT_MS else BAND_IN_MS)
+        snapshotFlow {
+            when {
+                currentLibraryOpen.value() -> BandLook.Gone
+                currentTileMenuOpen.value() -> BandLook.NoHero
+                else -> BandLook.Whole
+            }
+        }.collectLatest { look ->
+            val millis =
+                when {
+                    look == BandLook.NoHero || shown == BandLook.NoHero -> HERO_MENU_MS
+                    shown == BandLook.Gone && look != BandLook.Gone -> BAND_OUT_MS
+                    else -> BAND_IN_MS
+                }
+            val spec = motion.tweenSpec<Float>(millis)
             shown = look
             coroutineScope {
                 launch { band.title.animateTo(look.title, spec) }
@@ -1278,8 +1322,8 @@ private fun HeroTitle(
         }
     val animated = TvTheme.motion.animated
     val rise = with(LocalDensity.current) { TitleRise.roundToPx() }
-    val titleStyle = TvTheme.typography.heroTitle.withTitleShadow()
-    val chromeTitleStyle = TvTheme.typography.chromeTitle.withTitleShadow()
+    val titleStyle = TvTheme.typography.heroTitle.withTitleShadow(pill())
+    val chromeTitleStyle = TvTheme.typography.chromeTitle.withTitleShadow(pill())
     val metaStyle = TvTheme.typography.cinematicMeta.withSubtitleShadow()
     val detail = (if (cinematic) ShelfDetailHeight else MetaGap + ChipHeight) - MetaGap
     Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.BottomStart) {

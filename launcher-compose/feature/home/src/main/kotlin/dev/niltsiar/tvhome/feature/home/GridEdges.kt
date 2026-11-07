@@ -1,5 +1,6 @@
 package dev.niltsiar.tvhome.feature.home
 
+import androidx.compose.foundation.lazy.grid.LazyGridLayoutInfo
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
@@ -58,20 +59,12 @@ internal fun Modifier.gridEdges(
             val settle = SETTLE * unit
             val info = grid.layoutInfo
             val shift = low() - info.viewportStartOffset
-            var solidBottom = Float.NaN
-            var nextBottom = Float.POSITIVE_INFINITY
             var solidTop = Float.POSITIVE_INFINITY
             var partialTop = Float.NEGATIVE_INFINITY
             for (i in info.visibleItemsInfo.indices) {
                 val item = info.visibleItemsInfo[i]
                 if (item.key == SHELF_KEY) continue
                 val itemTop = item.offset.y + shift
-                val itemBottom = itemTop + item.size.height
-                if (itemBottom <= size.height - settle) {
-                    if (solidBottom.isNaN() || itemBottom > solidBottom) solidBottom = itemBottom
-                } else if (itemBottom < nextBottom) {
-                    nextBottom = itemBottom
-                }
                 if (itemTop >= top + settle) solidTop = minOf(solidTop, itemTop) else partialTop = maxOf(partialTop, itemTop)
             }
 
@@ -90,19 +83,8 @@ internal fun Modifier.gridEdges(
                 if (item.key != SHELF_KEY && itemTop < topEnd && itemTop + item.size.height > topStart) topHasContent = true
             }
 
-            val joined = if (nextBottom.isInfinite()) 1f else ((size.height - nextBottom) / settle).coerceIn(0f, 1f)
-            val bottomAnchor =
-                when {
-                    solidBottom.isNaN() -> size.height * BOTTOM_FADE_LIMIT / FRAME_HEIGHT - (BOTTOM_FADE_RUN + FADE_GAP) * unit
-                    nextBottom.isInfinite() -> solidBottom
-                    else -> solidBottom + joined * (nextBottom - solidBottom)
-                }
-            val bottomStart = minOf(bottomAnchor + FADE_GAP * unit, size.height)
-            val wanted =
-                BottomMask(
-                    start = bottomStart,
-                    end = minOf(bottomStart + BOTTOM_FADE_RUN * unit, size.height * BOTTOM_FADE_LIMIT / FRAME_HEIGHT),
-                )
+            val wanted = bottomFade(info, shift, size.height)
+            val bottomStart = wanted.start
             val bottomMask =
                 cached?.takeIf { it.first == wanted }?.second
                     ?: wanted.brush(size.height).also { cached = wanted to it }
@@ -120,8 +102,42 @@ internal fun Modifier.gridEdges(
         }
     }
 
+/**
+ * The bottom fade of the grid whose items [info] lists, [shift] lower than laid out, in a viewport [height] pixels high: it
+ * starts [FADE_GAP] under the last row that ends [SETTLE] inside the edge, and moves to the next row's bottom as that row comes
+ * to within [SETTLE] of the edge.
+ */
+internal fun bottomFade(
+    info: LazyGridLayoutInfo,
+    shift: Float,
+    height: Float,
+): BottomMask {
+    val unit = height / FRAME_HEIGHT
+    var solidBottom = Float.NaN
+    var nextBottom = Float.POSITIVE_INFINITY
+    for (i in info.visibleItemsInfo.indices) {
+        val item = info.visibleItemsInfo[i]
+        if (item.key == SHELF_KEY) continue
+        val itemBottom = item.offset.y + shift + item.size.height
+        if (itemBottom <= height - SETTLE * unit) {
+            if (solidBottom.isNaN() || itemBottom > solidBottom) solidBottom = itemBottom
+        } else if (itemBottom < nextBottom) {
+            nextBottom = itemBottom
+        }
+    }
+    val joined = if (nextBottom.isInfinite()) 1f else ((height - nextBottom) / (SETTLE * unit)).coerceIn(0f, 1f)
+    val anchor =
+        when {
+            solidBottom.isNaN() -> height * BOTTOM_FADE_LIMIT / FRAME_HEIGHT - (BOTTOM_FADE_RUN + FADE_GAP) * unit
+            nextBottom.isInfinite() -> solidBottom
+            else -> solidBottom + joined * (nextBottom - solidBottom)
+        }
+    val start = minOf(anchor + FADE_GAP * unit, height)
+    return BottomMask(start = start, end = minOf(start + BOTTOM_FADE_RUN * unit, height * BOTTOM_FADE_LIMIT / FRAME_HEIGHT))
+}
+
 /** The bottom mask: whole down to [start], then falling to gone at [end]. */
-private data class BottomMask(
+internal data class BottomMask(
     val start: Float,
     val end: Float,
 ) {

@@ -178,8 +178,25 @@ class HeaderLegibilityUiTest {
         return Offset(subtitle.left.value - 4f, (subtitle.top.value + subtitle.bottom.value) / 2f)
     }
 
-    /** What the local scrim leaves of a level inside the title block: black 0.60. */
-    private fun heroScrimmed(level: Int): Int = Math.round(level * (1f - 0.60f))
+    /**
+     * The local scrim's alpha at [x] dp over a picture it takes to [darkening] in all, where Home's left scrim is [left] strong at the
+     * edge and gone 0.55 of the screen's width in: only what the left scrim lacks.
+     */
+    private fun heroAlpha(
+        x: Float,
+        left: Float = 0.60f,
+        darkening: Float = 0.50f,
+    ): Float {
+        val home = left * max(0f, 1f - x / screen().right.value / 0.55f)
+        return max(0f, 1f - (1f - darkening) / (1f - home))
+    }
+
+    /** What the local scrim leaves of a level inside the title block at [at]. */
+    private fun heroScrimmed(
+        level: Int,
+        at: Offset,
+        darkening: Float = 0.50f,
+    ): Int = Math.round(level * (1f - heroAlpha(at.x, darkening = darkening)))
 
     /** What the subtitle's pill leaves of a level: black 0.45. */
     private fun pilled(level: Int): Int = Math.round(level * (1f - 0.45f))
@@ -221,11 +238,11 @@ class HeaderLegibilityUiTest {
     }
 
     @Test
-    fun a_bright_wallpaper_puts_the_subtitle_on_a_black_045_pill_over_the_black_060_scrim() {
+    fun a_bright_wallpaper_puts_the_subtitle_on_a_black_045_pill_over_what_the_local_scrim_adds_to_the_page_scrim() {
         showHome(level = 1f)
         val at = besideTheSubtitle()
 
-        assertNear(pilled(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at))), redAt(at))
+        assertNear(pilled(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at), at)), redAt(at))
     }
 
     /** The picture over [at] under the page scrim and the local one: 14 dp left of the subtitle, outside its pill. */
@@ -287,7 +304,10 @@ class HeaderLegibilityUiTest {
         showHome(wallpapers = flowOf(Wallpaper(picture = grey(1f), thumbnail = stripes(period = 20, white = 5))))
         val at = besideTheSubtitle()
 
-        assertNear(pilled(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at))), redAt(at))
+        // A quarter of the thumbnail is white and the rest is grey 0.1: a mean relative luminance of 0.2575.
+        val darkening = heroScrimDarkening(0.2575f)
+        assertTrue("the local scrim darkens by $darkening", darkening > 0.05f)
+        assertNear(pilled(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at), at, darkening)), redAt(at))
     }
 
     @Test
@@ -305,7 +325,7 @@ class HeaderLegibilityUiTest {
         val wallpapers = MutableStateFlow(Wallpaper(picture = picture, thumbnail = thumbnail))
         showHome(wallpapers = wallpapers)
         val at = besideTheSubtitle()
-        val withHeroScrim = pilled(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at)))
+        val withHeroScrim = pilled(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at), at))
         assertNear(withHeroScrim, redAt(at))
 
         // The thumbnail is the sample's input: darkening it in place and moving focus around must not make Home sample it again.
@@ -478,10 +498,11 @@ class HeaderLegibilityUiTest {
 
         fun at(beyond: Float) = Offset(title.right.value + beyond, y)
 
-        assertNear(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at(-20f))), redAt(at(-20f)))
-        // Half way the smoothstep has taken half of the black 0.60; a quarter of the way it has taken 0.156 of it.
-        assertNear(Math.round(scrimmed(255, top = 0.70f, left = 0.60f, at(120f)) * (1f - 0.30f)), redAt(at(120f)))
-        assertNear(Math.round(scrimmed(255, top = 0.70f, left = 0.60f, at(60f)) * (1f - 0.60f * (1f - 0.15625f))), redAt(at(60f)))
+        val end = heroAlpha(title.right.value)
+        assertNear(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at(-20f)), at(-20f)), redAt(at(-20f)))
+        // Half way the smoothstep has taken half of the alpha at the title's end; a quarter of the way it has taken 0.156 of it.
+        assertNear(Math.round(scrimmed(255, top = 0.70f, left = 0.60f, at(120f)) * (1f - end * 0.5f)), redAt(at(120f)))
+        assertNear(Math.round(scrimmed(255, top = 0.70f, left = 0.60f, at(60f)) * (1f - end * (1f - 0.15625f))), redAt(at(60f)))
         assertNear(scrimmed(255, top = 0.70f, left = 0.60f, at(250f)), redAt(at(250f)))
     }
 

@@ -287,12 +287,51 @@ class AlwaysShowNamesUiTest {
 
     @Test
     @Config(qualifiers = "w960dp-h620dp-xhdpi")
-    fun with_names_a_grid_row_with_48_dp_visible_or_more_draws_at_its_alpha() {
+    fun with_names_a_grid_row_with_48_dp_above_the_edge_but_less_left_after_the_bottom_fade_draws_nothing() {
         showHome(named4, apps = whiteApps)
 
         assertTrue("the row shows ${visibleDp("tile:pkg.5")} dp", visibleDp("tile:pkg.5") in 48f..60f)
-        assertTrue("the row's top reads ${redUnderTop("tile:pkg.5", 2f)}", redUnderTop("tile:pkg.5", 2f) > 20)
+        assertEquals(0, redUnderTop("tile:pkg.5", 2f))
     }
+
+    /** How many dp of tile [tag] show: the rows of its middle column, on the screen, whose red is above 10 percent. */
+    private fun drawnDp(tag: String): Float {
+        val density = compose.activity.resources.displayMetrics.density
+        val tile = bounds(tag)
+        val screen =
+            compose
+                .onRoot()
+                .getBoundsInRoot()
+                .bottom.value
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val x = ((tile.left.value + tile.right.value) / 2 * density).toInt()
+        val rows =
+            (tile.top.value * density).toInt().coerceAtLeast(0).until((minOf(tile.bottom.value, screen) * density).toInt()).count {
+                pixels[x, it].red > 0.1f
+            }
+        return rows / density
+    }
+
+    /** At each of six scroll steps, no tile in the lower half of the screen shows more than nothing and less than 48 dp of itself. */
+    private fun assertNoStripAtAnyScrollStep(config: TvConfig) {
+        showHome(config, apps = whiteApps)
+        repeat(6) { step ->
+            press(Key.DirectionDown)
+            val lower =
+                (1..18).map { "tile:pkg.$it" }.filter {
+                    compose.onAllNodesWithTag(it).fetchSemanticsNodes().isNotEmpty() && bounds(it).top.value > 270f
+                }
+            val strips = lower.associateWith(::drawnDp).filterValues { it in 0.5f..47f }
+            assertTrue("a row shows a strip of its tile at step ${step + 1}: $strips", strips.isEmpty())
+        }
+    }
+
+    @Test
+    fun with_names_no_grid_row_shows_a_strip_of_under_48_dp_of_its_tile_at_any_scroll_step() = assertNoStripAtAnyScrollStep(named4)
+
+    @Test
+    fun without_names_no_grid_row_shows_a_strip_of_under_48_dp_of_its_tile_at_any_scroll_step() =
+        assertNoStripAtAnyScrollStep(SixColumns.copy(columns = 4))
 
     @Test
     fun in_a_single_row_every_tile_has_its_name_and_the_panel_grows_to_hold_them() {

@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
@@ -55,26 +56,24 @@ private val LiftShadowColor = Color.Black.copy(alpha = 0.55f)
  */
 private val LiftHeight = TileGap - FocusRingReach - TrayRimClear
 
-/** The chevron's shape before it is fitted to its gutter: the width of its glyph, its stroke and the outline on each side of it. */
-private val ChevronDepth = 7.dp
-private val ChevronStroke = 2.5.dp
-private val ChevronOutline = 1.25.dp
+/**
+ * The chevron: its glyph is [ChevronHeight] tall and [ChevronDepth] wide, drawn with a [ChevronStroke] stroke and an outline
+ * [ChevronOutline] wide round it. It stands [ChevronRingClear] past the ring and may reach into the next tile.
+ */
+private val ChevronHeight = 10.dp
+private val ChevronDepth = 5.dp
+private val ChevronStroke = 2.dp
+private val ChevronOutline = 1.dp
 private val ChevronRingClear = 4.dp
-private val ChevronNextClear = 3.dp
-
-/** What the [TileGap] leaves a chevron, glyph and outline, beside a carried tile at its rest size and its ring. */
-private val ChevronFootprint = TileGap - FocusRingReach - ChevronRingClear - ChevronNextClear
-
-/** How much the chevron's shape shrinks to fill [ChevronFootprint]. */
-private val ChevronFit = ChevronFootprint / (ChevronDepth + ChevronStroke + ChevronOutline * 2)
-private val ChevronColor = Color.White
-private val ChevronOutlineColor = Color.Black.copy(alpha = 0.55f)
+private val ChevronFootprint = ChevronDepth + ChevronStroke + ChevronOutline * 2
+private val ChevronColor = Color.White.copy(alpha = 0.90f)
+private val ChevronOutlineColor = Color.Black.copy(alpha = 0.45f)
 
 /**
  * A tile's look in reorder and edit-dock modes: dimmed unless it is the carried one, which lifts, is drawn at its rest size
  * (a focused tile is grown), casts a shadow in its [shape], wiggles a little and shows a white chevron in the gutter beside
- * each edge it can still move towards, clear of its ring and of the next tile; it settles back with a spring when it is put
- * down. No other tile moves. The animated values are read in the layer and draw lambdas only.
+ * each edge it can still move towards, clear of its ring; it settles back with a spring when it is put down. No other tile
+ * moves. The animated values are read in the layer and draw lambdas only.
  */
 @Composable
 internal fun Modifier.reorderLook(
@@ -132,9 +131,6 @@ internal fun Modifier.reorderLook(
         ambientShadowColor = LiftShadowColor
         spotShadowColor = LiftShadowColor
     }.drawWithCache {
-        val stroke = Stroke((ChevronStroke * ChevronFit).toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
-        val outline = Stroke(((ChevronStroke + ChevronOutline * 2) * ChevronFit).toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
-        val depth = (ChevronDepth * ChevronFit).toPx()
         onDrawWithContent {
             drawContent()
             val lifted = lift.value.coerceIn(0f, 1f)
@@ -146,16 +142,8 @@ internal fun Modifier.reorderLook(
             val centre = chevronCentre(size.width, grown * raised)
             scale(1f / raised, Offset(size.width / 2f, size.height / 2f)) {
                 val middle = size.height / 2f
-                if (onLeft > 0f) {
-                    val chevron = chevron(Offset(-centre, middle), depth, pointsLeft = true)
-                    drawPath(chevron, ChevronOutlineColor, alpha = onLeft, style = outline)
-                    drawPath(chevron, ChevronColor, alpha = onLeft, style = stroke)
-                }
-                if (onRight > 0f) {
-                    val chevron = chevron(Offset(size.width + centre, middle), depth, pointsLeft = false)
-                    drawPath(chevron, ChevronOutlineColor, alpha = onRight, style = outline)
-                    drawPath(chevron, ChevronColor, alpha = onRight, style = stroke)
-                }
+                if (onLeft > 0f) drawChevron(Offset(-centre, middle), pointsLeft = true, alpha = onLeft)
+                if (onRight > 0f) drawChevron(Offset(size.width + centre, middle), pointsLeft = false, alpha = onRight)
             }
         }
     }
@@ -175,18 +163,27 @@ private fun HomeInput.badgeAtStart(
     side: State<Boolean>,
 ): Float = Snapshot.withoutReadObservation { if (carried.value == key && side.value) 1f else 0f }
 
-/** A chevron centred on [center], [half] tall above and below it, pointing left or right. */
-private fun chevron(
+/** A chevron centred on [center], pointing left or right, at [alpha]: its outline, then its stroke. */
+internal fun DrawScope.drawChevron(
     center: Offset,
-    half: Float,
     pointsLeft: Boolean,
-): Path {
-    val tip = if (pointsLeft) -half / 2f else half / 2f
-    return Path().apply {
-        moveTo(center.x - tip, center.y - half)
-        lineTo(center.x + tip, center.y)
-        lineTo(center.x - tip, center.y + half)
-    }
+    alpha: Float,
+) {
+    val half = ChevronHeight.toPx() / 2f
+    val tip = if (pointsLeft) -ChevronDepth.toPx() / 2f else ChevronDepth.toPx() / 2f
+    val path =
+        Path().apply {
+            moveTo(center.x - tip, center.y - half)
+            lineTo(center.x + tip, center.y)
+            lineTo(center.x - tip, center.y + half)
+        }
+    drawPath(
+        path,
+        ChevronOutlineColor,
+        alpha = alpha,
+        style = Stroke((ChevronStroke + ChevronOutline * 2).toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
+    )
+    drawPath(path, ChevronColor, alpha = alpha, style = Stroke(ChevronStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
 }
 
 /**

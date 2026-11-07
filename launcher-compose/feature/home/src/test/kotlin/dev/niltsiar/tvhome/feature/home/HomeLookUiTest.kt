@@ -4,10 +4,12 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertCountEquals
@@ -23,7 +25,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpRect
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.height
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
@@ -257,24 +261,24 @@ class HomeLookUiTest {
 
     @Test
     @Config(qualifiers = "w960dp-h580dp-xhdpi")
-    fun a_grid_row_with_48_dp_visible_draws_though_under_half_of_its_tile_shows() {
+    fun a_grid_row_with_48_dp_above_the_edge_but_less_left_after_the_bottom_fade_draws_nothing() {
         showHome(apps = whiteApps(30), config = SixColumns.copy(columns = 4))
 
         assertTrue("the row shows ${visibleDp("tile:pkg.5")} dp", visibleDp("tile:pkg.5") in 48f..56f)
-        assertTrue("the row's top reads ${redUnderTop("tile:pkg.5", 2f)}", redUnderTop("tile:pkg.5", 2f) > 20)
+        assertNear(0, redUnderTop("tile:pkg.5", 2f), 2)
     }
 
     @Test
-    fun a_grid_row_with_more_than_48_dp_visible_draws_whole_under_the_bottom_fade_not_as_a_half_alpha_strip() {
+    fun a_grid_row_with_70_dp_above_the_edge_draws_nothing_when_the_bottom_fade_leaves_20_dp_of_its_tile() {
         showHome(apps = whiteApps(30), config = SixColumns.copy(columns = 5))
         press(Key.DirectionDown)
         compose.onNodeWithTag("tile:pkg.6").assertIsFocused()
 
-        // The third row shows 70 dp of its tile and starts 24 dp under the last whole row, whose bottom is 8 dp short of the
-        // fade's start; the fade runs 36 dp, so the row's top reads (20 - dp) / 36 of its own alpha.
+        // The third row starts 24 dp under the last whole row, whose bottom is 8 dp short of the fade's start, and the fade runs
+        // 36 dp: the row has 20 dp of its tile before it is gone.
         assertTrue("the row shows ${visibleDp("tile:pkg.16")} dp", visibleDp("tile:pkg.16") in 60f..84f)
-        assertNear(Math.round(255 * (20f - 2f) / 36f), redUnderTop("tile:pkg.16", 2f), 5)
-        assertNear(Math.round(255 * (20f - 10f) / 36f), redUnderTop("tile:pkg.16", 10f), 5)
+        assertNear(0, redUnderTop("tile:pkg.16", 2f), 2)
+        assertNear(0, redUnderTop("tile:pkg.16", 10f), 2)
     }
 
     @Test
@@ -435,7 +439,7 @@ class HomeLookUiTest {
         val pixels = compose.onRoot().captureToImage().toPixelMap()
         val density = compose.activity.resources.displayMetrics.density
         return (((left * density).toInt()) until (right * density).toInt()).any { x ->
-            (((top * density).toInt()) until (bottom * density).toInt()).any { y -> pixels[x, y].green > 0.9f }
+            (((top * density).toInt()) until (bottom * density).toInt()).any { y -> pixels[x, y].green > 0.8f }
         }
     }
 
@@ -507,7 +511,7 @@ class HomeLookUiTest {
         to: Float,
         top: Float,
         bottom: Float,
-        level: Float = 0.9f,
+        level: Float = 0.8f,
     ): List<ClosedFloatingPointRange<Float>> {
         val pixels = compose.onRoot().captureToImage().toPixelMap()
         val density = compose.activity.resources.displayMetrics.density
@@ -551,8 +555,8 @@ class HomeLookUiTest {
         return ((from * density).toInt()..(to * density).toInt()).first { isRingOrange(pixels[(x * density).toInt(), it]) } / density
     }
 
-    /** The chevron's black outline round its white stroke, which the gutter counts as part of the chevron: 1.25 dp, fitted to the gutter by 8 / 12. */
-    private val chevronOutline = 1.25f * 8f / 12f
+    /** The chevron's black outline round its white stroke, which the gutter counts as part of the chevron: 1 dp. */
+    private val chevronOutline = 1f
 
     /**
      * Carries the first of [tiles] dock tiles, of clear art among white, to [slot] (from 1) and returns, in dp, the
@@ -604,9 +608,28 @@ class HomeLookUiTest {
         val underRim = clearances[4]
         val footprint = clearances[5]
         assertTrue("chevron clearance from the ring, right then left: $ringRight $ringLeft", ringRight >= 3.5f && ringLeft >= 3.5f)
-        assertTrue("chevron clearance from the next tile, right then left: $nextRight $nextLeft", nextRight >= 2.5f && nextLeft >= 2.5f)
+        assertTrue("chevron clearance from the next tile, right then left: $nextRight $nextLeft", nextRight >= -4f && nextLeft >= -4f)
         assertTrue("the ring is $underRim dp under the rim", underRim >= 7.5f)
-        assertTrue("the chevron is $footprint dp wide with its outline", footprint in 7.2f..8.3f)
+        assertTrue("the chevron is $footprint dp wide with its outline", footprint in 8.5f..9.5f)
+    }
+
+    @Test
+    fun a_chevron_is_a_10_dp_glyph_with_a_2_dp_white_stroke_and_a_black_outline_1_dp_wide_all_round_it() {
+        val image = ImageBitmap(80, 80)
+        Canvas(image).drawRect(Rect(0f, 0f, 80f, 80f), Paint().apply { color = Color.White })
+        CanvasDrawScope().draw(Density(2f), LayoutDirection.Ltr, Canvas(image), Size(80f, 80f)) {
+            drawChevron(Offset(40f, 40f), pointsLeft = false, alpha = 1f)
+        }
+
+        // At 2 pixels to a dp the glyph's ends are at (35, 30) and (35, 50): 10 dp apart. On a white ground the outline is black at
+        // 0.45, so 0.55; the stroke is white at 0.90 over it, so 0.955. Pixel rows 29 and 51 lie in the round caps' stroke (2 px
+        // from the end), rows 27 and 53 in the outline (4 px), rows 24 and 56 past it.
+        val pixels = image.toPixelMap()
+        for ((stroke, outline, clear) in listOf(Triple(29, 27, 24), Triple(51, 53, 56))) {
+            assertEquals("the stroke at row $stroke", 0.955f, pixels[35, stroke].red, 0.03f)
+            assertEquals("the outline at row $outline", 0.55f, pixels[35, outline].red, 0.05f)
+            assertEquals("clear at row $clear", 1f, pixels[35, clear].red, 0.01f)
+        }
     }
 
     @Test

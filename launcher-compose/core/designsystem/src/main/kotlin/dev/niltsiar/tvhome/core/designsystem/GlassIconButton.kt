@@ -50,6 +50,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import androidx.compose.ui.graphics.lerp as lerpColor
 
 private val ButtonSize = 40.dp
 private val IconSize = 22.dp
@@ -61,8 +62,8 @@ private const val BRIGHT_BAR_FROM_LIGHTNESS = 70f
 private const val BRIGHT_BAR_FULL_LIGHTNESS = 90f
 private const val BRIGHT_BAR_FILL = 0.75f
 private val GrownMargin = 1.dp
-private val ActiveStroke = 1.dp
-private const val ACTIVE_FILL = 0.25f
+private const val ACTIVE_FILL = 0.60f
+private const val ACTIVE_MS = 120
 private val PulseStroke = 2.dp
 private const val PULSE_PEAK = 0.9f
 
@@ -78,8 +79,8 @@ internal const val OFFER_PULSE_MS = 600
  * a pill while focused, and lays out on the width it draws at, its focus growth included, plus [GrownMargin] a side.
  * A button with a [label] has no rim. Over a wallpaper brighter than L* 70 under the top bar
  * ([GlassState.topBarLightness]) its tint thickens, up to a total alpha of 0.75 from L* 90. While [active] (a panel it
- * opened is open) it has a white fill of 0.25 and a white edge, so the panel reads as hanging from it. It grows about
- * [transformOrigin].
+ * opened is open) it looks as it does focused, with a white fill of 0.60 and a dark glyph, so the panel reads as hanging
+ * from it. It grows about [transformOrigin].
  *
  * With a [focusLabel], a nonzero [offerToken] grows the button into its pill without focus and lights its rim once
  * ([OFFER_PULSE_MS]); a new token pulses again, 0 takes the offer back. With animations off or reduced motion the pill
@@ -107,6 +108,9 @@ public fun GlassIconButton(
     val grownScale = motion.focusScale(FOCUSED_SCALE)
     val growSpec = motion.springSpec<Float>(dampingRatio = 0.8f, stiffness = Spring.StiffnessMedium)
     val offered by rememberUpdatedState(offerToken != 0)
+    val surfaces = TvTheme.surfaces
+    val held = remember { Animatable(0f) }
+    LaunchedEffect(active, motion) { held.animateTo(if (active) 1f else 0f, motion.tweenSpec(ACTIVE_MS)) }
     val follow =
         modifier.onFocusChanged {
             val target = if (it.isFocused) 1f else 0f
@@ -158,10 +162,22 @@ public fun GlassIconButton(
                         },
                     )
                 }
-                if (active) Spacer(Modifier.matchParentSize().drawBehind { drawActive() })
+                Spacer(
+                    Modifier.matchParentSize().drawBehind {
+                        if (held.value > 0f) drawRect(surfaces.pillFill, alpha = ACTIVE_FILL * held.value)
+                    },
+                )
                 if (offerToken != 0) Spacer(Modifier.matchParentSize().drawBehind { drawPulse(pulse.value) })
             },
-        ) { ink ->
+        ) { focusInk ->
+            val ink =
+                remember(focusInk, surfaces) {
+                    FocusInk(
+                        content = { lerpColor(focusInk.content(), surfaces.pillContent, held.value) },
+                        secondary = { lerpColor(focusInk.secondary(), surfaces.pillSecondary, held.value) },
+                        progress = { maxOf(focusInk.progress(), held.value) },
+                    )
+                }
             val focus = { progress.value }
             when {
                 label != null -> {
@@ -202,19 +218,6 @@ public fun GlassIconButton(
             }
         }
     }
-}
-
-/** The white fill and the white edge of an [active] button, which follow the pill's outline. */
-private fun DrawScope.drawActive() {
-    val edge = ActiveStroke.toPx()
-    drawRoundRect(Color.White, alpha = ACTIVE_FILL, cornerRadius = CornerRadius(size.height / 2f))
-    drawRoundRect(
-        Color.White,
-        topLeft = Offset(edge / 2f, edge / 2f),
-        size = Size(size.width - edge, size.height - edge),
-        cornerRadius = CornerRadius((size.height - edge) / 2f),
-        style = Stroke(edge),
-    )
 }
 
 /** The rim of an offered button at [progress] 0 to 1 of its pulse: a white edge that rises to [PULSE_PEAK] and falls back. */
