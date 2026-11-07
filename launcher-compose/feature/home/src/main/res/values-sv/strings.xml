@@ -28,7 +28,7 @@
   <string name="library_save_failed">Kunde inte spara genvägen</string>
   <string name="dock_edit">Välj appar i favoritraden</string>
   <string name="reorder">Ändra ordning på appar</string>
-  <string name="power_menu">Starta om TV:n…</string>
+  <string name="power_menu">Starta om TV:n</string>
   <string name="reorder_hint">OK plockar upp en app, pilarna flyttar den, Tillbaka placerar den. Tillbaka igen för att avsluta.</string>
   <string name="dock_edit_hint">Välj platsen i favoritraden som du vill ändra och tryck OK. Tillbaka för att avsluta.</string>
   <string name="dock_edit_pick_app">Välj nu appen som ska ligga där och tryck OK. Tillbaka för att välja en annan plats.</string>

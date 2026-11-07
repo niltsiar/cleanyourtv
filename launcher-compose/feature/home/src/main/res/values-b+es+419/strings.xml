@@ -28,7 +28,7 @@
   <string name="library_save_failed">No se pudo guardar el acceso directo</string>
   <string name="dock_edit">Elegir apps de la barra de favoritos</string>
   <string name="reorder">Reordenar aplicaciones</string>
-  <string name="power_menu">Reiniciar el televisor…</string>
+  <string name="power_menu">Reiniciar TV</string>
   <string name="reorder_hint">Presiona OK para seleccionar una aplicación, usa las flechas para moverla y presiona Atrás para colocarla. Presiona Atrás otra vez para terminar.</string>
   <string name="dock_edit_hint">Elige el espacio de la barra de favoritos que quieres cambiar y presiona OK. Presiona Atrás para terminar.</string>
   <string name="dock_edit_pick_app">Ahora elige la aplicación que quieres colocar ahí y presiona OK. Presiona Atrás para elegir otro espacio.</string>

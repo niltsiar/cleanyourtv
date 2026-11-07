@@ -25,7 +25,7 @@
   <string name="library_save_failed">Nun se pudo guardar l\'accesu direutu</string>
   <string name="dock_edit">Escoyer les aplicaciones del dock</string>
   <string name="reorder">Reordenar aplicaciones</string>
-  <string name="power_menu">Reaniciar la TV…</string>
+  <string name="power_menu">Reaniciar TV</string>
   <string name="reorder_hint">D\'acuerdu escueye una aplicación, les fleches muévenla, Atrás suéltala. Atrás de nuevu pa finar.</string>
   <string name="dock_edit_hint">Escueyi\'l sitiu del dock que quies camudar y calca OK. Atrás pa finar.</string>
   <string name="dock_edit_pick_app">Agora escueyi l\'aplicación que quies poner ende y calca OK. Atrás pa escoyer otru sitiu.</string>

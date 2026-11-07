@@ -27,7 +27,7 @@
   <string name="library_save_failed">Não foi possível salvar o atalho</string>
   <string name="dock_edit">Escolher apps do dock</string>
   <string name="reorder">Reordenar apps</string>
-  <string name="power_menu">Reiniciar a TV…</string>
+  <string name="power_menu">Reiniciar TV</string>
   <string name="reorder_hint">OK pega numa app, as setas movem-na, Voltar pousa-a. Voltar outra vez para terminar.</string>
   <string name="dock_edit_hint">Escolha o lugar do dock que quer mudar e pressione OK. Voltar para terminar.</string>
   <string name="dock_edit_pick_app">Agora escolha o app para colocar lá e pressione OK. Voltar para escolher outro lugar.</string>

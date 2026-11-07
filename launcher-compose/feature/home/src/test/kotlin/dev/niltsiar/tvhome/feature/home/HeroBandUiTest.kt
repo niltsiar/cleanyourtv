@@ -321,8 +321,7 @@ class HeroBandUiTest {
         repeat(2) { press(Key.DirectionRight) }
         holdOk()
 
-        val ellipsis = Char(0x2026)
         compose.onNode(hasTestTag("menu:EditDock") and hasText("Choose dock apps")).assertExists()
-        compose.onNode(hasTestTag("menu:PowerMenu") and hasText("Restart TV$ellipsis")).assertExists()
+        compose.onNode(hasTestTag("menu:PowerMenu") and hasText("Restart TV")).assertExists()
     }
 }

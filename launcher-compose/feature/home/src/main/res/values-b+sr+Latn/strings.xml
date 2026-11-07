@@ -26,7 +26,7 @@
   <string name="library_save_failed">Prečica nije sačuvana</string>
   <string name="dock_edit">Izaberi aplikacije za dok</string>
   <string name="reorder">Promeni redosled aplikacija</string>
-  <string name="power_menu">Ponovo pokreni televizor…</string>
+  <string name="power_menu">Ponovo pokreni TV</string>
   <string name="reorder_hint">OK podiže aplikaciju, strelice je pomeraju, Nazad je postavlja. Ponovo Nazad za kraj.</string>
   <string name="dock_edit_hint">Izaberite mesto u doku i pritisnite OK. Nazad za kraj.</string>
   <string name="dock_edit_pick_app">Sada izaberite aplikaciju za to mesto i pritisnite OK. Nazad da izaberete drugo mesto.</string>

@@ -27,7 +27,7 @@
   <string name="library_save_failed">Tidak dapat menyimpan pintasan</string>
   <string name="dock_edit">Pilih aplikasi Dock</string>
   <string name="reorder">Tata Ulang App</string>
-  <string name="power_menu">Mulai ulang TV…</string>
+  <string name="power_menu">Mulai ulang TV</string>
   <string name="reorder_hint">OK mengambil aplikasi, panah memindahkannya, Kembali menempatkannya. Kembali lagi untuk selesai.</string>
   <string name="dock_edit_hint">Pilih posisi dock yang ingin diubah lalu tekan OK. Kembali untuk selesai.</string>
   <string name="dock_edit_pick_app">Sekarang pilih aplikasi untuk ditempatkan di sana lalu tekan OK. Kembali untuk memilih posisi lain.</string>

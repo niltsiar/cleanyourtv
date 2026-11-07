@@ -26,7 +26,7 @@
   <string name="library_save_failed">শর্টকাটটি সেভ করা যায়নি</string>
   <string name="dock_edit">ডকের অ্যাপ বেছে নিন</string>
   <string name="reorder">অ্যাপ সাজান</string>
-  <string name="power_menu">টিভি রিস্টার্ট করুন…</string>
+  <string name="power_menu">টিভি রিস্টার্ট করুন</string>
   <string name="reorder_hint">OK দিয়ে অ্যাপ তুলুন, তীর দিয়ে সরান, Back দিয়ে বসান। শেষ করতে আবার Back চাপুন।</string>
   <string name="dock_edit_hint">ডকের যে জায়গাটি বদলাতে চান সেটি বেছে OK চাপুন। শেষ হলে Back চাপুন।</string>
   <string name="dock_edit_pick_app">ওই জায়গায় যে অ্যাপ রাখতে চান সেটি বেছে OK চাপুন। অন্য জায়গা বাছতে Back চাপুন।</string>

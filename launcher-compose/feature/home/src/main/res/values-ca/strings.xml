@@ -26,7 +26,7 @@
   <string name="library_save_failed">No s’ha pogut desar la drecera</string>
   <string name="dock_edit">Tria les apps del dock</string>
   <string name="reorder">Reordena les aplicacions</string>
-  <string name="power_menu">Reinicia el televisor…</string>
+  <string name="power_menu">Reinicia la TV</string>
   <string name="reorder_hint">D\'acord agafa una aplicació, les fletxes la mouen, Enrere la deixa. Torna a prémer Enrere per acabar.</string>
   <string name="dock_edit_hint">Tria la posició del dock que vols canviar i prem D\'acord. Enrere per acabar.</string>
   <string name="dock_edit_pick_app">Ara tria l\'aplicació que hi vols posar i prem D\'acord. Enrere per triar una altra posició.</string>
