@@ -523,6 +523,52 @@ class LibraryOverlayLookUiTest {
         }
     }
 
+    /** The room over the art and the room under the last line of the name, in the card of [name]. */
+    private fun roomAboveAndBelow(name: String): Pair<Dp, Dp> = (art(name).top - card(name).top) to (card(name).bottom - nameBottom(name))
+
+    @Test
+    fun a_library_card_with_no_status_mark_has_the_art_and_the_two_line_name_slot_centred_for_a_one_line_and_a_two_line_name() {
+        showLibrary(
+            listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp(longNames[0])),
+            config = TvConfig(appLibrary = true, libraryOkOpens = true),
+        )
+
+        // A two-line name fills its slot, so the slot ends where that name does.
+        val slotBottom = nameBottom(longNames[0])
+        for (name in listOf("Beta", longNames[0])) {
+            val above = art(name).top - card(name).top
+            val below = card(name).bottom - slotBottom
+            assertTrue("$name has $above over its art and $below under the name slot", abs(above.value - below.value) <= 4f)
+        }
+        assertNear(art("Beta").top - card("Beta").top, art(longNames[0]).top - card(longNames[0]).top)
+    }
+
+    @Test
+    fun a_one_line_name_keeps_its_gap_under_the_art_when_the_library_has_no_status_mark() {
+        showLibrary(
+            listOf(libraryApp("Aaa"), libraryApp("Beta")),
+            config = TvConfig(appLibrary = true, libraryOkOpens = true),
+        )
+
+        assertNear(13.dp, nameTop("Beta") - art("Beta").bottom)
+    }
+
+    @Test
+    fun a_chooser_card_keeps_its_art_and_name_above_the_check() {
+        showLibrary(
+            listOf(libraryApp("Aaa"), libraryApp("Bbb", onHome = true), libraryApp("Ccc $describedName")),
+            art = LibraryArt(red, Color.Red),
+            config = chooser,
+        )
+
+        val (above, below) = roomAboveAndBelow("Bbb")
+        assertNear(6.dp, above)
+        assertNear(33.dp, below)
+        val (aboveTwo, belowTwo) = roomAboveAndBelow("Ccc $describedName")
+        assertNear(6.dp, aboveTwo)
+        assertNear(28.dp, belowTwo)
+    }
+
     @Test
     fun in_the_least_used_order_a_two_line_name_ends_at_least_4_dp_above_the_opened_line_and_a_focused_one_at_least_2_dp() {
         showLibrary(

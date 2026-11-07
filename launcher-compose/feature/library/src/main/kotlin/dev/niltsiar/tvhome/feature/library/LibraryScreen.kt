@@ -503,6 +503,7 @@ private fun Cards(
     val bringIntoView = remember(gridState, density) { RowBringIntoViewSpec(gridState, with(density) { GridEdge.toPx() }) }
     // Read here, not in the grid's content, so a focus move does not rebuild what the grid lists.
     val cards = remember(state) { derivedStateOf { state().cards } }.value
+    val statusFree = remember(cards, layout) { cards.none { it.hasStatusLine(layout) } }
     LaunchedEffect(gridState) {
         snapshotFlow { state().focusRequest }.filterNotNull().collect { request ->
             val index = state().cards.indexOfFirst { it.app.key == request.key }
@@ -539,6 +540,7 @@ private fun Cards(
                         index = index,
                         widthPx = cardWidthPx,
                         layout = layout,
+                        statusFree = statusFree,
                         art = art,
                         measurer = measurer,
                         entrance = entrance,

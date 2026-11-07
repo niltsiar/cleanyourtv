@@ -123,7 +123,8 @@ private const val OFF_HOME_ART_ALPHA = 0.5f
  * slot holds a check for an app on Home and a ring for one that is not. An idle card is opaque, so nothing of Home shows
  * through it; a focused one lets the plate [FocusSurface] draws behind it show. It rises in once per opening, with the delay [CardEntrance] gives it, and when its
  * Home shortcut changes pops a little, or in the chooser pulses its mark. Both run in the layer lambda. The status slot keeps
- * its place while the card grows, so it stays level with the cards beside it. [widthPx] is the narrowest the card can be.
+ * its place while the card grows, so it stays level with the cards beside it. [widthPx] is the narrowest the card can be. When
+ * no card of the grid has a status line, [statusFree] is true and the art and name take the whole card, centred.
  */
 @Composable
 internal fun LibraryCardView(
@@ -131,6 +132,7 @@ internal fun LibraryCardView(
     index: Int,
     widthPx: Int,
     layout: LibraryLayout,
+    statusFree: Boolean,
     art: suspend (String) -> LibraryArt?,
     measurer: TextMeasurer,
     entrance: CardEntrance,
@@ -226,7 +228,14 @@ internal fun LibraryCardView(
                     }.border(1.dp, ink.copy(alpha = RIM_ALPHA), CardShape)
                     .semantics { contentDescription = card.app.label },
             ) {
-                ArtAndName(Modifier.fillMaxSize().padding(start = CardSide, end = CardSide, bottom = CardBottom + StatusHeight)) {
+                ArtAndName(
+                    statusFree,
+                    Modifier.fillMaxSize().padding(
+                        start = CardSide,
+                        end = CardSide,
+                        bottom = if (statusFree) 0.dp else CardBottom + StatusHeight,
+                    ),
+                ) {
                     Art(card, artwork, layout.selection && !card.onHome, focusProgress, Modifier.padding(horizontal = ArtInset))
                     Name(card.app.label, measurer, widthPx - with(density) { CardSide.roundToPx() * 2 })
                 }
@@ -251,10 +260,12 @@ private const val CARD_TINT_MS = 300
 /**
  * The art, then the name, in the room above the status slot. The name's box ends [NameToMark] above the top of the check or
  * ring, which [CheckSize] makes overhang the slot; the art sits where it would for a name of [NAME_LINES] lines ending there,
- * so every card in a row has its art at one height. A shorter name is centred in what is left below the art.
+ * so every card in a row has its art at one height. A shorter name is centred in what is left below the art. With [statusFree]
+ * there is no slot: the art and the room of [NAME_LINES] name lines are centred in the card, and the name sits in that room as above.
  */
 @Composable
 private fun ArtAndName(
+    statusFree: Boolean,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -263,10 +274,17 @@ private fun ArtAndName(
         val loose = constraints.copy(minWidth = 0, minHeight = 0)
         val art = measurables[0].measure(loose)
         val name = measurables[1].measure(loose)
-        val nameLimit = constraints.maxHeight - (MarkOverhang + NameToMark).roundToPx()
-        val artTop = (nameLimit - art.height - nameRoom.roundToPx()).coerceAtLeast(0)
-        val centred = artTop + art.height + (constraints.maxHeight - artTop - art.height - name.height) / 2
-        val nameTop = minOf(centred, nameLimit - name.height)
+        val markRoom = (MarkOverhang + NameToMark).roundToPx()
+        val nameLimit = constraints.maxHeight - markRoom
+        val artTop =
+            if (statusFree) {
+                (constraints.maxHeight - art.height - nameRoom.roundToPx()) / 2
+            } else {
+                (nameLimit - art.height - nameRoom.roundToPx()).coerceAtLeast(0)
+            }
+        val slotBottom = artTop + art.height + nameRoom.roundToPx()
+        val centred = artTop + art.height + (slotBottom + markRoom - artTop - art.height - name.height) / 2
+        val nameTop = minOf(centred, slotBottom - name.height)
         layout(constraints.maxWidth, constraints.maxHeight) {
             art.place((constraints.maxWidth - art.width) / 2, artTop)
             name.place((constraints.maxWidth - name.width) / 2, nameTop)
@@ -372,6 +390,9 @@ internal fun shownName(
     if (wholeWordsSize(style.fontSize, label, ::measure) != null) return label
     return label.substring(0, laidOut.getLineEnd(last, visibleEnd = true)).trimEnd() + Ellipsis
 }
+
+/** Whether the card has a mark or a line in its status slot. */
+internal fun LibraryCard.hasStatusLine(layout: LibraryLayout): Boolean = layout.selection || opened != null || !(onHome || layout.okOpens)
 
 /**
  * The status slot, one baseline for every card: the line that says what the name does not. That line is, in the least used
