@@ -199,9 +199,9 @@ private fun typographyFor(colors: TvColors): TvTypography {
             TextStyle(
                 color = colors.onSurface,
                 fontSize = heroTitleSize,
-                fontWeight = FontWeight.Normal,
+                fontWeight = FontWeight.Medium,
                 letterSpacing = (-0.025).em,
-                fontFamily = googleSansFlex(FontWeight.Normal, heroTitleSize, width = 112f, roundness = 100f),
+                fontFamily = googleSansFlex(FontWeight.Medium, heroTitleSize, width = 112f, roundness = 100f),
             ),
         chromeTitle =
             TextStyle(

@@ -353,6 +353,13 @@ class HeaderLegibilityUiTest {
     }
 
     @Test
+    fun the_hero_title_is_medium_weight() {
+        showHome(level = 0.3f)
+
+        assertEquals(FontWeight.Medium, compose.onNodeWithTag("shelf:title").textStyle().fontWeight)
+    }
+
+    @Test
     fun the_local_scrim_keeps_its_full_strength_24_dp_under_the_subtitle_line() {
         showHome(level = 1f)
         val line = compose.onNodeWithTag("shelf:title-meta").getBoundsInRoot()
