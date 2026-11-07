@@ -892,7 +892,7 @@ class LibraryOverlayLookUiTest {
 
         val count = bounds("library:count")
         val status = bounds("library:status")
-        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Add to Home", "Hold OK", "Options", "Menu", "Usual order")
+        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Add to Home", "Hold OK", "Options")
         compose.onNodeWithTag("library:status").assertTextEquals("No usage data yet")
         assertNear(count.right, status.right)
         assertTrue("status $status under count $count", status.top >= count.bottom)
@@ -1351,13 +1351,40 @@ class LibraryOverlayLookUiTest {
 
     @Test
     @Config(qualifiers = "+night")
+    fun the_order_chip_ends_with_the_menu_key_cap_after_its_label_and_4_dp_clear_of_its_top_and_bottom() {
+        showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
+        val chip = bounds("library:order")
+        val cap = compose.onNodeWithTag("library:order:key", useUnmergedTree = true).getBoundsInRoot()
+        val label =
+            compose
+                .onNode(hasText("Usual order") and hasAnyAncestor(hasTestTag("library:order")), useUnmergedTree = true)
+                .getBoundsInRoot()
+
+        assertTrue("chip ${chip.width}, cap $cap, label $label", cap.left >= label.right && cap.right <= chip.right)
+        assertTrue("cap $cap in chip $chip", cap.top - chip.top >= 4.dp && chip.bottom - cap.bottom >= 4.dp)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun a_focused_order_chip_draws_its_menu_key_cap_text_dark() {
+        showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
+        val cap = compose.onNodeWithTag("library:order:key", useUnmergedTree = true).getBoundsInRoot()
+
+        press(Key.DirectionUp)
+
+        compose.onNodeWithTag("library:order").assertIsFocused()
+        assertTrue("cap text is dark", darkestRed(cap) < 90)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
     fun the_no_usage_status_is_set_in_the_hints_size_at_70_percent_of_the_text_colour() {
         showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
         press(Key.Menu)
 
         val status = compose.onNodeWithTag("library:status").textStyle()
 
-        assertEquals(hintPart("Usual order").textStyle().fontSize, status.fontSize)
+        assertEquals(hintPart("Add to Home").textStyle().fontSize, status.fontSize)
         assertEquals(0.70f, status.color.alpha, 0.005f)
     }
 

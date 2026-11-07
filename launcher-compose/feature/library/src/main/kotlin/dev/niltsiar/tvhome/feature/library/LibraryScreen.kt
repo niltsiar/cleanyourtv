@@ -80,7 +80,9 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
@@ -295,14 +297,7 @@ private fun Header(
         }
         if (!empty) {
             Row(Modifier.height(HeaderHintHeight), verticalAlignment = Alignment.CenterVertically) {
-                KeyHints(
-                    hint,
-                    order,
-                    look,
-                    orderMenu = layout.leastUsed,
-                    chipFocused = chip.focused,
-                    Modifier.weight(1f).testTag("library:hint"),
-                )
+                KeyHints(hint, order, look, chipFocused = chip.focused, Modifier.weight(1f).testTag("library:hint"))
                 if (noUsage) {
                     BasicText(
                         stringResource(R.string.library_no_usage_yet),
@@ -317,22 +312,21 @@ private fun Header(
 }
 
 /**
- * What the keys do, as the chips of reorder mode drawn in [look]: the focused card's OK and a held OK, then, with the
- * order switch ([orderMenu]), the MENU key. While the order chip has focus ([chipFocused]) it is the OK on it alone.
+ * What the keys do, as the chips of reorder mode drawn in [look]: the focused card's OK and a held OK. While the order
+ * chip has focus ([chipFocused]) it is the OK on it alone. The MENU key is a cap on the order chip, not a hint.
  */
 @Composable
 private fun KeyHints(
     hint: LibraryHint,
     order: LibraryOrder,
     look: KeyChipLook,
-    orderMenu: Boolean,
     chipFocused: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val ok = stringResource(R.string.library_key_ok)
     val other = stringResource(order.other().label())
     Row(modifier.clipToBounds().semantics(mergeDescendants = true) {}, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        if (orderMenu && chipFocused) {
+        if (chipFocused) {
             KeyChip(ok, other, look = look)
             return@Row
         }
@@ -346,7 +340,6 @@ private fun KeyHints(
         if (hint == LibraryHint.Open || hint == LibraryHint.Add) {
             KeyChip(stringResource(R.string.library_key_hold_ok), stringResource(R.string.library_key_options), look = look)
         }
-        if (orderMenu) KeyChip(stringResource(R.string.library_key_menu), other, look = look)
     }
 }
 
@@ -371,6 +364,7 @@ private fun OrderChip(
 ) {
     val typography = TvTheme.typography
     val rest = TvTheme.colors.onSurface
+    val key = remember(typography) { typography.chipKey.copy(fontSize = 12.sp) }
     FocusPill(
         onClick = onClick,
         shape = CircleShape,
@@ -402,6 +396,20 @@ private fun OrderChip(
             Box(Modifier.size(ChipGlyph).testTag("library:order:glyph").drawBehind { drawSortArrows(ink.content(), size.width) })
             Spacer(Modifier.width(ChipGlyphGap))
             BasicText(label, style = typography.chipLabel, maxLines = 1, color = ink.content)
+            Spacer(Modifier.width(ChipKeyGap))
+            Box(
+                Modifier
+                    .clearAndSetSemantics { testTag = "library:order:key" }
+                    .drawBehind {
+                        drawRoundRect(
+                            ink.content().copy(alpha = CHIP_KEY_FILL_ALPHA),
+                            cornerRadius =
+                                CornerRadius(size.height / 2f),
+                        )
+                    }.padding(horizontal = 6.dp, vertical = 1.dp),
+            ) {
+                BasicText(stringResource(R.string.library_key_menu), style = key, maxLines = 1, color = ink.content)
+            }
         }
     }
 }
@@ -430,9 +438,11 @@ private val ChipEnd = 16.dp
 private val ChipHeight = 32.dp
 private val ChipGlyph = 14.dp
 private val ChipGlyphGap = 6.dp
+private val ChipKeyGap = 8.dp
 private val ChipGlyphStroke = 1.5.dp
 private const val CHIP_FILL_ALPHA = 0.10f
 private const val CHIP_RIM_ALPHA = 0.24f
+private const val CHIP_KEY_FILL_ALPHA = 0.16f
 
 @StringRes
 private fun LibraryOrder.label(): Int =

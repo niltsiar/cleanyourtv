@@ -210,17 +210,15 @@ class LibraryOverlayUiTest {
     }
 
     @Test
-    fun the_menu_key_switches_the_order_the_header_and_hint_name_it_and_focus_stays_on_the_same_app() {
+    fun the_menu_key_switches_the_order_the_header_names_it_and_focus_stays_on_the_same_app() {
         gammaOpenedThreeDaysAgo()
         showLibrary(leastUsed)
         compose.onNodeWithTag("library:order").assertTextEquals("Usual order")
-        compose.onNodeWithTag("library:hint").assertTextContains("Least used", substring = true)
         compose.onNodeWithTag("card:${key("Delta")}").assertIsFocused()
 
         press(Key.Menu)
 
         compose.onNodeWithTag("library:order").assertTextEquals("Least used")
-        compose.onNodeWithTag("library:hint").assertTextContains("Usual order", substring = true)
         compose.onNodeWithTag("card:${key("Delta")}").assertIsFocused()
         press(Key.DirectionRight)
         compose.onNodeWithTag("card:${key("Gamma")}").assertIsFocused()
@@ -309,11 +307,11 @@ class LibraryOverlayUiTest {
     @Test
     fun with_no_open_time_for_any_app_the_least_used_order_shows_no_opened_text_and_a_status_says_so() {
         showLibrary(leastUsed)
-        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Add to Home", "Hold OK", "Options", "Menu", "Least used")
+        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Add to Home", "Hold OK", "Options")
 
         press(Key.Menu)
 
-        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Add to Home", "Hold OK", "Options", "Menu", "Usual order")
+        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Add to Home", "Hold OK", "Options")
         compose.onNodeWithTag("library:status").assertTextEquals("No usage data yet")
         compose.onNodeWithTag("card:opened:${key("Alpha")}", useUnmergedTree = true).assertDoesNotExist()
         assertEquals(listOf("Alpha", "Add to Home"), compose.textsOnCard("Alpha"))
@@ -326,7 +324,7 @@ class LibraryOverlayUiTest {
 
         press(Key.Menu)
 
-        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Add to Home", "Hold OK", "Options", "Menu", "Usual order")
+        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Add to Home", "Hold OK", "Options")
         compose.onNodeWithTag("library:status").assertDoesNotExist()
     }
 
@@ -357,7 +355,18 @@ class LibraryOverlayUiTest {
         compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Usual order")
 
         press(Key.DirectionDown)
-        compose.onNodeWithTag("library:hint").assertTextContains("Menu", substring = true)
+        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Add to Home", "Hold OK", "Options")
+    }
+
+    @Test
+    fun with_the_order_chip_shown_the_hint_row_has_no_menu_hint_and_the_chip_holds_the_menu_key_cap() {
+        showLibrary(leastUsed)
+
+        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Add to Home", "Hold OK", "Options")
+        compose
+            .onNode(hasText("Menu") and hasAnyAncestor(hasTestTag("library:order")), useUnmergedTree = true)
+            .assertExists()
+        orderChip().assertTextEquals("Usual order")
     }
 
     @Test
