@@ -8,6 +8,9 @@ import kotlin.math.max
 import kotlin.math.min
 
 private const val GREY_BELOW_SATURATION = 0.25f
+private const val MUTED_FROM_SATURATION = 0.08f
+private const val MUTED_BELOW_SATURATION = 0.45f
+private const val MUTED_RING_VALUE = 0.85f
 private const val RING_MIN_LIGHTNESS = 0.65f
 private const val MIN_RING_CONTRAST = 3f
 
@@ -22,9 +25,11 @@ public fun focusRingColour(
 ): Color = if (whiteFocus || !coloured) Color.White else ringColor(art)
 
 /**
- * The focus ring of an app whose art gives [brand]: white when the brand's HSL saturation is below 0.25 (a dark or grey
- * app colour is pale grey-blue on a light picture, and one ring colour for those is white); otherwise the brand with its
- * HSL lightness raised to at least 0.65, hue and saturation kept. A brand not known yet keeps white.
+ * The focus ring of an app whose art gives [brand]. A muted brand, HSV saturation from 0.08 up to 0.45 (slate teal art
+ * is one), keeps its hue with saturation 0.45 and value at least 0.85, so the ring still says which app it is. Under
+ * 0.08, or when the brand's HSL saturation is below 0.25 (a dark or grey app colour is pale grey-blue on a light picture,
+ * and one ring colour for those is white), the ring is white; otherwise the brand with its HSL lightness raised to at
+ * least 0.65, hue and saturation kept. A brand not known yet keeps white.
  */
 public fun ringColor(brand: Color): Color {
     if (brand.isUnspecified) return Color.White
@@ -32,25 +37,40 @@ public fun ringColor(brand: Color): Color {
     val low = min(brand.red, min(brand.green, brand.blue))
     val lightness = (high + low) / 2f
     val chroma = high - low
-    val saturation = if (chroma == 0f) 0f else chroma / (1f - abs(2f * lightness - 1f))
-    if (saturation < GREY_BELOW_SATURATION) return Color.White
-    if (lightness >= RING_MIN_LIGHTNESS) return Color(brand.red, brand.green, brand.blue)
+    val valueSaturation = if (high == 0f) 0f else chroma / high
+    if (valueSaturation < MUTED_FROM_SATURATION) return Color.White
     val hue =
         when (high) {
             brand.red -> ((brand.green - brand.blue) / chroma).mod(6f)
             brand.green -> (brand.blue - brand.red) / chroma + 2f
             else -> (brand.red - brand.green) / chroma + 4f
         }
+    if (valueSaturation < MUTED_BELOW_SATURATION) {
+        val value = max(high, MUTED_RING_VALUE)
+        val mutedChroma = value * MUTED_BELOW_SATURATION
+        return fromHue(hue, mutedChroma, value - mutedChroma)
+    }
+    val saturation = chroma / (1f - abs(2f * lightness - 1f))
+    if (saturation < GREY_BELOW_SATURATION) return Color.White
+    if (lightness >= RING_MIN_LIGHTNESS) return Color(brand.red, brand.green, brand.blue)
     val newChroma = (1f - abs(2f * RING_MIN_LIGHTNESS - 1f)) * saturation
-    val m = RING_MIN_LIGHTNESS - newChroma / 2f
-    val x = newChroma * (1f - abs(hue.mod(2f) - 1f))
+    return fromHue(hue, newChroma, RING_MIN_LIGHTNESS - newChroma / 2f)
+}
+
+/** The colour of [hue] (0 up to 6 sectors) with [chroma], its lowest channel at [floor]. */
+private fun fromHue(
+    hue: Float,
+    chroma: Float,
+    floor: Float,
+): Color {
+    val x = chroma * (1f - abs(hue.mod(2f) - 1f))
     return when (hue.toInt()) {
-        0 -> Color(newChroma + m, x + m, m)
-        1 -> Color(x + m, newChroma + m, m)
-        2 -> Color(m, newChroma + m, x + m)
-        3 -> Color(m, x + m, newChroma + m)
-        4 -> Color(x + m, m, newChroma + m)
-        else -> Color(newChroma + m, m, x + m)
+        0 -> Color(chroma + floor, x + floor, floor)
+        1 -> Color(x + floor, chroma + floor, floor)
+        2 -> Color(floor, chroma + floor, x + floor)
+        3 -> Color(floor, x + floor, chroma + floor)
+        4 -> Color(x + floor, floor, chroma + floor)
+        else -> Color(chroma + floor, floor, x + floor)
     }
 }
 

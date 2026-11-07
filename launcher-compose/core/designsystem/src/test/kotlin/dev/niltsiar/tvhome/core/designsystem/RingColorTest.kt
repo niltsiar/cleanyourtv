@@ -12,6 +12,7 @@ class RingColorTest {
     private val twitch = Color(0xFF9146FF)
     private val spotify = Color(0xFF1DB954)
     private val navy = Color(0xFF1A3C8C)
+    private val slateTeal = Color(0xFF4F6A72)
 
     private class Hsl(
         val h: Float,
@@ -35,10 +36,23 @@ class RingColorTest {
         return Hsl(h, s, l)
     }
 
+    private class Hsv(
+        val h: Float,
+        val s: Float,
+        val v: Float,
+    )
+
+    private fun hsv(color: Color): Hsv {
+        val hsl = hsl(color)
+        val high = maxOf(color.red, color.green, color.blue)
+        val low = minOf(color.red, color.green, color.blue)
+        return Hsv(hsl.h, if (high == 0f) 0f else (high - low) / high, high)
+    }
+
     @Test
     fun a_grey_app_colour_gets_a_white_ring() {
-        // A dark grey tile and a pale blue-grey one both vanish on cloud, so neither keeps its own tone.
-        for (art in listOf(Color(0xFF3A3A3A), Color(0xFF8A8F99), Color(0xFFB8C4D4), Color.Black, Color.White)) {
+        // A dark grey tile and a pale grey one both vanish on cloud, so neither keeps its own tone.
+        for (art in listOf(Color(0xFF3A3A3A), Color(0xFF8A8C90), Color(0xFFC4C8CC), Color(0xFF8C8C8C), Color.Black, Color.White)) {
             assertEquals("$art", Color.White, ringColor(art))
         }
     }
@@ -66,22 +80,33 @@ class RingColorTest {
 
     @Test
     fun a_saturated_app_colour_that_is_already_light_is_left_as_it_is() {
-        val pastel = Color(0xFFA6D8FF)
+        val pastel = Color(0xFF6FB6FF)
 
         assertEquals(pastel, ringColor(pastel))
     }
 
-    /** A colour of HSL lightness 0.4 and the given [saturation], red-leaning. */
-    private fun hslColor(saturation: Float): Color {
-        val l = 0.4f
-        val c = (1f - abs(2f * l - 1f)) * saturation
-        return Color(l + c / 2f, l, l - c / 2f)
+    @Test
+    fun a_muted_app_colour_keeps_its_hue_and_gets_a_saturation_of_045_and_a_value_of_085() {
+        val before = hsv(slateTeal)
+        val after = hsv(ringColor(slateTeal))
+
+        assertEquals(before.h, after.h, 1f)
+        assertEquals(0.45f, after.s, 0.01f)
+        assertEquals(0.85f, after.v, 0.01f)
     }
 
     @Test
-    fun a_saturation_of_025_is_the_first_to_keep_its_colour() {
-        assertEquals(Color.White, ringColor(hslColor(0.24f)))
-        assertNotEquals(Color.White, ringColor(hslColor(0.26f)))
+    fun a_muted_app_colour_that_is_already_brighter_than_085_keeps_its_value() {
+        val after = hsv(ringColor(Color.hsv(30f, 0.2f, 0.95f)))
+
+        assertEquals(0.45f, after.s, 0.01f)
+        assertEquals(0.95f, after.v, 0.01f)
+    }
+
+    @Test
+    fun a_saturation_of_008_is_the_first_to_keep_its_colour() {
+        assertEquals(Color.White, ringColor(Color.hsv(200f, 0.07f, 0.5f)))
+        assertNotEquals(Color.White, ringColor(Color.hsv(200f, 0.09f, 0.5f)))
     }
 
     @Test
