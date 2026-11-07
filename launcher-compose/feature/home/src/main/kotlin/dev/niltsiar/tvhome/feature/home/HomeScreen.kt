@@ -1346,7 +1346,7 @@ private fun HeroTitle(
                         Modifier
                             .testTag(if (live) "shelf:title" else "")
                             .lineBetween(HeroAscent, TitleDescent)
-                            .graphicsLayer { alpha = band.title.value },
+                            .drawnAt { band.title.value },
                 )
                 Box(Modifier.padding(start = MetaIndent, top = MetaGap).height(detail).drawnAt { band.detail.value }) {
                     when (val keys = shown.hint?.takeIf { live }) {

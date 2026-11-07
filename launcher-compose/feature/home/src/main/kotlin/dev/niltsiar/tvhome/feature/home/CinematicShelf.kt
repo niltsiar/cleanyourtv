@@ -178,7 +178,7 @@ internal fun CinematicShelf(
                             Modifier
                                 .testTag(if (live) "shelf:name" else "")
                                 .lineBetween(TitleAscent, TitleDescent)
-                                .graphicsLayer { this.alpha = titleAlpha() },
+                                .drawnAt(titleAlpha),
                     )
                     val meta = if (live) lastOpenedLine(app.lastOpened, app.usual, app.neverOpened) else AnnotatedString("")
                     BasicText(

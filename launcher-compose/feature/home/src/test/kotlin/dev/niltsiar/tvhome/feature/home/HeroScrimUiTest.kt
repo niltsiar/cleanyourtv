@@ -563,6 +563,45 @@ class HeroScrimUiTest {
     fun the_band_subtitle_pill_keeps_its_round_ends_while_a_new_title_fades_in() =
         assertPillKeepsItsRoundEndsInASwap(cinematic = false, tag = "shelf:title-meta")
 
+    /**
+     * How much darker, in the red channel, the title's shadow makes the picture one pixel left of the title's box, at mid height,
+     * than 12 dp left of it, where the shadow no longer reaches. The glyphs start 6 dp inside the box and the shadow blurs 9 dp.
+     */
+    private fun shadowLeftOfTheTitle(tag: String): Float {
+        val density = compose.activity.resources.displayMetrics.density
+        val title = titleBounds(tag)
+        val y = ((title.top.value + title.bottom.value) / 2 * density).toInt()
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        return pixels[((title.left.value - 12f) * density).toInt(), y].red - pixels[(title.left.value * density).toInt() - 1, y].red
+    }
+
+    private fun assertShadowKeptWhileTheTitleFades(
+        cinematic: Boolean,
+        tag: String,
+    ) {
+        showHome(cinematic, solid(1f).let { Wallpaper(picture = it, thumbnail = it) }, headerScrim = HeaderScrim.Off)
+        val atRest = shadowLeftOfTheTitle(tag)
+        assertTrue("at rest the shadow darkens the picture by $atRest", atRest > 0.03f)
+
+        compose.mainClock.autoAdvance = false
+        pressMenuKey()
+        try {
+            compose.mainClock.advanceTimeBy(48)
+            val midFade = shadowLeftOfTheTitle(tag)
+            assertTrue("mid-fade the shadow darkens the picture by $midFade, at rest by $atRest", midFade > 0.25f * atRest)
+        } finally {
+            compose.mainClock.autoAdvance = true
+        }
+    }
+
+    @Test
+    fun the_shelf_name_keeps_its_shadow_past_its_box_while_a_tile_menu_fades_it_out() =
+        assertShadowKeptWhileTheTitleFades(cinematic = true, tag = "shelf:name")
+
+    @Test
+    fun the_band_title_keeps_its_shadow_past_its_box_while_a_tile_menu_fades_it_out() =
+        assertShadowKeptWhileTheTitleFades(cinematic = false, tag = "shelf:title")
+
     @Test
     fun a_title_swap_does_not_draw_the_hero_scrims_body_again_on_any_frame_of_its_cross_fade() {
         showHome(cinematic = false)
