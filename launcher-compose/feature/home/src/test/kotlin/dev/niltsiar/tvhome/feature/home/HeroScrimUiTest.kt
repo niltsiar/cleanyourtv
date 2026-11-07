@@ -38,6 +38,7 @@ import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
 import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -74,6 +75,8 @@ class HeroScrimUiTest {
     private val bodies = mutableMapOf<String, Int>()
 
     private val scrimMode = mutableStateOf(HeaderScrim.Auto)
+
+    private val appList = MutableStateFlow(AppList(emptyList()))
 
     /** Counts, by composable, the bodies that run; the compiler calls it for each composable that does not skip. */
     private val tracer =
@@ -112,8 +115,9 @@ class HeroScrimUiTest {
         headerScrim: HeaderScrim = HeaderScrim.Auto,
     ) {
         scrimMode.value = headerScrim
+        appList.value = AppList(shown)
         val config = SixColumns.copy(cinematicHome = cinematic)
-        val sources = sources(apps = flowOf(AppList(shown)), wallpaper = flowOf(wallpaper))
+        val sources = sources(apps = appList, wallpaper = flowOf(wallpaper))
         compose.setContent {
             CompositionLocalProvider(LocalBakeDispatcher provides Dispatchers.Unconfined) {
                 TvTheme(darkTheme = true) {
@@ -412,12 +416,47 @@ class HeroScrimUiTest {
         return values.sorted()[values.size / 2]
     }
 
+    /**
+     * The 90th percentile of the relative luminance behind the hero title's glyphs: over the box of "Prime Video", once the title
+     * is blank spaces wider than it, so that the scrim stays and no glyph or shadow is drawn.
+     */
+    private fun heroBackgroundP90(name: String): Float {
+        showCouncil(name)
+        val density = compose.activity.resources.displayMetrics.density
+        val box = titleBounds("shelf:title")
+        val spaces = "\u2002".repeat((box.width.value / 22f).toInt() + 2)
+        appList.value = AppList(listOf(titled.copy(label = spaces)) + NineApps.drop(1))
+        settle()
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val values =
+            (box.left.value * density).toInt().until((box.right.value * density).toInt()).flatMap { x ->
+                (box.top.value * density).toInt().until((box.bottom.value * density).toInt()).map { y ->
+                    relativeLuminance(pixels[x, y])
+                }
+            }
+        return values.sorted()[values.size * 9 / 10]
+    }
+
+    @Test
+    fun over_the_bright_sky_the_background_behind_the_hero_title_glyphs_has_a_90th_percentile_luminance_of_at_most_016() {
+        val p90 = heroBackgroundP90("bright")
+
+        assertTrue("the 90th percentile behind the hero title is $p90", p90 <= 0.16f)
+    }
+
+    @Test
+    fun over_the_busy_light_forest_the_background_behind_the_hero_title_glyphs_has_a_90th_percentile_luminance_of_at_most_016() {
+        val p90 = heroBackgroundP90("busy")
+
+        assertTrue("the 90th percentile behind the hero title is $p90", p90 <= 0.16f)
+    }
+
     @Test
     fun over_the_bright_sky_the_background_behind_the_hero_title_is_neither_near_black_nor_too_light_for_white_text() {
         showCouncil("bright")
         val luminance = heroBackground()
 
-        assertTrue("the background behind the hero title has relative luminance $luminance", luminance in 0.12f..0.20f)
+        assertTrue("the background behind the hero title has relative luminance $luminance", luminance in 0.08f..0.16f)
     }
 
     @Test
@@ -425,15 +464,15 @@ class HeroScrimUiTest {
         showCouncil("busy")
         val luminance = heroBackground()
 
-        assertTrue("the background behind the hero title has relative luminance $luminance", luminance in 0.12f..0.20f)
+        assertTrue("the background behind the hero title has relative luminance $luminance", luminance in 0.08f..0.16f)
     }
 
     @Test
-    fun the_hero_scrim_is_none_up_to_a_luminance_of_018_and_at_most_half_strong_over_a_white_picture() {
+    fun the_hero_scrim_is_none_up_to_a_luminance_of_012_and_at_most_half_strong_over_a_white_picture() {
         assertEquals(0f, heroScrimDarkening(0f), 0f)
         assertEquals(0f, heroScrimDarkening(0.10f), 0f)
-        assertEquals(0f, heroScrimDarkening(0.18f), 0.01f)
-        assertTrue("over a half-bright picture ${heroScrimDarkening(0.5f)}", heroScrimDarkening(0.5f) in 0.3f..0.4f)
+        assertEquals(0f, heroScrimDarkening(0.12f), 0.01f)
+        assertTrue("over a half-bright picture ${heroScrimDarkening(0.5f)}", heroScrimDarkening(0.5f) in 0.4f..0.5f)
         assertEquals(0.5f, heroScrimDarkening(1f), 0f)
         val steps = (0..100).map { heroScrimDarkening(it / 100f) }
         assertTrue("the strength falls somewhere: $steps", steps.zipWithNext().all { (a, b) -> b >= a })
@@ -457,7 +496,7 @@ class HeroScrimUiTest {
     private fun assertTightShadowOnBright(cinematic: Boolean) {
         val density = compose.activity.resources.displayMetrics.density
         showCouncil("bright", cinematic)
-        assertEquals(Shadow(Color.Black.copy(alpha = 0.35f), Offset(0f, density), 3 * density), titleShadow(cinematic))
+        assertEquals(Shadow(Color.Black.copy(alpha = 0.55f), Offset(0f, 2 * density), 6 * density), titleShadow(cinematic))
     }
 
     private fun assertWideShadowOnDark(cinematic: Boolean) {

@@ -80,15 +80,15 @@ private const val FALL_STEPS = 16
 internal val HeroSampleWidth = 480.dp
 
 /**
- * The sRGB brightness the hero scrim darkens a light picture to, behind the text: a grey of 0.47 has a relative luminance of
- * 0.16, where white text holds 5:1. The scrim never darkens a picture by more than [HERO_SCRIM_MAX_ALPHA].
+ * The sRGB brightness the hero scrim darkens a light picture to, behind the text: a grey of 0.38 has a relative luminance of
+ * 0.12, where white text holds 6:1. The scrim never darkens a picture by more than [HERO_SCRIM_MAX_ALPHA].
  */
-private const val HERO_SCRIM_TARGET_BRIGHTNESS = 0.47f
+private const val HERO_SCRIM_TARGET_BRIGHTNESS = 0.38f
 private const val HERO_SCRIM_MAX_ALPHA = 0.50f
 
 /**
  * How much the hero block darkens a picture of mean relative luminance [luminance] under it, Home's left scrim included: none up
- * to a brightness of [HERO_SCRIM_TARGET_BRIGHTNESS] (luminance 0.18), then what takes the picture's brightness down to it, up
+ * to a brightness of [HERO_SCRIM_TARGET_BRIGHTNESS] (luminance 0.12), then what takes the picture's brightness down to it, up
  * to [HERO_SCRIM_MAX_ALPHA].
  */
 internal fun heroScrimDarkening(luminance: Float): Float {

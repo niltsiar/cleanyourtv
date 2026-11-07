@@ -91,7 +91,6 @@ internal val ShelfDetailHeight = MetaGap + MetaSlot + DotsGap + DotSize
 /** The cinematic title line (its ascent and descent at the default font scale) and [ShelfDetailHeight]. */
 internal val CinematicTextHeight = 66.dp + ShelfDetailHeight
 private val TitleShadow = Color.Black.copy(alpha = 0.55f)
-private val TightTitleShadow = Color.Black.copy(alpha = 0.35f)
 private val SubtitleShadow = Color.Black.copy(alpha = 0.75f)
 private val SubtitlePillColor = Color.Black.copy(alpha = 0.45f)
 private val SubtitlePillStroke = Color.White.copy(alpha = 0.12f)
@@ -344,7 +343,7 @@ internal fun Modifier.drawnAt(alpha: () -> Float): Modifier =
         this.alpha = alpha()
     }
 
-/** This style with the shadow that keeps a title readable on a picture: a tight one, 3 dp blur, while the hero scrim is [scrimmed], else a wide one. */
+/** This style with the shadow that keeps a title readable on a picture: a tight one, 6 dp blur, while the hero scrim is [scrimmed], else a wide one. */
 @Composable
 internal fun TextStyle.withTitleShadow(scrimmed: Boolean = false): TextStyle {
     val density = LocalDensity.current.density
@@ -352,7 +351,7 @@ internal fun TextStyle.withTitleShadow(scrimmed: Boolean = false): TextStyle {
         copy(
             shadow =
                 if (scrimmed) {
-                    Shadow(TightTitleShadow, Offset(0f, density), 3 * density)
+                    Shadow(TitleShadow, Offset(0f, 2 * density), 6 * density)
                 } else {
                     Shadow(
                         TitleShadow,

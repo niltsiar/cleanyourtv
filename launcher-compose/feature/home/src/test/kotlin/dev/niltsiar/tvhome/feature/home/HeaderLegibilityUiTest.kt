@@ -285,10 +285,10 @@ class HeaderLegibilityUiTest {
 
     @Test
     fun a_dark_wallpaper_gets_no_local_scrim_and_no_pill_behind_the_subtitle() {
-        showHome(level = 0.4f)
+        showHome(level = 0.3f)
         val at = besideTheSubtitle()
 
-        assertNoPill(scrimmed(102, top = 0.55f, left = 0.40f, at), redAt(at))
+        assertNoPill(scrimmed(77, top = 0.55f, left = 0.40f, at), redAt(at))
     }
 
     @Test
@@ -335,14 +335,14 @@ class HeaderLegibilityUiTest {
         compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
         assertNear(withHeroScrim, redAt(at))
 
-        wallpapers.value = Wallpaper(picture = picture, thumbnail = grey(0.4f))
+        wallpapers.value = Wallpaper(picture = picture, thumbnail = grey(0.3f))
         settle()
         assertNoPill(scrimmed(255, top = 0.55f, left = 0.40f, at), redAt(at))
     }
 
     @Test
     fun the_hero_title_has_a_black_055_shadow_1_dp_down_blurred_9_dp() {
-        showHome(level = 0.4f)
+        showHome(level = 0.3f)
 
         val shadow = checkNotNull(compose.onNodeWithTag("shelf:title").textStyle().shadow)
         val density = compose.activity.resources.displayMetrics.density
