@@ -99,7 +99,7 @@ private val SubtitlePillAcross = 10.dp
 private val SubtitlePillDown = 3.dp
 private val DotWide = 18.dp
 private val DotSpacing = 8.dp
-private val DotRest = Color(0x4DFFFFFF)
+private val DotRest = Color(0x80FFFFFF)
 private const val SHOW_MS = 260
 private const val HIDE_MS = 160
 

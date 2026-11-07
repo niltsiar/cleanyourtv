@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PixelMap
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
@@ -173,6 +174,27 @@ class HomeBandLookUiTest {
         assertEquals(listOf(18f, 8f, 8f, 8f, 8f, 8f), runs.map { it.endInclusive - it.start })
         assertEquals(List(5) { 8f }, runs.zipWithNext { before, after -> after.start - before.endInclusive })
         assertEquals(0f, runs.first().start, 0.5f)
+    }
+
+    @Test
+    fun the_inactive_page_dots_read_at_4_5_to_1_on_a_near_black_wallpaper_and_stay_dimmer_than_the_active_one() {
+        val wallpaper = Color(0xFF070A13)
+        showHome(wallpaper)
+        val dots = bounds("shelf:dots")
+        val pixels = screen()
+        val middle = ((dots.top.value + dots.bottom.value) / 2f * density).toInt()
+
+        // The active dot is 18 dp wide, and the dots after it are 8 dp wide with 8 dp between.
+        val active = pixels[((dots.left.value + 9f) * density).toInt(), middle]
+        val inactive = pixels[((dots.left.value + 30f) * density).toInt(), middle]
+
+        fun contrast(
+            lighter: Color,
+            darker: Color,
+        ) = (lighter.luminance() + 0.05f) / (darker.luminance() + 0.05f)
+
+        assertTrue("inactive dot $inactive on $wallpaper: ${contrast(inactive, wallpaper)}", contrast(inactive, wallpaper) >= 4.5f)
+        assertTrue("active dot $active, inactive dot $inactive: ${contrast(active, inactive)}", contrast(active, inactive) >= 3f)
     }
 
     @Test
