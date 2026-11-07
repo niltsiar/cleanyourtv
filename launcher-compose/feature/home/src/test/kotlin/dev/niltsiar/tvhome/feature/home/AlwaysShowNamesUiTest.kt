@@ -432,17 +432,13 @@ class AlwaysShowNamesUiTest {
 
     @Test
     @Config(qualifiers = "+night")
-    fun the_focused_name_is_dark_text_on_a_white_pill_and_the_others_keep_their_dark_pill() {
+    fun the_focused_tiles_name_keeps_the_dark_pill_and_light_ink_of_the_others() {
         showHome(named4, wallpaper = Wallpaper(picture = white))
 
         compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-        assertTrue("focused pill ${inPill("name:pkg.1", 3f, 12f)}", inPill("name:pkg.1", 3f, 12f) >= 230)
+        assertTrue("focused pill ${inPill("name:pkg.1", 3f, 12f)}", inPill("name:pkg.1", 3f, 12f) < 140)
         assertTrue("other pill ${inPill("name:pkg.2", 3f, 12f)}", inPill("name:pkg.2", 3f, 12f) < 140)
-        val darkest =
-            compose.onNodeWithTag("name:pkg.1").captureToImage().toPixelMap().let { pixels ->
-                (0 until pixels.height).minOf { y -> (0 until pixels.width).minOf { x -> pixels[x, y].red } }
-            }
-        assertTrue("the text is $darkest", darkest < 0.25f)
+        assertEquals(0.85f, ink("name:pkg.1"), 0.05f)
     }
 
     private fun left(tag: String): Dp = compose.onNodeWithTag(tag).getBoundsInRoot().left

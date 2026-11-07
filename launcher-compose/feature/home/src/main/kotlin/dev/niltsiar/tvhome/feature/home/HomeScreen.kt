@@ -189,12 +189,9 @@ internal val TileNameRoom = TileNameGap + NameLine + NamePillDown * 2
 /** How far the name of another launcher's banner stands from the banner's bottom and left edges. */
 private val NameOnBannerInset = 8.dp
 
-/** The alpha of the name under a tile without focus; it has a pill behind it. */
-private const val NAME_REST_ALPHA = 0.85f
-private val NameRestPill = Color.Black.copy(alpha = 0.55f)
-
-/** How long a name takes to turn from its pill at rest to the focused pill. */
-private const val NAME_FADE_MS = 220
+/** The ink and pill of a name under a tile, focused or not: the hero title already names the focused app. */
+private val NameInk = Color.White.copy(alpha = 0.85f)
+private val NamePill = Color.Black.copy(alpha = 0.55f)
 
 internal val TopBarTop = 20.dp
 internal val TopBarHeight = 56.dp
@@ -1852,12 +1849,7 @@ private fun AppTile(
                 Image(bitmap = image, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 if (app.iconArt) IconTileLabel(app.label)
                 if (app.homeLauncher && bannerName && !app.iconArt) {
-                    NameChip(
-                        app,
-                        fill = { NameRestPill },
-                        ink = { Color.White.copy(alpha = NAME_REST_ALPHA) },
-                        modifier = Modifier.align(Alignment.BottomStart).padding(NameOnBannerInset),
-                    )
+                    NameChip(app, Modifier.align(Alignment.BottomStart).padding(NameOnBannerInset))
                 }
             } else {
                 TrimmedEllipsisText(app.label, TvTheme.typography.tileLabel, maxLines = 2)
@@ -1867,10 +1859,8 @@ private fun AppTile(
 }
 
 /**
- * [tile] with [app]'s name under it, on one line, on a pill as wide as the text and no wider than the tile: white text at
- * [NAME_REST_ALPHA] on black 0.55, and while the tile has focus [TvSurfaces.pillContent] on [TvSurfaces.pillFill], as a
- * focused top-bar pill. The pill is [nameGap] under the tile. The turn to the focused pill runs in the draw phase, so a
- * focus move recomposes nothing.
+ * [tile] with [app]'s name under it, on one line, on a pill as wide as the text and no wider than the tile, which looks the same
+ * with focus or without. The pill is [nameGap] under the tile.
  */
 @Composable
 private fun NameUnder(
@@ -1878,27 +1868,13 @@ private fun NameUnder(
     modifier: Modifier = Modifier,
     tile: @Composable () -> Unit,
 ) {
-    val motion = TvTheme.motion
-    val focus = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
-    val surfaces = TvTheme.surfaces
-    val grownScale = motion.focusScale(TILE_FOCUSED_SCALE)
+    val grownScale = TvTheme.motion.focusScale(TILE_FOCUSED_SCALE)
     Layout(
         content = {
             tile()
-            NameChip(
-                app,
-                fill = { lerp(NameRestPill, surfaces.pillFill, focus.value.coerceIn(0f, 1f)) },
-                ink = { lerp(Color.White.copy(alpha = NAME_REST_ALPHA), surfaces.pillContent, focus.value.coerceIn(0f, 1f)) },
-            )
+            NameChip(app)
         },
-        modifier =
-            modifier.onFocusChanged {
-                val target = if (it.hasFocus) 1f else 0f
-                if (focus.targetValue != target) {
-                    scope.launch(start = CoroutineStart.UNDISPATCHED) { focus.animateTo(target, motion.tweenSpec(NAME_FADE_MS)) }
-                }
-            },
+        modifier = modifier,
     ) { measurables, constraints ->
         val art = measurables[0].measure(constraints)
         val name = measurables[1].measure(Constraints(maxWidth = art.width))
@@ -1919,12 +1895,10 @@ private fun Density.nameGap(
     return maxOf(TileNameGap.roundToPx(), (ringEnd + NameRingClearance.toPx()).roundToInt())
 }
 
-/** [app]'s name in a pill of one line, [NameLine] high: [fill] and [ink] are read as it draws. */
+/** [app]'s name in a pill of one line, [NameLine] high. */
 @Composable
 private fun NameChip(
     app: AppEntry,
-    fill: () -> Color,
-    ink: ColorProducer,
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
@@ -1932,6 +1906,7 @@ private fun NameChip(
     val style =
         remember(density, label) {
             label.copy(
+                color = NameInk,
                 textAlign = TextAlign.Center,
                 lineHeight = with(density) { NameLine.toSp() },
                 lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
@@ -1939,7 +1914,7 @@ private fun NameChip(
         }
     Box(
         modifier
-            .drawBehind { drawRoundRect(fill(), cornerRadius = CornerRadius(NamePillRadius.toPx())) }
+            .drawBehind { drawRoundRect(NamePill, cornerRadius = CornerRadius(NamePillRadius.toPx())) }
             .padding(horizontal = NamePillAcross, vertical = NamePillDown),
     ) {
         TrimmedEllipsisText(
@@ -1947,7 +1922,6 @@ private fun NameChip(
             style,
             maxLines = 1,
             modifier = Modifier.testTag("name:${app.key}").clearAndSetSemantics {},
-            color = ink,
         )
     }
 }
