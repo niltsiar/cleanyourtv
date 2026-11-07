@@ -42,32 +42,39 @@ import kotlinx.coroutines.launch
 
 private const val DIMMED_ALPHA = 0.65f
 
-/** The carried tile has focus, so FocusSurface's 1.08 applies inside this layer too. */
-private const val LIFT_SCALE = 0.08f
 private const val WIGGLE_DEGREES = 1.6f
 private const val WIGGLE_MS = 150
 private const val DIM_MS = 140
-private const val APART_MS = 200
-private val LiftHeight = 8.dp
+private val TrayRimClear = 8.dp
 private val LiftShadow = 20.dp
 private val LiftShadowColor = Color.Black.copy(alpha = 0.55f)
+
+/**
+ * How far a carried tile lifts: its ring, [FocusRingReach] past the tile, stays [TrayRimClear] under the tray's rim, a
+ * [TileGap] above the tile.
+ */
+private val LiftHeight = TileGap - FocusRingReach - TrayRimClear
+
+/** The chevron's shape before it is fitted to its gutter: the width of its glyph, its stroke and the outline on each side of it. */
 private val ChevronDepth = 7.dp
 private val ChevronStroke = 2.5.dp
 private val ChevronOutline = 1.25.dp
-private val ChevronThickness = ChevronStroke + ChevronOutline * 2
-private val ChevronClear = 6.dp
+private val ChevronRingClear = 4.dp
+private val ChevronNextClear = 3.dp
 
-/** The least gap a row keeps between two tiles away from the carried one. */
-private val MinApartGap = 4.dp
+/** What the [TileGap] leaves a chevron, glyph and outline, beside a carried tile at its rest size and its ring. */
+private val ChevronFootprint = TileGap - FocusRingReach - ChevronRingClear - ChevronNextClear
+
+/** How much the chevron's shape shrinks to fill [ChevronFootprint]. */
+private val ChevronFit = ChevronFootprint / (ChevronDepth + ChevronStroke + ChevronOutline * 2)
 private val ChevronColor = Color.White
 private val ChevronOutlineColor = Color.Black.copy(alpha = 0.55f)
 
 /**
- * A tile's look in reorder and edit-dock modes: dimmed unless it is the carried one, which lifts, grows, casts a shadow
- * in its [shape], wiggles a little and shows a white chevron in the gutter beside each edge it can still move towards,
- * clear of its ring and of the next tile; it settles back with a spring when it is put down. The tiles of its row spread
- * from it as far as the chevrons need ([ApartRow]), taking the room from the gaps farther out. The animated values are read in the layer and
- * draw lambdas only.
+ * A tile's look in reorder and edit-dock modes: dimmed unless it is the carried one, which lifts, is drawn at its rest size
+ * (a focused tile is grown), casts a shadow in its [shape], wiggles a little and shows a white chevron in the gutter beside
+ * each edge it can still move towards, clear of its ring and of the next tile; it settles back with a spring when it is put
+ * down. No other tile moves. The animated values are read in the layer and draw lambdas only.
  */
 @Composable
 internal fun Modifier.reorderLook(
@@ -82,28 +89,10 @@ internal fun Modifier.reorderLook(
     val wiggle = remember { Animatable(0f) }
     val left = remember { Animatable(input.badgeAtStart(key, input.canMoveLeft)) }
     val right = remember { Animatable(input.badgeAtStart(key, input.canMoveRight)) }
-    val density = LocalDensity.current
-    val width = remember { mutableFloatStateOf(0f) }
-    val shift = remember { Animatable(0f) }
-    LaunchedEffect(key, input, motion, density) {
+    val grown = motion.focusScale(TILE_FOCUSED_SCALE)
+    LaunchedEffect(key, input, motion) {
         launch {
             snapshotFlow { if (key in input.dimmed.value) DIMMED_ALPHA else 1f }.collect { dim.animateTo(it, motion.tweenSpec(DIM_MS)) }
-        }
-        launch {
-            // A tile built mid-session starts where it ends up.
-            var placed = false
-            snapshotFlow {
-                density.apartShift(
-                    input.apart.value,
-                    key,
-                    width.floatValue,
-                    motion.focusScale(TILE_FOCUSED_SCALE) * (1f + LIFT_SCALE),
-                )
-            }.filterNotNull()
-                .collect {
-                    if (placed) shift.animateTo(it, motion.tweenSpec(APART_MS)) else shift.snapTo(it)
-                    placed = true
-                }
         }
         launch {
             snapshotFlow { input.carried.value == key }.collectLatest { carried ->
@@ -134,19 +123,18 @@ internal fun Modifier.reorderLook(
         compositingStrategy = CompositingStrategy.ModulateAlpha
         alpha = dim.value.coerceIn(0f, 1f)
         val raised = lift.value
-        scaleX = 1f + LIFT_SCALE * raised
+        scaleX = 1f + (1f / grown - 1f) * raised
         scaleY = scaleX
         translationY = -LiftHeight.toPx() * raised
         rotationZ = WIGGLE_DEGREES * wiggle.value * raised
-        translationX = shift.value
         shadowElevation = LiftShadow.toPx() * raised.coerceIn(0f, 1f)
         this.shape = shape
         ambientShadowColor = LiftShadowColor
         spotShadowColor = LiftShadowColor
-    }.onSizeChanged { width.floatValue = it.width.toFloat() }.drawWithCache {
-        val stroke = Stroke(ChevronStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
-        val outline = Stroke(ChevronThickness.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
-        val grown = motion.focusScale(TILE_FOCUSED_SCALE)
+    }.drawWithCache {
+        val stroke = Stroke((ChevronStroke * ChevronFit).toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        val outline = Stroke(((ChevronStroke + ChevronOutline * 2) * ChevronFit).toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        val depth = (ChevronDepth * ChevronFit).toPx()
         onDrawWithContent {
             drawContent()
             val lifted = lift.value.coerceIn(0f, 1f)
@@ -154,17 +142,17 @@ internal fun Modifier.reorderLook(
             val onRight = lifted * right.value.coerceIn(0f, 1f)
             if (onLeft == 0f && onRight == 0f) return@onDrawWithContent
             // The layer is scaled by the lift: draw in the tile's own measures by undoing that.
-            val raised = 1f + LIFT_SCALE * lift.value
-            val gutter = chevronGutter(size.width, grown * raised)
+            val raised = 1f + (1f / grown - 1f) * lift.value
+            val centre = chevronCentre(size.width, grown * raised)
             scale(1f / raised, Offset(size.width / 2f, size.height / 2f)) {
                 val middle = size.height / 2f
                 if (onLeft > 0f) {
-                    val chevron = chevron(Offset(-gutter.centre, middle), ChevronDepth.toPx(), pointsLeft = true)
+                    val chevron = chevron(Offset(-centre, middle), depth, pointsLeft = true)
                     drawPath(chevron, ChevronOutlineColor, alpha = onLeft, style = outline)
                     drawPath(chevron, ChevronColor, alpha = onLeft, style = stroke)
                 }
                 if (onRight > 0f) {
-                    val chevron = chevron(Offset(size.width + gutter.centre, middle), ChevronDepth.toPx(), pointsLeft = false)
+                    val chevron = chevron(Offset(size.width + centre, middle), depth, pointsLeft = false)
                     drawPath(chevron, ChevronOutlineColor, alpha = onRight, style = outline)
                     drawPath(chevron, ChevronColor, alpha = onRight, style = stroke)
                 }
@@ -174,86 +162,13 @@ internal fun Modifier.reorderLook(
 }
 
 /**
- * Where a chevron sits beside a carried tile whose art, [width] wide, is [scale] times its size. The ring reaches
- * [FocusRingReach] x [scale] past the art; the chevron, [ChevronDepth] wide and [ChevronThickness] wider with its outline,
- * stands [ChevronClear] past the ring, and the next tile [ChevronClear] past it. [ChevronGutter.centre] is the chevron's
- * distance outside the tile's edge, and [ChevronGutter.reach] the distance at which the next tile must start.
+ * How far outside the edge of a carried tile, [width] wide and drawn [scale] times its size, its chevron is centred: it
+ * stands [ChevronRingClear] past the ring, which reaches [FocusRingReach] x [scale] past the art.
  */
-private fun Density.chevronGutter(
+private fun Density.chevronCentre(
     width: Float,
     scale: Float,
-): ChevronGutter {
-    val ringEnd = width * (scale - 1f) / 2f + FocusRingReach.toPx() * scale
-    val footprint = (ChevronDepth + ChevronThickness).toPx()
-    val clear = ChevronClear.toPx()
-    return ChevronGutter(centre = ringEnd + clear + footprint / 2f, reach = ringEnd + 2f * clear + footprint)
-}
-
-/** How far from a tile's edge a chevron stands ([centre]), and how far the next tile must start for it to be [ChevronClear] clear ([reach]). */
-private data class ChevronGutter(
-    val centre: Float,
-    val reach: Float,
-)
-
-/** How many places the row of [apart] runs before and after the carried tile. */
-private fun apartSides(apart: Map<String, Int>): Pair<Int, Int> {
-    var left = 0
-    var right = 0
-    for (step in apart.values) {
-        if (step < 0) left = maxOf(left, -step) else right = maxOf(right, step)
-    }
-    return left to right
-}
-
-/**
- * How far the tile [key] moves along its row when the row spreads from the carried tile, or null while its [width] is
- * unknown. A tile outside [apart] stays.
- */
-private fun Density.apartShift(
-    apart: Map<String, Int>,
-    key: String,
-    width: Float,
-    scale: Float,
-): Float? {
-    val step = apart[key] ?: return 0f
-    if (width <= 0f) return null
-    val (before, after) = apartSides(apart)
-    return ApartRow(before, after, TileGap.toPx(), chevronGutter(width, scale).reach, MinApartGap.toPx()).shift(step)
-}
-
-/**
- * A row of [left] tiles, the carried one and [right] tiles, whose gaps are [gap] at rest. A gap beside the carried tile
- * is [reach] wide, as its chevron needs. The other gaps give up what that costs, down to [floor]; the row keeps its
- * length while they can. When they cannot, the row grows by the rest, half at each end.
- */
-internal class ApartRow(
-    private val left: Int,
-    private val right: Int,
-    private val gap: Float,
-    reach: Float,
-    floor: Float,
-) {
-    private val beside = maxOf(reach, gap)
-    private val others: Float
-    private val growth: Float
-
-    init {
-        val sides = (if (left > 0) 1 else 0) + (if (right > 0) 1 else 0)
-        val between = left + right - sides
-        val total = (left + right) * gap
-        others = if (between == 0) gap else ((total - sides * beside) / between).coerceIn(minOf(floor, gap), gap)
-        growth = sides * beside + between * others - total
-    }
-
-    /** How far the tile [step] places from the carried one moves along the row; a negative step is before it. */
-    fun shift(step: Int): Float {
-        var moved = -growth / 2f
-        for (index in 0 until left + step) moved += gapAt(index) - gap
-        return moved
-    }
-
-    private fun gapAt(index: Int): Float = if ((left > 0 && index == left - 1) || (right > 0 && index == left)) beside else others
-}
+): Float = width * (scale - 1f) / 2f + FocusRingReach.toPx() * scale + ChevronRingClear.toPx() + ChevronFootprint.toPx() / 2f
 
 private fun HomeInput.badgeAtStart(
     key: String,

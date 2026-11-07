@@ -242,27 +242,37 @@ class HomeLookUiTest {
         return redAt(Offset((tile.left.value + tile.right.value) / 2, tile.bottom.value - above))
     }
 
-    /** How much of a tile's height tile [tag] shows above the screen's bottom edge; a tile's bounds stop at the edge, so the dock's first tile gives the height. */
-    private fun visibleShare(tag: String): Float = (screen().bottom.value - bounds(tag).top.value) / bounds("tile:pkg.1").height.value
+    /** How many dp of tile [tag] show above the screen's bottom edge. */
+    private fun visibleDp(tag: String): Float = screen().bottom.value - bounds(tag).top.value
 
     @Test
-    fun a_grid_row_under_half_visible_draws_at_alpha_0() {
-        showHome(apps = whiteApps(30), config = SixColumns.copy(columns = 4))
+    @Config(qualifiers = "w960dp-h548dp-xhdpi")
+    fun a_grid_row_with_under_48_dp_visible_draws_at_alpha_0() {
+        showHome(apps = whiteApps(30), config = SixColumns.copy(columns = 5))
 
-        assertTrue("the row shows ${visibleShare("tile:pkg.6")}", visibleShare("tile:pkg.6") in 0.05f..0.5f)
+        assertTrue("the row shows ${visibleDp("tile:pkg.6")} dp", visibleDp("tile:pkg.6") in 40f..48f)
         assertNear(0, redUnderTop("tile:pkg.6", 2f), 2)
         assertNear(0, redUnderTop("tile:pkg.6", 10f), 2)
     }
 
     @Test
-    fun a_grid_row_half_visible_or_more_draws_whole_under_the_bottom_fade_not_as_a_half_alpha_strip() {
+    @Config(qualifiers = "w960dp-h580dp-xhdpi")
+    fun a_grid_row_with_48_dp_visible_draws_though_under_half_of_its_tile_shows() {
+        showHome(apps = whiteApps(30), config = SixColumns.copy(columns = 4))
+
+        assertTrue("the row shows ${visibleDp("tile:pkg.5")} dp", visibleDp("tile:pkg.5") in 48f..56f)
+        assertTrue("the row's top reads ${redUnderTop("tile:pkg.5", 2f)}", redUnderTop("tile:pkg.5", 2f) > 20)
+    }
+
+    @Test
+    fun a_grid_row_with_more_than_48_dp_visible_draws_whole_under_the_bottom_fade_not_as_a_half_alpha_strip() {
         showHome(apps = whiteApps(30), config = SixColumns.copy(columns = 5))
         press(Key.DirectionDown)
         compose.onNodeWithTag("tile:pkg.6").assertIsFocused()
 
-        // The third row shows 80% of its tile and starts 24 dp under the last whole row, whose bottom is 8 dp short of the
+        // The third row shows 70 dp of its tile and starts 24 dp under the last whole row, whose bottom is 8 dp short of the
         // fade's start; the fade runs 36 dp, so the row's top reads (20 - dp) / 36 of its own alpha.
-        assertTrue("the row shows ${visibleShare("tile:pkg.16")}", visibleShare("tile:pkg.16") in 0.5f..0.95f)
+        assertTrue("the row shows ${visibleDp("tile:pkg.16")} dp", visibleDp("tile:pkg.16") in 60f..84f)
         assertNear(Math.round(255 * (20f - 2f) / 36f), redUnderTop("tile:pkg.16", 2f), 5)
         assertNear(Math.round(255 * (20f - 10f) / 36f), redUnderTop("tile:pkg.16", 10f), 5)
     }
@@ -272,13 +282,13 @@ class HomeLookUiTest {
         showHome(apps = whiteApps(30), config = SixColumns.copy(columns = 4))
         press(Key.DirectionDown)
         compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
-        assertTrue("row 3 shows ${visibleShare("tile:pkg.13")}", visibleShare("tile:pkg.13") < 0.5f)
+        assertTrue("row 3 shows ${visibleDp("tile:pkg.13")} dp", visibleDp("tile:pkg.13") < 48f)
         assertNear(0, redUnderTop("tile:pkg.13", 2f), 2)
 
         press(Key.DirectionDown)
         compose.onNodeWithTag("tile:pkg.9").assertIsFocused()
 
-        assertTrue("the row shows ${visibleShare("tile:pkg.13")}", visibleShare("tile:pkg.13") >= 1f)
+        assertTrue("the row shows ${visibleDp("tile:pkg.13")} dp", visibleDp("tile:pkg.13") >= bounds("tile:pkg.1").height.value)
         assertNear(255, redAboveBottom("tile:pkg.13", 1f), 2)
     }
 
@@ -395,8 +405,11 @@ class HomeLookUiTest {
         return top / density to (bottom + 1) / density
     }
 
+    /** The ring reaches 9 dp past the art of a tile at its rest size. */
+    private val ringReach = 9f
+
     @Test
-    fun a_carried_tile_lifts_eight_dp_and_grows_eight_percent_over_the_focused_tile() {
+    fun a_carried_tile_lifts_7_dp_and_is_drawn_at_its_rest_size_not_grown_like_a_focused_tile() {
         showHome(apps = whiteApps(9))
         val neighbour = dockTile(2)
         val middle = (neighbour.top.value + neighbour.bottom.value) / 2
@@ -407,9 +420,9 @@ class HomeLookUiTest {
         carryFirstTile()
         val (top, bottom) = artSpan(x, middle)
 
-        val height = restBottom - restTop
-        assertNear(height * 1.08f, bottom - top, 1f)
-        assertNear((restTop + restBottom) / 2 - 8f, (top + bottom) / 2, 1f)
+        // A focused tile is drawn 1.08 times its size.
+        assertNear((restBottom - restTop) / 1.08f, bottom - top, 1f)
+        assertNear((restTop + restBottom) / 2 - 7f, (top + bottom) / 2, 1f)
     }
 
     /** Whether the screen holds a white pixel in the box from ([left], [top]) to ([right], [bottom]), in dp. */
@@ -429,19 +442,63 @@ class HomeLookUiTest {
     /** Apps whose art is clear, so that only a chevron is white over the dark tile. */
     private fun clearApps(count: Int) = whiteApps(count).map { it.copy(image = ImageBitmap(16, 9)) }
 
-    /** The gutter beside a carried tile is bare but for a chevron between its ring, which ends 9 dp x 1.08 x 1.08 past its art, and the next tile. */
-    private fun chevronOn(
+    /** Whether a white chevron stands in the gutter on [side] (-1 left, +1 right) of dock slot [slot] (from 1), past the ring, where the dock tiles [rest] stood before the carry. */
+    private fun chevronBeside(
+        rest: List<DpRect>,
+        slot: Int,
         side: Int,
-        key: String,
     ): Boolean {
-        val tile = bounds("tile:$key")
-        val grown = 1.08f * 1.08f
-        val width = tile.right.value - tile.left.value
-        val ringEnd = width * (grown - 1f) / 2f + 9f * grown
-        val edge = if (side < 0) tile.left.value else tile.right.value
-        val near = edge + side * ringEnd
-        val far = edge + side * (ringEnd + 24f)
-        return whiteIn(minOf(near, far), tile.top.value - 10f, maxOf(near, far), tile.bottom.value)
+        val tile = rest[slot - 1]
+        val from =
+            if (side <
+                0
+            ) {
+                rest.getOrNull(slot - 2)?.right?.value ?: (tile.left.value - TileGap.value)
+            } else {
+                tile.right.value + ringReach
+            }
+        val to = if (side < 0) tile.left.value - ringReach else rest.getOrNull(slot)?.left?.value ?: (tile.right.value + TileGap.value)
+        return whiteIn(from, tile.top.value - 10f, to, tile.bottom.value)
+    }
+
+    private fun restTiles(count: Int) = (1..count).map { dockTile(it) }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_carried_tile_shows_a_chevron_in_the_gutter_only_on_the_sides_it_can_move_to() {
+        showHome(apps = clearApps(3))
+        val rest = restTiles(3)
+
+        carryFirstTile()
+        assertTrue("first slot, right", chevronBeside(rest, 1, +1))
+        assertTrue("first slot, left", !chevronBeside(rest, 1, -1))
+
+        press(Key.DirectionRight)
+        assertTrue("middle slot, right", chevronBeside(rest, 2, +1))
+        assertTrue("middle slot, left", chevronBeside(rest, 2, -1))
+
+        press(Key.DirectionRight)
+        assertTrue("last slot, right", !chevronBeside(rest, 3, +1))
+        assertTrue("last slot, left", chevronBeside(rest, 3, -1))
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun a_chevron_covers_none_of_the_carried_tiles_art_and_none_of_the_tiles_beside_it() {
+        showHome(apps = clearApps(3))
+        val rest = restTiles(3)
+        carryFirstTile()
+        press(Key.DirectionRight)
+        assertTrue("both chevrons show", chevronBeside(rest, 2, -1) && chevronBeside(rest, 2, +1))
+
+        val carried = rest[1]
+        assertTrue("the art", !whiteIn(carried.left.value, carried.top.value, carried.right.value, carried.bottom.value))
+        for (neighbour in listOf(rest[0], rest[2])) {
+            assertTrue(
+                "the tile beside it",
+                !whiteIn(neighbour.left.value, neighbour.top.value, neighbour.right.value, neighbour.bottom.value),
+            )
+        }
     }
 
     /** The runs of columns, in dp, that hold a pixel with green over [level] (white is 1) at some row from [top] to [bottom] dp, between [from] and [to] dp. */
@@ -469,6 +526,8 @@ class HomeLookUiTest {
         return runs
     }
 
+    private fun isRingOrange(pixel: Color) = pixel.red > 0.9f && pixel.green in 0.3f..0.55f && pixel.blue < 0.4f
+
     /** The columns, in dp, from [from] to [to] dp whose pixel at [row] dp is the reorder ring's orange. */
     private fun ringColumns(
         from: Float,
@@ -477,93 +536,101 @@ class HomeLookUiTest {
     ): ClosedFloatingPointRange<Float> {
         val pixels = compose.onRoot().captureToImage().toPixelMap()
         val density = compose.activity.resources.displayMetrics.density
-        val orange =
-            (((from * density).toInt())..((to * density).toInt())).filter {
-                val pixel = pixels[it, (row * density).toInt()]
-                pixel.red > 0.9f && pixel.green in 0.3f..0.55f && pixel.blue < 0.4f
-            }
+        val orange = (((from * density).toInt())..((to * density).toInt())).filter { isRingOrange(pixels[it, (row * density).toInt()]) }
         return (orange.min() / density)..((orange.max() + 1) / density)
     }
 
-    @Test
-    @Config(qualifiers = "+night")
-    fun the_carried_tile_shows_a_chevron_in_the_gutter_only_on_the_sides_it_can_move_to() {
-        showHome(apps = clearApps(3))
-
-        carryFirstTile()
-        assertTrue("first tile, right", chevronOn(+1, "pkg.1"))
-        assertTrue("first tile, left", !chevronOn(-1, "pkg.1"))
-
-        press(Key.DirectionRight)
-        assertTrue("middle tile, right", chevronOn(+1, "pkg.1"))
-        assertTrue("middle tile, left", chevronOn(-1, "pkg.1"))
-
-        press(Key.DirectionRight)
-        assertTrue("last tile, right", !chevronOn(+1, "pkg.1"))
-        assertTrue("last tile, left", chevronOn(-1, "pkg.1"))
+    /** The first row, in dp, from [from] down to [to] dp whose pixel in the column at [x] dp is the reorder ring's orange. */
+    private fun ringTop(
+        x: Float,
+        from: Float,
+        to: Float,
+    ): Float {
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val density = compose.activity.resources.displayMetrics.density
+        return ((from * density).toInt()..(to * density).toInt()).first { isRingOrange(pixels[(x * density).toInt(), it]) } / density
     }
 
-    @Test
-    @Config(qualifiers = "+night")
-    fun a_chevron_covers_none_of_the_carried_tiles_art_and_none_of_the_tiles_beside_it() {
-        showHome(apps = clearApps(3))
-        carryFirstTile()
-        press(Key.DirectionRight)
-        assertTrue("both chevrons show", chevronOn(-1, "pkg.1") && chevronOn(+1, "pkg.1"))
+    /** The chevron's black outline round its white stroke, which the gutter counts as part of the chevron: 1.25 dp, fitted to the gutter by 8 / 12. */
+    private val chevronOutline = 1.25f * 8f / 12f
 
-        val carried = bounds("tile:pkg.1")
-        val before = dockTile(2)
-        val after = dockTile(3)
-        // The art grows 8.3% of its width past the layout bounds; the box is the bounds, which the art covers.
-        assertTrue("the art", !whiteIn(carried.left.value, carried.top.value, carried.right.value, carried.bottom.value))
-        assertTrue("the tile before", !whiteIn(before.left.value, before.top.value, before.right.value, before.bottom.value))
-        assertTrue("the tile after", !whiteIn(after.left.value, after.top.value, after.right.value, after.bottom.value))
-    }
-
-    /** The chevron's black outline, 1.25 dp round its white stroke, which the gutter counts as part of the chevron. */
-    private val chevronOutline = 1.25f
-
-    /** Carries the first tile to [slot] (1 to 6) of a dock of clear and white art, and returns the 6 dp clearance's shortfalls, in dp. */
-    private fun chevronShortfalls(slot: Int): List<Float> {
-        showHome(apps = clearApps(1) + whiteApps(9).drop(1))
-        val artRow = dockTile(2).top.value + 6f
+    /**
+     * Carries the first of [tiles] dock tiles, of clear art among white, to [slot] (from 1) and returns, in dp, the
+     * chevron's clearance from the ring and from the next tile on the right, then on the left, the ring's room under the
+     * tray's rim, and the width of a chevron with its outline.
+     */
+    private fun carriedClearances(
+        tiles: Int,
+        slot: Int,
+    ): List<Float> {
+        showHome(apps = clearApps(1) + whiteApps(tiles).drop(1))
+        val rest = restTiles(tiles)
+        // Below the chevrons and clear of the tile's rounded corners.
+        val artRow = (rest[1].top.value + rest[1].bottom.value) / 2f + 14f
         carryFirstTile()
         repeat(slot - 1) { press(Key.DirectionRight) }
-        val carried = bounds("tile:pkg.1")
-        val middle = (carried.top.value + carried.bottom.value) / 2f
-        val centre = (carried.left.value + carried.right.value) / 2f
-        val halo = 3f * 1.08f * 1.08f
-        val ringRight = ringColumns(centre, carried.right.value + 30f, middle).endInclusive + halo
-        val ringLeft = ringColumns(carried.left.value - 30f, centre, middle).start - halo
+        val at = rest[slot - 1]
+        // The ring's dark hairline and stroke reach 3 dp past its orange.
+        val halo = 3f
+        val middle = (at.top.value + at.bottom.value) / 2f - 7f
+        val centre = (at.left.value + at.right.value) / 2f
+        val ringRight = ringColumns(centre, at.right.value + 30f, middle).endInclusive + halo
+        val ringLeft = ringColumns(at.left.value - 30f, centre, middle).start - halo
 
-        val chevronRight = whiteRuns(ringRight - halo, carried.right.value + 80f, middle - 10f, middle + 10f).single()
-        val chevronLeft = whiteRuns(carried.left.value - 80f, ringLeft + halo, middle - 10f, middle + 10f).single()
+        val chevronRight = whiteRuns(ringRight - halo, at.right.value + 80f, middle - 10f, middle + 10f).single()
+        val chevronLeft = whiteRuns(at.left.value - 80f, ringLeft + halo, middle - 10f, middle + 10f).single()
         // The tiles beside it are dimmed to 0.65, and their art starts and ends at the row above the chevrons.
-        val neighbourRight = whiteRuns(ringRight, carried.right.value + 80f, artRow, artRow + 1f, level = 0.5f).first().start
-        val neighbourLeft = whiteRuns(carried.left.value - 80f, ringLeft, artRow, artRow + 1f, level = 0.5f).last().endInclusive
+        val neighbourRight = whiteRuns(ringRight, at.right.value + 80f, artRow, artRow + 1f, level = 0.5f).first().start
+        val neighbourLeft = whiteRuns(at.left.value - 80f, ringLeft, artRow, artRow + 1f, level = 0.5f).last().endInclusive
+        val underRim = ringTop(centre, bounds("dock").top.value, at.top.value + 40f) - halo - bounds("dock").top.value
 
         return listOf(
             chevronRight.start - chevronOutline - ringRight,
             neighbourRight - (chevronRight.endInclusive + chevronOutline),
             ringLeft - (chevronLeft.endInclusive + chevronOutline),
             chevronLeft.start - chevronOutline - neighbourLeft,
+            underRim,
+            chevronRight.endInclusive - chevronRight.start + 2f * chevronOutline,
         )
     }
 
-    @Test
-    @Config(qualifiers = "+night")
-    fun a_chevron_stands_6_dp_clear_of_the_ring_and_6_dp_clear_of_the_neighbour_tile_on_both_sides() {
-        val shortfalls = chevronShortfalls(slot = 2)
+    private fun assertCarriedClearances(
+        tiles: Int,
+        slot: Int,
+    ) {
+        val clearances = carriedClearances(tiles, slot)
 
-        assertTrue("ring and neighbour, right then left: $shortfalls", shortfalls.all { it >= 5.5f })
+        val (ringRight, nextRight, ringLeft, nextLeft) = clearances
+        val underRim = clearances[4]
+        val footprint = clearances[5]
+        assertTrue("chevron clearance from the ring, right then left: $ringRight $ringLeft", ringRight >= 3.5f && ringLeft >= 3.5f)
+        assertTrue("chevron clearance from the next tile, right then left: $nextRight $nextLeft", nextRight >= 2.5f && nextLeft >= 2.5f)
+        assertTrue("the ring is $underRim dp under the rim", underRim >= 7.5f)
+        assertTrue("the chevron is $footprint dp wide with its outline", footprint in 7.2f..8.3f)
     }
 
     @Test
     @Config(qualifiers = "+night")
-    fun the_chevrons_keep_their_clearance_with_the_carried_tile_in_the_middle_of_a_full_dock() {
-        val shortfalls = chevronShortfalls(slot = 4)
+    fun with_four_dock_tiles_a_carried_tiles_chevrons_fit_its_gutter_and_its_ring_stays_8_dp_under_the_rim() {
+        assertCarriedClearances(tiles = 4, slot = 2)
+    }
 
-        assertTrue("ring and neighbour, right then left: $shortfalls", shortfalls.all { it >= 5.5f })
+    @Test
+    @Config(qualifiers = "+night")
+    fun with_five_dock_tiles_a_carried_tiles_chevrons_fit_its_gutter_and_its_ring_stays_8_dp_under_the_rim() {
+        assertCarriedClearances(tiles = 5, slot = 2)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun with_six_dock_tiles_a_carried_tiles_chevrons_fit_its_gutter_and_its_ring_stays_8_dp_under_the_rim() {
+        assertCarriedClearances(tiles = 6, slot = 2)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_chevrons_keep_their_clearances_with_the_carried_tile_in_the_middle_of_a_full_dock() {
+        assertCarriedClearances(tiles = 6, slot = 4)
     }
 
     /** The left edge, in dp, of the white art that covers [x] dp at [row] dp. */
@@ -574,36 +641,23 @@ class HomeLookUiTest {
 
     @Test
     @Config(qualifiers = "+night")
-    fun the_tiles_beside_a_carried_tile_move_apart_and_come_back_when_it_is_put_down() {
-        showHome(apps = clearApps(1) + whiteApps(9).drop(1))
-        val row = dockTile(3).top.value + 6f
-        val next = centreOf(dockTile(3)).x
-        val rest = artStart(next, row)
-
-        carryFirstTile()
-        press(Key.DirectionRight)
-        val moved = artStart(next, row)
-
-        assertTrue("the next tile moved from $rest to $moved", moved - rest > 10f)
-
-        back()
-        assertEquals(rest, artStart(next, row), 0.6f)
-    }
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun with_a_tile_carried_the_other_tiles_of_a_full_dock_stay_between_the_rest_places_of_its_first_and_last_tile() {
-        showHome(apps = clearApps(1) + whiteApps(9).drop(1))
-        val from = dockTile(1).left.value
-        val to = dockTile(6).right.value
+    fun with_a_tile_carried_no_other_tile_moves_so_every_gap_stays_at_its_rest_value() {
+        showHome(apps = whiteApps(6))
+        val rest = restTiles(6)
+        val row = rest[1].top.value + 6f
+        val artStarts = rest.map { artStart((it.left.value + it.right.value) / 2f, row) }
 
         carryFirstTile()
         for (slot in 1..6) {
             if (slot > 1) press(Key.DirectionRight)
-            for (n in 2..6) {
-                val tile = dockTile(n)
-                assertTrue("tile $n at slot $slot is ${tile.left}, the row starts at $from", tile.left.value >= from - 0.5f)
-                assertTrue("tile $n at slot $slot is ${tile.right}, the row ends at $to", tile.right.value <= to + 0.5f)
+            for (other in (1..6).filter { it != slot }) {
+                val at = rest[other - 1]
+                assertEquals(
+                    "the tile in slot $other with the carried tile in slot $slot",
+                    artStarts[other - 1],
+                    artStart((at.left.value + at.right.value) / 2f, row),
+                    0.6f,
+                )
             }
         }
     }

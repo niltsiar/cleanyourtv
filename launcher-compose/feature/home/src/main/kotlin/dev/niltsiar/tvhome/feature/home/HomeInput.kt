@@ -32,8 +32,6 @@ internal class HomeInput(
     /** Which way the carried tile can still move. Read them in draw lambdas only. */
     val canMoveLeft: State<Boolean> = mutableStateOf(false),
     val canMoveRight: State<Boolean> = mutableStateOf(false),
-    /** The tiles in the carried tile's row, by the side of it they lie on. Read it in layer lambdas and effects only. */
-    val apart: State<Map<String, Int>> = mutableStateOf(emptyMap()),
     private val openLibrary: State<() -> Unit> = mutableStateOf({}),
     /** Whether the Inputs button offers a device. Read it in a focus-properties lambda, not in composition. */
     val inputOffered: State<Boolean> = mutableStateOf(false),

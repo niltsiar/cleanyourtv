@@ -175,16 +175,15 @@ internal val TileGap = 24.dp
 private val TileNameGap = 21.dp
 private val NameRingClearance = 6.dp
 
-/** One line of a tile's name, the padding of its pill, and the lines a name takes before it ends in an ellipsis. */
+/** One line of a tile's name and the padding of its pill. */
 private val NameLine = 20.dp
 private val NamePillAcross = 6.dp
 private val NamePillDown = 2.dp
-private const val NAME_LINES = 2
 
 /** The radius of every name pill: half the height of a pill of one line. */
 private val NamePillRadius = (NameLine + NamePillDown * 2) / 2
 
-/** The room always_show_names adds under a tile: the gap and a pill of one line. A second line takes more room from its row. */
+/** The room always_show_names adds under a tile: the gap and a pill of one line. */
 internal val TileNameRoom = TileNameGap + NameLine + NamePillDown * 2
 
 /** How far the name of another launcher's banner stands from the banner's bottom and left edges. */
@@ -210,9 +209,6 @@ private val LightTileEdge = Color.Black.copy(alpha = 0.28f)
 private const val BRIGHT_WALLPAPER_LIGHTNESS = 70f
 private val DockShape = RoundedCornerShape(32.dp)
 private val GridBottom = 48.dp
-
-/** The room the grid's bottom fade leaves, at least, under the last whole row. */
-private val NamedRowsClearance = 16.dp
 
 /** The space between the end of the Inputs list and the dock's panel. */
 private val InputsTrayClearance = 24.dp
@@ -331,7 +327,6 @@ public fun HomeScreen(
                 reordering = derivedStateOf { currentState.value().reorder != null },
                 canMoveLeft = derivedStateOf { currentState.value().reorder?.canMoveLeft == true },
                 canMoveRight = derivedStateOf { currentState.value().reorder?.canMoveRight == true },
-                apart = derivedStateOf { currentState.value().reorder?.apart ?: emptyMap() },
                 openLibrary = currentOpenLibrary,
                 inputOffered = derivedStateOf { currentState.value().inputOffer != null },
                 habit = if (layout.habitMark) derivedStateOf { currentState.value().habit } else null,
@@ -560,7 +555,7 @@ private fun HomeContent(
     val window = LocalWindowInfo.current.containerSize
     val gridWidth = with(density) { window.width.toDp() } - ScreenMargin * 2
     val share = gridShare(layout, gridWidth, with(density) { window.height.toDp() }, shelfBottom)
-    val startMargin = gridStart(layout, gridWidth, share)
+    val startMargin = gridStart(gridWidth, share)
     val endMargin = ScreenMargin + gridWidth * (1f - share) - (startMargin - ScreenMargin)
     // The pill ends the grid: scrolled to the end it stands whole above the bottom fade, not a bottom margin higher.
     val pillAfterGrid = layout.libraryPill && !layout.singleRow
@@ -911,7 +906,7 @@ private fun rememberFocusDim(
                         nameRoom = layout.nameRoom(),
                     ).dp
                 }
-            val start = gridStart(layout, gridWidth, share)
+            val start = gridStart(gridWidth, share)
             val edge = (start - TileGap) / width
             val end = (start + gridWidth * share + TileGap) / width
             val top = shelfBottom + lowered
@@ -935,45 +930,29 @@ private fun rememberFocusDim(
 
 /**
  * The share of the grid's width its tiles use, so that [HomeLayout.rowsBelowDock] rows fit under a dock whose panel starts at
- * [shelfBottom]; with names, so that the row in focus and the next one, names included, end [NamedRowsClearance] above the bottom edge.
+ * [shelfBottom]. The names under the tiles do not change it.
  */
-private fun gridShare(
+internal fun gridShare(
     layout: HomeLayout,
     gridWidth: Dp,
     windowHeight: Dp,
     shelfBottom: Dp,
 ): Float {
     if (layout.singleRow) return 1f
-    val below =
-        tileWidthShare(
-            gridWidth.value,
-            (windowHeight - shelfBottom - GridBottom).value,
-            layout.columns,
-            layout.rowsBelowDock,
-            TileGap.value,
-            layout.nameRoom(),
-        )
-    if (!layout.showNames) return below
-    val named =
-        namedRowsShare(
-            gridWidth.value,
-            (windowHeight - shelfBottom - TileGap - NamedRowsClearance).value,
-            layout.columns,
-            TileGap.value,
-            TileNameRoom.value,
-        )
-    return minOf(below, named)
+    return tileWidthShare(
+        gridWidth.value,
+        (windowHeight - shelfBottom - GridBottom).value,
+        layout.columns,
+        layout.rowsBelowDock,
+        TileGap.value,
+    )
 }
 
-/**
- * Where the dock and the grid start: with the names on, on the margin where the header starts; else centred between the
- * margins when [share] shrinks them.
- */
+/** Where the dock and the grid start: centred between the margins when [share] shrinks them. */
 private fun gridStart(
-    layout: HomeLayout,
     gridWidth: Dp,
     share: Float,
-): Dp = ScreenMargin + if (layout.showNames) 0.dp else gridWidth * ((1f - share) / 2f)
+): Dp = ScreenMargin + gridWidth * ((1f - share) / 2f)
 
 /** The room a tile's name takes under it, in dp; 0 with the names off. */
 private fun HomeLayout.nameRoom(): Float = if (showNames) TileNameRoom.value else 0f
@@ -1033,6 +1012,7 @@ private fun FocusDimEffects(
         LocalWindowInfo.current.containerSize.height
             .toFloat()
     val solidTop = with(density) { cutoff.toPx() } + settleOf(windowHeight)
+    val minVisible = with(density) { GridRowMinVisible.toPx() }
     LaunchedEffect(state, input, layout, motion) {
         snapshotFlow { focusRowOf(state.value(), input, layout).toFloat() }
             .collectLatest { dim.row.animateTo(it, motion.tweenSpec(ROW_DIM_MS)) }
@@ -1063,11 +1043,11 @@ private fun FocusDimEffects(
             }
         }
     }
-    LaunchedEffect(state, grid, layout, dim, motion) {
+    LaunchedEffect(state, grid, layout, dim, motion, minVisible) {
         var first = true
         snapshotFlow {
             val rows = (state.value().grid.size + layout.columns - 1) / layout.columns
-            minOf(dim.hiddenFromRow(grid.layoutInfo, layout.columns), rows).toFloat()
+            minOf(dim.hiddenFromRow(grid.layoutInfo, layout.columns, minVisible), rows).toFloat()
         }.collectLatest { target ->
             if (first) dim.fold.snapTo(target) else dim.fold.animateTo(target, motion.tweenSpec(ROW_DIM_MS))
             first = false
@@ -1105,16 +1085,20 @@ private fun DockEdgeEffect(
 
 private const val ROW_DIM_MS = 160
 
+/** The least a grid row's tile shows above the bottom edge for the row to draw: a smaller part reads as a rendering fault. */
+private val GridRowMinVisible = 48.dp
+
 /** The dock's alpha under a top-bar popup, so that the popup is what looks active. */
 private const val POPUP_DOCK_ALPHA = 0.55f
 
 /**
- * The first grid row whose tile shows under half its height above the bottom edge, or [Int.MAX_VALUE]: a smaller part
- * reads as a rendering fault.
+ * The first grid row whose tile shows under [minVisible] pixels (or under its whole height, if that is less) above the bottom
+ * edge, or [Int.MAX_VALUE].
  */
 private fun FocusDim.hiddenFromRow(
     info: LazyGridLayoutInfo,
     columns: Int,
+    minVisible: Float,
 ): Int {
     val shift = lowPx() - info.viewportStartOffset
     var first = Int.MAX_VALUE
@@ -1122,7 +1106,8 @@ private fun FocusDim.hiddenFromRow(
         val item = info.visibleItemsInfo[i]
         val index = item.index - GRID_ITEMS_BEFORE
         if (index < 0 || item.key == LIBRARY_FOCUS) continue
-        if (info.viewportSize.height - (item.offset.y + shift) < item.size.width / TILE_ASPECT / 2f) first = minOf(first, index / columns)
+        val shown = info.viewportSize.height - (item.offset.y + shift)
+        if (shown < minOf(minVisible, item.size.width / TILE_ASPECT)) first = minOf(first, index / columns)
     }
     return first
 }
@@ -1796,7 +1781,6 @@ private fun AppTile(
                 if (app.homeLauncher && bannerName && !app.iconArt) {
                     NameChip(
                         app,
-                        maxLines = 1,
                         fill = { NameRestPill },
                         ink = { Color.White.copy(alpha = NAME_REST_ALPHA) },
                         modifier = Modifier.align(Alignment.BottomStart).padding(NameOnBannerInset),
@@ -1810,7 +1794,7 @@ private fun AppTile(
 }
 
 /**
- * [tile] with [app]'s name under it, in [NAME_LINES] lines at most, on a pill as wide as the text: white text at
+ * [tile] with [app]'s name under it, on one line, on a pill as wide as the text and no wider than the tile: white text at
  * [NAME_REST_ALPHA] on black 0.55, and while the tile has focus [TvSurfaces.pillContent] on [TvSurfaces.pillFill], as a
  * focused top-bar pill. The pill is [nameGap] under the tile. The turn to the focused pill runs in the draw phase, so a
  * focus move recomposes nothing.
@@ -1831,7 +1815,6 @@ private fun NameUnder(
             tile()
             NameChip(
                 app,
-                maxLines = NAME_LINES,
                 fill = { lerp(NameRestPill, surfaces.pillFill, focus.value.coerceIn(0f, 1f)) },
                 ink = { lerp(Color.White.copy(alpha = NAME_REST_ALPHA), surfaces.pillContent, focus.value.coerceIn(0f, 1f)) },
             )
@@ -1863,14 +1846,10 @@ private fun Density.nameGap(
     return maxOf(TileNameGap.roundToPx(), (ringEnd + NameRingClearance.toPx()).roundToInt())
 }
 
-/**
- * [app]'s name in a pill, in [maxLines] lines at most: [fill] and [ink] are read as it draws. Every line is [NameLine]
- * high, so a pill of one line is as round as one of two.
- */
+/** [app]'s name in a pill of one line, [NameLine] high: [fill] and [ink] are read as it draws. */
 @Composable
 private fun NameChip(
     app: AppEntry,
-    maxLines: Int,
     fill: () -> Color,
     ink: ColorProducer,
     modifier: Modifier = Modifier,
@@ -1893,7 +1872,7 @@ private fun NameChip(
         TrimmedEllipsisText(
             app.label,
             style,
-            maxLines = maxLines,
+            maxLines = 1,
             modifier = Modifier.testTag("name:${app.key}").clearAndSetSemantics {},
             color = ink,
         )

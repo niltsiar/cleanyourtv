@@ -1,5 +1,6 @@
 package dev.niltsiar.tvhome.feature.home
 
+import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.model.AppEntry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -15,12 +16,11 @@ class HomeLayoutTest {
         share: Float,
         rows: Int,
         columns: Int = 6,
-        nameRoom: Float = 0f,
     ): Float {
         val inner = gridWidth * share
         val dockTile = (inner - (columns + 1) * gap) / columns * 9 / 16
         val gridTile = (inner - (columns - 1) * gap) / columns * 9 / 16
-        return dockTile + nameRoom + 2 * gap + rows * (gridTile + nameRoom + gap)
+        return dockTile + 2 * gap + rows * (gridTile + gap)
     }
 
     @Test
@@ -41,12 +41,13 @@ class HomeLayoutTest {
     }
 
     @Test
-    fun names_under_the_tiles_shrink_them_until_the_dock_and_the_rows_with_their_names_fit() {
-        val room = 360f
-        val bare = tileWidthShare(gridWidth, room, columns = 6, rowsBelowDock = 3, gap = gap)
-        val named = tileWidthShare(gridWidth, room, columns = 6, rowsBelowDock = 3, gap = gap, nameRoom = 4f)
-        assertTrue("shares $bare and $named", named < bare)
-        assertEquals(room, needed(named, rows = 3, nameRoom = 4f), 0.5f)
+    fun names_do_not_change_how_wide_the_tiles_are_though_the_rows_under_the_dock_do_not_fit() {
+        val bare = HomeLayout(columns = 4, rowsBelowDock = 3, singleRow = false, fillDock = true)
+
+        fun share(layout: HomeLayout) = gridShare(layout, gridWidth = 880.dp, windowHeight = 540.dp, shelfBottom = 245.dp)
+
+        assertTrue("share ${share(bare)}", share(bare) < 1f)
+        assertEquals(share(bare), share(bare.copy(showNames = true)), 0f)
     }
 
     @Test

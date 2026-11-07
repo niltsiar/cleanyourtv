@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
+import androidx.compose.ui.unit.width
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.FocusRingReach
 import dev.niltsiar.tvhome.core.designsystem.TILE_FOCUSED_SCALE
@@ -257,24 +258,40 @@ class AlwaysShowNamesUiTest {
         assertNear(height("tile:pkg.1") + TileGap + TileNameRoom, rowPitch())
     }
 
-    @Test
-    fun with_four_columns_and_names_the_second_grid_row_shows_whole_with_its_names() {
-        showHome(SixColumns.copy(columns = 4, alwaysShowNames = true), wallpaper = Wallpaper(picture = white))
-        press(Key.DirectionDown)
-        compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
-        val screen =
-            compose
-                .onRoot()
-                .getBoundsInRoot()
-                .bottom.value
+    private val whiteApps = apps.map { it.copy(image = white) }
 
-        val name = compose.onNodeWithTag("name:pkg.10").getBoundsInRoot()
-        assertTrue("the second row's name ends at ${name.bottom}", name.bottom.value <= screen - 12f)
-        val first = compose.onNodeWithTag("tile:pkg.6").getBoundsInRoot()
-        val second = compose.onNodeWithTag("tile:pkg.10").getBoundsInRoot()
-        val x = first.left.value + 8f
-        val middle = { tile: DpRect -> (tile.top.value + tile.bottom.value) / 2f }
-        assertEquals(redAt(x, middle(first)), redAt(x, middle(second)))
+    private fun redUnderTop(
+        tag: String,
+        below: Float,
+    ): Int {
+        val tile = bounds(tag)
+        return redAt((tile.left.value + tile.right.value) / 2f, tile.top.value + below)
+    }
+
+    /** How many dp of tile [tag] show above the screen's bottom edge. */
+    private fun visibleDp(tag: String): Float =
+        compose
+            .onRoot()
+            .getBoundsInRoot()
+            .bottom.value - bounds(tag).top.value
+
+    @Test
+    @Config(qualifiers = "w960dp-h610dp-xhdpi")
+    fun with_names_a_grid_row_with_under_48_dp_visible_draws_nothing_and_leaves_no_band() {
+        showHome(named4, apps = whiteApps)
+
+        assertTrue("the row shows ${visibleDp("tile:pkg.5")} dp", visibleDp("tile:pkg.5") in 30f..48f)
+        assertEquals(0, redUnderTop("tile:pkg.5", 2f))
+        assertEquals(0, redUnderTop("tile:pkg.5", 10f))
+    }
+
+    @Test
+    @Config(qualifiers = "w960dp-h620dp-xhdpi")
+    fun with_names_a_grid_row_with_48_dp_visible_or_more_draws_at_its_alpha() {
+        showHome(named4, apps = whiteApps)
+
+        assertTrue("the row shows ${visibleDp("tile:pkg.5")} dp", visibleDp("tile:pkg.5") in 48f..60f)
+        assertTrue("the row's top reads ${redUnderTop("tile:pkg.5", 2f)}", redUnderTop("tile:pkg.5", 2f) > 20)
     }
 
     @Test
@@ -292,20 +309,21 @@ class AlwaysShowNamesUiTest {
     private val named4 = SixColumns.copy(columns = 4, alwaysShowNames = true)
 
     @Test
-    fun a_name_too_long_for_its_tile_takes_two_lines_and_a_short_name_one() {
+    fun a_name_too_long_for_its_tile_stays_on_one_line_in_a_pill_no_wider_than_the_tile() {
         showHome(named4, apps = withLongName("pkg.1"))
 
-        assertEquals(2f, height("name:pkg.1").value / height("name:pkg.2").value, 0.1f)
+        assertNear(height("name:pkg.2"), height("name:pkg.1"))
+        // The pill is the name's box and 6 dp of padding on each side.
+        val pill = bounds("name:pkg.1").width.value + 12f
+        val tile = bounds("tile:pkg.1").width.value
+        assertTrue("the pill is $pill dp wide under a tile of $tile dp", pill <= tile + 0.5f && pill >= tile - 16f)
     }
 
     @Test
-    fun a_second_line_adds_one_line_to_its_row_and_the_next_row_starts_a_gap_under_the_pill() {
+    fun a_name_too_long_for_its_tile_does_not_make_its_row_taller() {
         showHome(SixColumns.copy(alwaysShowNames = true), apps = withLongName("pkg.7"))
-        val pitch = rowPitch()
 
-        assertNear(height("tile:pkg.7") + TileGap + TileNameRoom + 20.dp, pitch)
-        val pillBottom = bounds("name:pkg.7").bottom.value + 2f
-        assertNear(TileGap, (top("tile:pkg.13").value - pillBottom).dp)
+        assertNear(height("tile:pkg.1") + TileGap + TileNameRoom, rowPitch())
     }
 
     /** How far the focused ring's outer stroke ends under tile [key], then the gap to the top of its name's pill, in dp. */
@@ -343,16 +361,16 @@ class AlwaysShowNamesUiTest {
     }
 
     @Test
-    fun a_name_pill_is_a_capsule_of_the_height_of_one_line_whatever_the_lines() {
+    fun a_name_pill_is_a_capsule_of_the_height_of_one_line_also_when_the_name_is_cut() {
         showHome(named4, wallpaper = Wallpaper(picture = white), apps = withLongName("pkg.2"))
         val bare = inPill("name:pkg.3", -6f, 12f)
 
         // One line: 24 dp tall, so its ends are half circles of 12 dp.
-        assertTrue("one line, corner ${inPill("name:pkg.3", 2.5f, 2.5f)} of $bare", inPill("name:pkg.3", 2.5f, 2.5f) > bare * 0.8f)
-        assertTrue("one line, end ${inPill("name:pkg.3", 1.2f, 12f)} of $bare", inPill("name:pkg.3", 1.2f, 12f) < bare * 0.6f)
-        // Two lines: 44 dp tall, with the same radius.
-        assertTrue("two lines, corner ${inPill("name:pkg.2", 2.5f, 2.5f)} of $bare", inPill("name:pkg.2", 2.5f, 2.5f) > bare * 0.8f)
-        assertTrue("two lines, side ${inPill("name:pkg.2", 1.2f, 14f)} of $bare", inPill("name:pkg.2", 1.2f, 14f) < bare * 0.6f)
+        for (key in listOf("pkg.3", "pkg.2")) {
+            assertTrue("$key, corner ${inPill("name:$key", 2.5f, 2.5f)} of $bare", inPill("name:$key", 2.5f, 2.5f) > bare * 0.8f)
+            assertTrue("$key, end ${inPill("name:$key", 1.2f, 12f)} of $bare", inPill("name:$key", 1.2f, 12f) < bare * 0.6f)
+            assertNear(24.dp, (bounds("name:$key").height.value + 4f).dp)
+        }
     }
 
     @Test
@@ -373,15 +391,31 @@ class AlwaysShowNamesUiTest {
     private fun left(tag: String): Dp = compose.onNodeWithTag(tag).getBoundsInRoot().left
 
     @Test
-    fun with_names_the_dock_and_the_grid_start_on_the_headers_left_edge_though_the_rows_shrank() {
+    fun with_names_the_tiles_and_the_dock_keep_their_names_off_width_and_x() {
         showHome(named4)
-        val dockLeft = left("tile:pkg.1")
+        val gridWidth =
+            compose
+                .onRoot()
+                .getBoundsInRoot()
+                .width.value - ScreenMargin.value * 2
+        val tile = ((gridWidth - TileGap.value * 3) / 4).dp
+
+        assertNear(tile, bounds("tile:pkg.1").width)
+        assertNear(ScreenMargin, left("tile:pkg.1"))
+        assertNear(ScreenMargin - TileGap, left("dock"))
+        assertNear((gridWidth + TileGap.value * 2).dp, bounds("dock").width)
         press(Key.DirectionDown)
         compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
-
-        assertNear(ScreenMargin, dockLeft)
+        assertNear(tile, bounds("tile:pkg.5").width)
         assertNear(ScreenMargin, left("tile:pkg.5"))
-        assertTrue("the rows shrank to ${height("tile:pkg.1")} dp", height("tile:pkg.1").value < 113f)
+    }
+
+    @Test
+    fun with_names_a_shrunk_grid_stays_centred_between_the_margins_as_it_does_without() {
+        showHome(SixColumns.copy(columns = 4, rowsBelowDock = 3, alwaysShowNames = true))
+        press(Key.DirectionDown)
+
+        assertTrue("the grid starts at ${left("tile:pkg.5")}", left("tile:pkg.5").value > ScreenMargin.value + 4f)
     }
 
     @Test
