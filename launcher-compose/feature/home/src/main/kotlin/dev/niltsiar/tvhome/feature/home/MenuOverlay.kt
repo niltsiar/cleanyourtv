@@ -32,7 +32,7 @@ private val DockMenuRowHeight = 40.dp
 private val TileRowHeight = 46.dp
 
 /** The space between a dock tile menu and the dock's panel, which starts [TileGap] above the tile. */
-private val TrayClearance = 12.dp
+private val TrayClearance = 20.dp
 
 /**
  * The tile menu or the Settings menu: [rows], each tagged `menu:<row name>`, never over the top bar. A [tileMenu] is a

@@ -80,7 +80,7 @@ private const val WARN_DIVIDER_ALPHA = 0.18f
 private val WarnInkOnDark = Color(0xFFFF8A80)
 private val WarnInkOnLight = Color(0xFFC62828)
 private val RowHeight = 46.dp
-private const val TITLE_ALPHA = 0.85f
+private const val TITLE_ALPHA = 0.65f
 private val TitleTop = 6.dp
 private val TitleRuleGap = 8.dp
 
@@ -448,8 +448,11 @@ public fun MenuDivider(
 private fun MenuTitle(text: String) {
     val typography = TvTheme.typography
     val ink = TvTheme.colors.onSurface
+    val titleInk = if (TvTheme.surfaces.dark) Color.White else ink
     val style =
-        remember(typography) { typography.chipKey.copy(fontSize = typography.pillLabel.fontSize, color = ink.copy(alpha = TITLE_ALPHA)) }
+        remember(typography, titleInk) {
+            typography.chipKey.copy(fontSize = typography.pillLabel.fontSize, color = titleInk.copy(alpha = TITLE_ALPHA))
+        }
     Column(verticalArrangement = Arrangement.spacedBy(TitleRuleGap)) {
         BasicText(
             text,

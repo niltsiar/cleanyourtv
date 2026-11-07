@@ -197,6 +197,17 @@ class HomeOverlayLookUiTest {
 
     @Test
     @Config(qualifiers = "+night")
+    fun a_dock_tiles_menu_that_fits_under_the_top_bar_ends_20_dp_above_the_dock_panel() {
+        showHome(config = SixColumns)
+        openTileMenu()
+        compose.onNodeWithTag("menu:RemoveFromHome").assertDoesNotExist()
+
+        val clearance = bounds("dock").top.value - bounds("menu").bottom.value
+        assertEquals("the menu ends $clearance dp above the panel", 20f, clearance, 0.5f)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
     fun the_inputs_list_ends_at_least_24_dp_above_the_dock_panel_and_scrolls_to_the_row_in_focus() {
         val ports = InputsMenu(available = true, rows = (1..6).map { port(it, InputConnection.Disconnected) } + InputRow.LiveTv)
         showHome(inputs = ports)

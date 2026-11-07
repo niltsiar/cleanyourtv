@@ -6,6 +6,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -267,7 +269,8 @@ class HomeMenuUiTest {
     }
 
     @Test
-    fun a_dock_tiles_menu_header_is_16_sp_semi_bold_at_85_percent_of_the_text_colour() {
+    @Config(qualifiers = "+night")
+    fun a_dock_tiles_menu_header_is_16_sp_semi_bold_white_at_65_percent_on_the_dark_surface() {
         showHome()
 
         holdOk()
@@ -276,7 +279,19 @@ class HomeMenuUiTest {
         val style = compose.onNodeWithTag("menu:title").textStyle()
         assertEquals(16.sp, style.fontSize)
         assertEquals(FontWeight.SemiBold, style.fontWeight)
-        assertEquals(0.85f, style.color.alpha, 0.005f)
+        assertEquals(Color.White.copy(alpha = 0.65f), style.color)
+    }
+
+    @Test
+    fun a_dock_tiles_menu_header_is_the_text_colour_at_65_percent_on_the_light_surface() {
+        showHome()
+
+        holdOk()
+        releaseOk()
+
+        val style = compose.onNodeWithTag("menu:title").textStyle()
+        assertEquals(0.65f, style.color.alpha, 0.005f)
+        assertTrue("${style.color} is not dark", style.color.luminance() < 0.2f)
     }
 
     private fun gap() = with(compose.density) { TileGap.toPx() }
