@@ -213,7 +213,9 @@ internal fun CinematicShelf(
  * Shows [target] in two slots that stay in the tree, so a new value only changes a slot's text. With [animated], a value
  * of another [key] goes to the hidden slot and fades in over [inMillis] (of the old value and the new) while it rises
  * [risePx] into place, and the shown one fades out in [TITLE_OUT_MS]; a value of the same key replaces the shown one.
- * The fade is a layer's alpha and the rise a draw translation, so no node moves and nothing below them moves either.
+ * The fade is a layer's alpha and the rise a draw translation, so no node moves and nothing below them moves either. The
+ * layer modulates alpha draw by draw instead of drawing into a buffer, so nothing a slot draws past its bounds (a subtitle
+ * pill, a shadow) is cut while it fades.
  * [content] shows one slot's value; `live` is false for a slot that has faded out, which shows nothing and has no tags.
  * [extent], when given, is told how wide the block is drawn: it moves from the old value's width to the new one's with the new
  * value's fade.
@@ -242,8 +244,10 @@ internal fun <T : Any> TitleSlots(
         for (slot in 0..1) {
             Box(
                 Modifier
-                    .graphicsLayer { alpha = slots.alpha[slot].floatValue }
-                    .drawWithContent { translate(top = slots.rise[slot].floatValue) { this@drawWithContent.drawContent() } }
+                    .graphicsLayer {
+                        compositingStrategy = CompositingStrategy.ModulateAlpha
+                        alpha = slots.alpha[slot].floatValue
+                    }.drawWithContent { translate(top = slots.rise[slot].floatValue) { this@drawWithContent.drawContent() } }
                     .onSizeChanged { slots.widths[slot].intValue = it.width },
             ) {
                 content(slots.values[slot], slot == slots.front || cleared < generation)

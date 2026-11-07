@@ -507,6 +507,62 @@ class HeroScrimUiTest {
         assertTrue("the pill's stroke is ${pillStroke()} brighter", pillStroke() > 0.05f)
     }
 
+    /**
+     * How much brighter, in the red channel, the pixel [across] dp right of the subtitle's box's left edge and [down] dp below its
+     * top is than the picture 14 dp left of that edge, outside the pill. The pill is black over a scrim that is already near black,
+     * so only its 1 dp white stroke shows.
+     */
+    private fun pillStroke(
+        meta: DpRect,
+        across: Float,
+        down: Float,
+    ): Float {
+        val density = compose.activity.resources.displayMetrics.density
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val outside = pixels[((meta.left.value - 14f) * density).toInt(), ((meta.top.value + meta.bottom.value) / 2 * density).toInt()].red
+        return pixels[((meta.left.value + across) * density).toInt(), ((meta.top.value + down) * density).toInt()].red - outside
+    }
+
+    private fun assertPillRound(
+        meta: DpRect,
+        moment: String,
+    ) {
+        // The pill's left end at its middle height, 6 dp left of the slot's bounds.
+        val end = pillStroke(meta, across = -9.5f, down = (meta.bottom.value - meta.top.value) / 2)
+        // The corner of the pill's own box, which a round end leaves clear.
+        val corner = pillStroke(meta, across = -9.5f, down = -2.5f)
+        assertTrue("$moment: the pill's left end is $end brighter", end > 0.05f)
+        assertTrue("$moment: the pill's top left corner is $corner brighter", corner < 0.02f)
+    }
+
+    private fun assertPillKeepsItsRoundEndsInASwap(
+        cinematic: Boolean,
+        tag: String,
+    ) {
+        showCouncil("bright", cinematic)
+        val meta = titleBounds(tag)
+        assertPillRound(meta, "at rest")
+
+        compose.mainClock.autoAdvance = false
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
+        try {
+            for (frame in 1..8) {
+                compose.mainClock.advanceTimeByFrame()
+                if (frame == 1 || frame == 8) assertPillRound(meta, "frame $frame of the swap")
+            }
+        } finally {
+            compose.mainClock.autoAdvance = true
+        }
+    }
+
+    @Test
+    fun the_shelf_subtitle_pill_keeps_its_round_ends_while_a_new_name_fades_in() =
+        assertPillKeepsItsRoundEndsInASwap(cinematic = true, tag = "shelf:meta")
+
+    @Test
+    fun the_band_subtitle_pill_keeps_its_round_ends_while_a_new_title_fades_in() =
+        assertPillKeepsItsRoundEndsInASwap(cinematic = false, tag = "shelf:title-meta")
+
     @Test
     fun a_title_swap_does_not_draw_the_hero_scrims_body_again_on_any_frame_of_its_cross_fade() {
         showHome(cinematic = false)
