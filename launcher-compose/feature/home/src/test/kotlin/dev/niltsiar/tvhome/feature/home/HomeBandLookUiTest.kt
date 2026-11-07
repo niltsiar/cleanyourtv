@@ -24,10 +24,13 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.height
+import androidx.compose.ui.unit.width
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
 import kotlinx.coroutines.flow.flowOf
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -137,9 +140,40 @@ class HomeBandLookUiTest {
     private fun titleArea(tag: String): DpRect = bounds(tag).let { DpRect(it.left, it.top, it.left + 300.dp, it.bottom) }
 
     /** The meta line under the title and the page dots under that. */
-    private fun detailArea(metaTag: String): DpRect = bounds(metaTag).let { DpRect(it.left, it.top, it.left + 300.dp, it.bottom + 22.dp) }
+    private fun detailArea(metaTag: String): DpRect = bounds(metaTag).let { DpRect(it.left, it.top, it.left + 300.dp, it.bottom + 24.dp) }
 
     private fun tile(n: Int): DpRect = bounds("tile:pkg.$n")
+
+    /** The runs of lit pixels along the middle of the page dots, as start to end in dp from the dots' left edge. */
+    private fun dotRuns(): List<ClosedFloatingPointRange<Float>> {
+        val dots = bounds("shelf:dots")
+        val pixels = screen()
+        val y = ((dots.top.value + dots.bottom.value) / 2f * density).toInt()
+        val lit = (0 until (dots.width.value * density).toInt()).map { pixels[(dots.left.value * density).toInt() + it, y].red > 0.1f }
+        val runs = mutableListOf<ClosedFloatingPointRange<Float>>()
+        var start = -1
+        for ((i, on) in (lit + false).withIndex()) {
+            if (on && start < 0) start = i
+            if (!on && start >= 0) {
+                runs += (start / density)..(i / density)
+                start = -1
+            }
+        }
+        return runs
+    }
+
+    @Test
+    fun the_page_dots_are_8_dp_with_8_dp_between_them_the_focused_one_an_18_dp_pill_and_start_at_the_titles_left_edge() {
+        showHome()
+
+        val dots = bounds("shelf:dots")
+        assertEquals(8f, dots.height.value, 0.1f)
+        assertEquals(bounds("shelf:name").left.value, dots.left.value, 0.5f)
+        val runs = dotRuns()
+        assertEquals(listOf(18f, 8f, 8f, 8f, 8f, 8f), runs.map { it.endInclusive - it.start })
+        assertEquals(List(5) { 8f }, runs.zipWithNext { before, after -> after.start - before.endInclusive })
+        assertEquals(0f, runs.first().start, 0.5f)
+    }
 
     @Test
     fun the_app_library_fades_out_the_dock_apps_name_time_and_dots() {
@@ -183,7 +217,7 @@ class HomeBandLookUiTest {
 
         assertTrue(brightest(titleArea("shelf:title")) >= 230)
         assertTrue(brightest(detailArea("shelf:title-meta")) >= 230)
-        val dots = bounds("shelf:title-meta").let { DpRect(it.left, it.bottom + 16.dp, it.left + 300.dp, it.bottom + 22.dp) }
+        val dots = bounds("shelf:title-meta").let { DpRect(it.left, it.bottom + 16.dp, it.left + 300.dp, it.bottom + 24.dp) }
         assertNear(0, brightest(dots), 2)
 
         press(Key.DirectionDown)

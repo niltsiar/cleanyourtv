@@ -83,7 +83,7 @@ internal val MetaIndent = 4.dp
 internal val MetaGap = 12.dp
 internal val MetaSlot = 20.dp
 private val DotsGap = 16.dp
-private val DotSize = 6.dp
+private val DotSize = 8.dp
 
 /** Under the title line: the meta line and the dots. */
 internal val ShelfDetailHeight = MetaGap + MetaSlot + DotsGap + DotSize
@@ -97,8 +97,8 @@ private val SubtitlePillStroke = Color.White.copy(alpha = 0.12f)
 private val SubtitlePillStrokeWidth = 1.dp
 private val SubtitlePillAcross = 10.dp
 private val SubtitlePillDown = 3.dp
-private val DotWide = 20.dp
-private val DotSpacing = 6.dp
+private val DotWide = 18.dp
+private val DotSpacing = 8.dp
 private val DotRest = Color(0x4DFFFFFF)
 private const val SHOW_MS = 260
 private const val HIDE_MS = 160
@@ -200,7 +200,7 @@ internal fun CinematicShelf(
                     position = shown.position,
                     count = shown.count,
                     animated = layout.animated,
-                    modifier = Modifier.padding(start = MetaIndent, top = DotsGap).drawnAt(detailAlpha),
+                    modifier = Modifier.padding(top = DotsGap).drawnAt(detailAlpha),
                 )
             } else {
                 Spacer(Modifier.height(DotsGap + DotSize))
@@ -427,7 +427,7 @@ private fun PositionDots(
     val width = (DotSize + DotSpacing) * (count - 1).coerceAtLeast(0) + DotWide
     Spacer(
         modifier =
-            modifier.size(width, DotSize).drawBehind {
+            modifier.size(width, DotSize).testTag("shelf:dots").drawBehind {
                 if (count < 2) return@drawBehind
                 val dot = DotSize.toPx()
                 val wide = DotWide.toPx()

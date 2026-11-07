@@ -38,6 +38,7 @@ import dev.niltsiar.tvhome.core.model.InputConnection
 import dev.niltsiar.tvhome.core.model.InputRow
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import kotlinx.coroutines.flow.flowOf
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -415,6 +416,64 @@ class HomeOverlayLookUiTest {
             "the line ${line.bottom} is over the restart row ${bounds("menu:PowerMenu")}",
             line.bottom <= bounds("menu:PowerMenu").top,
         )
+    }
+
+    /** The pixels of the screen in [area] that are [colour] to within 14 in each channel. */
+    private fun pixelsOf(
+        area: DpRect,
+        colour: Int,
+    ): Int {
+        val density = compose.activity.resources.displayMetrics.density
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val xs = (area.left.value * density).toInt() until (area.right.value * density).toInt()
+        val ys = (area.top.value * density).toInt() until (area.bottom.value * density).toInt()
+        return xs.sumOf { x ->
+            ys.count { y ->
+                val pixel = pixels[x, y]
+                abs(pixel.red * 255 - (colour shr 16 and 0xFF)) <= 14 &&
+                    abs(pixel.green * 255 - (colour shr 8 and 0xFF)) <= 14 &&
+                    abs(pixel.blue * 255 - (colour and 0xFF)) <= 14
+            }
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_restart_row_draws_its_text_in_coral_at_rest_and_not_while_it_has_focus() {
+        showHome()
+        openSettingsMenu()
+        val row = bounds("menu:PowerMenu")
+
+        assertTrue("coral pixels at rest: ${pixelsOf(row, 0xFF8A80)}", pixelsOf(row, 0xFF8A80) >= 8)
+        assertEquals("another row has no coral", 0, pixelsOf(bounds("menu:Reorder"), 0xFF8A80))
+        press(Key.DirectionDown)
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("menu:PowerMenu").assertIsFocused()
+        assertEquals("coral pixels under focus", 0, pixelsOf(row, 0xFF8A80))
+    }
+
+    @Test
+    fun on_the_light_menu_the_restart_row_draws_its_text_in_dark_red_at_rest_and_not_the_pale_coral() {
+        showHome()
+        openSettingsMenu()
+        val row = bounds("menu:PowerMenu")
+
+        assertTrue("dark red pixels at rest: ${pixelsOf(row, 0xC62828)}", pixelsOf(row, 0xC62828) >= 8)
+        assertEquals("pale coral on the light menu", 0, pixelsOf(row, 0xFF8A80))
+        assertEquals("another row has no red", 0, pixelsOf(bounds("menu:Reorder"), 0xC62828))
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_line_above_the_restart_row_is_white_at_018() {
+        showHome()
+        openSettingsMenu()
+
+        val rule = compose.onNodeWithTag("menu:divider").getBoundsInRoot()
+        val ground = redAt(Offset((rule.left.value + rule.right.value) / 2, rule.top.value - 3f))
+        val line = redAt(Offset((rule.left.value + rule.right.value) / 2, (rule.top.value + rule.bottom.value) / 2))
+
+        assertNear(Math.round(ground + 0.18f * (255 - ground)), line, 3)
     }
 
     @Test

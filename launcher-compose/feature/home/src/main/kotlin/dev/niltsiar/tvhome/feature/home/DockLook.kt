@@ -38,6 +38,10 @@ private const val BRIGHT_LIGHTNESS = 75f
 /** The most relative luminance the light tray has over any picture. */
 private const val TRAY_MAX_LUMINANCE = 0.55f
 
+/** The most the light tray lifts a dark picture's relative luminance, up to L* [DARK_UNTIL_LIGHTNESS]. */
+private const val DARK_TRAY_LIFT = 0.02f
+private const val DARK_UNTIL_LIGHTNESS = 30f
+
 /** Whether the tray takes the light tint: with [DockLook.glass], or without night mode. */
 internal fun DockLook.light(darkSurfaces: Boolean): Boolean = glass || !darkSurfaces
 
@@ -45,7 +49,9 @@ internal fun DockLook.light(darkSurfaces: Boolean): Boolean = glass || !darkSurf
  * The tint over the dock's frost, which carries the picture's colour. [darkSurfaces] is the TV's night mode; [lightness]
  * is the mean L* of the frost under the dock. With an [opacity] the tint is 0.85 times its percent. Without, it is 0.16
  * (dark) or 0.20 (light), and rises by 0.06 as the wallpaper under the dock goes from L* 60 to L* 75. A light tint
- * darkens, as far as it needs, for a tray over a bright frost to keep a mean relative luminance of at most 0.55.
+ * darkens, as far as it needs, for a tray over a bright frost to keep a mean relative luminance of at most 0.55, and
+ * for a tray over a dark frost (L* 30 or less, but over 0: a lightness of 0 means no frost, which keeps the base tint) to
+ * lift the frost's relative luminance by 0.02 at most, so the picture shows.
  */
 internal fun DockLook.tint(
     darkSurfaces: Boolean,
@@ -64,15 +70,20 @@ internal fun DockLook.tint(
 
 /**
  * This tint's colour dimmed so that a tray of the frost at L* [lightness] under it at [alpha] has a mean relative
- * luminance of [TRAY_MAX_LUMINANCE] at most. The frost is taken as a grey of that lightness, and the channels mix on
- * their encoded values as the screen mixes them.
+ * luminance of [TRAY_MAX_LUMINANCE] at most, and over a frost darker than L* [DARK_UNTIL_LIGHTNESS] lifts the frost's by
+ * [DARK_TRAY_LIFT] at most, a limit that relaxes from L* [DARK_UNTIL_LIGHTNESS] until it no longer binds at [DIM_LIGHTNESS].
+ * The frost is taken as a grey of that lightness, and the channels mix on their encoded values as the screen mixes them.
  */
 private fun Color.scaledToKeepTray(
     lightness: Float,
     alpha: Float,
 ): Color {
-    val frost = encoded(luminanceOfLightness(lightness))
-    val limit = encoded(TRAY_MAX_LUMINANCE)
+    val frostLuminance = luminanceOfLightness(lightness)
+    val darkLift = if (lightness > 0f) DARK_TRAY_LIFT else TRAY_MAX_LUMINANCE
+    val lift =
+        darkLift + TRAY_MAX_LUMINANCE * ((lightness - DARK_UNTIL_LIGHTNESS) / (DIM_LIGHTNESS - DARK_UNTIL_LIGHTNESS)).coerceIn(0f, 1f)
+    val frost = encoded(frostLuminance)
+    val limit = encoded(minOf(TRAY_MAX_LUMINANCE, frostLuminance + lift))
     val grey = (limit - (1f - alpha) * frost) / alpha
     val own = (red + green + blue) / 3f
     if (grey >= own) return this

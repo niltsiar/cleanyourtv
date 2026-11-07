@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
@@ -65,6 +66,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.util.lerp
 import dev.niltsiar.tvhome.core.designsystem.FocusSurface
 import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
@@ -99,6 +101,10 @@ private val PlusGap = 4.dp
 private val CheckSize = 16.dp
 private val CheckStroke = 1.75.dp
 private const val CHECK_DISC_ALPHA = 0.90f
+private const val CHECK_REST_DISC_ALPHA = 0.15f
+private const val CHECK_REST_ALPHA = 0.70f
+private val RingStroke = 1.5.dp
+private const val RING_ALPHA = 0.30f
 private val CheckInk = Color(0xFF07080C)
 private const val NEVER_OPENED_ALPHA = 0.45f
 private const val OFF_HOME_ART_ALPHA = 0.5f
@@ -157,6 +163,7 @@ internal fun LibraryCardView(
     val scope = rememberCoroutineScope()
     val ring = remember(artwork, layout) { layout.ringColour(artwork?.accent ?: Color.Unspecified) }
     val ringBlends = remember(ring, artwork) { ringBlendsWith(ring, artwork?.accent ?: Color.Unspecified) }
+    val focusProgress = remember(focus) { { focus.value.coerceIn(0f, 1f) } }
     Box(
         modifier =
             modifier.fillMaxWidth().height(CardHeight).graphicsLayer {
@@ -214,6 +221,7 @@ internal fun LibraryCardView(
                 Status(
                     card,
                     layout,
+                    focusProgress,
                     Modifier
                         .align(Alignment.BottomCenter)
                         .padding(start = CardSide, end = CardSide, bottom = CardBottom)
@@ -351,12 +359,14 @@ internal fun shownName(
 /**
  * The status slot, one baseline for every card: the line that says what the name does not. That line is, in the least used
  * order when the app was last opened, else the recent-install text, else "Add to Home" for an app that is not on Home, else
- * nothing; in the chooser an app on Home has a check there instead. A "+" goes before the recent-install text and "Add to Home".
+ * nothing; in the chooser an app on Home has a check there instead, and an app that is not on Home a ring before its line.
+ * A "+" goes before the recent-install text and "Add to Home".
  */
 @Composable
 private fun Status(
     card: LibraryCard,
     layout: LibraryLayout,
+    focus: () -> Float,
     modifier: Modifier = Modifier,
 ) {
     val typography = TvTheme.typography
@@ -379,8 +389,12 @@ private fun Status(
         if (opened != null) {
             Opened(card.app.key, opened, shown, line)
         } else if (layout.selection && card.onHome) {
-            OnHomeCheck(card.app.key)
+            OnHomeCheck(card.app.key, focus)
         } else if (text != null) {
+            if (layout.selection) {
+                OffHomeRing(card.app.key)
+                Spacer(Modifier.width(PlusGap))
+            }
             val color = style.color
             Box(Modifier.size(PlusSize).drawBehind { drawPlus(color, size.width) })
             Spacer(Modifier.width(PlusGap))
@@ -389,9 +403,15 @@ private fun Status(
     }
 }
 
-/** A white disc with a dark check, [CheckSize] across and centred in the slot, which it may overhang a little above and below. */
+/**
+ * A disc with a check, [CheckSize] across and centred in the slot, which it may overhang a little above and below: a quiet one
+ * at rest, and on the focused card ([focus] is 1) a white disc with a dark check.
+ */
 @Composable
-private fun OnHomeCheck(key: String) {
+private fun OnHomeCheck(
+    key: String,
+    focus: () -> Float,
+) {
     val onHome = stringResource(R.string.library_on_home)
     Box(
         Modifier
@@ -399,7 +419,8 @@ private fun OnHomeCheck(key: String) {
             .testTag("card:check:$key")
             .semantics { contentDescription = onHome }
             .drawBehind {
-                drawCircle(Color.White.copy(alpha = CHECK_DISC_ALPHA))
+                val focused = focus()
+                drawCircle(Color.White.copy(alpha = lerp(CHECK_REST_DISC_ALPHA, CHECK_DISC_ALPHA, focused)))
                 val side = size.width
                 val check =
                     Path().apply {
@@ -407,7 +428,22 @@ private fun OnHomeCheck(key: String) {
                         lineTo(0.44f * side, 0.67f * side)
                         lineTo(0.72f * side, 0.35f * side)
                     }
-                drawPath(check, CheckInk, style = Stroke(CheckStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+                val ink = lerp(Color.White.copy(alpha = CHECK_REST_ALPHA), CheckInk, focused)
+                drawPath(check, ink, style = Stroke(CheckStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+            },
+    )
+}
+
+/** A hollow ring where an app on Home has its check, [CheckSize] across. */
+@Composable
+private fun OffHomeRing(key: String) {
+    Box(
+        Modifier
+            .requiredSize(CheckSize)
+            .testTag("card:ring:$key")
+            .drawBehind {
+                val stroke = RingStroke.toPx()
+                drawCircle(Color.White.copy(alpha = RING_ALPHA), radius = (size.width - stroke) / 2f, style = Stroke(stroke))
             },
     )
 }

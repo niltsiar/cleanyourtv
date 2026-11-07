@@ -619,18 +619,76 @@ class LibraryOverlayLookUiTest {
 
         val card = card("Bbb")
         val slot = DpRect(card.left + 6.dp, card.bottom - 20.dp, card.right - 6.dp, card.bottom - 6.dp)
-        val disc = lightSpan(DpRect(slot.left, slot.top - 2.dp, slot.right, slot.bottom + 2.dp))!!
-        assertEquals(16f, disc.endInclusive - disc.start, 1f)
-        assertEquals((card.left.value + card.right.value) / 2f, (disc.start + disc.endInclusive) / 2f, 1f)
         val check = compose.onNodeWithTag("card:check:${key("Bbb")}", useUnmergedTree = true).getBoundsInRoot()
+        assertEquals(16f, check.width.value, 0.5f)
+        assertEquals(16f, check.height.value, 0.5f)
+        assertEquals((card.left.value + card.right.value) / 2f, (check.left.value + check.right.value) / 2f, 1f)
         assertEquals((slot.top.value + slot.bottom.value) / 2f, (check.top.value + check.bottom.value) / 2f, 1f)
         compose.onNodeWithTag("card:check:${key("Bbb")}", useUnmergedTree = true).assertContentDescriptionEquals("On Home")
         compose.onNodeWithTag("card:check:${key("Ccc")}", useUnmergedTree = true).assertDoesNotExist()
     }
 
+    /** The red channel of the pixel [across] and [down] (each 0 to 1) of the box tagged [tag] on the card of [name]. */
+    private fun redInMark(
+        tag: String,
+        name: String,
+        across: Float,
+        down: Float,
+    ): Int {
+        val mark = compose.onNodeWithTag("$tag:${key(name)}", useUnmergedTree = true).getBoundsInRoot()
+        return redAt(mark.left + mark.width * across, mark.top + mark.height * down)
+    }
+
     @Test
     @Config(qualifiers = "+night")
-    fun in_the_chooser_the_check_is_the_only_white_on_an_app_on_home_and_none_hangs_past_the_card() {
+    fun in_the_chooser_the_check_of_an_idle_card_is_a_white_015_disc_with_a_white_070_check() {
+        showChooser()
+
+        val idleFill = redAt(card("Bbb").left + 4.dp, (card("Bbb").top + card("Bbb").bottom) / 2)
+        val disc = redInMark("card:check", "Bbb", 0.5f, 0.15f)
+        val stroke = redInMark("card:check", "Bbb", 0.58f, 0.51f)
+
+        assertEquals("the disc", idleFill + 0.15f * (255 - idleFill), disc.toFloat(), 4f)
+        assertEquals("the check", disc + 0.70f * (255 - disc), stroke.toFloat(), 10f)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun in_the_chooser_the_check_of_the_focused_card_is_a_white_disc_with_a_dark_check() {
+        showChooser()
+        compose.onNodeWithTag("card:${key("Aaa")}").assertIsFocused()
+
+        // The focused card grows about its centre, so the mark is read over its whole box, grown by 3 dp.
+        val mark = compose.onNodeWithTag("card:check:${key("Aaa")}", useUnmergedTree = true).getBoundsInRoot()
+        val density = compose.activity.resources.displayMetrics.density
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val reds =
+            ((mark.left.value - 3f) * density).toInt().until(((mark.right.value + 3f) * density).toInt()).flatMap { x ->
+                ((mark.top.value - 3f) * density).toInt().until(((mark.bottom.value + 3f) * density).toInt()).map { y ->
+                    Math.round(pixels[x, y].red * 255)
+                }
+            }
+        assertTrue("the disc: ${reds.max()}", reds.max() >= 235)
+        assertTrue("the check: ${reds.min()}", reds.min() <= 40)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun in_the_chooser_an_app_off_home_shows_a_16_dp_hollow_ring_of_white_030_where_an_app_on_home_has_its_check() {
+        showChooser()
+
+        val ring = compose.onNodeWithTag("card:ring:${key("Ccc")}", useUnmergedTree = true).getBoundsInRoot()
+        val idleFill = redAt(card("Ccc").left + 4.dp, (card("Ccc").top + card("Ccc").bottom) / 2)
+        assertEquals(16f, ring.width.value, 0.5f)
+        assertEquals(16f, ring.height.value, 0.5f)
+        assertEquals("the stroke", idleFill + 0.30f * (255 - idleFill), redInMark("card:ring", "Ccc", 0.047f, 0.5f).toFloat(), 6f)
+        assertEquals("the middle", idleFill.toFloat(), redInMark("card:ring", "Ccc", 0.5f, 0.5f).toFloat(), 3f)
+        compose.onNodeWithTag("card:ring:${key("Bbb")}", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun in_the_chooser_no_white_lies_on_the_art_of_an_app_on_home_and_none_hangs_past_the_card_or_in_an_idle_check() {
         showChooser()
 
         val card = card("Bbb")
@@ -640,7 +698,7 @@ class LibraryOverlayLookUiTest {
         assertEquals("on the corner", 0, whitePixels(corner))
         val below = DpRect(card.left, card.bottom, card.right, card.bottom + 6.dp)
         assertEquals("under the card", 0, whitePixels(below))
-        assertTrue("the check in the slot", whitePixels(DpRect(card.left, card.bottom - 21.dp, card.right, card.bottom - 5.dp)) > 100)
+        assertEquals("in the idle check", 0, whitePixels(DpRect(card.left, card.bottom - 21.dp, card.right, card.bottom - 5.dp)))
     }
 
     @Test
@@ -666,7 +724,7 @@ class LibraryOverlayLookUiTest {
         val text = statusText("Add to Home", "Ccc")
         assertEquals(
             12f,
-            lightSpan(DpRect(text.left - 30.dp, text.top, text.left - 0.5.dp, text.bottom))!!.let { it.endInclusive - it.start },
+            lightSpan(DpRect(text.left - 17.dp, text.top, text.left - 0.5.dp, text.bottom))!!.let { it.endInclusive - it.start },
             1f,
         )
     }

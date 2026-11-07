@@ -45,10 +45,12 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -74,6 +76,9 @@ public val MenuRowSpacing: Dp = 8.dp
 /** The height of a [MenuDivider]. */
 public val MenuDividerHeight: Dp = 5.dp
 private const val DIVIDER_ALPHA = 0.12f
+private const val WARN_DIVIDER_ALPHA = 0.18f
+private val WarnInkOnDark = Color(0xFFFF8A80)
+private val WarnInkOnLight = Color(0xFFC62828)
 private val RowHeight = 46.dp
 private const val TITLE_ALPHA = 0.85f
 private val TitleTop = 6.dp
@@ -81,9 +86,6 @@ private val TitleRuleGap = 8.dp
 
 /** How far a scrolling panel fades its content out at an edge with more content past it. */
 private val EdgeFade = 24.dp
-
-/** Rounding a tile's width to whole pixels can leave a panel a pixel or two past the column edge it should end on. */
-private const val EDGE_SLACK_PX = 2
 
 /**
  * A panel beside its anchor rather than under it: [gap] right of the anchor, else [gap] left of it, centred on it
@@ -104,7 +106,8 @@ public class BesideAnchor(
  * string [label] gives and carries the test tag [rowTag]; the panel's own tag is `menu`, [padding] inside its edge, and
  * the rows' corners are concentric with the panel's. It rises and fades in with a spring and takes focus on its first
  * row, and never goes above [topLimit]; focus cannot leave it. A [title] is a header row over the rows, tagged
- * `menu:title`. A row for which [dividerBefore] is true, and that is not the first, has a [MenuDivider] above it. [above],
+ * `menu:title`. A row for which [dividerBefore] is true, and that is not the first, has a [MenuDivider] above it. A row
+ * for which [warn] is true draws its text in coral (dark red on the light surface) until it has focus, and the line above it is white 0.18. [above],
  * [anchorGap], [columnGap] and [edgeMargin] are [GlassDropdown]'s.
  */
 @Composable
@@ -126,6 +129,7 @@ public fun <T> GlassMenu(
     columnGap: Dp? = null,
     edgeMargin: Dp = 0.dp,
     dividerBefore: (T) -> Boolean = { false },
+    warn: (T) -> Boolean = { false },
 ) {
     val first = remember { FocusRequester() }
     val rowShape = remember(padding) { menuRowShape(padding) }
@@ -144,9 +148,10 @@ public fun <T> GlassMenu(
     ) {
         if (title != null) MenuTitle(title)
         rows.forEachIndexed { index, row ->
-            if (index > 0 && dividerBefore(row)) MenuDivider()
+            val warned = warn(row)
+            if (index > 0 && dividerBefore(row)) MenuDivider(alpha = if (warned) WARN_DIVIDER_ALPHA else DIVIDER_ALPHA)
             val focus = if (index == 0) Modifier.focusRequester(first) else Modifier
-            MenuItem(label(row), rowTag(row), { onPick(row) }, rowHeight, rowShape, focus)
+            MenuItem(label(row), rowTag(row), { onPick(row) }, rowHeight, rowShape, focus, warned)
         }
     }
 }
@@ -163,8 +168,8 @@ public fun <T> GlassMenu(
  * With [childHeights], the heights of [content]'s children, such a panel ends between two children rather than through
  * one; a [MenuDivider] counts with the child under it, so that the panel never ends on a divider. With [columnGap] the
  * anchor is one column of a grid whose columns are [columnGap] apart: the panel is a whole number of
- * columns wide, plus the gaps between them, and starts at the anchor's left edge (or ends at its right edge when it
- * would pass [edgeMargin] from the screen's side); [beside] it, [BesideAnchor.gap] should be [columnGap] so that the
+ * columns wide, plus the gaps between them, and starts at the anchor's left edge, or ends [edgeMargin] from the screen's
+ * right side when it would pass that; [beside] it, [BesideAnchor.gap] should be [columnGap] so that the
  * panel starts on the next column and ends on the one before.
  */
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
@@ -269,13 +274,7 @@ public fun GlassDropdown(
                 )
                 return@layout
             }
-            val margin = edgeMargin.roundToPx()
-            val end = alignEnd || (columns != null && at.left.toInt() + panel.width > constraints.maxWidth - margin + EDGE_SLACK_PX)
-            val x =
-                (if (end) at.right.toInt() - panel.width else at.left.toInt()).coerceIn(
-                    margin,
-                    maxOf(margin, constraints.maxWidth - panel.width - margin),
-                )
+            val x = dropdownLeft(at.left.toInt(), at.right.toInt(), panel.width, constraints.maxWidth, edgeMargin.roundToPx(), alignEnd)
             val y = dropdownTop(at.top.toInt(), at.bottom.toInt(), panel.height, constraints.maxHeight, gap, topLimit.roundToPx(), above)
             panel.place(x, y)
         }
@@ -378,6 +377,20 @@ internal fun dropdownTop(
 }
 
 /**
+ * Where a panel [panelWidth] wide starts horizontally for an anchor spanning [anchorLeft] to [anchorRight]: its left edge on
+ * the anchor's left edge, or with [alignEnd] its right edge on the anchor's right edge, moved no further than [margin] from
+ * either side of a container [containerWidth] wide.
+ */
+internal fun dropdownLeft(
+    anchorLeft: Int,
+    anchorRight: Int,
+    panelWidth: Int,
+    containerWidth: Int,
+    margin: Int,
+    alignEnd: Boolean,
+): Int = (if (alignEnd) anchorRight - panelWidth else anchorLeft).coerceIn(margin, maxOf(margin, containerWidth - panelWidth - margin))
+
+/**
  * The width of the fewest columns, each [column] wide with [gap] between them, that hold [content]: at least one column,
  * and a whole number of them plus the gaps between.
  */
@@ -417,14 +430,17 @@ public fun menuRowShape(padding: Dp = PanelPadding): Shape = RoundedCornerShape(
 
 /** A faint line between two groups of rows, [MenuDividerHeight] tall. */
 @Composable
-public fun MenuDivider(modifier: Modifier = Modifier) {
+public fun MenuDivider(
+    modifier: Modifier = Modifier,
+    alpha: Float = DIVIDER_ALPHA,
+) {
     Box(
         modifier
             .testTag("menu:divider")
             .fillMaxWidth()
             .height(MenuDividerHeight)
             .padding(horizontal = 12.dp, vertical = 2.dp)
-            .background(TvTheme.colors.onSurface.copy(alpha = DIVIDER_ALPHA)),
+            .background(TvTheme.colors.onSurface.copy(alpha = alpha)),
     )
 }
 
@@ -461,13 +477,16 @@ private fun MenuItem(
     height: Dp,
     shape: Shape,
     modifier: Modifier = Modifier,
+    warn: Boolean = false,
 ) {
+    val surfaces = TvTheme.surfaces
+    val warnInk = if (surfaces.dark) WarnInkOnDark else WarnInkOnLight
     FocusPill(onClick = onClick, modifier = modifier.fillMaxWidth().height(height).testTag(tag), shape = shape) { ink ->
         BasicText(
             text = stringResource(label),
             style = TvTheme.typography.pillLabel,
             maxLines = 1,
-            color = ink.content,
+            color = if (warn) ColorProducer { lerp(warnInk, surfaces.pillContent, ink.progress()) } else ink.content,
             modifier = Modifier.align(Alignment.CenterStart).fillMaxWidth().padding(horizontal = 16.dp),
         )
     }

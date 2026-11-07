@@ -91,6 +91,7 @@ class DockGlassUiTest {
             AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it", image = bitmap(16, 9) { _, _ -> grey(40) })
         }
     private val white = bitmap(40, 40) { _, _ -> grey(255) }
+    private val night = bitmap(40, 40) { _, _ -> grey(20) }
 
     /** Black at the top to white at the bottom, so a frost drawn a few dp off its place reads as another grey. */
     private val gradient = bitmap(40, 40) { _, y -> grey(y * 255 / 39) }
@@ -287,6 +288,17 @@ class DockGlassUiTest {
         showHome(white, cinematic.copy(dockGlass = true))
 
         assertTrue("luminance ${trayLuminance()}", trayLuminance() <= 0.57f)
+    }
+
+    @Test
+    fun on_a_dark_picture_a_light_glass_tray_lifts_the_picture_by_at_most_002_and_keeps_its_rim() {
+        showHome(night, cinematic.copy(dockGlass = true))
+        val at = gap()
+
+        val lift = screenAt(at).luminance() - frostAt(night, at, glass = true).luminance()
+        assertTrue("the tray lifts the picture by $lift", lift <= 0.023f)
+        val inside = panelEdgeAt(7)
+        assertEquals(0.40f, (panelEdgeAt(1) - inside) / (1f - inside), 0.03f)
     }
 
     /** The red channel of the screen [px] pixels under the panel's top (or over its bottom) in the gap between the third and fourth tiles. */

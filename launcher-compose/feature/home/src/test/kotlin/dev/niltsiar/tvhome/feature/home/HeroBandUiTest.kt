@@ -176,8 +176,8 @@ class HeroBandUiTest {
     @Test
     fun the_band_text_ends_28_dp_above_the_dock() {
         showHome()
-        // The page dots: 16 dp under the meta slot, 6 dp tall.
-        val dotsBottom = bounds("shelf:meta").bottom + 22.dp
+        // The page dots: 16 dp under the meta slot, 8 dp tall.
+        val dotsBottom = bounds("shelf:meta").bottom + 24.dp
 
         assertNear(dotsBottom + 28.dp, bounds("dock").top)
     }

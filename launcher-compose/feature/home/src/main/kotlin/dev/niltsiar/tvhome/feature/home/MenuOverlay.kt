@@ -40,7 +40,7 @@ private val TrayClearance = 12.dp
  * the app's name, which heads it) opens above the tile with shorter rows, ending [TrayClearance] above the dock's panel;
  * a grid tile's sits beside it and under [bandBottom], the bottom of the band over the grid, when it fits there. The
  * Settings menu hangs from the Settings button with shorter rows, so it ends clear of the dock, and a line sets its
- * restart row apart.
+ * restart row apart, which draws its text in coral.
  */
 @Composable
 internal fun MenuOverlay(
@@ -92,6 +92,7 @@ internal fun MenuOverlay(
             topLimit = MenuTopLimit,
             rowHeight = SettingsRowHeight,
             dividerBefore = { it == MenuRow.PowerMenu },
+            warn = { it == MenuRow.PowerMenu },
         )
     }
 }
