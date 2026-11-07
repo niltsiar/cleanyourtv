@@ -65,19 +65,16 @@ internal fun comparePriority(
     return if (recentA) b.installedAt.compareTo(a.installedAt) else 0
 }
 
-/** Selection mode: apps on Home first, then by label, then by package. */
-internal fun compareSelection(
+/** Label, then package. */
+private fun compareByLabel(
     a: LibraryApp,
     b: LibraryApp,
     collator: Collator,
-): Int {
-    if (a.onHome != b.onHome) return if (a.onHome) -1 else 1
-    return collator.compare(a.app.label, b.app.label).takeIf { it != 0 } ?: a.app.packageName.compareTo(b.app.packageName)
-}
+): Int = collator.compare(a.app.label, b.app.label).takeIf { it != 0 } ?: a.app.packageName.compareTo(b.app.packageName)
 
 /**
  * The catalogue in the order the library shows it. Normal mode: apps not on Home first, recent installs leading that
- * group, then by label. Selection mode: apps on Home first, then by label.
+ * group, then by label. Selection mode: by label alone, so a changed shortcut moves no card.
  */
 public fun sortLibrary(
     apps: List<LibraryApp>,
@@ -86,13 +83,8 @@ public fun sortLibrary(
     collator: Collator,
 ): List<LibraryApp> =
     apps.sortedWith { a, b ->
-        if (selection) {
-            compareSelection(a, b, collator)
-        } else {
-            comparePriority(a, b, now).takeIf { it != 0 }
-                ?: collator.compare(a.app.label, b.app.label).takeIf { it != 0 }
-                ?: a.app.packageName.compareTo(b.app.packageName)
-        }
+        val priority = if (selection) 0 else comparePriority(a, b, now)
+        priority.takeIf { it != 0 } ?: compareByLabel(a, b, collator)
     }
 
 /** After adding a shortcut, prefer another missing app; otherwise stay by a neighbour. -1 when there is no app. */
@@ -108,14 +100,4 @@ public fun nextFocus(
         if (missing(candidate)) return candidate
     }
     return if (from + 1 < count) from + 1 else maxOf(0, from - 1)
-}
-
-/** Keep the next neighbour when a shortcut moves away, or the previous one at the end. -1 when no app is left. */
-public fun nextAfterRemoval(
-    current: Int,
-    count: Int,
-): Int {
-    if (count <= 1) return -1
-    val from = current.coerceIn(0, count - 1)
-    return if (from + 1 < count) from + 1 else from - 1
 }

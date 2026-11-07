@@ -590,7 +590,7 @@ class LibraryOverlayLookUiTest {
 
     private val chooser = TvConfig(appLibrary = true, appLibrarySelection = true)
 
-    /** An app on Home draws first in the chooser, so the focus takes Aaa and Bbb stays idle. Ccc is the idle app off Home. */
+    /** The chooser lists by label: the focus takes Aaa, on Home, and Bbb stays idle on Home. Ccc is the idle app off Home. */
     private fun showChooser() =
         showLibrary(
             listOf(libraryApp("Aaa", onHome = true), libraryApp("Bbb", onHome = true), libraryApp("Ccc"), libraryApp("Ddd")),
@@ -614,14 +614,14 @@ class LibraryOverlayLookUiTest {
 
     @Test
     @Config(qualifiers = "+night")
-    fun in_the_chooser_an_app_on_home_has_a_16_dp_check_centred_in_its_status_slot_and_none_off_home() {
+    fun in_the_chooser_an_app_on_home_has_an_18_dp_check_centred_in_its_status_slot_and_none_off_home() {
         showChooser()
 
         val card = card("Bbb")
         val slot = DpRect(card.left + 6.dp, card.bottom - 20.dp, card.right - 6.dp, card.bottom - 6.dp)
         val check = compose.onNodeWithTag("card:check:${key("Bbb")}", useUnmergedTree = true).getBoundsInRoot()
-        assertEquals(16f, check.width.value, 0.5f)
-        assertEquals(16f, check.height.value, 0.5f)
+        assertEquals(18f, check.width.value, 0.5f)
+        assertEquals(18f, check.height.value, 0.5f)
         assertEquals((card.left.value + card.right.value) / 2f, (check.left.value + check.right.value) / 2f, 1f)
         assertEquals((slot.top.value + slot.bottom.value) / 2f, (check.top.value + check.bottom.value) / 2f, 1f)
         compose.onNodeWithTag("card:check:${key("Bbb")}", useUnmergedTree = true).assertContentDescriptionEquals("On Home")
@@ -641,15 +641,15 @@ class LibraryOverlayLookUiTest {
 
     @Test
     @Config(qualifiers = "+night")
-    fun in_the_chooser_the_check_of_an_idle_card_is_a_white_015_disc_with_a_white_070_check() {
+    fun in_the_chooser_the_check_of_an_idle_card_is_a_white_085_disc_with_a_dark_check() {
         showChooser()
 
         val idleFill = redAt(card("Bbb").left + 4.dp, (card("Bbb").top + card("Bbb").bottom) / 2)
-        val disc = redInMark("card:check", "Bbb", 0.5f, 0.15f)
+        val disc = redInMark("card:check", "Bbb", 0.5f, 0.1f)
         val stroke = redInMark("card:check", "Bbb", 0.58f, 0.51f)
 
-        assertEquals("the disc", idleFill + 0.15f * (255 - idleFill), disc.toFloat(), 4f)
-        assertEquals("the check", disc + 0.70f * (255 - disc), stroke.toFloat(), 10f)
+        assertEquals("the disc", idleFill + 0.85f * (255 - idleFill), disc.toFloat(), 6f)
+        assertTrue("the check is $stroke on a disc of $disc", stroke <= 0.35f * disc)
     }
 
     @Test
@@ -674,21 +674,27 @@ class LibraryOverlayLookUiTest {
 
     @Test
     @Config(qualifiers = "+night")
-    fun in_the_chooser_an_app_off_home_shows_a_16_dp_hollow_ring_of_white_030_where_an_app_on_home_has_its_check() {
+    fun in_the_chooser_an_app_off_home_shows_an_18_dp_hollow_ring_with_a_2_dp_stroke_of_white_045_where_an_app_on_home_has_its_check() {
         showChooser()
 
         val ring = compose.onNodeWithTag("card:ring:${key("Ccc")}", useUnmergedTree = true).getBoundsInRoot()
         val idleFill = redAt(card("Ccc").left + 4.dp, (card("Ccc").top + card("Ccc").bottom) / 2)
-        assertEquals(16f, ring.width.value, 0.5f)
-        assertEquals(16f, ring.height.value, 0.5f)
-        assertEquals("the stroke", idleFill + 0.30f * (255 - idleFill), redInMark("card:ring", "Ccc", 0.047f, 0.5f).toFloat(), 6f)
+        assertEquals(18f, ring.width.value, 0.5f)
+        assertEquals(18f, ring.height.value, 0.5f)
+        assertEquals("the stroke", idleFill + 0.45f * (255 - idleFill), redInMark("card:ring", "Ccc", 1f / 18f, 0.5f).toFloat(), 6f)
+        assertEquals(
+            "the stroke is 2 dp",
+            idleFill + 0.45f * (255 - idleFill),
+            redInMark("card:ring", "Ccc", 1.8f / 18f, 0.5f).toFloat(),
+            8f,
+        )
         assertEquals("the middle", idleFill.toFloat(), redInMark("card:ring", "Ccc", 0.5f, 0.5f).toFloat(), 3f)
         compose.onNodeWithTag("card:ring:${key("Bbb")}", useUnmergedTree = true).assertDoesNotExist()
     }
 
     @Test
     @Config(qualifiers = "+night")
-    fun in_the_chooser_no_white_lies_on_the_art_of_an_app_on_home_and_none_hangs_past_the_card_or_in_an_idle_check() {
+    fun in_the_chooser_no_white_lies_on_the_art_of_an_app_on_home_and_none_hangs_past_the_card() {
         showChooser()
 
         val card = card("Bbb")
@@ -698,7 +704,6 @@ class LibraryOverlayLookUiTest {
         assertEquals("on the corner", 0, whitePixels(corner))
         val below = DpRect(card.left, card.bottom, card.right, card.bottom + 6.dp)
         assertEquals("under the card", 0, whitePixels(below))
-        assertEquals("in the idle check", 0, whitePixels(DpRect(card.left, card.bottom - 21.dp, card.right, card.bottom - 5.dp)))
     }
 
     @Test
@@ -716,17 +721,91 @@ class LibraryOverlayLookUiTest {
 
     @Test
     @Config(qualifiers = "+night")
-    fun in_the_chooser_an_app_off_home_shows_the_plus_and_add_to_home_and_an_app_on_home_no_status_line() {
+    fun in_the_chooser_an_app_off_home_has_its_ring_and_no_status_text_focused_or_not() {
         showChooser()
 
-        assertEquals(listOf("Ccc", "Add to Home"), compose.textsOnCard("Ccc"))
+        assertEquals(listOf("Ccc"), compose.textsOnCard("Ccc"))
         assertEquals(listOf("Bbb"), compose.textsOnCard("Bbb"))
-        val text = statusText("Add to Home", "Ccc")
-        assertEquals(
-            12f,
-            lightSpan(DpRect(text.left - 17.dp, text.top, text.left - 0.5.dp, text.bottom))!!.let { it.endInclusive - it.start },
-            1f,
+        press(Key.DirectionRight, times = 2)
+        compose.onNodeWithTag("card:${key("Ccc")}").assertIsFocused()
+
+        assertEquals(listOf("Ccc"), compose.textsOnCard("Ccc"))
+        compose.onNodeWithTag("card:ring:${key("Ccc")}", useUnmergedTree = true).assertExists()
+    }
+
+    /** The widest row, in dp, of pixels with red above 0.45 and green under 0.3 (the red art) or red above 0.45 alone ([white]) in [area]. */
+    private fun span(
+        area: DpRect,
+        white: Boolean,
+    ): Float {
+        val density = compose.activity.resources.displayMetrics.density
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val xs = (area.left.value * density).toInt() until (area.right.value * density).toInt()
+        val ys = (area.top.value * density).toInt() until (area.bottom.value * density).toInt()
+        val widest =
+            ys.maxOf { y ->
+                val lit = xs.filter { x -> pixels[x, y].red > 0.45f && (white || pixels[x, y].green < 0.3f) }
+                if (lit.isEmpty()) 0 else lit.last() - lit.first() + 1
+            }
+        return widest / density
+    }
+
+    private fun around(
+        tag: String,
+        by: Dp,
+    ): DpRect {
+        val box = compose.onNodeWithTag(tag, useUnmergedTree = true).getBoundsInRoot()
+        return DpRect(box.left - by, box.top - by, box.right + by, box.bottom + by)
+    }
+
+    /** What OK does to Ccc in the chooser, frame by frame: the widest the new check gets, the widest and narrowest its art gets, and the check once settled. */
+    private fun pulseFramesOfAddingCcc(config: TvConfig): Triple<Float, ClosedFloatingPointRange<Float>, Float> {
+        showLibrary(
+            listOf(libraryApp("Aaa", onHome = true), libraryApp("Bbb", onHome = true), libraryApp("Ccc"), libraryApp("Ddd")),
+            art = LibraryArt(red, Color.Red),
+            config = config,
         )
+        press(Key.DirectionRight, times = 2)
+        compose.onNodeWithTag("card:${key("Ccc")}").assertIsFocused()
+        val checks = mutableListOf<Float>()
+        val arts = mutableListOf<Float>()
+        compose.mainClock.autoAdvance = false
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+        repeat(14) {
+            compose.mainClock.advanceTimeByFrame()
+            if (compose.onAllNodesWithTag("card:check:${key("Ccc")}", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()) {
+                checks += span(around("card:check:${key("Ccc")}", 4.dp), white = true)
+                arts += span(art("Ccc"), white = false)
+            }
+        }
+        compose.mainClock.autoAdvance = true
+        settle()
+        return Triple(checks.max(), arts.min()..arts.max(), span(around("card:check:${key("Ccc")}", 4.dp), white = true))
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun in_the_chooser_the_check_of_a_card_whose_shortcut_changed_pulses_to_112_and_no_card_scales() {
+        val (peak, art, settled) = pulseFramesOfAddingCcc(chooser)
+
+        assertTrue("the check peaks at $peak dp, settled at $settled", peak >= 1.08f * settled)
+        assertTrue("the art spans $art dp", art.endInclusive - art.start <= 1.5f)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun with_motion_reduced_the_check_of_a_card_whose_shortcut_changed_does_not_pulse() {
+        val (peak, _, settled) = pulseFramesOfAddingCcc(chooser.copy(reducedMotion = true))
+
+        assertTrue("the check peaks at $peak dp, settled at $settled", peak <= 1.02f * settled)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun with_animations_off_the_check_of_a_card_whose_shortcut_changed_does_not_pulse() {
+        val (peak, _, settled) = pulseFramesOfAddingCcc(chooser.copy(animations = false))
+
+        assertTrue("the check peaks at $peak dp, settled at $settled", peak <= 1.02f * settled)
     }
 
     @Test

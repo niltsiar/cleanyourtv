@@ -7,7 +7,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.getBoundsInRoot
@@ -193,7 +192,7 @@ class LibraryOverlayUiTest {
     @Test
     fun in_selection_mode_a_held_ok_opens_no_menu_and_ok_changes_the_shortcut() {
         showLibrary(TvConfig(appLibrary = true, appLibrarySelection = true))
-        compose.onNodeWithTag("card:${key("Gamma")}").assertIsFocused()
+        compose.onNodeWithTag("card:${key("Alpha")}").assertIsFocused()
 
         compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
         compose.mainClock.advanceTimeBy(700)
@@ -201,7 +200,7 @@ class LibraryOverlayUiTest {
         compose.waitForIdle()
 
         compose.onNodeWithTag("menu").assertDoesNotExist()
-        assertEquals(listOf("pkg.Gamma" to false), library.saved)
+        assertEquals(listOf("pkg.Alpha" to true), library.saved)
     }
 
     private val leastUsed = TvConfig(appLibrary = true, libraryLeastUsed = true)
@@ -268,13 +267,13 @@ class LibraryOverlayUiTest {
     @Test
     fun in_the_chooser_the_hint_says_ok_removes_an_app_on_home_and_ok_adds_one_off_home() {
         showLibrary(TvConfig(appLibrary = true, appLibrarySelection = true))
+        compose.onNodeWithTag("card:${key("Alpha")}").assertIsFocused()
+        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Add to Home")
+
+        repeat(3) { press(Key.DirectionRight) }
+
         compose.onNodeWithTag("card:${key("Gamma")}").assertIsFocused()
         compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Remove from Home")
-
-        press(Key.DirectionRight)
-
-        compose.onNodeWithTag("card:${key("Gamma")}").assertIsNotFocused()
-        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Add to Home")
     }
 
     @Test

@@ -189,34 +189,34 @@ class LibraryPresenterTest {
         }
 
     @Test
-    fun selection_mode_lists_apps_on_home_first_toggles_with_ok_and_has_no_menu() =
+    fun selection_mode_lists_apps_by_label_toggles_with_ok_in_place_and_has_no_menu() =
         runTest {
             val library = FakeLibrary(catalogue)
             presenter(library, TvConfig(appLibrary = true, appLibrarySelection = true, libraryOkOpens = true)).test {
                 events.send(LibraryEvent.Open)
                 val shown = awaitMatching { it.shown }
-                assertEquals(listOf("Home", "Alpha", "Beta", "Fresh", "Zeta"), shown.labels())
+                assertEquals(listOf("Alpha", "Beta", "Fresh", "Home", "Zeta"), shown.labels())
                 assertEquals(listOf(false, false, false, false, false), shown.cards.map { it.recent })
-                assertEquals(LibraryHint.SelectRemove, shown.hint)
+                assertEquals(LibraryHint.SelectAdd, shown.hint)
 
+                events.send(LibraryEvent.Focus(key("Home")))
                 events.send(LibraryEvent.Hold(key("Home")))
                 events.send(LibraryEvent.Click(key("Home")))
-                val removed =
-                    awaitMatching {
-                        it.cards.firstOrNull { card -> card.app.label == "Home" } == null ||
-                            it.focusedKey == key("Alpha")
-                    }
+                val removed = awaitMatching { it.cards.firstOrNull { card -> card.app.label == "Home" }?.onHome == false }
 
                 assertEquals(listOf("pkg.Home" to false), library.saved)
                 assertEquals(null, removed.menu)
-                assertEquals(key("Alpha"), removed.focusRequest?.key)
+                assertEquals(listOf("Alpha", "Beta", "Fresh", "Home", "Zeta"), removed.labels())
+                assertEquals(key("Home"), removed.focusedKey)
+                assertEquals(key("Home"), removed.focusRequest?.key)
+                assertEquals(LibraryHint.SelectAdd, removed.hint)
                 assertEquals(true, effects.tryReceive().isFailure)
                 cancelAndIgnoreRemainingEvents()
             }
         }
 
     @Test
-    fun selection_mode_keeps_focus_on_an_app_it_adds_as_the_app_moves_to_the_front() =
+    fun selection_mode_keeps_focus_and_every_card_in_place_when_it_adds_an_app() =
         runTest {
             val library = FakeLibrary(catalogue)
             presenter(library, TvConfig(appLibrary = true, appLibrarySelection = true)).test {
@@ -226,7 +226,7 @@ class LibraryPresenterTest {
                 events.send(LibraryEvent.Click(key("Zeta")))
                 val added = awaitMatching { it.cards.firstOrNull { card -> card.app.label == "Zeta" }?.onHome == true }
 
-                assertEquals(listOf("Home", "Zeta", "Alpha", "Beta", "Fresh"), added.labels())
+                assertEquals(listOf("Alpha", "Beta", "Fresh", "Home", "Zeta"), added.labels())
                 assertEquals(key("Zeta"), added.focusRequest?.key)
                 cancelAndIgnoreRemainingEvents()
             }

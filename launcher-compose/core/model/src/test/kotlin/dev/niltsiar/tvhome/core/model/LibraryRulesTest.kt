@@ -41,22 +41,12 @@ class LibraryRulesTest {
     }
 
     @Test
-    fun removing_keeps_the_next_app_or_the_previous_app_at_the_end() {
-        assertEquals(1, nextAfterRemoval(0, 5))
-        assertEquals(3, nextAfterRemoval(2, 5))
-        assertEquals(3, nextAfterRemoval(4, 5))
-        assertEquals(-1, nextAfterRemoval(0, 1))
-        assertEquals(-1, nextAfterRemoval(0, 0))
-        assertEquals(1, nextAfterRemoval(-1, 3))
-        assertEquals(1, nextAfterRemoval(9, 3))
-    }
+    fun selection_mode_orders_by_label_then_package_whether_or_not_an_app_is_on_home() {
+        val apps = listOf(app("Zeta", onHome = true), app("Same", pkg = "b.pkg"), app("alpha"), app("Same", pkg = "a.pkg", onHome = true))
 
-    @Test
-    fun selection_mode_puts_apps_on_home_first_and_each_group_in_label_order() {
-        assertTrue(compareSelection(app("Zeta", onHome = true), app("Alpha"), english) < 0)
-        assertTrue(compareSelection(app("Alpha", onHome = true), app("Zeta", onHome = true), english) < 0)
-        assertTrue(compareSelection(app("Alpha"), app("Zeta"), english) < 0)
-        assertTrue(compareSelection(app("Same", pkg = "a.pkg"), app("Same", pkg = "b.pkg"), english) < 0)
+        val sorted = sortLibrary(apps, selection = true, now = NOW, collator = english)
+
+        assertEquals(listOf("pkg.alpha", "a.pkg", "b.pkg", "pkg.Zeta"), sorted.map { it.app.packageName })
     }
 
     @Test
@@ -103,7 +93,7 @@ class LibraryRulesTest {
 
         val sorted = sortLibrary(apps, selection = true, now = NOW, collator = english)
 
-        assertEquals(listOf("Home", "Beta", "Fresh", "Zeta"), sorted.map { it.app.label })
+        assertEquals(listOf("Beta", "Fresh", "Home", "Zeta"), sorted.map { it.app.label })
     }
 
     @Test

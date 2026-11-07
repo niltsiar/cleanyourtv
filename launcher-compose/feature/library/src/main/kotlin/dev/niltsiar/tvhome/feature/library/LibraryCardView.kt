@@ -3,6 +3,7 @@ package dev.niltsiar.tvhome.feature.library
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -48,7 +49,6 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
@@ -77,6 +77,7 @@ import dev.niltsiar.tvhome.core.model.describeLastOpened
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 internal val CardHeight = 113.dp
 private val CardShape = RoundedCornerShape(16.dp)
@@ -98,25 +99,26 @@ private val StatusHeight = 14.dp
 private val PlusSize = 12.dp
 private val PlusStroke = 1.5.dp
 private val PlusGap = 4.dp
-private val CheckSize = 16.dp
+private val CheckSize = 18.dp
 private val CheckStroke = 1.75.dp
 private const val CHECK_DISC_ALPHA = 0.90f
-private const val CHECK_REST_DISC_ALPHA = 0.15f
-private const val CHECK_REST_ALPHA = 0.70f
-private val RingStroke = 1.5.dp
-private const val RING_ALPHA = 0.30f
+private const val CHECK_REST_DISC_ALPHA = 0.85f
+private val RingStroke = 2.dp
+private const val RING_ALPHA = 0.45f
 private val CheckInk = Color(0xFF07080C)
+private const val CHECK_PULSE_MS = 140
+private const val CHECK_PULSE_SCALE = 0.12f
 private const val NEVER_OPENED_ALPHA = 0.45f
 private const val OFF_HOME_ART_ALPHA = 0.5f
 
 /**
  * One card of the grid: the app's art on a small tile and its name of up to [NAME_LINES] lines, in the room above the status
  * slot, which says in one line what is not the usual state. An app on Home has no mark; in the chooser
- * ([LibraryLayout.selection]) the art of an app that is not on Home is dimmed and an app that is on Home has a check in the
- * status slot. An idle card is opaque, so nothing of Home shows through it; a focused one lets the plate [FocusSurface]
- * draws behind it show. It rises in once per opening, with the delay [CardEntrance] gives it, and pops a little when its
- * Home shortcut changes. Both run in the layer lambda. The status slot keeps its place while the card grows, so it stays
- * level with the cards beside it. [widthPx] is the narrowest the card can be.
+ * ([LibraryLayout.selection]) the art of an app that is not on Home is dimmed and the status slot holds a check for an app
+ * on Home and a ring for one that is not. An idle card is opaque, so nothing of Home shows through it; a focused one lets the
+ * plate [FocusSurface] draws behind it show. It rises in once per opening, with the delay [CardEntrance] gives it, and when its
+ * Home shortcut changes pops a little, or in the chooser pulses its mark. Both run in the layer lambda. The status slot keeps
+ * its place while the card grows, so it stays level with the cards beside it. [widthPx] is the narrowest the card can be.
  */
 @Composable
 internal fun LibraryCardView(
@@ -143,11 +145,15 @@ internal fun LibraryCardView(
         }
     }
     val pop = remember { Animatable(0f) }
+    val pulse = remember { Animatable(0f) }
     val wasOnHome = remember { booleanArrayOf(card.onHome) }
     LaunchedEffect(card.onHome) {
         if (wasOnHome[0] != card.onHome) {
             wasOnHome[0] = card.onHome
-            if (layout.animated) {
+            if (layout.animated && layout.selection) {
+                pulse.snapTo(0f)
+                pulse.animateTo(1f, tween(CHECK_PULSE_MS, easing = LinearEasing))
+            } else if (layout.animated) {
                 pop.snapTo(1f)
                 pop.animateTo(0f, spring(dampingRatio = 0.3f, stiffness = Spring.StiffnessMedium))
             }
@@ -164,6 +170,7 @@ internal fun LibraryCardView(
     val ring = remember(artwork, layout) { layout.ringColour(artwork?.accent ?: Color.Unspecified) }
     val ringBlends = remember(ring, artwork) { ringBlendsWith(ring, artwork?.accent ?: Color.Unspecified) }
     val focusProgress = remember(focus) { { focus.value.coerceIn(0f, 1f) } }
+    val checkScale = remember(pulse) { { 1f + CHECK_PULSE_SCALE * (1f - abs(2f * pulse.value - 1f)).coerceIn(0f, 1f) } }
     Box(
         modifier =
             modifier.fillMaxWidth().height(CardHeight).graphicsLayer {
@@ -222,6 +229,7 @@ internal fun LibraryCardView(
                     card,
                     layout,
                     focusProgress,
+                    checkScale,
                     Modifier
                         .align(Alignment.BottomCenter)
                         .padding(start = CardSide, end = CardSide, bottom = CardBottom)
@@ -359,14 +367,15 @@ internal fun shownName(
 /**
  * The status slot, one baseline for every card: the line that says what the name does not. That line is, in the least used
  * order when the app was last opened, else the recent-install text, else "Add to Home" for an app that is not on Home, else
- * nothing; in the chooser an app on Home has a check there instead, and an app that is not on Home a ring before its line.
- * A "+" goes before the recent-install text and "Add to Home".
+ * nothing; in the chooser an app on Home has a check there instead, and an app that is not on Home a ring: the hint row
+ * says what OK does. A "+" goes before the recent-install text and "Add to Home". [checkScale] is the scale of the check or ring.
  */
 @Composable
 private fun Status(
     card: LibraryCard,
     layout: LibraryLayout,
     focus: () -> Float,
+    checkScale: () -> Float,
     modifier: Modifier = Modifier,
 ) {
     val typography = TvTheme.typography
@@ -388,13 +397,9 @@ private fun Status(
         val line = Modifier.weight(1f, fill = false)
         if (opened != null) {
             Opened(card.app.key, opened, shown, line)
-        } else if (layout.selection && card.onHome) {
-            OnHomeCheck(card.app.key, focus)
+        } else if (layout.selection) {
+            if (card.onHome) OnHomeCheck(card.app.key, focus, checkScale) else OffHomeRing(card.app.key, checkScale)
         } else if (text != null) {
-            if (layout.selection) {
-                OffHomeRing(card.app.key)
-                Spacer(Modifier.width(PlusGap))
-            }
             val color = style.color
             Box(Modifier.size(PlusSize).drawBehind { drawPlus(color, size.width) })
             Spacer(Modifier.width(PlusGap))
@@ -404,13 +409,14 @@ private fun Status(
 }
 
 /**
- * A disc with a check, [CheckSize] across and centred in the slot, which it may overhang a little above and below: a quiet one
- * at rest, and on the focused card ([focus] is 1) a white disc with a dark check.
+ * A white disc with a dark check, [CheckSize] across and centred in the slot, which it may overhang a little above and below:
+ * a little less white at rest than on the focused card ([focus] is 1). It draws at [scale].
  */
 @Composable
 private fun OnHomeCheck(
     key: String,
     focus: () -> Float,
+    scale: () -> Float,
 ) {
     val onHome = stringResource(R.string.library_on_home)
     Box(
@@ -418,6 +424,7 @@ private fun OnHomeCheck(
             .requiredSize(CheckSize)
             .testTag("card:check:$key")
             .semantics { contentDescription = onHome }
+            .scaled(scale)
             .drawBehind {
                 val focused = focus()
                 drawCircle(Color.White.copy(alpha = lerp(CHECK_REST_DISC_ALPHA, CHECK_DISC_ALPHA, focused)))
@@ -428,25 +435,34 @@ private fun OnHomeCheck(
                         lineTo(0.44f * side, 0.67f * side)
                         lineTo(0.72f * side, 0.35f * side)
                     }
-                val ink = lerp(Color.White.copy(alpha = CHECK_REST_ALPHA), CheckInk, focused)
-                drawPath(check, ink, style = Stroke(CheckStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+                drawPath(check, CheckInk, style = Stroke(CheckStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
             },
     )
 }
 
-/** A hollow ring where an app on Home has its check, [CheckSize] across. */
+/** A hollow ring where an app on Home has its check, [CheckSize] across, drawn at [scale]. */
 @Composable
-private fun OffHomeRing(key: String) {
+private fun OffHomeRing(
+    key: String,
+    scale: () -> Float,
+) {
     Box(
         Modifier
             .requiredSize(CheckSize)
             .testTag("card:ring:$key")
+            .scaled(scale)
             .drawBehind {
                 val stroke = RingStroke.toPx()
                 drawCircle(Color.White.copy(alpha = RING_ALPHA), radius = (size.width - stroke) / 2f, style = Stroke(stroke))
             },
     )
 }
+
+private fun Modifier.scaled(scale: () -> Float): Modifier =
+    graphicsLayer {
+        scaleX = scale()
+        scaleY = scale()
+    }
 
 /** When the app was last opened, in the TV's language, shrunk to fit one line; "Never opened" for an app Home never opened. */
 @Composable

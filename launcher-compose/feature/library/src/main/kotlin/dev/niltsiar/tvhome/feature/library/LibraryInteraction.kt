@@ -7,7 +7,6 @@ import dev.niltsiar.tvhome.core.model.LibraryApp
 import dev.niltsiar.tvhome.core.model.OpenedAt
 import dev.niltsiar.tvhome.core.model.OpenedRecord
 import dev.niltsiar.tvhome.core.model.isRecent
-import dev.niltsiar.tvhome.core.model.nextAfterRemoval
 import dev.niltsiar.tvhome.core.model.nextFocus
 import dev.niltsiar.tvhome.core.model.okOpens
 import dev.niltsiar.tvhome.core.model.sortLeastUsed
@@ -196,7 +195,7 @@ internal class LibraryInteraction(
 
     /**
      * Puts the app on Home or takes it off. The cards load again once the choice is saved. Focus then goes to the next
-     * app that is not on Home after an add, to the next app after a removal in selection mode, else stays on the app;
+     * app that is not on Home after an add outside selection mode, else stays on the app (in selection mode no card moves);
      * a choice that was not saved leaves focus on the app.
      */
     private fun toggle(
@@ -204,12 +203,7 @@ internal class LibraryInteraction(
         add: Boolean,
     ) {
         val index = cards.indexOf(card)
-        val next =
-            when {
-                layout.selection && !add -> nextAfterRemoval(index, cards.size)
-                !layout.selection && add -> nextFocus(index, cards.size) { !cards[it].onHome }
-                else -> -1
-            }
+        val next = if (!layout.selection && add) nextFocus(index, cards.size) { !cards[it].onHome } else -1
         val target = cards.getOrNull(next)?.app?.key ?: card.app.key
         pendingFocus = target
         scope.launch {
