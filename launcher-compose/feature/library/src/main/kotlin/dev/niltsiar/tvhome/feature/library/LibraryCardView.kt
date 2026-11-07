@@ -104,7 +104,8 @@ private val CheckStroke = 1.75.dp
 private const val CHECK_DISC_ALPHA = 0.90f
 private const val CHECK_REST_DISC_ALPHA = 0.85f
 private val RingStroke = 2.dp
-private const val RING_ALPHA = 0.45f
+private const val RING_ALPHA = 0.70f
+private const val RING_FILL_ALPHA = 0.10f
 private val CheckInk = Color(0xFF07080C)
 private const val CHECK_PULSE_MS = 140
 private const val CHECK_PULSE_SCALE = 0.12f
@@ -114,9 +115,9 @@ private const val OFF_HOME_ART_ALPHA = 0.5f
 /**
  * One card of the grid: the app's art on a small tile and its name of up to [NAME_LINES] lines, in the room above the status
  * slot, which says in one line what is not the usual state. An app on Home has no mark; in the chooser
- * ([LibraryLayout.selection]) the art of an app that is not on Home is dimmed and the status slot holds a check for an app
- * on Home and a ring for one that is not. An idle card is opaque, so nothing of Home shows through it; a focused one lets the
- * plate [FocusSurface] draws behind it show. It rises in once per opening, with the delay [CardEntrance] gives it, and when its
+ * ([LibraryLayout.selection]) the art of an app that is not on Home is dimmed, but not while its card has focus, and the status
+ * slot holds a check for an app on Home and a ring for one that is not. An idle card is opaque, so nothing of Home shows
+ * through it; a focused one lets the plate [FocusSurface] draws behind it show. It rises in once per opening, with the delay [CardEntrance] gives it, and when its
  * Home shortcut changes pops a little, or in the chooser pulses its mark. Both run in the layer lambda. The status slot keeps
  * its place while the card grows, so it stays level with the cards beside it. [widthPx] is the narrowest the card can be.
  */
@@ -222,7 +223,7 @@ internal fun LibraryCardView(
                     .semantics { contentDescription = card.app.label },
             ) {
                 ArtAndName(Modifier.fillMaxSize().padding(start = CardSide, end = CardSide, bottom = CardBottom + StatusHeight)) {
-                    Art(card, artwork, layout.selection && !card.onHome, Modifier.padding(horizontal = ArtInset))
+                    Art(card, artwork, layout.selection && !card.onHome, focusProgress, Modifier.padding(horizontal = ArtInset))
                     Name(card.app.label, measurer, widthPx - with(density) { CardSide.roundToPx() * 2 })
                 }
                 Status(
@@ -271,6 +272,7 @@ private fun Art(
     card: LibraryCard,
     artwork: LibraryArt?,
     dimmed: Boolean,
+    focus: () -> Float,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -280,7 +282,7 @@ private fun Art(
                 .aspectRatio(ART_ASPECT)
                 .graphicsLayer {
                     compositingStrategy = CompositingStrategy.ModulateAlpha
-                    alpha = if (dimmed) OFF_HOME_ART_ALPHA else 1f
+                    alpha = if (dimmed) lerp(OFF_HOME_ART_ALPHA, 1f, focus()) else 1f
                 }.clip(ArtShape)
                 .background(TvTheme.colors.surface)
                 .testTag("card:art:${card.app.key}"),
@@ -440,7 +442,7 @@ private fun OnHomeCheck(
     )
 }
 
-/** A hollow ring where an app on Home has its check, [CheckSize] across, drawn at [scale]. */
+/** A ring, lightly filled, where an app on Home has its check, [CheckSize] across, drawn at [scale]. */
 @Composable
 private fun OffHomeRing(
     key: String,
@@ -453,6 +455,7 @@ private fun OffHomeRing(
             .scaled(scale)
             .drawBehind {
                 val stroke = RingStroke.toPx()
+                drawCircle(Color.White.copy(alpha = RING_FILL_ALPHA), radius = (size.width - 2f * stroke) / 2f)
                 drawCircle(Color.White.copy(alpha = RING_ALPHA), radius = (size.width - stroke) / 2f, style = Stroke(stroke))
             },
     )

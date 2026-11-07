@@ -700,22 +700,32 @@ class LibraryOverlayLookUiTest {
 
     @Test
     @Config(qualifiers = "+night")
-    fun in_the_chooser_an_app_off_home_shows_an_18_dp_hollow_ring_with_a_2_dp_stroke_of_white_045_where_an_app_on_home_has_its_check() {
+    fun in_the_chooser_an_app_off_home_shows_an_18_dp_ring_of_2_dp_white_070_filled_with_white_010_where_an_app_on_home_has_its_check() {
         showChooser()
 
         val ring = compose.onNodeWithTag("card:ring:${key("Ccc")}", useUnmergedTree = true).getBoundsInRoot()
         val idleFill = redAt(card("Ccc").left + 4.dp, (card("Ccc").top + card("Ccc").bottom) / 2)
         assertEquals(18f, ring.width.value, 0.5f)
         assertEquals(18f, ring.height.value, 0.5f)
-        assertEquals("the stroke", idleFill + 0.45f * (255 - idleFill), redInMark("card:ring", "Ccc", 1f / 18f, 0.5f).toFloat(), 6f)
+        assertEquals("the stroke", idleFill + 0.70f * (255 - idleFill), redInMark("card:ring", "Ccc", 1f / 18f, 0.5f).toFloat(), 6f)
         assertEquals(
             "the stroke is 2 dp",
-            idleFill + 0.45f * (255 - idleFill),
+            idleFill + 0.70f * (255 - idleFill),
             redInMark("card:ring", "Ccc", 1.8f / 18f, 0.5f).toFloat(),
             8f,
         )
-        assertEquals("the middle", idleFill.toFloat(), redInMark("card:ring", "Ccc", 0.5f, 0.5f).toFloat(), 3f)
+        assertEquals("the inside", idleFill + 0.10f * (255 - idleFill), redInMark("card:ring", "Ccc", 0.5f, 0.5f).toFloat(), 3f)
         compose.onNodeWithTag("card:ring:${key("Bbb")}", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun in_the_chooser_the_ring_of_an_app_off_home_is_clearly_lighter_than_the_check_disc_of_an_app_on_home() {
+        showChooser()
+
+        val ring = redInMark("card:ring", "Ccc", 1f / 18f, 0.5f)
+        val disc = redInMark("card:check", "Bbb", 0.5f, 0.1f)
+        assertTrue("the ring stroke is $ring against a disc of $disc", ring + 20 <= disc)
     }
 
     @Test
@@ -743,6 +753,18 @@ class LibraryOverlayLookUiTest {
         val offRed = redAt((off.left + off.right) / 2, (off.top + off.bottom) / 2)
         assertEquals(255, onRed)
         assertEquals("half of the red art over the card", 142f, offRed.toFloat(), 14f)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun in_the_chooser_the_art_of_a_focused_app_off_home_draws_whole() {
+        showChooser()
+        press(Key.DirectionRight, times = 2)
+        compose.onNodeWithTag("card:${key("Ccc")}").assertIsFocused()
+        settle()
+
+        val off = art("Ccc")
+        assertEquals(255, redAt((off.left + off.right) / 2, (off.top + off.bottom) / 2))
     }
 
     @Test
