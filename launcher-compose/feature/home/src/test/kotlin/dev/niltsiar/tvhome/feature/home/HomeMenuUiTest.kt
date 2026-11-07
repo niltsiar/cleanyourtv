@@ -225,6 +225,35 @@ class HomeMenuUiTest {
         compose.onNode(hasTestTag("menu:Reorder") and hasAnyAncestor(hasTestTag("menu"))).assertExists()
     }
 
+    @Test
+    fun in_reorder_mode_the_hero_title_is_the_name_of_the_app_that_moves() {
+        showHome()
+        press(Key.DirectionRight)
+        holdOk()
+        releaseOk()
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+        compose.onNodeWithTag("reorder:hint").assertExists()
+        compose.onNodeWithTag("shelf:title").assertTextEquals("App 2")
+
+        press(Key.DirectionRight)
+
+        compose.onNodeWithTag("shelf:title").assertTextEquals("App 2")
+    }
+
+    @Test
+    fun in_edit_dock_mode_the_hero_title_stays_choose_dock_apps() {
+        showHome()
+        press(Key.DirectionUp)
+        repeat(2) { press(Key.DirectionRight) }
+        holdOk()
+        releaseOk()
+        press(Key.DirectionCenter)
+
+        compose.onNodeWithTag("reorder:hint").assertExists()
+        compose.onNodeWithTag("shelf:title").assertTextEquals("Choose dock apps")
+    }
+
     private fun boundsOf(tag: String): Rect = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
 
     @Test

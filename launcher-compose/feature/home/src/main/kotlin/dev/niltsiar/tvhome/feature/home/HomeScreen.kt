@@ -1289,8 +1289,8 @@ private data class HeroLine(
 
 /**
  * The band over the grid: the focused tile's name and when Home last opened it; on the library pill the library's
- * name and size; in a reorder or edit-dock mode the mode's name and its keys. A new line cross-fades with the old one
- * as the cinematic shelf's does ([TitleSlots]). The meta line keeps its slot when empty, so the title stands where the
+ * name and size; in reorder mode the name of the tile that moves, in edit-dock mode the mode's name, and the keys. A new
+ * line cross-fades with the old one as the cinematic shelf's does ([TitleSlots]). The meta line keeps its slot when empty, so the title stands where the
  * [cinematic] shelf's does. It draws at the [band]'s fades.
  */
 @Composable
@@ -1314,6 +1314,7 @@ private fun HeroTitle(
         }
     }
     val link by remember(state) { derivedStateOf { state().network.link } }
+    val focusedLabel by remember(state) { derivedStateOf { state().focusedLabel } }
     val tile by remember(state) {
         derivedStateOf {
             val home = state()
@@ -1330,7 +1331,7 @@ private fun HeroTitle(
     val bar = control
     val line =
         when {
-            mode != null -> HeroLine(stringResource(if (mode == ReorderHint.Reorder) R.string.reorder else R.string.dock_edit), hint = mode)
+            mode != null -> HeroLine(if (mode == ReorderHint.Reorder) focusedLabel else stringResource(R.string.dock_edit), hint = mode)
             input.pillFocused -> HeroLine(stringResource(R.string.library_entry), libraryCountText(count), quick = true, chrome = true)
             bar != null -> barLine(bar, inputs, link).copy(chrome = true)
             else -> tile

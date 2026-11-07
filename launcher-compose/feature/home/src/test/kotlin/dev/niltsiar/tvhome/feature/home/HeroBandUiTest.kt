@@ -195,7 +195,7 @@ class HeroBandUiTest {
     }
 
     @Test
-    fun reorder_mode_names_itself_in_the_band_and_shows_the_key_chips_above_the_dock() {
+    fun reorder_mode_names_the_moved_app_in_the_band_and_shows_the_key_chips_above_the_dock() {
         showHome()
         press(Key.Menu)
         press(Key.DirectionDown)
@@ -203,7 +203,7 @@ class HeroBandUiTest {
         press(Key.DirectionCenter)
         compose.mainClock.advanceTimeBy(1_000)
 
-        assertEquals("Reorder apps", textOf("shelf:title"))
+        assertEquals("App 1", textOf("shelf:title"))
         // Move picks the tile up, so the legend is the held step's: one chip says OK and Back both drop it.
         for (chip in listOf("OK", "Arrows", "move", "Back")) {
             compose.onNode(hasText(chip) and hasAnyAncestor(hasTestTag("reorder:hint"))).assertExists()
