@@ -1626,7 +1626,8 @@ private fun DockPanel(
     if (look.band) {
         val dark = TvTheme.surfaces.dark
         val tint = remember(look, dark, glass) { { look.tint(dark, glass.dockLightness) } }
-        DockSurface(glass, tint, DockShape, modifier, edge, outerHairline = look.light(dark), content = content)
+        val gloss = remember(look, dark, glass) { { look.gloss(dark, glass.dockLightness) } }
+        DockSurface(glass, tint, DockShape, modifier, edge, outerHairline = look.light(dark), gloss = gloss, content = content)
     } else {
         Box(modifier, content = content)
     }

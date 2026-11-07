@@ -93,6 +93,10 @@ class DockGlassUiTest {
     private val white = bitmap(40, 40) { _, _ -> grey(255) }
     private val night = bitmap(40, 40) { _, _ -> grey(20) }
 
+    /** A frost of relative luminance 0.07 once baked, and one of 0.11 (mean L* 36): dark pictures under a light glass dock. */
+    private val dusk = bitmap(40, 40) { _, _ -> grey(76) }
+    private val twilight = bitmap(40, 40) { _, _ -> grey(90) }
+
     /** Black at the top to white at the bottom, so a frost drawn a few dp off its place reads as another grey. */
     private val gradient = bitmap(40, 40) { _, y -> grey(y * 255 / 39) }
 
@@ -260,8 +264,14 @@ class DockGlassUiTest {
         assertSame(over(light, 0.20f, frostAt(uniform, at, glass = true)), screenAt(at))
     }
 
-    /** The mean relative luminance of the panel, less 3 dp inside its edges and 10 dp around each tile, which clears their rings. */
-    private fun trayLuminance(): Float {
+    /**
+     * The mean relative luminance of the panel from [fromDp] to [toDp] below its top (the default: less 3 dp inside its
+     * edges), less 3 dp inside its sides and 10 dp around each tile, which clears their rings.
+     */
+    private fun trayLuminance(
+        fromDp: Float = 3f,
+        toDp: Float? = null,
+    ): Float {
         val panel = compose.onNodeWithTag("dock").getBoundsInRoot()
         val tiles = (1..6).map { dockTile(it) }
         val density = compose.activity.resources.displayMetrics.density
@@ -269,7 +279,8 @@ class DockGlassUiTest {
         var sum = 0.0
         var count = 0
         for (x in ((panel.left.value + 3f) * density).toInt() until ((panel.right.value - 3f) * density).toInt()) {
-            for (y in ((panel.top.value + 3f) * density).toInt() until ((panel.bottom.value - 3f) * density).toInt()) {
+            for (y in ((panel.top.value + fromDp) * density).toInt() until
+                ((toDp?.let { panel.top.value + it } ?: (panel.bottom.value - 3f)) * density).toInt()) {
                 val near =
                     tiles.any {
                         x >= (it.left.value - 10f) * density && x <= (it.right.value + 10f) * density &&
@@ -298,6 +309,42 @@ class DockGlassUiTest {
         val lift = screenAt(at).luminance() - frostAt(night, at, glass = true).luminance()
         assertTrue("the tray lifts the picture by $lift", lift <= 0.023f)
         val inside = panelEdgeAt(7)
+        assertEquals(0.30f, (panelEdgeAt(1) - inside) / (1f - inside), 0.03f)
+    }
+
+    @Test
+    fun a_light_glass_tray_over_a_dark_frost_stays_under_012_and_2_5_times_the_frost_between_the_tiles() {
+        showHome(dusk, cinematic.copy(dockGlass = true))
+        val at = gap()
+
+        val frost = frostAt(dusk, at, glass = true).luminance()
+        val tray = screenAt(at).luminance()
+        assertTrue("the frost is $frost", frost in 0.06f..0.08f)
+        assertTrue("the tray is $tray over a frost of $frost", tray <= minOf(2.5f * frost, 0.12f))
+    }
+
+    @Test
+    fun a_light_glass_tray_over_a_dark_frost_keeps_its_top_strip_under_020() {
+        showHome(twilight, cinematic.copy(dockGlass = true))
+
+        // 5 to 16.5 dp under the panel's top: below the rim, over the sheen.
+        val strip = trayLuminance(fromDp = 5f, toDp = 16.5f)
+        assertTrue("the strip is $strip", strip <= 0.20f)
+    }
+
+    @Test
+    fun a_light_glass_tray_over_a_dark_frost_has_a_1_dp_white_030_line_on_its_top_edge() {
+        showHome(dusk, cinematic.copy(dockGlass = true))
+        val inside = panelEdgeAt(7)
+
+        assertEquals(0.30f, (panelEdgeAt(1) - inside) / (1f - inside), 0.03f)
+    }
+
+    @Test
+    fun a_light_glass_tray_over_a_white_picture_keeps_the_white_040_rim() {
+        showHome(white, cinematic.copy(dockGlass = true))
+        val inside = panelEdgeAt(7)
+
         assertEquals(0.40f, (panelEdgeAt(1) - inside) / (1f - inside), 0.03f)
     }
 

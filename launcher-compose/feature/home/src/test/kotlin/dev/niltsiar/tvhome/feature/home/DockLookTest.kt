@@ -72,6 +72,36 @@ class DockLookTest {
     }
 
     @Test
+    fun over_a_frost_from_L_31_to_38_the_light_tray_lifts_it_to_at_most_1_6_times_its_luminance() {
+        for (lightness in listOf(31f, 33f, 35f, 36.5f, 38f)) {
+            val tint = DockLook(glass = true).tint(darkSurfaces = true, lightness = lightness)
+            val frost = ((lightness + 16f) / 116f).pow(3)
+
+            assertTrue(
+                "L* $lightness gives ${trayLuminance(tint, lightness) / frost} times",
+                trayLuminance(tint, lightness) <= 1.6f * frost,
+            )
+        }
+    }
+
+    @Test
+    fun a_light_tray_keeps_all_its_gloss_on_a_frost_of_L_45_or_more_or_with_no_frost_and_a_dark_one_always() {
+        for (lightness in listOf(0f, 45f, 60f, 100f)) {
+            assertEquals("L* $lightness", 1f, DockLook(glass = true).gloss(darkSurfaces = true, lightness = lightness), 0f)
+        }
+        for (lightness in listOf(1f, 30f, 40f, 100f)) {
+            assertEquals("dark tray at L* $lightness", 1f, DockLook().gloss(darkSurfaces = true, lightness = lightness), 0f)
+        }
+    }
+
+    @Test
+    fun a_light_tray_over_a_frost_of_L_30_or_less_keeps_a_quarter_of_its_gloss_and_more_up_to_L_45() {
+        assertEquals(0.25f, DockLook(glass = true).gloss(darkSurfaces = true, lightness = 30f), 0.001f)
+        assertEquals(0.25f, DockLook(glass = true).gloss(darkSurfaces = true, lightness = 10f), 0.001f)
+        assertEquals(0.625f, DockLook(glass = true).gloss(darkSurfaces = true, lightness = 37.5f), 0.001f)
+    }
+
+    @Test
     fun with_no_frost_under_the_dock_a_lightness_of_0_keeps_the_base_light_tint() {
         assertEquals(light.copy(alpha = 0.20f), DockLook(glass = true).tint(darkSurfaces = true, lightness = 0f))
     }

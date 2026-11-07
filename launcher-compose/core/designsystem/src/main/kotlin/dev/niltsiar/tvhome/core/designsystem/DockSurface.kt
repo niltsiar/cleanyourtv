@@ -3,7 +3,6 @@ package dev.niltsiar.tvhome.core.designsystem
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,6 +42,8 @@ import kotlin.math.roundToInt
 
 private val DockRim = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.40f), Color.White.copy(alpha = 0.08f)))
 private val DockRimWidth = 1.5.dp
+private val TopLine = Color.White.copy(alpha = 0.30f)
+private val TopLineWidth = 1.dp
 private val DockSheen = Brush.verticalGradient(0f to Color.White.copy(alpha = 0.16f), 0.35f to Color.Transparent)
 private val BottomEdge = Color.Black.copy(alpha = 0.25f)
 private val BottomEdgeWidth = 1.dp
@@ -56,7 +57,9 @@ private val DockShadowDrop = 6.dp
  * The dock's panel: the frost under a [tint] (read in the draw phase), a sheen over its top, a 1.5 dp rim that is white 0.40
  * at the top and fades to 0.08 at the bottom, a 1 dp black 0.25 edge along its bottom half, and a shadow that falls 6 dp lower
  * than the panel. With an [edgeLight] the focused tile lights the rim and the floor. With [outerHairline] a 1 dp black 0.30 line
- * runs round the outside of the panel, so a light panel keeps its edge on a bright picture.
+ * runs round the outside of the panel, so a light panel keeps its edge on a bright picture. [gloss] (read in the draw phase,
+ * 0 to 1) scales the sheen and the rim: at less than 1 a white 0.30 line, [TopLineWidth] thick, takes over the rim's top edge
+ * as it fades.
  */
 @Composable
 public fun DockSurface(
@@ -66,6 +69,7 @@ public fun DockSurface(
     modifier: Modifier = Modifier,
     edgeLight: DockEdgeLight? = null,
     outerHairline: Boolean = false,
+    gloss: () -> Float = { 1f },
     content: @Composable BoxScope.() -> Unit,
 ) {
     Box(
@@ -77,18 +81,25 @@ public fun DockSurface(
                 .glassFrost(glass, dock = true)
                 .drawBehind {
                     drawRect(tint())
-                    drawRect(DockSheen)
+                    drawRect(DockSheen, alpha = gloss())
                     edgeLight?.run { drawFloor() }
                 }.drawWithContent {
                     drawContent()
                     val outline = shape.createOutline(size, layoutDirection, this)
+                    val glossy = gloss()
+                    val rim = DockRimWidth.toPx()
+                    drawOutline(outline.grownBy(-rim / 2f), DockRim, alpha = glossy, style = Stroke(rim))
+                    if (glossy < 1f) {
+                        val line = TopLineWidth.toPx()
+                        val edge = outline.grownBy(-line / 2f)
+                        clipRect(bottom = line) { drawOutline(edge, TopLine, alpha = 1f - glossy, style = Stroke(line)) }
+                    }
                     clipRect(top = size.height / 2f) {
                         val width = BottomEdgeWidth.toPx()
                         drawOutline(outline.grownBy(-width / 2f), BottomEdge, style = Stroke(width))
                     }
                     edgeLight?.run { drawRim() }
-                }.border(DockRimWidth, DockRim, shape)
-                .then(if (edgeLight != null) Modifier.onGloballyPositioned { edgeLight.panelLeft = it.positionInRoot().x } else Modifier),
+                }.then(if (edgeLight != null) Modifier.onGloballyPositioned { edgeLight.panelLeft = it.positionInRoot().x } else Modifier),
     ) {
         SurfaceContent { content() }
     }

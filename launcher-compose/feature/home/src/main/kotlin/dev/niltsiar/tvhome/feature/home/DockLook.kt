@@ -42,8 +42,29 @@ private const val TRAY_MAX_LUMINANCE = 0.55f
 private const val DARK_TRAY_LIFT = 0.02f
 private const val DARK_UNTIL_LIGHTNESS = 30f
 
+/** Above L* [DARK_UNTIL_LIGHTNESS] the lift grows by this times the cube of the frost's gain in relative luminance. */
+private const val LIFT_CURVE = 640f
+
+/** The share of its sheen and rim a light tray keeps over the darkest frost, and the L* from which it keeps all of them. */
+private const val MIN_GLOSS = 0.25f
+private const val FULL_GLOSS_LIGHTNESS = 45f
+
 /** Whether the tray takes the light tint: with [DockLook.glass], or without night mode. */
 internal fun DockLook.light(darkSurfaces: Boolean): Boolean = glass || !darkSurfaces
+
+/**
+ * How much of its sheen and rim the dock panel shows: all (1), unless the tray is light over a frost of L* [lightness] under
+ * [FULL_GLOSS_LIGHTNESS]. Then it falls in a straight line to [MIN_GLOSS] at L* [DARK_UNTIL_LIGHTNESS], so a light tray does
+ * not outshine a dark picture. A lightness of 0 means no frost, which keeps all of it.
+ */
+internal fun DockLook.gloss(
+    darkSurfaces: Boolean,
+    lightness: Float,
+): Float {
+    if (!light(darkSurfaces) || lightness <= 0f) return 1f
+    return MIN_GLOSS +
+        (1f - MIN_GLOSS) * ((lightness - DARK_UNTIL_LIGHTNESS) / (FULL_GLOSS_LIGHTNESS - DARK_UNTIL_LIGHTNESS)).coerceIn(0f, 1f)
+}
 
 /**
  * The tint over the dock's frost, which carries the picture's colour. [darkSurfaces] is the TV's night mode; [lightness]
@@ -51,7 +72,8 @@ internal fun DockLook.light(darkSurfaces: Boolean): Boolean = glass || !darkSurf
  * (dark) or 0.20 (light), and rises by 0.06 as the wallpaper under the dock goes from L* 60 to L* 75. A light tint
  * darkens, as far as it needs, for a tray over a bright frost to keep a mean relative luminance of at most 0.55, and
  * for a tray over a dark frost (L* 30 or less, but over 0: a lightness of 0 means no frost, which keeps the base tint) to
- * lift the frost's relative luminance by 0.02 at most, so the picture shows.
+ * lift the frost's relative luminance by 0.02 at most, so the picture shows. Over a frost from L* 30 the lift may grow by
+ * [LIFT_CURVE] times the cube of the frost's gain in relative luminance since L* 30, which no longer binds at L* 40.
  */
 internal fun DockLook.tint(
     darkSurfaces: Boolean,
@@ -71,7 +93,7 @@ internal fun DockLook.tint(
 /**
  * This tint's colour dimmed so that a tray of the frost at L* [lightness] under it at [alpha] has a mean relative
  * luminance of [TRAY_MAX_LUMINANCE] at most, and over a frost darker than L* [DARK_UNTIL_LIGHTNESS] lifts the frost's by
- * [DARK_TRAY_LIFT] at most, a limit that relaxes from L* [DARK_UNTIL_LIGHTNESS] until it no longer binds at [DIM_LIGHTNESS].
+ * [DARK_TRAY_LIFT] at most, a limit that relaxes from L* [DARK_UNTIL_LIGHTNESS] along [LIFT_CURVE].
  * The frost is taken as a grey of that lightness, and the channels mix on their encoded values as the screen mixes them.
  */
 private fun Color.scaledToKeepTray(
@@ -80,8 +102,8 @@ private fun Color.scaledToKeepTray(
 ): Color {
     val frostLuminance = luminanceOfLightness(lightness)
     val darkLift = if (lightness > 0f) DARK_TRAY_LIFT else TRAY_MAX_LUMINANCE
-    val lift =
-        darkLift + TRAY_MAX_LUMINANCE * ((lightness - DARK_UNTIL_LIGHTNESS) / (DIM_LIGHTNESS - DARK_UNTIL_LIGHTNESS)).coerceIn(0f, 1f)
+    val gain = (frostLuminance - luminanceOfLightness(DARK_UNTIL_LIGHTNESS)).coerceAtLeast(0f)
+    val lift = darkLift + LIFT_CURVE * gain * gain * gain
     val frost = encoded(frostLuminance)
     val limit = encoded(minOf(TRAY_MAX_LUMINANCE, frostLuminance + lift))
     val grey = (limit - (1f - alpha) * frost) / alpha
