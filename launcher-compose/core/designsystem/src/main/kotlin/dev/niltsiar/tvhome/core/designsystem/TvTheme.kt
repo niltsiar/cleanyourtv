@@ -175,7 +175,7 @@ private fun typographyFor(colors: TvColors): TvTypography {
             ),
         greeting =
             TextStyle(
-                color = colors.onSurface.copy(alpha = 0.8f),
+                color = colors.onSurface.copy(alpha = 0.95f),
                 fontSize = greetingSize,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 0.18.em,

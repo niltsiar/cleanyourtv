@@ -92,6 +92,7 @@ private const val APPS_ICON_GROWTH = 0.18f
 private const val DEFAULT_NETWORK_WIDTH_DP = 180
 private const val CLOCK_SLOTS = 5
 private const val DIVIDER_ALPHA = 0.2f
+private const val DATE_INK_ALPHA = 0.88f
 private val NetworkIconRise = 6.dp
 private val DigitRise = 10.dp
 private val ClockPillPadding = 24.dp
@@ -340,8 +341,11 @@ internal fun ClockPill(
         val typography = TvTheme.typography
         val clockStyle =
             remember(typography, dateBelowClock) { if (dateBelowClock) typography.clock.copy(fontSize = 28.sp) else typography.clock }
+        val dateInk = TvTheme.colors.onSurface.copy(alpha = DATE_INK_ALPHA)
         val dateStyle =
-            remember(typography, dateBelowClock) { if (dateBelowClock) typography.date.copy(fontSize = 14.sp) else typography.date }
+            remember(typography, dateBelowClock, dateInk) {
+                typography.date.copy(color = dateInk, fontSize = if (dateBelowClock) 14.sp else typography.date.fontSize)
+            }
         val divider = TvTheme.colors.onSurface.copy(alpha = DIVIDER_ALPHA)
         Row(
             modifier = Modifier.fillMaxHeight().padding(horizontal = ClockPillPadding),

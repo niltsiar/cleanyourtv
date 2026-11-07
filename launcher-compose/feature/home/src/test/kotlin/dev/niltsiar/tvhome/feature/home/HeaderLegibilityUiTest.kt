@@ -29,6 +29,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpRect
+import androidx.compose.ui.unit.width
 import dev.niltsiar.tvhome.core.config.HeaderScrim
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.GlassState
@@ -60,6 +61,7 @@ import org.robolectric.annotation.GraphicsMode
 import java.time.ZoneId
 import kotlin.math.abs
 import kotlin.math.max
+import kotlin.math.min
 
 /** What the header and the top-bar buttons look like over a bright or a dark wallpaper, read from the rendered pixels. */
 @RunWith(RobolectricTestRunner::class)
@@ -98,6 +100,7 @@ class HeaderLegibilityUiTest {
         inputs: Flow<InputsMenu> = emptyFlow(),
         apps: List<AppEntry> = NineApps,
         lastOpened: Map<String, Long> = emptyMap(),
+        darkTheme: Boolean = true,
     ) {
         val sources =
             sources(
@@ -109,7 +112,7 @@ class HeaderLegibilityUiTest {
             )
         compose.setContent {
             CompositionLocalProvider(LocalBakeDispatcher provides Dispatchers.Unconfined) {
-                TvTheme(darkTheme = true) {
+                TvTheme(darkTheme = darkTheme) {
                     glass = rememberGlassState()
                     val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                     val state = viewModel.uiState.collectAsState()
@@ -533,6 +536,102 @@ class HeaderLegibilityUiTest {
         val at = aboveTheTitle()
 
         assertNear(scrimmed(191, top = 0.55f + 0.15f * 0.865f, left = 0.40f + 0.20f * 0.865f, at), redAt(at))
+    }
+
+    private fun contrast(
+        first: Color,
+        second: Color,
+    ): Float = (max(first.luminance(), second.luminance()) + 0.05f) / (min(first.luminance(), second.luminance()) + 0.05f)
+
+    /** The date's rows under the clock pill's top, in dp, and the greeting's. */
+    private val dateRows = 31f..44f
+    private val greetingRows = 11f..22f
+
+    /** The pixels in [rows] under the clock pill's top and from [from] to [to] dp past its left edge. */
+    private fun pillPixels(
+        image: PixelMap,
+        rows: ClosedFloatingPointRange<Float>,
+        from: Float,
+        to: Float,
+    ): List<Color> {
+        val pill = compose.onNodeWithTag("clock").getBoundsInRoot()
+        val density = compose.activity.resources.displayMetrics.density
+        val ys = ((pill.top.value + rows.start) * density).toInt() until ((pill.top.value + rows.endInclusive) * density).toInt()
+        val xs = ((pill.left.value + from) * density).toInt() until ((pill.left.value + to) * density).toInt()
+        return ys.flatMap { y -> xs.map { x -> image[x, y] } }
+    }
+
+    /** The most extreme pixel of [pixels], the one furthest from the pill's surface: the ink of text drawn on it. */
+    private fun ink(
+        pixels: List<Color>,
+        darkTheme: Boolean,
+    ): Color = if (darkTheme) pixels.maxBy { it.luminance() } else pixels.minBy { it.luminance() }
+
+    /** The clock pill's width in dp, for the strips of its padding at both ends of a line. */
+    private fun pillWidth(): Float =
+        compose
+            .onNodeWithTag("clock")
+            .getBoundsInRoot()
+            .width.value
+
+    /** The lowest contrast of the ink of the pill's line in [rows] against the pill's own surface beside it: its padding at both ends. */
+    private fun lineContrast(
+        image: PixelMap,
+        rows: ClosedFloatingPointRange<Float>,
+        darkTheme: Boolean,
+    ): Float {
+        val ink = ink(pillPixels(image, rows, 160f, pillWidth() - 30f), darkTheme)
+        val surface = pillPixels(image, rows, 10f, 20f) + pillPixels(image, rows, pillWidth() - 20f, pillWidth() - 9f)
+        return surface.minOf { contrast(ink, it) }
+    }
+
+    private val noFrost = "no frost" to Wallpaper()
+    private val black = "black" to Wallpaper(picture = grey(0f), thumbnail = grey(0f))
+    private val white = "white" to Wallpaper(picture = grey(1f), thumbnail = grey(1f))
+
+    /** The contrast of the greeting, then of the date, on the clock pill with each of [surfaces] behind it, by name. */
+    private fun pillContrastOver(
+        darkTheme: Boolean,
+        vararg surfaces: Pair<String, Wallpaper>,
+    ): List<Triple<String, Float, Float>> {
+        val wallpapers = MutableStateFlow(Wallpaper())
+        showHome(wallpapers = wallpapers, darkTheme = darkTheme)
+        return surfaces.map { (name, wallpaper) ->
+            wallpapers.value = wallpaper
+            settle()
+            val image = compose.onRoot().captureToImage().toPixelMap()
+            Triple(name, lineContrast(image, greetingRows, darkTheme), lineContrast(image, dateRows, darkTheme))
+        }
+    }
+
+    @Test
+    fun the_clock_pills_greeting_and_date_read_at_4_5_to_1_on_every_wallpaper_and_the_date_5_5_to_1_on_the_busy_forest() {
+        val ratios = pillContrastOver(true, noFrost, black, white, "bright sky" to picture("bright"), "busy forest" to picture("busy"))
+
+        val low = ratios.filter { (name, greeting, date) -> greeting < 4.5f || date < if (name == "busy forest") 5.5f else 4.5f }
+        assertTrue("greeting and date contrast on the pill: $ratios", low.isEmpty())
+    }
+
+    @Test
+    fun without_night_mode_the_clock_pills_greeting_and_date_read_at_4_5_to_1_on_every_wallpaper() {
+        val ratios = pillContrastOver(false, noFrost, black, white, "busy forest" to picture("busy"))
+
+        assertTrue(
+            "greeting and date contrast on the pill: $ratios",
+            ratios.all { (_, greeting, date) -> greeting >= 4.5f && date >= 4.5f },
+        )
+    }
+
+    @Test
+    fun the_clock_pills_ink_steps_down_from_the_clock_to_the_greeting_to_the_date() {
+        showHome(wallpapers = flowOf(Wallpaper(picture = grey(0f), thumbnail = grey(0f))))
+        val image = compose.onRoot().captureToImage().toPixelMap()
+
+        val clock = ink(pillPixels(image, 12f..44f, 24f, 140f), darkTheme = true).luminance()
+        val greeting = ink(pillPixels(image, greetingRows, 160f, pillWidth() - 30f), darkTheme = true).luminance()
+        val date = ink(pillPixels(image, dateRows, 160f, pillWidth() - 30f), darkTheme = true).luminance()
+
+        assertTrue("clock $clock, greeting $greeting, date $date", clock > greeting && greeting > date)
     }
 
     private fun settingsFill(): Int {
