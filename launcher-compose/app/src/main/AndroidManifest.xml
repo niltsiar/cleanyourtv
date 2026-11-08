@@ -116,6 +116,24 @@
             </intent-filter>
         </activity>
 
+        <!-- Package-name app launches from the Android TV Remote service (Home Assistant android_tv_remote), normally
+             served by the stock launcher. -->
+        <activity
+            android:name=".OpenPackageActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="market"
+                    android:host="launch" />
+            </intent-filter>
+        </activity>
+
         <!-- The clock screensaver started by Home after home_idle_clock_minutes, on Back with back_opens_clock and by the
              "screensaver" word of app_keys where the firmware has no screensaver of its own. -->
         <activity
