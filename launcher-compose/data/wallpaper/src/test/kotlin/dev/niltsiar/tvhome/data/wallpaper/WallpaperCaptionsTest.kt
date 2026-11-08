@@ -10,9 +10,9 @@ class WallpaperCaptionsTest {
     fun reads_filename_tab_name() {
         val names =
             WallpaperCaptions.parse(
-                listOf("001.jpg\tRed Spider Nebula · Hubble", "002.jpg\t  Falcon 9 at sunset  "),
+                listOf("001.jpg\tSunrise and aurora over northern Europe · NASA, Expedition 43", "002.jpg\t  Falcon 9 at sunset  "),
             )
-        assertEquals("Red Spider Nebula · Hubble", names["001.jpg"])
+        assertEquals("Sunrise and aurora over northern Europe · NASA, Expedition 43", names["001.jpg"])
         assertEquals("Falcon 9 at sunset", names["002.jpg"])
     }
 

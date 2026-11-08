@@ -1,3 +1,4 @@
+<!-- Changed from the Android CLI "Android Skills" original (Google LLC, Apache License 2.0): a | inside a table cell is escaped as \| so the cells count correctly. -->
 syntax:
 :
 

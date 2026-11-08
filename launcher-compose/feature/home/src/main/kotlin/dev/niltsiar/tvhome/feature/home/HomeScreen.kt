@@ -2100,7 +2100,11 @@ private fun HomePreview(
         val header =
             HeaderStyle(hour24 = false, datePattern = DateFormat.getBestDateTimePattern(locale, "EEEEdMMMM"), greetingName = "Sam")
         val network = NetworkState(NetworkLink.Wifi, ssid = "Living room", validated = true)
-        val wallpaper = Wallpaper(picture = ImageBitmap.imageResource(R.drawable.wallpaper), caption = "Red Spider Nebula · Hubble")
+        val wallpaper =
+            Wallpaper(
+                picture = ImageBitmap.imageResource(R.drawable.wallpaper),
+                caption = "Sunrise and aurora over northern Europe · NASA, Expedition 43",
+            )
         val now = LocalDateTime.of(2026, 11, 3, 20, 15)
         val yesterday =
             now

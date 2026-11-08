@@ -30,13 +30,13 @@ class WallpaperCaptionTest {
 
     @Test
     fun the_pictures_name_shows_on_home() {
-        show(Wallpaper(caption = "Red Spider Nebula"))
-        compose.onNodeWithText("Red Spider Nebula").assertIsDisplayed()
+        show(Wallpaper(caption = "Sunrise and aurora over northern Europe"))
+        compose.onNodeWithText("Sunrise and aurora over northern Europe").assertIsDisplayed()
     }
 
     @Test
     fun a_picture_without_a_name_shows_none() {
         show(Wallpaper())
-        compose.onNodeWithText("Red Spider Nebula").assertDoesNotExist()
+        compose.onNodeWithText("Sunrise and aurora over northern Europe").assertDoesNotExist()
     }
 }
