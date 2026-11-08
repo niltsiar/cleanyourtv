@@ -590,8 +590,10 @@ class AlwaysShowNamesUiTest {
                 .width.value - ScreenMargin.value * 2
         val tile = ((gridWidth - TileGap.value * 3) / 4).dp
 
-        assertNear(tile, bounds("tile:pkg.1").width)
-        assertNear(ScreenMargin, left("tile:pkg.1"))
+        // The dock tiles stand inside the panel's padding, which leaves their ring room at the wall.
+        val dockTile = bounds("tile:pkg.1")
+        assertTrue("the dock tile is $dockTile dp", dockTile.width.value in tile.value - 6f..tile.value)
+        assertTrue("the dock tile starts at ${dockTile.left}", dockTile.left.value in ScreenMargin.value..ScreenMargin.value + 8f)
         assertNear(ScreenMargin - TileGap, left("dock"))
         assertNear((gridWidth + TileGap.value * 2).dp, bounds("dock").width)
         press(Key.DirectionDown)

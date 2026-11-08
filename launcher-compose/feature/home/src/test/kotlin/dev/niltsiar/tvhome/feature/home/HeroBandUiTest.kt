@@ -256,7 +256,7 @@ class HeroBandUiTest {
     }
 
     @Test
-    fun dock_tiles_sit_on_the_grid_columns() {
+    fun dock_tiles_stand_within_3_dp_of_the_grid_columns_and_up_to_3_dp_narrower() {
         showHome(apps = (1..12).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") })
         // On the top bar no tile is focused, so none is drawn grown.
         press(Key.DirectionUp)
@@ -264,8 +264,13 @@ class HeroBandUiTest {
         for (column in 1..6) {
             val dock = dockTile(column).getBoundsInRoot()
             val grid = bounds("tile:pkg.${column + 6}")
-            assertNear(grid.left, dock.left)
-            assertNear(grid.right, dock.right)
+            val dockWidth = (dock.right - dock.left).value
+            val gridWidth = (grid.right - grid.left).value
+            assertTrue(
+                "column $column: dock tile ${dock.left}..${dock.right}, grid tile ${grid.left}..${grid.right}",
+                abs((dock.left.value + dock.right.value) / 2f - (grid.left.value + grid.right.value) / 2f) <= 3f &&
+                    dockWidth in gridWidth - 3f..gridWidth,
+            )
         }
     }
 

@@ -163,6 +163,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.ZoneId
+import kotlin.math.ceil
 
 internal val ScreenMargin = 40.dp
 internal val TileGap = 24.dp
@@ -238,8 +239,11 @@ private val GridBottom = 48.dp
 private val InputsTrayClearance = 24.dp
 private val LibraryRowHeight = 84.dp
 
-/** The padding at the sides of a dock panel that has fewer tiles than the row holds. */
+/** The least padding at the sides of a dock panel that has fewer tiles than the row holds. */
 private val DockShrunkSide = 28.dp
+
+/** From the outer edge of a focused end dock tile's ring to the dock panel's wall, at least. */
+private val DockRingWallClear = 12.dp
 
 /** From the shelf's bottom edge up to the line under which a row at the top of the grid counts as fully visible. */
 private val ShelfToFade = 16.dp
@@ -1540,8 +1544,12 @@ private fun Dock(
     onOpenLibrary: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // One gap wider on each side than the grid, so the tiles inside its padding sit on the grid's columns. With fewer
-    // tiles than the row holds the panel is as wide as they are, centred.
+    // One gap wider on each side than the grid. The padding inside leaves a focused end tile's ring DockRingWallClear from
+    // the wall, so the tiles are a little narrower than the grid's columns. With fewer tiles than the row holds the panel
+    // is as wide as they are, centred.
+    val side =
+        with(LocalDensity.current) { ringReach(rowTileWidth.toPx(), TvTheme.motion.focusScale(TILE_FOCUSED_SCALE)).toDp() } +
+            DockRingWallClear
     val shrunk = look.band && !layout.singleRow && dock.size < layout.columns
     val width = if (shrunk) Modifier.wrapContentWidth() else Modifier.fillMaxWidth()
     DockPanel(glass, look, edge, shade, modifier.outset(TileGap).then(width).testTag("dock")) {
@@ -1551,7 +1559,7 @@ private fun Dock(
                 LazyRow(
                     state = row,
                     modifier = Modifier.focusRequester(focus).focusRestorer().upToOffer(input, layout),
-                    contentPadding = PaddingValues(TileGap),
+                    contentPadding = PaddingValues(horizontal = side, vertical = TileGap),
                     horizontalArrangement = Arrangement.spacedBy(TileGap),
                 ) {
                     itemsIndexed(dock, key = { _, app -> app.key }) { index, app ->
@@ -1570,11 +1578,6 @@ private fun Dock(
                             tileMenu = layout.tileMenu,
                             showName = layout.showNames,
                             edge = edge,
-                            growthAnchorX =
-                                dockGrowthAnchor(
-                                    first = index == 0,
-                                    last = index == dock.lastIndex && !layout.libraryPill,
-                                ),
                             modifier =
                                 Modifier
                                     .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = TvTheme.motion.placementSpec)
@@ -1604,7 +1607,7 @@ private fun Dock(
                         .focusRestorer()
                         .focusGroup()
                         .upToOffer(input, layout)
-                        .padding(horizontal = if (shrunk) DockShrunkSide else TileGap, vertical = TileGap),
+                        .padding(horizontal = if (shrunk) maxOf(DockShrunkSide, side) else side, vertical = TileGap),
                 horizontalArrangement = Arrangement.spacedBy(TileGap),
             ) {
                 dock.forEachIndexed { index, app ->
@@ -1631,11 +1634,6 @@ private fun Dock(
                             tileMenu = layout.tileMenu,
                             showName = layout.showNames,
                             edge = edge,
-                            growthAnchorX =
-                                dockGrowthAnchor(
-                                    first = index == 0,
-                                    last = index == (if (shrunk) dock.lastIndex else layout.columns - 1),
-                                ),
                             modifier =
                                 (if (shrunk) Modifier.width(rowTileWidth) else Modifier.weight(1f))
                                     .slideToIndex(index, TileGap)
@@ -1650,20 +1648,6 @@ private fun Dock(
         }
     }
 }
-
-/**
- * Where across its width a dock tile's focus growth is anchored: the first slot at its left edge and the last at its right,
- * so its ring grows away from the dock panel's wall; any other, or a lone slot between two walls, about its centre.
- */
-private fun dockGrowthAnchor(
-    first: Boolean,
-    last: Boolean,
-): Float =
-    when {
-        first && !last -> 0f
-        last && !first -> 1f
-        else -> 0.5f
-    }
 
 /** With input_arrival, Up from a dock tile goes to the Inputs button while it offers a device. Read when focus moves. */
 private fun Modifier.upToOffer(
@@ -1790,7 +1774,6 @@ private fun AppTile(
     edge: DockEdgeLight? = null,
     bannerName: Boolean = true,
     growthPivot: ((Float) -> Float)? = null,
-    growthAnchorX: Float = 0.5f,
 ) {
     val marked = if (habitMark) modifier.habitMark(input.habit, app.packageName) else modifier
     if (showName) {
@@ -1815,7 +1798,6 @@ private fun AppTile(
                 edge = edge,
                 bannerName = false,
                 growthPivot = pivot,
-                growthAnchorX = growthAnchorX,
             )
         }
         return
@@ -1847,10 +1829,9 @@ private fun AppTile(
         ring = ringColour,
         ringBlends = ringBlends,
         growthPivot = growthPivot,
-        growthAnchorX = growthAnchorX,
         modifier =
             (if (fadeUnused) marked.unusedFade(input.faded, key) else marked)
-                .then(if (reordering) Modifier.reorderLook(key, input, TileShape, growthPivot, growthAnchorX) else Modifier)
+                .then(if (reordering) Modifier.reorderLook(key, input, TileShape, growthPivot) else Modifier)
                 .aspectRatio(TILE_ASPECT)
                 .then(
                     if (edge != null) {
@@ -1936,7 +1917,8 @@ private fun NameUnder(
         val art = measurables[0].measure(constraints)
         val name = measurables[1].measure(Constraints(maxWidth = art.width))
         val gap = nameGap(art.height.toDp().value, scale).dp.roundToPx()
-        val below = nameBelow(art.height.toDp().value, scale).dp.roundToPx()
+        // In whole pixels, so that rounding the two apart cannot leave the space under the pill short of its ratio.
+        val below = maxOf(0, ceil(NAME_BELOW_RATIO * gap).toInt() - TileGap.roundToPx())
         layout(art.width, art.height + gap + name.height + below) {
             art.place(0, 0)
             name.place((art.width - name.width) / 2, art.height + gap)

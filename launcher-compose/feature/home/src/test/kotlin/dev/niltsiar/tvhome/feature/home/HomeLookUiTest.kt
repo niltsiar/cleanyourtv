@@ -252,7 +252,7 @@ class HomeLookUiTest {
     private fun visibleDp(tag: String): Float = screen().bottom.value - bounds(tag).top.value
 
     @Test
-    @Config(qualifiers = "w960dp-h548dp-xhdpi")
+    @Config(qualifiers = "w960dp-h544dp-xhdpi")
     fun a_grid_row_with_under_48_dp_visible_draws_at_alpha_0() {
         showHome(apps = whiteApps(30), config = SixColumns.copy(columns = 5))
 
@@ -726,6 +726,35 @@ class HomeLookUiTest {
     @Config(qualifiers = "+night")
     fun with_four_columns_a_carried_tiles_arrows_keep_their_clearances() {
         assertCarriedClearances(tiles = 4, slot = 2, config = TvConfig(columns = 4))
+    }
+
+    /** Carries the first of nine tiles to the last of [config]'s dock and reads how far the right arrow's disc stands from the dock's wall. */
+    private fun lastTileDiscToWall(config: TvConfig): Float {
+        showHome(apps = clearApps(1) + whiteApps(9).drop(1), config = config)
+        val rest = restTiles(config.columns)
+        carryFirstTile()
+        repeat(config.columns - 1) { press(Key.DirectionRight) }
+        val at = rest.last()
+        val middle = (at.top.value + at.bottom.value) / 2f - 7f
+        val wall = bounds("dock").right.value
+        val chevron = whiteRuns(at.right.value + ringReach - 8f, wall, middle - 10f, middle + 10f).single()
+        return wall - ((chevron.start + chevron.endInclusive) / 2f + arrowDisc / 2f)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_right_arrow_of_the_last_dock_tile_keeps_4_dp_from_the_dock_wall_in_a_six_column_dock() {
+        val gap = lastTileDiscToWall(SixColumns)
+
+        assertTrue("the disc stood $gap dp from the wall", gap >= 4f)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_right_arrow_of_the_last_dock_tile_keeps_4_dp_from_the_dock_wall_in_a_four_column_dock() {
+        val gap = lastTileDiscToWall(TvConfig(columns = 4))
+
+        assertTrue("the disc stood $gap dp from the wall", gap >= 4f)
     }
 
     /** The left edge, in dp, of the white art that covers [x] dp at [row] dp. */

@@ -700,7 +700,7 @@ class DockGlassUiTest {
         val panel = compose.onNodeWithTag("dock").getBoundsInRoot()
 
         assertEquals(880f + 2 * 24f, panel.width.value, 1f)
-        assertEquals(24f, dockTile(1).left.value - panel.left.value, 1f)
+        assertEquals(26.8f, dockTile(1).left.value - panel.left.value, 0.6f)
     }
 
     @Test
@@ -808,5 +808,59 @@ class DockGlassUiTest {
         val gap = ringGapToWall(slot = 1, side = -1)
 
         assertTrue("the ring stood $gap dp from the left wall", gap >= 12f)
+    }
+
+    /**
+     * How far, in dp, the outer edge of the focus ring of dock slot [slot] (from 1) stands from the edge of its neighbour on
+     * [side] (-1 left, +1 right), read from the rendered pixels as [ringGapToWall] does. A ring the neighbour covers reads as
+     * the 3 dp of its strokes under zero.
+     */
+    private fun ringGapToNeighbour(
+        slot: Int,
+        side: Int,
+    ): Float {
+        val tile = dockTile(slot)
+        val neighbour = dockTile(slot + side)
+        val density = compose.activity.resources.displayMetrics.density
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val row = ((tile.top.value + tile.bottom.value) / 2f * density).toInt()
+
+        fun white(x: Int) = minOf(pixels[x, row].red, pixels[x, row].green, pixels[x, row].blue) > 0.9f
+        val strokes = 3f
+        return if (side > 0) {
+            val ring = ((tile.right.value * density).toInt()..(neighbour.left.value * density).toInt()).first { white(it) }
+            val end = generateSequence(ring) { it + 1 }.first { !white(it) }
+            neighbour.left.value - (end / density + strokes)
+        } else {
+            val ring = ((tile.left.value * density).toInt()).downTo((neighbour.right.value * density).toInt()).first { white(it) }
+            val end = generateSequence(ring) { it - 1 }.first { !white(it) }
+            (end + 1) / density - strokes - neighbour.right.value
+        }
+    }
+
+    private fun assertEndTilesLeaveTheirNeighbourTheRoomAMiddleTileLeaves(columns: Int) {
+        showHome(night, cinematic.copy(columns = columns))
+        press(Key.DirectionRight)
+        compose.onNodeWithTag("tile:pkg.2").assertIsFocused()
+        val middle = ringGapToNeighbour(slot = 2, side = +1)
+        press(Key.DirectionLeft)
+        val first = ringGapToNeighbour(slot = 1, side = +1)
+        repeat(columns - 1) { press(Key.DirectionRight) }
+        compose.onNodeWithTag("tile:pkg.$columns").assertIsFocused()
+        val last = ringGapToNeighbour(slot = columns, side = -1)
+
+        assertTrue("a middle tile left $middle dp, the first $first dp, the last $last dp", middle >= 4f)
+        assertEquals("the first tile's gap to the second, $columns columns", middle, first, 0.5f)
+        assertEquals("the last tile's gap to the one before it, $columns columns", middle, last, 0.5f)
+    }
+
+    @Test
+    fun a_focused_end_dock_tile_leaves_its_neighbour_the_room_a_focused_middle_tile_leaves_in_a_four_column_dock() {
+        assertEndTilesLeaveTheirNeighbourTheRoomAMiddleTileLeaves(columns = 4)
+    }
+
+    @Test
+    fun a_focused_end_dock_tile_leaves_its_neighbour_the_room_a_focused_middle_tile_leaves_in_a_six_column_dock() {
+        assertEndTilesLeaveTheirNeighbourTheRoomAMiddleTileLeaves(columns = 6)
     }
 }
