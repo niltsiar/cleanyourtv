@@ -74,7 +74,8 @@ private val ChevronOutlineColor = Color.Black.copy(alpha = 0.45f)
  * A tile's look in reorder and edit-dock modes: dimmed unless it is the carried one, which lifts, is drawn at its rest size
  * (a focused tile is grown), casts a shadow in its [shape], wiggles a little and shows a white chevron in the gutter beside
  * each edge it can still move towards, clear of its ring and of the next tile; it settles back with a spring when it is put
- * down. No other tile moves. The animated values are read in the layer and draw lambdas only.
+ * down. No other tile moves. [growthAnchorX] is where across its width the tile's focus growth is anchored (0 left edge, 1 right
+ * edge), which the lift undoes. The animated values are read in the layer and draw lambdas only.
  */
 @Composable
 internal fun Modifier.reorderLook(
@@ -82,6 +83,7 @@ internal fun Modifier.reorderLook(
     input: HomeInput,
     shape: Shape,
     growthPivot: ((Float) -> Float)? = null,
+    growthAnchorX: Float = 0.5f,
 ): Modifier {
     val motion = TvTheme.motion
     // A tile built mid-session (it crossed from the grid into the dock) starts where it ends up.
@@ -129,6 +131,7 @@ internal fun Modifier.reorderLook(
         // A growth anchored under the tile's centre, cancelled about the centre, would leave the tile this much higher than at rest.
         val regrown = growthPivot?.let { (it(size.height) - size.height / 2f) * (1f - 1f / grown) } ?: 0f
         translationY = (regrown - LiftHeight.toPx()) * raised
+        translationX = regrownX(size.width, growthAnchorX, grown) * raised
         rotationZ = WIGGLE_DEGREES * wiggle.value * raised
         shadowElevation = LiftShadow.toPx() * raised.coerceIn(0f, 1f)
         this.shape = shape
@@ -144,14 +147,26 @@ internal fun Modifier.reorderLook(
             // The layer is scaled by the lift: draw in the tile's own measures by undoing that.
             val raised = 1f + (1f / grown - 1f) * lift.value
             val centre = chevronCentre(size.width, grown * raised)
+            // The lift's translationX carries the chevrons too; they stand where the tile rests.
+            val shifted = regrownX(size.width, growthAnchorX, grown) * lift.value
             scale(1f / raised, Offset(size.width / 2f, size.height / 2f)) {
                 val middle = size.height / 2f
-                if (onLeft > 0f) drawChevron(Offset(-centre, middle), pointsLeft = true, alpha = onLeft)
-                if (onRight > 0f) drawChevron(Offset(size.width + centre, middle), pointsLeft = false, alpha = onRight)
+                if (onLeft > 0f) drawChevron(Offset(-centre - shifted, middle), pointsLeft = true, alpha = onLeft)
+                if (onRight > 0f) drawChevron(Offset(size.width + centre - shifted, middle), pointsLeft = false, alpha = onRight)
             }
         }
     }
 }
+
+/**
+ * The shift, along X, that puts a tile [width] wide back at its rest place after its growth, [grown] times about [anchorX]
+ * across it, is cancelled by a shrink about its centre; zero for a growth about the centre.
+ */
+private fun regrownX(
+    width: Float,
+    anchorX: Float,
+    grown: Float,
+): Float = width * (anchorX - 0.5f) * (1f - 1f / grown)
 
 /**
  * How far outside the edge of a carried tile, [width] wide and drawn [scale] times its size, its chevron is centred: it

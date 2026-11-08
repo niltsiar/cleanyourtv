@@ -73,7 +73,9 @@ public val FocusRingReach: Dp = RingGap + RingWidth + HairlineWidth + OuterStrok
  * lambdas, so a focus change neither recomposes nor relays out. [focusedScale] is the size it grows to. The growth is
  * drawn, not a layer scale, so the surface's bounds stay put while it grows and accessibility has nothing to update.
  * [growthPivot], given the surface's height in pixels, says how far under its top the growth is anchored, in the middle
- * of its width; without it the surface grows about its centre.
+ * of its width; without it the surface grows about its centre. [growthAnchorX] says where across its width the growth is
+ * anchored, from 0 at its left edge to 1 at its right edge: a tile beside a wall anchors at its edge there, so all its
+ * growth, and its ring's, goes away from the wall.
  */
 @Composable
 public fun FocusSurface(
@@ -89,6 +91,7 @@ public fun FocusSurface(
     ringBlends: Boolean = false,
     plate: Color = Color.Unspecified,
     growthPivot: ((Float) -> Float)? = null,
+    growthAnchorX: Float = 0.5f,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val motion = TvTheme.motion
@@ -109,14 +112,14 @@ public fun FocusSurface(
             modifier
                 .graphicsLayer {
                     shadowElevation = if (glow) GlowElevation.toPx() * focus.value.coerceIn(0f, 1f) else 0f
-                    this.shape = ScaledShape(shape, 1f + (grownScale - 1f) * focus.value, growthPivot)
+                    this.shape = ScaledShape(shape, 1f + (grownScale - 1f) * focus.value, growthPivot, growthAnchorX)
                     ambientShadowColor = glowColor
                     spotShadowColor = glowColor
                 }.drawWithContent {
                     scale(
                         1f + (grownScale - 1f) * focus.value,
                         Offset(
-                            size.width / 2f,
+                            size.width * growthAnchorX,
                             growthPivot?.invoke(size.height) ?: (size.height / 2f),
                         ),
                     ) {
@@ -195,11 +198,15 @@ internal fun Outline.grownBy(delta: Float): Outline =
 
 private fun CornerRadius.grownBy(delta: Float): CornerRadius = CornerRadius(x + delta, y + delta)
 
-/** [base] grown [scale] times about its centre, or about [pivot]'s height under its top, as the drawn growth shows it, so the glow under it grows with it. */
+/**
+ * [base] grown [scale] times about its centre, or about [pivot]'s height under its top and [anchorX] across its width, as the
+ * drawn growth shows it, so the glow under it grows with it.
+ */
 private data class ScaledShape(
     val base: Shape,
     val scale: Float,
     val pivot: ((Float) -> Float)?,
+    val anchorX: Float,
 ) : Shape {
     override fun createOutline(
         size: Size,
@@ -208,7 +215,7 @@ private data class ScaledShape(
     ): Outline {
         val outline = base.createOutline(size, layoutDirection, density)
         if (scale == 1f) return outline
-        val cx = size.width / 2f
+        val cx = size.width * anchorX
         val cy = pivot?.invoke(size.height) ?: (size.height / 2f)
         if (outline is Outline.Rounded) {
             val r = outline.roundRect

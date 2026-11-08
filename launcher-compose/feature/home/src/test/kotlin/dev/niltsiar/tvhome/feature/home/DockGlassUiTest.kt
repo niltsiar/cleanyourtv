@@ -700,4 +700,61 @@ class DockGlassUiTest {
         compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
         assertSame(over(tint, tint.alpha, frostAt(gradient, at)), screenAt(at), tolerance = 8)
     }
+
+    /**
+     * How far, in dp, the outer edge of the focus ring of dock slot [slot] (from 1) stands from the dock panel's wall on
+     * [side] (-1 left, +1 right), read from the rendered pixels: the ring is the white run, with a 1 dp hairline and a 2 dp
+     * dark stroke outside it.
+     */
+    private fun ringGapToWall(
+        slot: Int,
+        side: Int,
+    ): Float {
+        val panel = compose.onNodeWithTag("dock").getBoundsInRoot()
+        val tile = dockTile(slot)
+        val density = compose.activity.resources.displayMetrics.density
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val row = ((tile.top.value + tile.bottom.value) / 2f * density).toInt()
+
+        fun white(x: Int) = minOf(pixels[x, row].red, pixels[x, row].green, pixels[x, row].blue) > 0.9f
+        val strokes = 3f
+        return if (side < 0) {
+            val wall = (panel.left.value * density).toInt()
+            val ring = (wall..(tile.left.value * density).toInt()).first { white(it) }
+            ring / density - strokes - panel.left.value
+        } else {
+            val wall = (panel.right.value * density).toInt() - 1
+            val ring = wall.downTo((tile.right.value * density).toInt()).first { white(it) }
+            panel.right.value - ((ring + 1) / density + strokes)
+        }
+    }
+
+    @Test
+    fun the_first_dock_tiles_ring_keeps_12_dp_from_the_dock_wall() {
+        showHome(night)
+
+        val gap = ringGapToWall(slot = 1, side = -1)
+
+        assertTrue("the ring stood $gap dp from the left wall", gap >= 12f)
+    }
+
+    @Test
+    fun the_last_dock_tiles_ring_keeps_12_dp_from_the_dock_wall() {
+        showHome(night)
+        repeat(5) { press(Key.DirectionRight) }
+        compose.onNodeWithTag("tile:pkg.6").assertIsFocused()
+
+        val gap = ringGapToWall(slot = 6, side = +1)
+
+        assertTrue("the ring stood $gap dp from the right wall", gap >= 12f)
+    }
+
+    @Test
+    fun with_names_the_first_dock_tiles_ring_keeps_12_dp_from_the_dock_wall() {
+        showHome(night, config = cinematic.copy(alwaysShowNames = true))
+
+        val gap = ringGapToWall(slot = 1, side = -1)
+
+        assertTrue("the ring stood $gap dp from the left wall", gap >= 12f)
+    }
 }

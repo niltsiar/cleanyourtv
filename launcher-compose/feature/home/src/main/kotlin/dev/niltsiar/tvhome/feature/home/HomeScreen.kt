@@ -1591,6 +1591,11 @@ private fun Dock(
                             showName = layout.showNames,
                             edge = edge,
                             lightEdge = onLight.takeIf { app.lightArt },
+                            growthAnchorX =
+                                dockGrowthAnchor(
+                                    first = index == 0,
+                                    last = index == dock.lastIndex && !layout.libraryPill,
+                                ),
                             modifier =
                                 Modifier
                                     .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = TvTheme.motion.placementSpec)
@@ -1648,6 +1653,11 @@ private fun Dock(
                             showName = layout.showNames,
                             edge = edge,
                             lightEdge = onLight.takeIf { app.lightArt },
+                            growthAnchorX =
+                                dockGrowthAnchor(
+                                    first = index == 0,
+                                    last = index == (if (shrunk) dock.lastIndex else layout.columns - 1),
+                                ),
                             modifier =
                                 (if (shrunk) Modifier.width(rowTileWidth) else Modifier.weight(1f))
                                     .slideToIndex(index, TileGap)
@@ -1662,6 +1672,20 @@ private fun Dock(
         }
     }
 }
+
+/**
+ * Where across its width a dock tile's focus growth is anchored: the first slot at its left edge and the last at its right,
+ * so its ring grows away from the dock panel's wall; any other, or a lone slot between two walls, about its centre.
+ */
+private fun dockGrowthAnchor(
+    first: Boolean,
+    last: Boolean,
+): Float =
+    when {
+        first && !last -> 0f
+        last && !first -> 1f
+        else -> 0.5f
+    }
 
 /** Whether the surface under a dock tile is light: a light tray, or with a dark tray or none the wallpaper. Read it in a draw lambda. */
 private fun dockOnLight(
@@ -1799,6 +1823,7 @@ private fun AppTile(
     lightEdge: (() -> Boolean)? = null,
     bannerName: Boolean = true,
     growthPivot: ((Float) -> Float)? = null,
+    growthAnchorX: Float = 0.5f,
 ) {
     val marked = if (habitMark) modifier.habitMark(input.habit, app.packageName) else modifier
     if (showName) {
@@ -1824,6 +1849,7 @@ private fun AppTile(
                 lightEdge = lightEdge,
                 bannerName = false,
                 growthPivot = pivot,
+                growthAnchorX = growthAnchorX,
             )
         }
         return
@@ -1855,9 +1881,10 @@ private fun AppTile(
         ring = ringColour,
         ringBlends = ringBlends,
         growthPivot = growthPivot,
+        growthAnchorX = growthAnchorX,
         modifier =
             (if (fadeUnused) marked.unusedFade(input.faded, key) else marked)
-                .then(if (reordering) Modifier.reorderLook(key, input, TileShape, growthPivot) else Modifier)
+                .then(if (reordering) Modifier.reorderLook(key, input, TileShape, growthPivot, growthAnchorX) else Modifier)
                 .aspectRatio(TILE_ASPECT)
                 .then(
                     if (edge != null) {
