@@ -5,6 +5,7 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.ringColor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -50,6 +51,14 @@ class ShelfLayoutTest {
         assertEquals(ring, ShelfLayout().ringColour(art, inDock = true))
         assertEquals(Color.White, ShelfLayout().ringColour(art, inDock = false))
         assertEquals(ring, ShelfLayout(appGlow = true).ringColour(art, inDock = false))
+    }
+
+    @Test
+    fun the_ring_of_a_tile_whose_edge_is_its_own_colour_is_lifted_toward_white() {
+        val blue = Color(0xFF288BFF)
+
+        assertEquals(ringColor(blue, tile = blue), ShelfLayout().ringColour(blue, inDock = true, edge = blue))
+        assertNotEquals(ringColor(blue), ShelfLayout().ringColour(blue, inDock = true, edge = blue))
     }
 
     @Test

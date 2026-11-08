@@ -258,6 +258,7 @@ public class PackageManagerAppsProvider(
                     label = tile.label,
                     image = art?.image,
                     accent = art?.let { Color(it.accent) } ?: Color.Unspecified,
+                    edge = art?.edge?.let { Color(it) } ?: Color.Unspecified,
                     leanback = tile.candidate.packageName in tvPackages,
                     iconArt = art?.fromIcon == true,
                     lightArt = art?.light == true,

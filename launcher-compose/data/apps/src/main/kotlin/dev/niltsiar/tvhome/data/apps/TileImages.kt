@@ -49,13 +49,14 @@ internal fun isBannerShaped(
 /**
  * What one tile shows: its [image] (null when the app has no art) and the [accent] colour picked from the art, as ARGB.
  * [fromIcon] is true when the image is the app's icon in the middle of the tile, not a banner. [light] is true for a banner
- * that [isLightArt] finds light.
+ * that [isLightArt] finds light. [edge] is the banner's [edgeColor], as ARGB; null for an icon, whose tile is the theme's.
  */
 internal class TileArt(
     val image: ImageBitmap?,
     val accent: Int,
     val fromIcon: Boolean = false,
     val light: Boolean = false,
+    val edge: Int? = null,
 )
 
 /** Draws the artwork of one tile: the app's banner, or its icon. */
@@ -75,6 +76,7 @@ internal class TileImages(
                 banner.toBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888).asImageBitmap(),
                 vividColor(pixels),
                 light = isLightArt(pixels),
+                edge = edgeColor(pixels),
             )
         }
         val drawable = icon() ?: return TileArt(null, NO_ART_ACCENT)

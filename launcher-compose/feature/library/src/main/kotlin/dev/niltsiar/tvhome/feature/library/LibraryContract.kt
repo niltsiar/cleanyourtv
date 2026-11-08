@@ -27,8 +27,11 @@ public data class LibraryLayout(
     val leastUsed: Boolean = false,
 )
 
-/** The ring of a focused card whose art gives [art]. */
-internal fun LibraryLayout.ringColour(art: Color): Color = focusRingColour(art, coloured = appGlow, whiteFocus = whiteFocus)
+/** The ring of a focused card whose art gives [art] and shows [edge] at the card's edge. */
+internal fun LibraryLayout.ringColour(
+    art: Color,
+    edge: Color,
+): Color = focusRingColour(art, coloured = appGlow, whiteFocus = whiteFocus, tile = edge)
 
 public fun TvConfig.libraryLayout(): LibraryLayout =
     LibraryLayout(

@@ -1,6 +1,7 @@
 package dev.niltsiar.tvhome.core.designsystem
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -107,6 +108,37 @@ class RingColorTest {
     fun a_saturation_of_008_is_the_first_to_keep_its_colour() {
         assertEquals(Color.White, ringColor(Color.hsv(200f, 0.07f, 0.5f)))
         assertNotEquals(Color.White, ringColor(Color.hsv(200f, 0.09f, 0.5f)))
+    }
+
+    private fun contrast(
+        a: Color,
+        b: Color,
+    ): Float {
+        val light = maxOf(a.luminance(), b.luminance())
+        val dark = minOf(a.luminance(), b.luminance())
+        return (light + 0.05f) / (dark + 0.05f)
+    }
+
+    @Test
+    fun a_ring_on_a_tile_of_its_own_colour_reads_2_to_1_or_more_against_the_tile_in_its_own_hue() {
+        val prime = Color(0xFF288BFF)
+        for (tile in listOf(prime, twitch, Color(0xFFE50914), Color(0xFFFF0000))) {
+            val plain = ringColor(tile)
+            val ring = ringColor(tile, tile)
+
+            assertTrue("$tile: ${contrast(plain, tile)} before", contrast(plain, tile) < 1.5f)
+            assertTrue("$tile: ${contrast(ring, tile)} after", contrast(ring, tile) >= 2f)
+            assertTrue("$tile hue ${hsl(plain).h} became ${hsl(ring).h}", abs(hsl(plain).h - hsl(ring).h) < 1f)
+        }
+    }
+
+    @Test
+    fun a_ring_on_a_tile_of_another_colour_keeps_its_colour() {
+        val charcoal = Color(0xFF1E1E1E)
+
+        assertEquals(ringColor(Color(0xFFFF0000)), ringColor(Color(0xFFFF0000), charcoal))
+        assertEquals(ringColor(slateTeal), ringColor(slateTeal, slateTeal))
+        assertEquals(ringColor(twitch), ringColor(twitch, Color.Unspecified))
     }
 
     @Test

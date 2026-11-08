@@ -13,6 +13,9 @@ private const val MUTED_BELOW_SATURATION = 0.45f
 private const val MUTED_RING_VALUE = 0.85f
 private const val RING_MIN_LIGHTNESS = 0.65f
 private const val MIN_RING_CONTRAST = 3f
+private const val TILE_BLEND_BELOW = 1.5f
+private const val MIN_TILE_CONTRAST = 2f
+private const val WHITENING_STEPS = 32
 
 /**
  * The ring of a focused tile for an app whose art gives [art]: white with [whiteFocus] or when the tile is not [coloured],
@@ -22,16 +25,33 @@ public fun focusRingColour(
     art: Color,
     coloured: Boolean,
     whiteFocus: Boolean,
-): Color = if (whiteFocus || !coloured) Color.White else ringColor(art)
+    tile: Color = Color.Unspecified,
+): Color = if (whiteFocus || !coloured) Color.White else ringColor(art, tile)
 
 /**
  * The focus ring of an app whose art gives [brand]. A muted brand, HSV saturation from 0.08 up to 0.45 (slate teal art
  * is one), keeps its hue with saturation 0.45 and value at least 0.85, so the ring still says which app it is. Under
  * 0.08, or when the brand's HSL saturation is below 0.25 (a dark or grey app colour is pale grey-blue on a light picture,
  * and one ring colour for those is white), the ring is white; otherwise the brand with its HSL lightness raised to at
- * least 0.65, hue and saturation kept. A brand not known yet keeps white.
+ * least 0.65, hue and saturation kept. A brand not known yet keeps white. A ring under 1.5:1 against the [tile] it sits
+ * on (the tile's edge colour, unspecified when not known) is mixed toward white, hue kept, to the first step that reads
+ * 2:1 or more; on a tile too light for that it ends white.
  */
-public fun ringColor(brand: Color): Color {
+public fun ringColor(
+    brand: Color,
+    tile: Color = Color.Unspecified,
+): Color {
+    val ring = brandRing(brand)
+    if (tile.isUnspecified || ring == Color.White || contrastRatio(ring, tile) >= TILE_BLEND_BELOW) return ring
+    for (step in 1 until WHITENING_STEPS) {
+        val mix = step / WHITENING_STEPS.toFloat()
+        val lighter = Color(ring.red + (1f - ring.red) * mix, ring.green + (1f - ring.green) * mix, ring.blue + (1f - ring.blue) * mix)
+        if (contrastRatio(lighter, tile) >= MIN_TILE_CONTRAST) return lighter
+    }
+    return Color.White
+}
+
+private fun brandRing(brand: Color): Color {
     if (brand.isUnspecified) return Color.White
     val high = max(brand.red, max(brand.green, brand.blue))
     val low = min(brand.red, min(brand.green, brand.blue))
@@ -83,7 +103,14 @@ public fun ringBlendsWith(
     brand: Color,
 ): Boolean {
     if (brand.isUnspecified || ring == Color.White) return false
-    val light = max(ring.luminance(), brand.luminance())
-    val dark = min(ring.luminance(), brand.luminance())
-    return (light + 0.05f) / (dark + 0.05f) < MIN_RING_CONTRAST
+    return contrastRatio(ring, brand) < MIN_RING_CONTRAST
+}
+
+private fun contrastRatio(
+    a: Color,
+    b: Color,
+): Float {
+    val light = max(a.luminance(), b.luminance())
+    val dark = min(a.luminance(), b.luminance())
+    return (light + 0.05f) / (dark + 0.05f)
 }

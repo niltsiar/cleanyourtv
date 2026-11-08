@@ -18,11 +18,15 @@ public data class LibraryApp(
     val installedAt: Long = 0,
 )
 
-/** The art of a library card: a banner or an icon on a tile, null for an app without art, and its vivid [accent] colour. */
+/**
+ * The art of a library card: a banner or an icon on a tile, null for an app without art, its vivid [accent] colour and
+ * the [edge] colour a banner shows at the card's edge (unspecified for an icon).
+ */
 @Immutable
 public data class LibraryArt(
     val image: ImageBitmap?,
     val accent: Color,
+    val edge: Color = Color.Unspecified,
 )
 
 /**

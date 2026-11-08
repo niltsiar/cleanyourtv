@@ -18,6 +18,25 @@ class VividColorTest {
     }
 
     @Test
+    fun the_edge_colour_is_the_average_of_the_border_pixels_and_ignores_the_middle() {
+        val middle = 5 * VIVID_SIDE + 5
+        val blueEdge = art(0xFF288BFF.toInt(), middle to 0xFFFF0000.toInt())
+        val halfAndHalf =
+            IntArray(VIVID_SIDE * VIVID_SIDE) {
+                if (it % VIVID_SIDE <
+                    VIVID_SIDE / 2
+                ) {
+                    0xFF000000.toInt()
+                } else {
+                    0xFFFFFFFF.toInt()
+                }
+            }
+
+        assertEquals(0xFF288BFF.toInt(), edgeColor(blueEdge))
+        assertEquals(0xFF7F7F7F.toInt(), edgeColor(halfAndHalf))
+    }
+
+    @Test
     fun a_dark_saturated_colour_is_lifted_to_half_brightness() {
         assertEquals(0xFF000080.toInt(), vividColor(art(0xFF000032.toInt())))
     }

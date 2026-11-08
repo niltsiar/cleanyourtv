@@ -59,6 +59,27 @@ internal fun vividColor(pixels: IntArray): Int {
     return hsvToRgb(hsv)
 }
 
+/**
+ * The colour a tile shows at its edge: the average of the border pixels of [pixels] (the art drawn to [VIVID_SIDE]
+ * squared, ARGB), which a focus ring sits against.
+ */
+internal fun edgeColor(pixels: IntArray): Int {
+    var red = 0L
+    var green = 0L
+    var blue = 0L
+    var count = 0
+    for ((i, p) in pixels.withIndex()) {
+        val row = i / VIVID_SIDE
+        val column = i % VIVID_SIDE
+        if (row != 0 && row != VIVID_SIDE - 1 && column != 0 && column != VIVID_SIDE - 1) continue
+        red += (p shr 16) and 0xFF
+        green += (p shr 8) and 0xFF
+        blue += p and 0xFF
+        count++
+    }
+    return 0xFF shl 24 or ((red / count).toInt() shl 16) or ((green / count).toInt() shl 8) or (blue / count).toInt()
+}
+
 /** [hsv] gets hue in degrees, saturation and value from 0 to 1, as android.graphics.Color.colorToHSV gives them. */
 internal fun rgbToHsv(
     color: Int,

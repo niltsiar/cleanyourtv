@@ -70,7 +70,7 @@ public class LibraryCatalog(
                             .load(
                                 info.activityInfo,
                             ) { info.loadIcon(context.packageManager) }
-                            .let { LibraryArt(it.image, Color(it.accent)) }
+                            .let { LibraryArt(it.image, Color(it.accent), it.edge?.let { edge -> Color(edge) } ?: Color.Unspecified) }
                     } catch (e: RuntimeException) {
                         Log.w(TAG, "no artwork for $key: $e")
                         return@run null

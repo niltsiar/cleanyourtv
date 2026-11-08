@@ -528,7 +528,7 @@ public fun HomeScreen(
                 val key = shown.menu?.tileKey
                 val inDock = shown.dock.firstOrNull { it.key == key }
                 val tile = inDock ?: shown.grid.firstOrNull { it.key == key }
-                tile?.let { shelfLayout.ringColour(it.accent, inDock = inDock != null) } ?: Color.White
+                tile?.let { shelfLayout.ringColour(it.accent, inDock = inDock != null, edge = it.edge) } ?: Color.White
             },
         ) {
             menu?.let { open ->
@@ -705,7 +705,7 @@ private fun HomeContent(
                 AppTile(
                     app = app,
                     accent = shelfLayout.focusAccent(app.accent, inDock = false),
-                    ring = shelfLayout.ringColour(app.accent, inDock = false),
+                    ring = shelfLayout.ringColour(app.accent, inDock = false, edge = app.edge),
                     onFocus = onFocus,
                     onClick = onClick,
                     input = input,
@@ -1560,7 +1560,7 @@ private fun Dock(
                         AppTile(
                             app = app,
                             accent = shelfLayout.focusAccent(app.accent, inDock = true),
-                            ring = shelfLayout.ringColour(app.accent, inDock = true),
+                            ring = shelfLayout.ringColour(app.accent, inDock = true, edge = app.edge),
                             onFocus = onFocus,
                             onClick = onClick,
                             input = input,
@@ -1617,7 +1617,7 @@ private fun Dock(
                         AppTile(
                             app = app,
                             accent = shelfLayout.focusAccent(app.accent, inDock = true),
-                            ring = shelfLayout.ringColour(app.accent, inDock = true),
+                            ring = shelfLayout.ringColour(app.accent, inDock = true, edge = app.edge),
                             onFocus = onFocus,
                             onClick = onClick,
                             input = input,

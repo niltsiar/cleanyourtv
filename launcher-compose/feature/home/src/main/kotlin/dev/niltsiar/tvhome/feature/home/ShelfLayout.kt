@@ -55,9 +55,10 @@ internal fun ShelfLayout.focusAccent(
 
 /**
  * The colour of a tile's focus ring given the [art] colour of its app: the app's [ringColor] in the dock, and in the grid
- * too with app_glow. cinematic_white_focus keeps every ring white.
+ * too with app_glow. cinematic_white_focus keeps every ring white. [edge] is the colour the art shows at the tile's edge.
  */
 internal fun ShelfLayout.ringColour(
     art: Color,
     inDock: Boolean,
-): Color = focusRingColour(art, coloured = inDock || appGlow, whiteFocus = whiteFocus)
+    edge: Color = Color.Unspecified,
+): Color = focusRingColour(art, coloured = inDock || appGlow, whiteFocus = whiteFocus, tile = edge)

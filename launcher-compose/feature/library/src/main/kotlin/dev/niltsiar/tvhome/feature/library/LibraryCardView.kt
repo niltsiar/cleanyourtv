@@ -174,7 +174,7 @@ internal fun LibraryCardView(
     val density = LocalDensity.current
     val focus = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
-    val ring = remember(artwork, layout) { layout.ringColour(artwork?.accent ?: Color.Unspecified) }
+    val ring = remember(artwork, layout) { layout.ringColour(artwork?.accent ?: Color.Unspecified, artwork?.edge ?: Color.Unspecified) }
     val ringBlends = remember(ring, artwork) { ringBlendsWith(ring, artwork?.accent ?: Color.Unspecified) }
     val focusProgress = remember(focus) { { focus.value.coerceIn(0f, 1f) } }
     val checkScale = remember(pulse) { { 1f + CHECK_PULSE_SCALE * (1f - abs(2f * pulse.value - 1f)).coerceIn(0f, 1f) } }
