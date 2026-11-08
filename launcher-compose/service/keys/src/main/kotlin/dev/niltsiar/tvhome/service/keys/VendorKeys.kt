@@ -22,7 +22,7 @@ public class VendorKeys(
 ) {
     private val keys = AppKeys(config.appKeys)
     private val settingsKeycodes = config.settingsKeyKeycodes
-    private val launcher = TargetLauncher(context, settings, performGlobal = null)
+    private val launcher = TargetLauncher(context, settings, performGlobal = null, liveTvPackage = config.liveTvPackage)
 
     /** True when the key was taken, so Home does not handle it. */
     public fun handle(event: KeyEvent): Boolean {

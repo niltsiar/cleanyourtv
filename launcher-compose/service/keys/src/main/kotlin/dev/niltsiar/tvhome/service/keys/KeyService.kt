@@ -100,7 +100,7 @@ public class KeyService : AccessibilityService() {
         this.config = config
         keys = AppKeys(config.appKeys)
         val settings = SystemSettings(this, null).also { settings = it }
-        launcher = TargetLauncher(this, settings, ::performGlobalAction)
+        launcher = TargetLauncher(this, settings, ::performGlobalAction, config.liveTvPackage)
         if (config.consumeVolumeKeys) {
             val audio = getSystemService(AudioManager::class.java)
             volume = VolumeRepeat(timer) { audio?.adjustVolume(it, AudioManager.FLAG_SHOW_UI) }

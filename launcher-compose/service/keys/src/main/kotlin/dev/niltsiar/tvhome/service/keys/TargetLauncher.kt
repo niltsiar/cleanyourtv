@@ -22,6 +22,7 @@ internal class TargetLauncher(
     private val context: Context,
     private val settings: SystemSettings,
     private val performGlobal: ((Int) -> Boolean)?,
+    private val liveTvPackage: String?,
 ) {
     fun launch(target: String) {
         when (val parsed = parseTarget(target)) {
@@ -42,10 +43,12 @@ internal class TargetLauncher(
             }
 
             is KeyTarget.Input -> {
-                start(
+                val view =
                     Intent(Intent.ACTION_VIEW)
-                        .setDataAndType(TvContract.buildChannelUriForPassthroughInput(parsed.id), CHANNEL_TYPE),
-                )
+                        .setDataAndType(TvContract.buildChannelUriForPassthroughInput(parsed.id), CHANNEL_TYPE)
+                // An app that also claims the channel URI turns the press into a chooser, so the TV app is asked first.
+                val liveTv = liveTvPackage?.takeIf { it.isNotBlank() }
+                if (liveTv == null || !start(Intent(view).setPackage(liveTv))) start(view)
             }
 
             is KeyTarget.Activity -> {
@@ -110,7 +113,5 @@ internal class TargetLauncher(
         }
     }
 
-    private fun start(intent: Intent) {
-        context.startActivitySafely(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    }
+    private fun start(intent: Intent): Boolean = context.startActivitySafely(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 }
