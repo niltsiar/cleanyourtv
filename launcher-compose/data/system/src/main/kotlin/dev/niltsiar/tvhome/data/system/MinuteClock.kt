@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import java.time.Instant
@@ -23,27 +24,30 @@ internal const val TIME_VALID_AFTER_MS = 1_735_689_600_000L
  */
 public class MinuteClock(
     timeChanges: Flow<Unit>,
+    displayOn: Flow<Unit>,
     scope: CoroutineScope,
     currentMillis: () -> Long = System::currentTimeMillis,
     zone: () -> ZoneId = ZoneId::systemDefault,
 ) {
     public val now: StateFlow<LocalDateTime?> =
-        minuteClock(timeChanges, currentMillis, zone)
+        minuteClock(timeChanges, displayOn, currentMillis, zone)
             .stateIn(scope, SharingStarted.WhileSubscribed(replayExpirationMillis = 0), null)
 }
 
 /**
- * The local time now, then again at the start of every minute and whenever [timeChanges] says the wall clock or the
- * time zone was set. While the time is not valid yet ([TIME_VALID_AFTER_MS]) it emits null and looks again each second,
+ * The local time now, then again at the start of every minute, whenever [timeChanges] says the wall clock or the
+ * time zone was set, and whenever [displayOn] says the display came back on: the wait to the next minute stands still
+ * while the set sleeps. While the time is not valid yet ([TIME_VALID_AFTER_MS]) it emits null and looks again each second,
  * as some TVs set the network time without any broadcast.
  */
 internal fun minuteClock(
     timeChanges: Flow<Unit>,
+    displayOn: Flow<Unit>,
     currentMillis: () -> Long,
     zone: () -> ZoneId,
 ): Flow<LocalDateTime?> =
     channelFlow {
-        timeChanges.onStart { emit(Unit) }.collectLatest {
+        merge(timeChanges, displayOn).onStart { emit(Unit) }.collectLatest {
             while (true) {
                 val millis = currentMillis()
                 if (millis < TIME_VALID_AFTER_MS) {

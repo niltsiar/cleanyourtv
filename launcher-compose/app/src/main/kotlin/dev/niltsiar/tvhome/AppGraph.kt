@@ -16,6 +16,7 @@ import dev.niltsiar.tvhome.data.system.MinuteClock
 import dev.niltsiar.tvhome.data.system.NetworkMonitor
 import dev.niltsiar.tvhome.data.system.SystemSettings
 import dev.niltsiar.tvhome.data.system.TimeChanges
+import dev.niltsiar.tvhome.data.system.displayOn
 import dev.niltsiar.tvhome.data.wallpaper.ScreensaverWallpaper
 import dev.niltsiar.tvhome.data.wallpaper.WallpaperProvider
 import dev.niltsiar.tvhome.feature.home.FocusMemory
@@ -107,8 +108,10 @@ interface AppGraph {
 
     @Provides
     @SingleIn(AppScope::class)
-    fun provideMinuteClock(timeChanges: TimeChanges): MinuteClock =
-        MinuteClock(timeChanges.changes, CoroutineScope(SupervisorJob() + Dispatchers.Default))
+    fun provideMinuteClock(
+        application: Application,
+        timeChanges: TimeChanges,
+    ): MinuteClock = MinuteClock(timeChanges.changes, displayOn(application), CoroutineScope(SupervisorJob() + Dispatchers.Default))
 
     @Provides
     @SingleIn(AppScope::class)
