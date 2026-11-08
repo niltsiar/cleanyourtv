@@ -385,7 +385,10 @@ public fun HomeScreen(
                     // Focus coming back from outside (the window regains it, or the focused tile was removed) arrives with
                     // a direction, and the nearest target that way is a top-bar button; it goes to the dock instead.
                     onEnter = {
-                        if (requestedFocusDirection != FocusDirection.Enter) {
+                        // Before the apps arrive the nearest target is a top-bar button, which would show focus until the dock exists.
+                        if (currentState.value().awaitingApps) {
+                            cancelFocusChange()
+                        } else if (requestedFocusDirection != FocusDirection.Enter) {
                             try {
                                 // An overlay that just closed gives focus back to what it hung from, not to the dock on the way.
                                 val owner = input.overlayOwner
@@ -1115,7 +1118,7 @@ private const val POPUP_DOCK_ALPHA = 0.55f
  * How the dock dims while focus is in the top bar, and how long it takes to get there and back: a black layer over its panel,
  * which darkens a light tray on any picture, or without a panel its alpha.
  */
-private const val TOP_BAR_DOCK_SHADE = 0.25f
+internal const val TOP_BAR_DOCK_SHADE = 0.25f
 private const val TOP_BAR_DOCK_ALPHA = 0.75f
 private const val TOP_BAR_DOCK_MS = 150
 

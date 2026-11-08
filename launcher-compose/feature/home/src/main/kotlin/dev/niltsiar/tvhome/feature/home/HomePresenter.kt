@@ -126,5 +126,6 @@ internal fun homePresenter(
         libraryCount = libraryCount,
         habit = interaction.habit,
         faded = faded,
+        awaitingApps = interaction.awaitingApps,
     )
 }

@@ -32,6 +32,7 @@ import java.util.Locale
  * [libraryCount] is how many apps the App library lists, null until it is known.
  * [habit] is the package of the app the household usually opens at this time of day (habit_hint), null when none is, and
  * [focusedUsual] whether the focused app is it. [faded] holds the keys of the grid tiles drawn faded (unused_fade_days).
+ * [awaitingApps] is true until the first app list arrives: the dock is empty then, and focus waits for it.
  */
 @Immutable
 public data class HomeUiState(
@@ -59,6 +60,7 @@ public data class HomeUiState(
     val habit: String? = null,
     val focusedUsual: Boolean = false,
     val faded: Set<String> = emptySet(),
+    val awaitingApps: Boolean = false,
 )
 
 /** Focus goes to the tile with this key, or to the Settings button for [SETTINGS_FOCUS]. A new [token] asks again. */
@@ -309,6 +311,7 @@ internal fun homeUiState(
     libraryCount: Int? = null,
     habit: String? = null,
     faded: Set<String> = emptySet(),
+    awaitingApps: Boolean = false,
 ): HomeUiState {
     val focused = apps.all.firstOrNull { it.key == focusedKey } ?: apps.all.firstOrNull()
     return HomeUiState(
@@ -336,6 +339,7 @@ internal fun homeUiState(
         habit = habit,
         focusedUsual = habit != null && focused?.packageName == habit,
         faded = faded,
+        awaitingApps = awaitingApps,
     )
 }
 

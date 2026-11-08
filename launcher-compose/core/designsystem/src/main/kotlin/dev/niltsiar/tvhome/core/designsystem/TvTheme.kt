@@ -228,7 +228,8 @@ private fun typographyFor(colors: TvColors): TvTypography {
             ),
         tileLabel =
             TextStyle(
-                color = colors.onSurfaceMuted,
+                // The tile fill is dark in every set, so its label takes the dark set's ink.
+                color = DarkColors.onSurface,
                 fontSize = tileLabelSize,
                 fontWeight = FontWeight.Medium,
                 fontFamily = googleSansFlex(FontWeight.Medium, tileLabelSize, width = 100f, roundness = 0f),

@@ -35,6 +35,10 @@ internal class HomeInteraction(
     var list by mutableStateOf(AppList())
         private set
 
+    /** True until the first app list arrives. */
+    var awaitingApps by mutableStateOf(true)
+        private set
+
     /** The top_bar_apps that can be opened. */
     var topBarApps by mutableStateOf(emptyList<AppEntry>())
         private set
@@ -206,6 +210,7 @@ internal class HomeInteraction(
     /** An app came or went under a session: keep the order so far. */
     suspend fun listLoaded(loaded: AppList) {
         list = loaded
+        awaitingApps = false
         if (restoring && loaded.apps.isNotEmpty()) {
             restoring = false
             focusedKey =
