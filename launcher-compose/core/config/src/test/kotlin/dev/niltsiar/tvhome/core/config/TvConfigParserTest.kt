@@ -297,12 +297,24 @@ class TvConfigParserTest {
     }
 
     @Test
+    fun dock_title_is_on_unless_a_theme_turns_it_off_and_a_wrong_type_keeps_it_on() {
+        assertTrue(parseTvConfig("{}").config.dockTitle)
+        assertTrue(parseTvConfig("""{"dock_title": true}""").config.dockTitle)
+        val off = parseTvConfig("""{"dock_title": false}""")
+        assertFalse(off.config.dockTitle)
+        assertEquals(emptyList<String>(), off.unsupportedKeys + off.unknownKeys + off.rejectedKeys)
+        val wrong = parseTvConfig("""{"dock_title": "no"}""")
+        assertTrue(wrong.config.dockTitle)
+        assertEquals(listOf("dock_title"), wrong.rejectedKeys)
+    }
+
+    @Test
     fun keys_the_reference_knows_but_this_launcher_does_not_use_are_unsupported_not_unknown() {
         val parsed =
             parseTvConfig(
-                """{"dock_title": false, "columns": 5, "festival": "diwali", "game_day": "x", "nonsense": 1, "dock_titel": true}""",
+                """{"columns": 5, "festival": "diwali", "game_day": "x", "nonsense": 1, "dock_titel": true}""",
             )
-        assertEquals(listOf("dock_title", "festival", "game_day"), parsed.unsupportedKeys)
+        assertEquals(listOf("festival", "game_day"), parsed.unsupportedKeys)
         assertEquals(listOf("nonsense", "dock_titel"), parsed.unknownKeys)
         assertEquals(5, parsed.config.columns)
     }
@@ -470,7 +482,7 @@ class TvConfigParserTest {
 
     @Test
     fun keys_with_no_reader_in_this_launcher_are_unsupported_and_change_nothing() {
-        val keys = listOf("app_banners", "dock_title", "dock_even_padding", "locale", "open_on_start_choice", "open_on_start_on_wake")
+        val keys = listOf("app_banners", "dock_even_padding", "locale", "open_on_start_choice", "open_on_start_on_wake")
         val parsed = parseTvConfig(keys.joinToString(prefix = "{", postfix = "}") { "\"$it\": true" })
 
         assertEquals(keys, parsed.unsupportedKeys)
@@ -490,6 +502,7 @@ class TvConfigParserTest {
             "rows_below_dock" to ("2" to defaults.copy(rowsBelowDock = 2)),
             "single_row" to ("true" to defaults.copy(singleRow = true)),
             "always_show_names" to ("true" to defaults.copy(alwaysShowNames = true)),
+            "dock_title" to ("false" to defaults.copy(dockTitle = false)),
             "launch_actions" to ("""["com.a=ACT"]""" to defaults.copy(launchActions = mapOf("com.a" to "ACT"))),
             "app_labels" to ("""["com.a=Alpha"]""" to defaults.copy(appLabels = mapOf("com.a" to "Alpha"))),
             "top_bar_apps" to

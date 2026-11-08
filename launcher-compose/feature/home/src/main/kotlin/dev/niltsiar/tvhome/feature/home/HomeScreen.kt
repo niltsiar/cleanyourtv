@@ -388,7 +388,13 @@ public fun HomeScreen(
     val reordering = { state().reorder != null }
     val backdrop = rememberCinematicBackdrop(shelfLayout, shelf = { state().shelf }, heroArt = heroArt, reordering = reordering)
     val titleShift: GraphicsLayerScope.() -> Float = { dim.titleShiftPx(TitleGridDrop.toPx()) }
+    val heroSource by remember(state, layout.dockTitle) {
+        derivedStateOf { heroSource(layout.dockTitle, state().reorder?.hint, input.pillFocused, input.headerControl(state())) }
+    }
     val heroScrim = rememberHeroScrim(glass, wallpaperLayout.headerScrim)
+    val scrimWanted by remember(shelfLayout.cinematic) { derivedStateOf { shelfLayout.cinematic || heroSource != HeroSource.Quiet } }
+    val scrimFade = rememberHeroScrimFade(source = { heroSource }, wanted = { scrimWanted })
+    val scrimLit = { heroScrim.value.darkening > 0f && scrimWanted }
     val shelfExtent = remember { TitleExtent() }
     val bandExtent = remember { TitleExtent() }
     val shelfModifier =
@@ -454,6 +460,7 @@ public fun HomeScreen(
                 shelf = shelfExtent,
                 band = bandExtent,
                 shift = titleShift,
+                fade = { scrimFade.value },
             )
             HomeContent(
                 glass,
@@ -480,17 +487,18 @@ public fun HomeScreen(
                     modifier = shelfModifier,
                     titleAlpha = { band.title.value },
                     detailAlpha = { band.detail.value },
-                    pill = { heroScrim.value.darkening > 0f },
+                    pill = scrimLit,
                     extent = shelfExtent,
                 )
             }
             HeroTitle(
                 state,
                 input,
+                { heroSource },
                 shelfLayout.cinematic,
                 band,
                 shelfModifier,
-                pill = { heroScrim.value.darkening > 0f },
+                pill = scrimLit,
                 extent = bandExtent,
             )
             WallpaperCaption(
@@ -1309,6 +1317,66 @@ private fun rememberBandFade(
     return band
 }
 
+private fun HeroSource.quick(): Boolean = this is HeroSource.Bar || this == HeroSource.Library
+
+/**
+ * The hero scrim's fade, 0 or 1 once settled: it follows [wanted] in the time the band's line takes to swap
+ * ([LIBRARY_SWAP_MS] when either line is a chrome control's, else [CINEMATIC_MS]), and jumps with animations off or reduced
+ * motion, as the line does. Read it in layer lambdas only.
+ */
+@Composable
+internal fun rememberHeroScrimFade(
+    source: () -> HeroSource,
+    wanted: () -> Boolean,
+): State<Float> {
+    val motion = TvTheme.motion
+    val fade = remember { Animatable(if (wanted()) 1f else 0f) }
+    val currentSource = rememberUpdatedState(source)
+    val currentWanted = rememberUpdatedState(wanted)
+    LaunchedEffect(motion) {
+        var shown = currentSource.value()
+        snapshotFlow { currentSource.value() to currentWanted.value() }.collectLatest { (now, on) ->
+            val target = if (on) 1f else 0f
+            val millis = if (shown.quick() || now.quick()) LIBRARY_SWAP_MS else CINEMATIC_MS
+            shown = now
+            if (motion.animated) fade.animateTo(target, motion.tweenSpec(millis)) else fade.snapTo(target)
+        }
+    }
+    return fade.asState()
+}
+
+/** Which line the band over the grid shows, in order of precedence; [Quiet] is the empty line of dock_title false. */
+internal sealed interface HeroSource {
+    data class Mode(
+        val hint: ReorderHint,
+    ) : HeroSource
+
+    data object Library : HeroSource
+
+    data class Bar(
+        val control: BarControl,
+    ) : HeroSource
+
+    data object Tile : HeroSource
+
+    data object Quiet : HeroSource
+}
+
+/** The band's line: reorder or dock-edit mode, then the library pill, then a top-bar control, then the focused tile when [dockTitle] allows it. */
+internal fun heroSource(
+    dockTitle: Boolean,
+    hint: ReorderHint?,
+    pillFocused: Boolean,
+    control: BarControl?,
+): HeroSource =
+    when {
+        hint != null -> HeroSource.Mode(hint)
+        pillFocused -> HeroSource.Library
+        control != null -> HeroSource.Bar(control)
+        dockTitle -> HeroSource.Tile
+        else -> HeroSource.Quiet
+    }
+
 /**
  * What the band over the grid says when the cinematic shelf does not. A [meta] of a space keeps the line's place;
  * [opened] puts when Home last opened the tile there instead, [never] says Home never opened it, and [usual] adds that the tile is
@@ -1337,15 +1405,14 @@ private data class HeroLine(
 private fun HeroTitle(
     state: () -> HomeUiState,
     input: HomeInput,
+    source: () -> HeroSource,
     cinematic: Boolean,
     band: BandFade,
     modifier: Modifier = Modifier,
     pill: () -> Boolean = { false },
     extent: TitleExtent = TitleExtent(),
 ) {
-    val hint by remember(state) { derivedStateOf { state().reorder?.hint } }
     val count by remember(state) { derivedStateOf { state().libraryCount } }
-    val control by remember(state, input) { derivedStateOf { input.headerControl(state()) } }
     val inputs by remember(state) {
         derivedStateOf {
             state().let { home ->
@@ -1367,14 +1434,27 @@ private fun HeroTitle(
             }
         }
     }
-    val mode = hint
-    val bar = control
     val line =
-        when {
-            mode != null -> HeroLine(if (mode == ReorderHint.Reorder) focusedLabel else stringResource(R.string.dock_edit), hint = mode)
-            input.pillFocused -> HeroLine(stringResource(R.string.library_entry), libraryCountText(count), quick = true, chrome = true)
-            bar != null -> barLine(bar, inputs, link).copy(chrome = true)
-            else -> tile
+        when (val chosen = source()) {
+            is HeroSource.Mode -> {
+                HeroLine(if (chosen.hint == ReorderHint.Reorder) focusedLabel else stringResource(R.string.dock_edit), hint = chosen.hint)
+            }
+
+            HeroSource.Library -> {
+                HeroLine(stringResource(R.string.library_entry), libraryCountText(count), quick = true, chrome = true)
+            }
+
+            is HeroSource.Bar -> {
+                barLine(chosen.control, inputs, link).copy(chrome = true)
+            }
+
+            HeroSource.Tile -> {
+                tile
+            }
+
+            HeroSource.Quiet -> {
+                HeroLine("")
+            }
         }
     val animated = TvTheme.motion.animated
     val rise = with(LocalDensity.current) { TitleRise.roundToPx() }

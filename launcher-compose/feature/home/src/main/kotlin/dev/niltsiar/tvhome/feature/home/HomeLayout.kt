@@ -13,7 +13,8 @@ import dev.niltsiar.tvhome.core.model.showLibraryPill
  * tile has its name under it (always_show_names), which the dock panel and each grid row grow to hold, and
  * [inputArrival] whether the Inputs button offers a device that was just switched on (input_arrival), and [habitMark]
  * whether the app usually opened at this time of day has a mark under its tile (habit_hint), and [unusedFade] whether
- * grid tiles of apps not opened for a while are drawn faded (unused_fade_days).
+ * grid tiles of apps not opened for a while are drawn faded (unused_fade_days), and [dockTitle] whether the band above the dock
+ * names the focused tile (dock_title); its reorder, dock-edit, library and top-bar lines show either way.
  */
 @Immutable
 public data class HomeLayout(
@@ -27,6 +28,7 @@ public data class HomeLayout(
     val inputArrival: Boolean = false,
     val habitMark: Boolean = false,
     val unusedFade: Boolean = false,
+    val dockTitle: Boolean = true,
 )
 
 public fun TvConfig.homeLayout(): HomeLayout =
@@ -41,6 +43,7 @@ public fun TvConfig.homeLayout(): HomeLayout =
         inputArrival = inputArrival && showInputsPill,
         habitMark = habitHint,
         unusedFade = unusedFadeDays > 0,
+        dockTitle = dockTitle,
     )
 
 private const val MIN_TILE_SHARE = 0.85f

@@ -221,8 +221,8 @@ private fun DrawScope.drawCover(
 
 /**
  * The hero block's scrim: [heroScrimDarkening] of [GlassState.heroLuminance], and Home's left strength under it; none unless
- * the theme leaves header_scrim on auto. The block gets its scrim, the pill under its subtitle and its tight title shadow while
- * the darkening is above 0.
+ * the theme leaves header_scrim on auto. The block gets its scrim, the pill under its subtitle and its tight title shadow
+ * while the darkening is above 0.
  */
 @Composable
 internal fun rememberHeroScrim(
@@ -246,7 +246,8 @@ internal fun rememberHeroScrim(
  * weakens. That width is read in the draw and layer phases, so it follows a title's cross-fade without recomposing. The part
  * under the text is a cached offscreen layer of the screen's width, clipped to the width when it is drawn into the box, and the
  * falloff is a cached offscreen layer of fixed width that the width moves in the layer phase, so a cross-fade rasterises neither
- * again and no layout bound depends on the width. [shift] moves both in the layer phase.
+ * again and no layout bound depends on the width. [shift] moves both in the layer phase, and [fade] (0 to 1) is the alpha of
+ * both, read there too.
  */
 @Composable
 internal fun HeroScrim(
@@ -255,6 +256,7 @@ internal fun HeroScrim(
     shelf: TitleExtent,
     band: TitleExtent,
     shift: GraphicsLayerScope.() -> Float,
+    fade: () -> Float,
 ) {
     val scrim = look.value
     if (scrim.darkening <= 0f) return
@@ -266,7 +268,11 @@ internal fun HeroScrim(
             .padding(top = ContentTop - HeroScrimAbove)
             .fillMaxWidth()
             .height(height)
-            .graphicsLayer { translationY = shift() },
+            .graphicsLayer {
+                compositingStrategy = CompositingStrategy.ModulateAlpha
+                alpha = fade()
+                translationY = shift()
+            },
     ) {
         Box(
             Modifier
