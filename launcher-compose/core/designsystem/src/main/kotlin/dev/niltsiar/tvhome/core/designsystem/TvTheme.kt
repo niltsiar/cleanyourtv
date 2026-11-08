@@ -302,6 +302,9 @@ private val LocalMotion = staticCompositionLocalOf { Motion() }
 @Suppress("CompositionLocalAllowlist")
 private val LocalTvSurfaces = staticCompositionLocalOf { DarkSurfaces }
 
+@Suppress("CompositionLocalAllowlist")
+private val LocalFocusStyle = staticCompositionLocalOf { FocusStyle.Glass }
+
 private val OnLightTypography by lazy { typographyFor(OnLightColors) }
 
 public object TvTheme {
@@ -324,15 +327,21 @@ public object TvTheme {
         @Composable
         @ReadOnlyComposable
         get() = LocalTvSurfaces.current
+
+    public val focusStyle: FocusStyle
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalFocusStyle.current
 }
 
 /**
  * The TV theme. Text over the wallpaper is always light; the [TvTheme.surfaces] are light or dark with [darkTheme].
- * [motion] says how anything moves.
+ * [motion] says how anything moves, [focusStyle] how a focused tile is lit.
  */
 @Composable
 public fun TvTheme(
     motion: Motion = Motion(),
+    focusStyle: FocusStyle = FocusStyle.Glass,
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
@@ -340,6 +349,7 @@ public fun TvTheme(
         LocalTvColors provides DarkColors,
         LocalTvTypography provides typographyFor(DarkColors),
         LocalMotion provides motion,
+        LocalFocusStyle provides focusStyle,
         LocalTvSurfaces provides if (darkTheme) DarkSurfaces else LightSurfaces,
         content = content,
     )

@@ -354,6 +354,23 @@ class TvConfigParserTest {
     }
 
     @Test
+    fun glass_style_is_glass_unless_a_theme_says_rim_or_halo_in_any_case_and_any_other_value_keeps_glass() {
+        assertEquals(GlassStyle.Glass, parseTvConfig("""{}""").config.glassStyle)
+        assertEquals(GlassStyle.Glass, parseTvConfig("""{"glass_style": "glass"}""").config.glassStyle)
+        assertEquals(GlassStyle.Rim, parseTvConfig("""{"glass_style": "rim"}""").config.glassStyle)
+
+        val halo = parseTvConfig("""{"glass_style": " Halo "}""")
+        assertEquals(GlassStyle.Halo, halo.config.glassStyle)
+        assertEquals(emptyList<String>(), halo.rejectedKeys + halo.unknownKeys + halo.unsupportedKeys)
+
+        for (bad in listOf("\"frosted\"", "\"\"", "true", "1")) {
+            val parsed = parseTvConfig("""{"glass_style": $bad}""")
+            assertEquals(bad, GlassStyle.Glass, parsed.config.glassStyle)
+            assertEquals(bad, listOf("glass_style"), parsed.rejectedKeys)
+        }
+    }
+
+    @Test
     fun dock_opacity_takes_30_to_100_and_anything_else_keeps_the_guarded_default() {
         assertEquals(30, parseTvConfig("""{"dock_opacity": 30}""").config.dockOpacity)
         assertEquals(100, parseTvConfig("""{"dock_opacity": 100.9}""").config.dockOpacity)
@@ -561,6 +578,7 @@ class TvConfigParserTest {
             "dock_even_padding" to ("true" to defaults.copy(dockEvenPadding = true)),
             "background_color" to (""""#112233"""" to defaults.copy(backgroundColor = 0xFF112233.toInt())),
             "header_scrim" to (""""off"""" to defaults.copy(headerScrim = HeaderScrim.Off)),
+            "glass_style" to (""""rim"""" to defaults.copy(glassStyle = GlassStyle.Rim)),
             "wallpaper" to ("false" to defaults.copy(wallpaper = false)),
             "wallpaper_rotation_minutes" to ("30" to defaults.copy(wallpaperRotationMinutes = 30)),
             "wallpaper_dim" to ("40" to defaults.copy(wallpaperDim = 40)),

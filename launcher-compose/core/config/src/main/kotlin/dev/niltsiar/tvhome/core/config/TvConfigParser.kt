@@ -27,7 +27,6 @@ private val unsupportedKeys: Set<String> =
         "festival",
         "festival_until",
         "game_day",
-        "glass_style",
         "glow_style",
         "greeting",
         "header_white",
@@ -118,6 +117,7 @@ public fun parseTvConfig(json: String): ParsedConfig {
             dockEvenPadding = o.bool("dock_even_padding", d.dockEvenPadding),
             backgroundColor = o.color("background_color", d.backgroundColor),
             headerScrim = o.enum("header_scrim", d.headerScrim, HeaderScrim.entries) { it.jsonValue },
+            glassStyle = o.enum("glass_style", d.glassStyle, GlassStyle.entries, ignoreCase = true) { it.jsonValue },
             wallpaper = o.bool("wallpaper", d.wallpaper),
             wallpaperRotationMinutes = o.int("wallpaper_rotation_minutes", d.wallpaperRotationMinutes, 0..1440),
             wallpaperDim = o.int("wallpaper_dim", d.wallpaperDim, 0..90),
@@ -307,11 +307,12 @@ private class Overlay(
         key: String,
         default: E,
         entries: List<E>,
+        ignoreCase: Boolean = false,
         jsonValue: (E) -> String,
     ): E =
         value(key, default) { element ->
             val name = (element as? JsonPrimitive)?.takeIf { it.isString }?.content?.trim()
-            entries.firstOrNull { jsonValue(it) == name }
+            entries.firstOrNull { jsonValue(it).equals(name, ignoreCase) }
         }
 
     /** {"night": ["03-moon-lake.jpg", ...], ...}: each mood's picture names; other keys and names are left out. */

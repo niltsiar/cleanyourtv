@@ -72,7 +72,7 @@ class MainActivity : ComponentActivity() {
         applyViewInputsHandler(graph.config.handleViewInputs)
         if (graph.config.restoreKeyServices) ServiceRepair.restore(this)
         setContent {
-            TvTheme(motion = graph.config.motion()) {
+            TvTheme(motion = graph.config.motion(), focusStyle = graph.config.focusStyle()) {
                 val glass = rememberGlassState()
                 val libraryOpen = if (graph.config.appLibrary) library.uiState.collectAsStateWithLifecycle() else null
                 HomeHost(

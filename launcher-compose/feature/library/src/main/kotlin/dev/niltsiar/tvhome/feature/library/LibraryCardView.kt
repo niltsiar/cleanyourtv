@@ -121,7 +121,8 @@ private const val OFF_HOME_ART_ALPHA = 0.5f
  * slot, which says in one line what is not the usual state. An app on Home has no mark; in the chooser
  * ([LibraryLayout.selection]) the art of an app that is not on Home is dimmed, but not while its card has focus, and the status
  * slot holds a check for an app on Home and a ring for one that is not. An idle card is opaque, so nothing of Home shows
- * through it; a focused one lets the plate [FocusSurface] draws behind it show. It rises in once per opening, with the delay [CardEntrance] gives it, and when its
+ * through it; a focused one lets the plate [FocusSurface] draws behind it show, unless the focus style has no slab: then the
+ * card keeps its fill. It rises in once per opening, with the delay [CardEntrance] gives it, and when its
  * Home shortcut changes pops a little, or in the chooser pulses its mark. Both run in the layer lambda. The status slot keeps
  * its place while the card grows, so it stays level with the cards beside it. [widthPx] is the narrowest the card can be. When
  * no card of the grid has a status line, [statusFree] is true and the art and name take the whole card, centred.
@@ -169,6 +170,7 @@ internal fun LibraryCardView(
     val artwork by produceState<LibraryArt?>(null, key) { value = art(key) }
     val ink = TvTheme.colors.onSurface
     val fill = TvTheme.surfaces.card
+    val slab = TvTheme.focusStyle.slab
     val tint = animateColorAsState(if (card.onHome) OnHomeTint else Color.Transparent, tween(CARD_TINT_MS), label = "cardTint")
     val motion = TvTheme.motion
     val density = LocalDensity.current
@@ -223,7 +225,7 @@ internal fun LibraryCardView(
                 Modifier
                     .fillMaxSize()
                     .drawBehind {
-                        drawRect(fill, alpha = (1f - focus.value).coerceIn(0f, 1f))
+                        drawRect(fill, alpha = if (slab) (1f - focus.value).coerceIn(0f, 1f) else 1f)
                         drawRect(tint.value)
                     }.border(1.dp, ink.copy(alpha = RIM_ALPHA), CardShape)
                     .semantics { contentDescription = card.app.label },

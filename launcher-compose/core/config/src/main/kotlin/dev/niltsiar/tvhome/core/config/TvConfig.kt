@@ -33,6 +33,15 @@ public enum class HeaderScrim(
     Off("off"),
 }
 
+/** glass_style: how a focused tile is lit. [Glass] is the full look; [Rim] keeps the crisp ring alone; [Halo] adds a lighter glow to it. */
+public enum class GlassStyle(
+    internal val jsonValue: String,
+) {
+    Glass("glass"),
+    Rim("rim"),
+    Halo("halo"),
+}
+
 /** The time-of-day groups of wallpaper_moods. */
 public enum class WallpaperMood(
     internal val jsonValue: String,
@@ -113,6 +122,7 @@ public data class TvConfig(
     /** Opaque ARGB. */
     val backgroundColor: Int = OPAQUE_BLACK,
     val headerScrim: HeaderScrim = HeaderScrim.Auto,
+    val glassStyle: GlassStyle = GlassStyle.Glass,
     /** Whether the theme may show a wallpaper at all. */
     val wallpaper: Boolean = true,
     /** 0 to 1440; 0 shows one picture. */

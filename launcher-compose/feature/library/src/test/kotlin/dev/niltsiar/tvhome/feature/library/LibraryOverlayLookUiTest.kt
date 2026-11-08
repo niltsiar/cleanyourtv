@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.width
 import app.cash.molecule.RecompositionMode
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.FocusRingReach
+import dev.niltsiar.tvhome.core.designsystem.FocusStyle
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
@@ -98,12 +99,13 @@ class LibraryOverlayLookUiTest {
         art: LibraryArt? = null,
         config: TvConfig = TvConfig(appLibrary = true),
         motion: Motion = Motion(),
+        focusStyle: FocusStyle = FocusStyle.Glass,
         record: OpenedRecord = OpenedRecord(),
     ) {
         val library = FakeLibrary(apps).apply { this.record = record }
         lateinit var viewModel: MoleculeLibraryViewModel
         compose.setContent {
-            TvTheme(motion = motion) {
+            TvTheme(motion = motion, focusStyle = focusStyle) {
                 val scope = rememberCoroutineScope()
                 viewModel =
                     remember {
@@ -203,6 +205,28 @@ class LibraryOverlayLookUiTest {
         home = Color.White
         compose.waitForIdle()
         return Math.round((inside() - dark) * 255)
+    }
+
+    /** The red channel, 0 to 255, inside the focused card [name], 5 dp in from its grown left edge, half way down: beside its art and name. */
+    private fun insideFocusedCard(name: String): Int {
+        val card = grownCard(name)
+        return redAt(card.left + 5.dp, (card.top + card.bottom) / 2)
+    }
+
+    @Test
+    fun a_focused_card_shows_the_plate_behind_it_with_glass() {
+        showLibrary(nineApps, focusStyle = FocusStyle.Glass)
+
+        val inside = insideFocusedCard("App 1")
+        assertTrue("inside $inside", inside < CARD_FILL_RED - 10)
+    }
+
+    @Test
+    fun a_focused_card_keeps_its_fill_with_rim_and_halo() {
+        showLibrary(nineApps, focusStyle = FocusStyle.Rim)
+
+        val inside = insideFocusedCard("App 1")
+        assertTrue("inside $inside", abs(inside - CARD_FILL_RED) <= 2)
     }
 
     @Test
@@ -1543,6 +1567,9 @@ class LibraryOverlayLookUiTest {
         const val PANEL_X = 960
         const val PANEL_HEADER_Y = 103
         const val MAX_BLEED = 10
+
+        /** The red of an idle card on the light surfaces the tests run in. */
+        const val CARD_FILL_RED = 233
         const val WHITE = 230
         const val FRAMES = 24
         const val RING_STRONG = 200

@@ -55,6 +55,19 @@ private const val PLATE_TOP_ALPHA = 0.22f
 private const val PLATE_BOTTOM_ALPHA = 0.06f
 private const val PLATE_STROKE_ALPHA = 0.3f
 
+/**
+ * How a focused [FocusSurface] is lit, from glass_style. [slab] gives it the lit top and, with a [FocusSurface] `plate`, the
+ * plate; [glowStrength] scales the colour of its glow, 0 leaving it out. The ring and its keyline are drawn in every style.
+ */
+public enum class FocusStyle(
+    public val slab: Boolean,
+    internal val glowStrength: Float,
+) {
+    Glass(slab = true, glowStrength = 1f),
+    Rim(slab = false, glowStrength = 0f),
+    Halo(slab = false, glowStrength = 0.5f),
+}
+
 /** How far the ring, with its hairline and dark stroke, reaches past a focused surface's edge, before the surface grows. */
 public val FocusRingReach: Dp = RingGap + RingWidth + HairlineWidth + OuterStrokeWidth
 
@@ -65,9 +78,9 @@ public val FocusRingReach: Dp = RingGap + RingWidth + HairlineWidth + OuterStrok
  * concentric to the shape's, so a parent must leave the grown surface plus 9dp times [focusedScale] free around it or it
  * clips the ring. [onFocused] fires on gaining focus. [interactionSource] receives
  * the press and focus events, for content that reacts to them. [accent] colours the glow; unspecified takes the
- * theme's. [ring] colours the ring instead of white. [ringBlends] ([ringBlendsWith]) puts a 2 dp white stroke at 0.90 in the
- * outer part of the gap, between the dark gap and the ring. [plate], when specified, is the colour of a plate behind the surface,
- * out to the ring's inner edge with corners concentric to the shape's: it fades and grows with the ring, as one cue, and a
+ * theme's. [TvTheme.focusStyle] says which of the lit top, plate and glow it gets. [ring] colours the ring instead of
+ * white. [ringBlends] ([ringBlendsWith]) puts a 2 dp white stroke at 0.90 in the outer part of the gap, between the dark
+ * gap and the ring. [plate], when specified, is the colour of a plate behind the surface, out to the ring's inner edge with corners concentric to the shape's: it fades and grows with the ring, as one cue, and a
  * translucent surface shows it. [glow] turns the glow off: the elevation shadow also shows through
  * a translucent surface, as a dark patch. The animation starts in the focus callback and is read in the layer and draw
  * lambdas, so a focus change neither recomposes nor relays out. [focusedScale] is the size it grows to. The growth is
@@ -95,20 +108,25 @@ public fun FocusSurface(
     val focus = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val grownScale = motion.focusScale(focusedScale)
-    val glowColor = accent.takeOrElse { TvTheme.colors.accent }
+    val style = TvTheme.focusStyle
+    val glowing = glow && style.glowStrength > 0f
+    val glowColor = accent.takeOrElse { TvTheme.colors.accent }.let { it.copy(alpha = it.alpha * style.glowStrength) }
+    val plateColor = if (style.slab) plate else Color.Unspecified
     val plateFill =
-        remember(plate) {
-            if (plate.isUnspecified) {
+        remember(plateColor) {
+            if (plateColor.isUnspecified) {
                 null
             } else {
-                Brush.verticalGradient(listOf(plate.copy(alpha = PLATE_TOP_ALPHA), plate.copy(alpha = PLATE_BOTTOM_ALPHA)))
+                Brush.verticalGradient(
+                    listOf(plateColor.copy(alpha = PLATE_TOP_ALPHA), plateColor.copy(alpha = PLATE_BOTTOM_ALPHA)),
+                )
             }
         }
     Box(
         modifier =
             modifier
                 .graphicsLayer {
-                    shadowElevation = if (glow) GlowElevation.toPx() * focus.value.coerceIn(0f, 1f) else 0f
+                    shadowElevation = if (glowing) GlowElevation.toPx() * focus.value.coerceIn(0f, 1f) else 0f
                     this.shape = ScaledShape(shape, 1f + (grownScale - 1f) * focus.value, growthPivot)
                     ambientShadowColor = glowColor
                     spotShadowColor = glowColor
@@ -127,11 +145,11 @@ public fun FocusSurface(
                         if (outline != null && plateFill != null) {
                             val behind = outline.grownBy(gap)
                             drawOutline(behind, plateFill, alpha = progress)
-                            drawOutline(behind, plate, alpha = progress * PLATE_STROKE_ALPHA, style = Stroke(HairlineWidth.toPx()))
+                            drawOutline(behind, plateColor, alpha = progress * PLATE_STROKE_ALPHA, style = Stroke(HairlineWidth.toPx()))
                         }
                         this@drawWithContent.drawContent()
                         if (outline != null) {
-                            drawOutline(outline, Gloss, alpha = progress)
+                            if (style.slab) drawOutline(outline, Gloss, alpha = progress)
                             if (ringBlends) {
                                 val inner = InnerStrokeWidth.toPx()
                                 drawOutline(outline.grownBy(gap - inner / 2f), InnerStroke, alpha = progress, style = Stroke(inner))
