@@ -11,6 +11,7 @@
 #          SWITCH_HOME_STATE_DIR   where the saved before-values live (default: ~/.cleanyourtv)
 #          BIND_WAIT_SECONDS, FOCUS_WAIT_SECONDS   how long to wait for the key service to bind and for Home to be in
 #                                                  front (default: 10 each)
+#          CYCLE_WAIT_SECONDS   pause between switching accessibility off and writing the list back (default: 1)
 #
 # Stages: `KEYS=keep SCREENSAVER=keep scripts/switch-home.sh new` changes only Home. Run it again without the two
 # variables to move the key service and the screensaver after Home has been seen working.
@@ -35,6 +36,14 @@
 #   accessibility_enabled           set to 1 in both directions.
 #   screensaver_components          new: the old ClockDream becomes dev.niltsiar.tvhome/.ClockDream. old: ours becomes the
 #                                   old one. Only when the setting names that screensaver now; any other screensaver stays.
+#
+# TCL firmware (TclAppBoot) refuses to bind an app's accessibility service unless the app holds a start app-op, and
+# refuses again after a reinstall until the service list changes. So, unless KEYS=keep, new also:
+#   - allows the app-ops AUTO_START, APP_AUTO_START and ASSOC_START for dev.niltsiar.tvhome (`cmd appops set`, each
+#     firmware knows one or two of them and ignores the rest) and runs `appops write-settings` so the grant survives a reboot.
+#   - when the list already holds our KeyService, empties it, sets accessibility_enabled to 0, waits CYCLE_WAIT_SECONDS and
+#     writes the wanted list back. The saved before-values and the undo command are the same as without the cycle.
+# old does not touch app-ops: they are harmless and belong to the package.
 #
 # Each value is printed before and after. It never enables, disables, uninstalls or force-stops a package. new also grants the
 # launcher its location permission, which the Wi-Fi name needs. Both launchers stay installed and enabled, so each switch
@@ -140,10 +149,10 @@ read_setting() {
 # A secure setting's value as Settings prints it, "null" for an unset one.
 read_raw() { adb_tv shell settings get secure "$1" | tr -d '\r'; }
 
-# put_setting NAME BEFORE WANT: print BEFORE, write WANT when it differs, print what the TV holds afterwards.
+# put_setting NAME BEFORE WANT [force]: print BEFORE, write WANT when it differs (or with force), print what the TV holds afterwards.
 put_setting() {
   echo "$1 before: ${2:-<unset>}"
-  if [ "$2" = "$3" ]; then
+  if [ "$2" = "$3" ] && [ -z "${4:-}" ]; then
     echo "$1 after:  unchanged"
     return 0
   fi
@@ -170,6 +179,7 @@ for _opt in "$KEYS" "$SCREENSAVER"; do
   esac
 done
 BIND_WAIT_SECONDS="${BIND_WAIT_SECONDS:-10}"
+CYCLE_WAIT_SECONDS="${CYCLE_WAIT_SECONDS:-1}"
 FOCUS_WAIT_SECONDS="${FOCUS_WAIT_SECONDS:-10}"
 
 STATE_DIR="${SWITCH_HOME_STATE_DIR:-$HOME/.cleanyourtv}"
@@ -191,10 +201,22 @@ on_exit() {
 }
 trap on_exit EXIT
 
+# TCL firmware binds an accessibility service only for an app that holds a start app-op. Builds name it AUTO_START,
+# APP_AUTO_START or ASSOC_START; the others reject the name, so a failure is ignored. App-ops reach the disk lazily, and
+# without write-settings the next reboot drops the grant.
+grant_start_app_ops() {
+  local op
+  for op in AUTO_START APP_AUTO_START ASSOC_START; do
+    adb_tv shell cmd appops set "$NEW_PACKAGE" "$op" allow > /dev/null 2>&1 || true
+  done
+  adb_tv shell appops write-settings > /dev/null 2>&1 || true
+  echo "start app-ops allowed for $NEW_PACKAGE (a firmware ignores the names it does not know)"
+}
+
 # The remote key service of the launcher that becomes Home. Ours does what both old services did, so new swaps both out.
 # PREV_SERVICES and PREV_A11Y keep the raw values so a failed bind can put them back.
 switch_key_services() {
-  local before want
+  local before want a11y_before
   PREV_SERVICES="$(read_raw enabled_accessibility_services)"
   PREV_A11Y="$(read_raw accessibility_enabled)"
   before="$(read_setting enabled_accessibility_services)"
@@ -203,6 +225,17 @@ switch_key_services() {
   else
     want="$(list_add : "$(list_remove : "$before" "$NEW_KEY_SERVICE")" "$OLD_HOME_KEY")"
     if [ "${OLD_INPUT_KEY_SERVICE:-0}" = 1 ]; then want="$(list_add : "$want" "$OLD_INPUT_KEY")"; fi
+  fi
+  # A service that is listed already was refused while its APK was replaced and binds again only once the list changes.
+  if [ "$1" = new ] && list_has : "$before" "$NEW_KEY_SERVICE"; then
+    a11y_before="$(read_setting accessibility_enabled)"
+    echo "$NEW_KEY_SERVICE is listed already; switching accessibility off and on so it binds again"
+    adb_tv shell settings put secure enabled_accessibility_services "''"
+    adb_tv shell settings put secure accessibility_enabled 0
+    sleep "$CYCLE_WAIT_SECONDS"
+    put_setting enabled_accessibility_services "$before" "$want" force
+    put_setting accessibility_enabled "$a11y_before" 1 force
+    return 0
   fi
   put_setting enabled_accessibility_services "$before" "$want"
   put_setting accessibility_enabled "$(read_setting accessibility_enabled)" 1
@@ -400,6 +433,7 @@ elif [ "$USE_STATE" = 1 ]; then
   restore_setting enabled_accessibility_services "$S_SERVICES"
   restore_setting accessibility_enabled "$S_A11Y"
 else
+  if [ "$1" = new ]; then grant_start_app_ops; fi
   switch_key_services "$1"
   if [ "$1" = new ] && ! wait_for_key_service; then
     echo "ERROR: $NEW_KEY_SERVICE is not bound after ${BIND_WAIT_SECONDS}s; putting the key settings back" >&2

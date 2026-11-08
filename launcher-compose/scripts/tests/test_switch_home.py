@@ -21,6 +21,7 @@ BENCHMARK = f"{NEW}.benchmark"
 THEME_STAGE = "/data/local/tmp/tvhome-benchmark-theme"
 THEME_SCRIPT = f"{THEME_STAGE}/push-theme.sh"
 NEW_KEY = f"{NEW}/.service.keys.KeyService"
+APP_OPS = ("AUTO_START", "APP_AUTO_START", "ASSOC_START")
 OLD = "com.gathin.tvhome"
 OLD_HOME_KEY = f"{OLD}/.HomeKeyService"
 OLD_INPUT_KEY = f"{OLD}/.InputKeyService"
@@ -82,6 +83,10 @@ elif args[:1] == ["shell"]:
         out("       TOTAL PSS:    51200            TOTAL RSS:    90000")
     elif line.startswith("pm grant"):
         pass
+    elif line.startswith("cmd appops set"):
+        if cmd[5] in state.get("unknown_ops", []):
+            out(f"Error: Unknown operation string: {cmd[5]}")
+            sys.exit(255)
     elif line.startswith("sh /data/local/tmp/"):
         out(state.get("theme_push_output", "theme pushed"))
     elif line.startswith("test -f"):
@@ -206,6 +211,7 @@ class SwitchHomeTest(unittest.TestCase):
             SWITCH_HOME_STATE_DIR=str(self.state_dir),
             BIND_WAIT_SECONDS="0",
             FOCUS_WAIT_SECONDS="0",
+            CYCLE_WAIT_SECONDS="0",
         )
         full.update(env)
         return subprocess.run(["bash", str(SCRIPT), mode], env=full, capture_output=True, text=True, timeout=60)
@@ -299,6 +305,76 @@ class SwitchHomeTest(unittest.TestCase):
         self.assertEqual(tv["settings"], OLD_STATE["settings"])
         self.assertEqual(tv["home"], f"{OLD}/.MainActivity")
 
+    def appops_calls(self):
+        return [call for call in self.calls() if "appops" in call]
+
+    def test_new_grants_the_start_app_ops_and_writes_them_to_disk_before_the_key_list_changes(self):
+        result = self.run_script("new")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        calls = self.calls()
+        grants = [calls.index(["shell", "cmd", "appops", "set", NEW, op, "allow"]) for op in APP_OPS]
+        persisted = calls.index(["shell", "appops", "write-settings"])
+        first_key_write = calls.index(["shell", "settings", "put", "secure", "enabled_accessibility_services", f"'{NEW_KEY}'"])
+        self.assertLess(max(grants), persisted)
+        self.assertLess(persisted, first_key_write)
+        self.assertEqual(len(self.appops_calls()), len(APP_OPS) + 1)
+
+    def test_keys_keep_grants_no_app_ops(self):
+        self.assertEqual(self.run_script("new", KEYS="keep").returncode, 0)
+        self.assertEqual(self.appops_calls(), [])
+
+    def test_old_grants_no_app_ops(self):
+        self.assertEqual(self.run_script("new").returncode, 0)
+        Path(str(self.state_path) + ".log").unlink()
+        self.assertEqual(self.run_script("old").returncode, 0)
+        self.assertEqual(self.appops_calls(), [])
+
+    def test_an_app_op_the_firmware_does_not_know_does_not_stop_the_switch(self):
+        self.tv(unknown_ops=["APP_AUTO_START", "ASSOC_START"])
+        result = self.run_script("new")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(self.appops_calls()), len(APP_OPS) + 1)
+        self.assertEqual(self.read_tv()["settings"]["enabled_accessibility_services"], NEW_KEY)
+
+    def key_writes(self):
+        """The accessibility writes in order as (name, value)."""
+        return [
+            (call[4], call[5].strip("'"))
+            for call in self.calls()
+            if call[1:4] == ["settings", "put", "secure"] and call[4] in ("enabled_accessibility_services", "accessibility_enabled")
+        ]
+
+    def test_a_key_service_that_is_listed_already_is_cleared_and_written_back_once_the_switch_runs(self):
+        listed = f"x.y/.Svc:{NEW_KEY}"
+        self.tv(settings={**OLD_STATE["settings"], "enabled_accessibility_services": listed})
+        result = self.run_script("new")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            self.key_writes(),
+            [
+                ("enabled_accessibility_services", ""),
+                ("accessibility_enabled", "0"),
+                ("enabled_accessibility_services", listed),
+                ("accessibility_enabled", "1"),
+            ],
+        )
+        self.assertEqual(self.read_tv()["settings"]["enabled_accessibility_services"], listed)
+
+    def test_a_service_that_is_not_listed_yet_is_not_cycled(self):
+        self.assertEqual(self.run_script("new").returncode, 0)
+        self.assertEqual(self.key_writes(), [("enabled_accessibility_services", NEW_KEY)])
+
+    def test_old_and_a_failed_bind_restore_the_exact_before_values_after_a_cycle(self):
+        before = {**OLD_STATE["settings"], "enabled_accessibility_services": f"{OLD_HOME_KEY}:{NEW_KEY}", "accessibility_enabled": "0"}
+        self.tv(settings=before)
+        self.assertEqual(self.run_script("new").returncode, 0)
+        self.assertEqual(self.run_script("old").returncode, 0)
+        self.assertEqual(self.read_tv()["settings"], before)
+        self.tv(key_binds=False)
+        result = self.run_script("new")
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(self.read_tv()["settings"], before)
+
     def test_spike_gate_refuses_while_the_key_service_is_enabled_and_installs_nothing(self):
         result = self.run_script("new")
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -330,7 +406,7 @@ class SwitchHomeTest(unittest.TestCase):
         self.assertEqual(self.run_script("old").returncode, 0)
         self.assertEqual(self.read_tv()["settings"], OLD_STATE["settings"])
 
-    def test_new_keeps_other_services_and_a_second_new_writes_no_setting(self):
+    def test_new_keeps_other_services_and_a_second_new_leaves_the_same_list_after_its_cycle(self):
         self.tv(
             settings={
                 "enabled_accessibility_services": f"x.y/.Svc:{OLD_HOME_KEY}:z.w/z.w.Other:{OLD_INPUT_KEY}",
@@ -341,9 +417,11 @@ class SwitchHomeTest(unittest.TestCase):
         self.assertEqual(self.run_script("new").returncode, 0)
         self.assertEqual(self.read_tv()["settings"]["enabled_accessibility_services"], f"x.y/.Svc:z.w/z.w.Other:{NEW_KEY}")
         self.assertEqual(self.read_tv()["settings"]["screensaver_components"], "com.other/.Dream")
+        settings = self.read_tv()["settings"]
         Path(str(self.state_path) + ".log").unlink()
         self.assertEqual(self.run_script("new").returncode, 0)
-        self.assertEqual(self.writes(), ["home"])
+        self.assertEqual(self.read_tv()["settings"], settings)
+        self.assertNotIn("put screensaver_components", self.writes())
         self.assertEqual(self.run_script("old").returncode, 0)
         self.assertEqual(
             self.read_tv()["settings"]["enabled_accessibility_services"],
