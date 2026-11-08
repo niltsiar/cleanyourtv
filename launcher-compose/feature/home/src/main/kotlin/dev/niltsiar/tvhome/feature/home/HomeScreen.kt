@@ -229,7 +229,7 @@ private val CaptionTop = TopBarTop + TopBarHeight + 8.dp
 private val TileCorner = 12.dp
 private val TileShape = RoundedCornerShape(TileCorner)
 private val LightTileEdgeWidth = 1.dp
-private val LightTileEdge = Color.Black.copy(alpha = 0.58f)
+private val LightTileEdge = Color.Black.copy(alpha = 0.75f)
 
 /** The mean L* of the frost from which the wallpaper counts as bright under a tile: the mark where the top-bar buttons thicken their tint. */
 private const val BRIGHT_WALLPAPER_LIGHTNESS = 70f

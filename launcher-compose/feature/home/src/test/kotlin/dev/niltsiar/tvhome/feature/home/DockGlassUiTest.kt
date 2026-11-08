@@ -466,8 +466,8 @@ class DockGlassUiTest {
         level: Float,
     ) {
         val (edge, inside) = edgeOf(tag)
-        assertEquals("edge $edge", level * (1f - 0.58f), edge.max(), 0.03f)
-        assertEquals("edge $edge", level * (1f - 0.58f), edge.min(), 0.03f)
+        assertEquals("edge $edge", level * (1f - 0.75f), edge.max(), 0.03f)
+        assertEquals("edge $edge", level * (1f - 0.75f), edge.min(), 0.03f)
         assertEquals(level, inside, 0.01f)
     }
 
@@ -484,7 +484,7 @@ class DockGlassUiTest {
     private val level245 = 245f / 255f
 
     @Test
-    fun dock_glass_draws_a_black_058_edge_1_dp_wide_inside_each_light_dock_tile() {
+    fun dock_glass_draws_a_black_075_edge_1_dp_wide_inside_each_light_dock_tile() {
         showHome(uniform, cinematic.copy(dockGlass = true), shown = lightApps)
 
         assertEdge("tile:pkg.2", level245)
@@ -542,6 +542,16 @@ class DockGlassUiTest {
     @Test
     fun the_edge_of_a_white_dock_tile_holds_3_to_1_against_the_glass_tray_over_a_bright_wallpaper() {
         showHome(white, cinematic.copy(dockGlass = true), wallpaper = brightWallpaper, shown = whiteApps)
+
+        assertEdgeHolds("tile:pkg.6")
+    }
+
+    /** A picture whose light glass tray reads at a relative luminance of about 0.29, where a white tile alone holds under 3 to 1. */
+    private val midTone = bitmap(40, 40) { _, _ -> grey(127) }
+
+    @Test
+    fun the_edge_of_a_white_dock_tile_holds_3_to_1_against_mid_tone_glass() {
+        showHome(midTone, cinematic.copy(dockGlass = true), shown = whiteApps)
 
         assertEdgeHolds("tile:pkg.6")
     }
