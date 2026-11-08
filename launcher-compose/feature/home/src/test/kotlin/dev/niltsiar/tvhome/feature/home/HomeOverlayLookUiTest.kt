@@ -1,8 +1,10 @@
 package dev.niltsiar.tvhome.feature.home
 
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
@@ -38,6 +40,8 @@ import dev.niltsiar.tvhome.core.model.AppList
 import dev.niltsiar.tvhome.core.model.InputConnection
 import dev.niltsiar.tvhome.core.model.InputRow
 import dev.niltsiar.tvhome.core.model.InputsMenu
+import dev.niltsiar.tvhome.core.model.Wallpaper
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -62,39 +66,52 @@ class HomeOverlayLookUiTest {
             Canvas(image).drawRect(Rect(0f, 0f, 16f, 9f), Paint().apply { color = Color.White })
         }
 
+    private fun grey(level: Float) =
+        ImageBitmap(16, 9).also { image ->
+            Canvas(image).drawRect(Rect(0f, 0f, 16f, 9f), Paint().apply { color = Color(level, level, level) })
+        }
+
     private fun appsOf(count: Int) = (1..count).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it", image = white) }
 
     private var apps = appsOf(9)
 
     private var libraryOpen by mutableStateOf(false)
 
+    private var inputsRequests by mutableIntStateOf(0)
+
     private fun showHome(
         appCount: Int = 9,
         inputs: InputsMenu = FourPorts,
         config: TvConfig = SixColumns,
         topBarApps: List<AppEntry> = emptyList(),
+        wallpaper: Float? = null,
     ) {
         apps = appsOf(appCount)
+        val picture = wallpaper?.let { grey(it) }
         val sources =
             sources(
                 apps = flowOf(AppList(apps)),
                 topBarApps = flowOf(topBarApps),
                 inputs = flowOf(inputs),
+                wallpaper = flowOf(picture?.let { Wallpaper(picture = it, thumbnail = it) } ?: Wallpaper()),
                 powerMenuAvailable = { true },
             )
         compose.setContent {
-            TvTheme {
-                val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
-                val state = viewModel.uiState.collectAsState()
-                HomeScreen(
-                    state = { state.value },
-                    layout = config.homeLayout(),
-                    onFocus = viewModel::onFocus,
-                    onClick = {},
-                    topBar = config.topBarLayout(),
-                    actions = viewModel.actions,
-                    libraryOpen = { libraryOpen },
-                )
+            CompositionLocalProvider(LocalBakeDispatcher provides Dispatchers.Unconfined) {
+                TvTheme {
+                    val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
+                    val state = viewModel.uiState.collectAsState()
+                    HomeScreen(
+                        state = { state.value },
+                        layout = config.homeLayout(),
+                        onFocus = viewModel::onFocus,
+                        onClick = {},
+                        topBar = config.topBarLayout(),
+                        actions = viewModel.actions,
+                        libraryOpen = { libraryOpen },
+                        inputsRequests = { inputsRequests },
+                    )
+                }
             }
         }
         // A TV has no touch screen; the native graphics mode starts in touch mode, where nothing takes key focus.
@@ -671,15 +688,16 @@ class HomeOverlayLookUiTest {
     private fun withoutMenuScrim(red: Int): Float = (red - 7 * 0.5f) / 0.5f
 
     /**
-     * While its panel is open, [opener] is drawn as when focused, with the white fill at 0.60: its fill, 4 dp in from its edge, is
-     * 60 percent of the way from the idle [idle] button's to what [opener] read when focused, and its glyph is dark.
+     * While its panel is open, [opener] stands outside the scrim and is drawn as when focused, with the white fill at 0.60: its
+     * fill, 4 dp in from its edge, is 60 percent of the way from the idle [idle] button's to what [opener] read when focused,
+     * and its glyph is dark.
      */
     private fun assertFocusedLookAtSixtyPercent(
         opener: String,
         idle: String,
         focusedFill: Int,
     ) {
-        val fill = withoutMenuScrim(buttonRed(opener, 4f))
+        val fill = buttonRed(opener, 4f).toFloat()
         val rest = withoutMenuScrim(buttonRed(idle, 4f))
         val share = (fill - rest) / (focusedFill - rest)
         assertTrue("fill $fill of idle $rest and focused $focusedFill: $share", share in 0.52f..0.68f)
@@ -740,5 +758,98 @@ class HomeOverlayLookUiTest {
         compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
 
         assertNear(buttonRed("Settings", 4f), buttonRed("Inputs", 4f), 2)
+    }
+
+    /** The contrast of two colours. */
+    private fun ratio(
+        a: Color,
+        b: Color,
+    ): Float = (maxOf(a.luminance(), b.luminance()) + 0.05f) / (minOf(a.luminance(), b.luminance()) + 0.05f)
+
+    /**
+     * With the panel of the button described as [description] open over [wallpaper]: the contrast of the button's glyph against
+     * its fill, then of its outline (1 dp out from the left edge) against the dimmed surround 5 dp out.
+     */
+    private fun anchorContrast(
+        description: String,
+        wallpaper: Float,
+        open: () -> Unit,
+    ): Pair<Float, Float> {
+        showHome(wallpaper = wallpaper)
+        press(Key.DirectionUp)
+        open()
+        val box = compose.onNodeWithContentDescription(description).getBoundsInRoot()
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val density = compose.activity.resources.displayMetrics.density
+        val middle = (box.top.value + box.bottom.value) / 2
+
+        fun at(
+            x: Float,
+            y: Float = middle,
+        ) = pixels[(x * density).toInt(), (y * density).toInt()]
+        val fill = at(box.left.value + 4f)
+        val centre = (box.left.value + box.right.value) / 2
+        val glyph =
+            (-6..5).flatMap { dy -> (-6..5).map { dx -> at(centre + dx, middle + dy) } }.maxBy { abs(it.luminance() - fill.luminance()) }
+        return ratio(glyph, fill) to ratio(at(box.left.value - 1f), at(box.left.value - 5f))
+    }
+
+    private fun openSettingsFromTopBar() {
+        repeat(2) { press(Key.DirectionRight) }
+        compose.onNodeWithContentDescription("Settings").assertIsFocused()
+        openTileMenu()
+    }
+
+    private fun openInputsFromTopBar() {
+        press(Key.DirectionCenter)
+        compose.onNodeWithTag("input:0").assertIsFocused()
+    }
+
+    /** The glyph reads 4.5:1 on the fill, and the outline 3:1 on the surround but no more than 5.5:1: it is quieter than focus. */
+    private fun assertReadsAsAnchor(contrast: Pair<Float, Float>) {
+        assertTrue(
+            "glyph on fill ${contrast.first}, outline on surround ${contrast.second}",
+            contrast.first >= 4.5f && contrast.second in 3f..5.5f,
+        )
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_settings_button_reads_as_its_menus_anchor_on_a_dark_wallpaper_with_its_glyph_4_5_to_1_and_its_quiet_outline_3_to_1() {
+        assertReadsAsAnchor(anchorContrast("Settings", 0f, ::openSettingsFromTopBar))
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_settings_button_reads_as_its_menus_anchor_on_a_bright_wallpaper_with_its_glyph_4_5_to_1_and_its_quiet_outline_3_to_1() {
+        assertReadsAsAnchor(anchorContrast("Settings", 1f, ::openSettingsFromTopBar))
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_inputs_button_reads_as_its_lists_anchor_on_a_bright_wallpaper_with_its_glyph_4_5_to_1_and_its_quiet_outline_3_to_1() {
+        assertReadsAsAnchor(anchorContrast("Inputs", 1f, ::openInputsFromTopBar))
+    }
+
+    @Test
+    fun on_the_light_theme_the_settings_button_reads_as_its_menus_anchor_on_a_bright_wallpaper() {
+        assertReadsAsAnchor(anchorContrast("Settings", 1f, ::openSettingsFromTopBar))
+    }
+
+    @Test
+    fun on_the_light_theme_the_inputs_button_reads_as_its_lists_anchor_on_a_dark_wallpaper() {
+        assertReadsAsAnchor(anchorContrast("Inputs", 0f, ::openInputsFromTopBar))
+    }
+
+    @Test
+    fun the_input_list_the_system_opens_with_no_inputs_button_on_screen_draws_the_plain_scrim_and_no_ring() {
+        showHome(config = SixColumns.copy(showInputsPill = false))
+        compose.onNodeWithContentDescription("Inputs").assertDoesNotExist()
+
+        inputsRequests++
+        settle()
+
+        compose.onNodeWithTag("input:0").assertExists()
+        assertNear(redAt(Offset(40f, 3f)), redAt(Offset(1f, 1f)), 1)
     }
 }

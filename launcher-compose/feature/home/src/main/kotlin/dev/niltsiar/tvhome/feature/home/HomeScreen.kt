@@ -136,6 +136,7 @@ import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.designsystem.KeyChip
 import dev.niltsiar.tvhome.core.designsystem.KeyChipHeight
 import dev.niltsiar.tvhome.core.designsystem.OverlayHost
+import dev.niltsiar.tvhome.core.designsystem.Spotlight
 import dev.niltsiar.tvhome.core.designsystem.TILE_FOCUSED_SCALE
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.holdOk
@@ -263,6 +264,7 @@ private val TitleGridDrop = 16.dp
 /** A dock scrolled up for the grid fades out over the last of this before it reaches the shelf's bottom edge. */
 private val DockFadeOut = 28.dp
 private const val MENU_SCRIM = 0.5f
+private const val BUTTON_SPOT_RING_ALPHA = 0.48f
 private const val LIBRARY_SCRIM = 0.78f
 private const val BAND_IN_MS = 160
 private const val BAND_OUT_MS = 120
@@ -299,7 +301,8 @@ internal const val GRID_ITEMS_BEFORE = 2
  * OK on the Inputs button hangs the TV's input list under it; Back closes the list and returns focus to the button.
  * Each rise of [inputsRequests] (the system asked for the input list) opens the list.
  * The menus, the input list and [overlays] (the host's, such as the App library, open while [libraryOpen]) sit in one
- * [OverlayHost] over everything else on Home. The tile a menu acts on stays undimmed under it. While the library is open
+ * [OverlayHost] over everything else on Home. The tile a menu acts on stays undimmed under it, and so does the top-bar button
+ * that opened the Settings menu or the input list. While the library is open
  * every layer of Home above the wallpaper fades out, so only the wallpaper and the library's scrim are behind its panel.
  */
 @Composable
@@ -520,16 +523,31 @@ public fun HomeScreen(
         OverlayHost(
             open = { currentState.value().let { it.menu != null || it.inputsOpen } || libraryOpen() },
             strength = { if (libraryOpen()) LIBRARY_SCRIM else MENU_SCRIM },
-            spotlight = { input.anchor.value.takeIf { currentState.value().menu?.tileKey != null } },
-            spotlightOffset = dim::lowPx,
-            spotlightShape = TileShape,
-            spotlightRing = {
+            spotlight = {
                 val shown = currentState.value()
                 val key = shown.menu?.tileKey
-                val inDock = shown.dock.firstOrNull { it.key == key }
-                val tile = inDock ?: shown.grid.firstOrNull { it.key == key }
-                tile?.let { shelfLayout.ringColour(it.accent, inDock = inDock != null, edge = it.edge) } ?: Color.White
+                when {
+                    key != null -> {
+                        val inDock = shown.dock.firstOrNull { it.key == key }
+                        val tile = inDock ?: shown.grid.firstOrNull { it.key == key }
+                        val ring = tile?.let { shelfLayout.ringColour(it.accent, inDock = inDock != null, edge = it.edge) } ?: Color.White
+                        Spotlight(input.anchor.value, TileShape, ring)
+                    }
+
+                    shown.menu != null -> {
+                        buttonSpotlight(input.settingsBounds.value)
+                    }
+
+                    shown.inputsOpen -> {
+                        buttonSpotlight(input.inputsBounds.value)
+                    }
+
+                    else -> {
+                        null
+                    }
+                }
             },
+            spotlightOffset = dim::lowPx,
         ) {
             menu?.let { open ->
                 key(open) {
@@ -556,6 +574,10 @@ public fun HomeScreen(
         }
     }
 }
+
+/** The spotlight on a top-bar button at [bounds]; none while the button is not on screen (its bounds are empty). */
+private fun buttonSpotlight(bounds: Rect): Spotlight? =
+    if (bounds.isEmpty) null else Spotlight(bounds, CircleShape, ringAlpha = BUTTON_SPOT_RING_ALPHA, followsOffset = false)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

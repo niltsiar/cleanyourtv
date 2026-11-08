@@ -277,6 +277,7 @@ internal fun TopBar(
                     .focusRequester(
                         input.requester(SETTINGS_FOCUS),
                     ).nameInBand(input, BarControl.Settings)
+                    .onGloballyPositioned { input.settingsBounds.value = it.boundsInRoot() }
                     .holdOk(input.hold, onHold = { bounds ->
                         input.anchor.value = bounds
                         input.actions.onSettingsMenu()

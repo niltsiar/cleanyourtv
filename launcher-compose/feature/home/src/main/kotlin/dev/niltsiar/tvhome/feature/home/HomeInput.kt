@@ -62,6 +62,9 @@ internal class HomeInput(
     /** Where the Inputs button is, in the root's coordinates; zero until it is laid out. The Inputs list hangs from it. */
     val inputsBounds = mutableStateOf(Rect.Zero)
 
+    /** Where the Settings button is, in the root's coordinates; zero until it is laid out. */
+    val settingsBounds = mutableStateOf(Rect.Zero)
+
     /** Whether focus is in the grid, set by the grid. A reorder mode takes OK only there. */
     var gridFocused by mutableStateOf(false)
 

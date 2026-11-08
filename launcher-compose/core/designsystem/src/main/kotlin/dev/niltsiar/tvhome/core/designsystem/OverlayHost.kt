@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
@@ -35,21 +36,19 @@ private const val SPOT_RING_ALPHA = 0.7f
 
 /**
  * Where a screen's overlays go: it draws over every other child of its parent, whatever their order, and under the
- * overlays it draws a scrim that fades in while [open] is true, darkening by [strength]. A [spotlight] (in the root's
- * coordinates, of [spotlightShape]) stays undimmed inside a thin ring of [spotlightRing], so the thing an overlay acts on
- * stays in view. All of them are read while [open] and kept while the scrim fades out, except [spotlightOffset], the
- * distance in pixels the spotlight sits below its rectangle, which is read in every frame so that a spotlight on a moving
- * thing keeps up with it. Put it in the screen's outermost box.
+ * overlays it draws a scrim that fades in while [open] is true, darkening by [strength]. A [spotlight] stays undimmed
+ * inside a thin ring, so the thing an overlay acts on stays in view. Both are read while [open] and kept while the scrim
+ * fades out, except [spotlightOffset], the distance in pixels a [Spotlight.followsOffset] spotlight sits below its
+ * rectangle, which is read in every frame so that a spotlight on a moving thing keeps up with it. Put it in the screen's
+ * outermost box.
  */
 @Composable
 public fun OverlayHost(
     open: () -> Boolean,
     modifier: Modifier = Modifier,
     strength: () -> Float = { SCRIM_ALPHA },
-    spotlight: () -> Rect? = { null },
+    spotlight: () -> Spotlight? = { null },
     spotlightOffset: () -> Float = { 0f },
-    spotlightShape: Shape = RectangleShape,
-    spotlightRing: () -> Color = { Color.White },
     content: @Composable BoxScope.() -> Unit,
 ) {
     val motion = TvTheme.motion
@@ -71,41 +70,52 @@ public fun OverlayHost(
                     if (open()) {
                         look.strength = strength()
                         look.spot = spotlight()
-                        look.ring = spotlightRing()
                     }
-                    val spot = look.spot?.translate(0f, spotlightOffset())
+                    val spot = look.spot
                     if (spot == null) {
                         drawRect(ScrimColor, alpha = look.strength * shown)
                     } else {
-                        drawSpotlit(spot, spotlightShape, look.ring, look.strength * shown, shown)
+                        val bounds = if (spot.followsOffset) spot.bounds.translate(0f, spotlightOffset()) else spot.bounds
+                        drawSpotlit(bounds, spot, look.strength * shown, shown)
                     }
                 },
         content = content,
     )
 }
 
+/**
+ * What an [OverlayHost] leaves undimmed: [bounds] (in the root's coordinates) of [shape], inside a thin ring of [ring] at
+ * [ringAlpha] once the scrim is in. A [followsOffset] spotlight is moved by the host's `spotlightOffset`.
+ */
+@Immutable
+public class Spotlight(
+    public val bounds: Rect,
+    public val shape: Shape = RectangleShape,
+    public val ring: Color = Color.White,
+    public val ringAlpha: Float = SPOT_RING_ALPHA,
+    public val followsOffset: Boolean = true,
+)
+
 /** What the scrim draws with, taken while the host is open. */
 private class ScrimLook {
     var strength = SCRIM_ALPHA
-    var spot: Rect? = null
-    var ring = Color.White
+    var spot: Spotlight? = null
 }
 
-/** The scrim at [alpha] around [spot], which keeps its colours, then a ring of [color] hugging [spot]'s outline at [ringShown]. */
+/** The scrim at [alpha] around [spot] drawn at [at], which keeps its colours, then a ring hugging its outline at [ringShown]. */
 private fun DrawScope.drawSpotlit(
-    spot: Rect,
-    shape: Shape,
-    color: Color,
+    at: Rect,
+    spot: Spotlight,
     alpha: Float,
     ringShown: Float,
 ) {
-    val outline = shape.createOutline(spot.size, layoutDirection, this)
+    val outline = spot.shape.createOutline(at.size, layoutDirection, this)
     val hole = Path().apply { addOutline(outline) }
-    translate(spot.left, spot.top) {
+    translate(at.left, at.top) {
         clipPath(hole, ClipOp.Difference) {
-            translate(-spot.left, -spot.top) { drawRect(ScrimColor, alpha = alpha) }
+            translate(-at.left, -at.top) { drawRect(ScrimColor, alpha = alpha) }
         }
         val ring = SpotRingWidth.toPx()
-        drawOutline(outline.grownBy(ring / 2f), color, alpha = SPOT_RING_ALPHA * ringShown, style = Stroke(ring))
+        drawOutline(outline.grownBy(ring / 2f), spot.ring, alpha = spot.ringAlpha * ringShown, style = Stroke(ring))
     }
 }
