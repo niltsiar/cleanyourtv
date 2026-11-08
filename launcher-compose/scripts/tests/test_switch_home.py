@@ -27,6 +27,8 @@ OLD_HOME_KEY = f"{OLD}/.HomeKeyService"
 OLD_INPUT_KEY = f"{OLD}/.InputKeyService"
 SERIAL = "192.168.1.50:5555"
 SECURE_SETTINGS = "android.permission.WRITE_SECURE_SETTINGS"
+GUARD_CONFIG = f"{NEW}/.service.keys.GuardConfig"
+GUARD_LISTENER = f"{NEW}/.service.keys.GuardRevival"
 
 FAKE_ADB = r'''#!/usr/bin/env python3
 import json
@@ -111,6 +113,15 @@ elif args[:1] == ["shell"]:
     elif line.startswith("cmd package set-home-activity"):
         state["home"] = cmd[-1]
         save()
+    elif line.startswith("cmd notification"):
+        if state.get("listener_refused"):
+            out("Error: cannot change the listener")
+            sys.exit(255)
+    elif line.startswith("am broadcast"):
+        state["guard_off_in_standby"] = cmd[-1] == "true"
+        save()
+        out("Broadcasting: Intent { act=dev.niltsiar.tvhome.GUARD }")
+        out(f'Broadcast completed: result=0, data="guard_off_in_standby={cmd[-1]}"')
     elif line.startswith("am start"):
         out("Starting: Intent { act=android.intent.action.MAIN cat=[android.intent.category.HOME] }")
     elif line == "dumpsys activity activities":
@@ -350,6 +361,71 @@ class SwitchHomeTest(unittest.TestCase):
         Path(str(self.state_path) + ".log").unlink()
         self.assertEqual(self.run_script("old", RESTORE_KEY_SERVICES="1").returncode, 0)
         self.assertEqual(self.secure_settings_calls("grant") + self.secure_settings_calls("revoke"), [])
+
+    def guard_calls(self):
+        """The listener and opt-in calls, in order, as 'allow', 'disallow' or 'opt true|false'."""
+        found = []
+        for call in self.calls():
+            if call[1:3] == ["cmd", "notification"]:
+                found.append(f"{call[3].split('_')[0]} {call[4]}")
+            elif call[1:3] == ["am", "broadcast"]:
+                found.append(f"opt {call[-1]} {call[call.index('-a') + 1]} {call[call.index('-n') + 1]}")
+        return found
+
+    def test_new_with_guard_allows_the_listener_and_opts_in_after_the_key_service_binds(self):
+        result = self.run_script("new", GUARD="1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            self.guard_calls(),
+            [f"allow {GUARD_LISTENER}", f"opt true {NEW}.GUARD {GUARD_CONFIG}"],
+        )
+        self.assertTrue(self.read_tv()["guard_off_in_standby"])
+        self.assertIn('data="guard_off_in_standby=true"', result.stdout)
+        calls = self.calls()
+        opt_in = next(i for i, c in enumerate(calls) if c[1:3] == ["am", "broadcast"])
+        last_key_write = max(i for i, c in enumerate(calls) if c[1:5] == ["settings", "put", "secure", "enabled_accessibility_services"])
+        self.assertLess(last_key_write, opt_in)
+
+    def test_new_with_guard_grants_write_secure_settings_even_without_restore_key_services(self):
+        self.assertEqual(self.run_script("new", GUARD="1").returncode, 0)
+        self.assertEqual(self.secure_settings_calls("grant"), [["shell", "pm", "grant", NEW, SECURE_SETTINGS]])
+        self.assertEqual(self.secure_settings_calls("revoke"), [])
+
+    def test_new_with_guard_and_restore_key_services_grants_once(self):
+        self.assertEqual(self.run_script("new", GUARD="1", RESTORE_KEY_SERVICES="1").returncode, 0)
+        self.assertEqual(len(self.secure_settings_calls("grant")), 1)
+
+    def test_new_without_guard_touches_no_listener_and_sends_no_opt_in(self):
+        result = self.run_script("new", RESTORE_KEY_SERVICES="1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.guard_calls(), [])
+        self.assertIn("GUARD=1 turns it on", result.stdout)
+
+    def test_old_opts_out_and_disallows_the_listener_before_the_key_list_moves(self):
+        self.assertEqual(self.run_script("new", GUARD="1").returncode, 0)
+        Path(str(self.state_path) + ".log").unlink()
+        result = self.run_script("old")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            self.guard_calls(),
+            [f"opt false {NEW}.GUARD {GUARD_CONFIG}", f"disallow {GUARD_LISTENER}"],
+        )
+        self.assertFalse(self.read_tv()["guard_off_in_standby"])
+        calls = self.calls()
+        opt_out = next(i for i, c in enumerate(calls) if c[1:3] == ["am", "broadcast"])
+        first_key_write = min(i for i, c in enumerate(calls) if c[1:5] == ["settings", "put", "secure", "enabled_accessibility_services"])
+        self.assertLess(opt_out, first_key_write)
+
+    def test_old_without_guard_set_still_opts_out(self):
+        self.assertEqual(self.run_script("old").returncode, 0)
+        self.assertEqual(self.guard_calls()[0], f"opt false {NEW}.GUARD {GUARD_CONFIG}")
+
+    def test_a_listener_the_tv_refuses_does_not_stop_the_switch(self):
+        self.tv(listener_refused=True)
+        result = self.run_script("new", GUARD="1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("not allowed", result.stdout)
+        self.assertEqual(self.read_tv()["home"], f"{NEW}/.MainActivity")
 
     def test_keys_keep_grants_no_app_ops(self):
         self.assertEqual(self.run_script("new", KEYS="keep").returncode, 0)

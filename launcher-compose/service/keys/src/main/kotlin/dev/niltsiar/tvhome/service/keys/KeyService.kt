@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.media.AudioManager
+import android.os.PowerManager
 import android.os.SystemClock
 import android.os.UserManager
 import android.provider.Settings
@@ -34,7 +35,8 @@ private const val PROBE_BOOT_KEY = "probe_boot"
  * and with capture_input_keys KEYCODE_TV and KEYCODE_TV_INPUT), KEYCODE_ALL_APPS and, with home_long_press_home, the
  * Home key itself, which opens Home. Every other key passes through untouched. Also the redirects that bring Home back:
  * stock_home_redirect, power_on_home and power_on_home_always. With restore_key_services, [ServiceRepair] puts the service
- * back on the enabled list after a force stop.
+ * back on the enabled list after a force stop. With the opt-in broadcast of [GuardConfig], the service leaves the list while
+ * the screen is off and [GuardKeep] lists it again at screen-on.
  *
  * Enable over adb with scripts/switch-home.sh, or in the TV's accessibility settings.
  */
@@ -53,6 +55,10 @@ public class KeyService : AccessibilityService() {
     private var screenOnReceiver: BroadcastReceiver? = null
     private var gamepads: GamepadPassthrough? = null
     private var recorded = false
+    private var standbyExit: BroadcastReceiver? = null
+
+    /** disableSelf is how the service leaves for standby, not the user turning it off. */
+    private var steppingOut = false
     private val homeAfterKey = Runnable { openHome() }
 
     override fun onServiceConnected() {
@@ -121,6 +127,36 @@ public class KeyService : AccessibilityService() {
         }
         if (stockHome.isNotEmpty() || plan.liveTv.isNotEmpty()) probeAtBoot()
         if (config.gamepadPassthrough && config.keyFilter) gamepads = GamepadPassthrough(this).also { it.start() }
+        applyStandbyOptIn()
+    }
+
+    /** Arms or disarms the standby exit from the opt-in; [GuardKeep] calls it so a bound service sees an opt-in that arrives later. */
+    internal fun applyStandbyOptIn() {
+        if (!leavesInStandby(GuardKeep.offInStandby(this), GuardKeep.permitted(this))) {
+            disarmStandbyExit()
+            return
+        }
+        if (standbyExit != null) return
+        val receiver =
+            object : BroadcastReceiver() {
+                override fun onReceive(
+                    context: Context,
+                    intent: Intent,
+                ) = leaveForStandby()
+            }
+        standbyExit = receiver
+        registerReceiver(receiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
+        if (!getSystemService(PowerManager::class.java).isInteractive) leaveForStandby()
+    }
+
+    private fun disarmStandbyExit() {
+        standbyExit?.let(::unregisterReceiver)
+        standbyExit = null
+    }
+
+    private fun leaveForStandby() {
+        steppingOut = true
+        GuardKeep.stepOut(this)
     }
 
     private fun armPowerOnHome(plan: PowerOnPlan) {
@@ -161,6 +197,7 @@ public class KeyService : AccessibilityService() {
         powerOn = null
         screenOnReceiver?.let(::unregisterReceiver)
         screenOnReceiver = null
+        disarmStandbyExit()
         timer.cancel(homeAfterKey)
         gamepads?.stop()
         gamepads = null
@@ -276,7 +313,7 @@ public class KeyService : AccessibilityService() {
     /** Unbound by Android: no UP will reach the service to cancel a hold it saw go down. */
     override fun onUnbind(intent: Intent): Boolean {
         SharedPresses.release(this)
-        if (recorded) ServiceRepair.disconnected(this, javaClass)
+        if (recorded && !steppingOut) ServiceRepair.disconnected(this, javaClass)
         return super.onUnbind(intent)
     }
 

@@ -18,6 +18,8 @@ public object PowerMenu {
         if (bound === service) bound = null
     }
 
+    internal fun bound(): KeyService? = bound
+
     public fun available(): Boolean = bound != null
 
     /** The TV asks before it acts. Does nothing while no service is bound. */

@@ -18,6 +18,30 @@
                 android:resource="@xml/key_service" />
         </service>
 
+        <!-- Bound again by the system after a force stop, which restarts Home on firmware that kills third-party apps
+             (TCL tc8000_ay30a2). It reads no notification.
+             cmd notification allow_listener dev.niltsiar.tvhome/.service.keys.GuardRevival -->
+        <service
+            android:name=".GuardRevival"
+            android:directBootAware="true"
+            android:exported="true"
+            android:label="@string/key_service_name"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <!-- The opt-in to leave the key service while the screen is off; only the adb shell holds the permission. -->
+        <receiver
+            android:name=".GuardConfig"
+            android:exported="true"
+            android:permission="android.permission.WRITE_SECURE_SETTINGS">
+            <intent-filter>
+                <action android:name="dev.niltsiar.tvhome.GUARD" />
+            </intent-filter>
+        </receiver>
+
         <!-- stock_home_redirect at boot: the service opens this invisible activity once, so the screen behind it sends a
              window event when it closes. -->
         <activity

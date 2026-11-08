@@ -1,5 +1,6 @@
 package dev.niltsiar.tvhome.service.keys
 
+import android.Manifest
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.Application
@@ -10,6 +11,7 @@ import android.content.pm.ActivityInfo
 import android.content.pm.ResolveInfo
 import android.os.Environment
 import android.os.Looper
+import android.os.PowerManager
 import android.provider.Settings
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
@@ -46,6 +48,7 @@ class KeyServiceTest {
     @Before
     fun setUp() {
         SharedPresses.reset()
+        GuardKeep.reset()
         packages.addActivityIfNotPresent(home)
         packages.addIntentFilterForActivity(
             home,
@@ -490,5 +493,95 @@ class KeyServiceTest {
         service.start(TvConfig())
 
         assertEquals(emptySet<String>(), recordedServices())
+    }
+
+    private fun optInToStandbyExit() {
+        GuardKeep.setOffInStandby(app, true)
+        shadowOf(app).grantPermissions(Manifest.permission.WRITE_SECURE_SETTINGS)
+    }
+
+    private fun screenOff() {
+        shadowOf(app.getSystemService(PowerManager::class.java)).turnScreenOn(false)
+        app.sendBroadcast(Intent(Intent.ACTION_SCREEN_OFF))
+        shadowOf(Looper.getMainLooper()).idle()
+    }
+
+    private fun watchingScreenOn() = shadowOf(app).registeredReceivers.any { it.intentFilter.hasAction(Intent.ACTION_SCREEN_ON) }
+
+    @Test
+    fun with_the_opt_in_and_the_permission_the_screen_going_off_makes_the_service_wait_for_the_screen() {
+        optInToStandbyExit()
+        service.start(TvConfig())
+
+        screenOff()
+
+        assertTrue(watchingScreenOn())
+    }
+
+    @Test
+    fun without_the_permission_the_screen_going_off_leaves_the_service_bound() {
+        GuardKeep.setOffInStandby(app, true)
+        shadowOf(app).denyPermissions(Manifest.permission.WRITE_SECURE_SETTINGS)
+        service.start(TvConfig())
+
+        screenOff()
+
+        assertFalse(watchingScreenOn())
+    }
+
+    @Test
+    fun without_the_opt_in_the_screen_going_off_leaves_the_service_bound() {
+        shadowOf(app).grantPermissions(Manifest.permission.WRITE_SECURE_SETTINGS)
+        service.start(TvConfig())
+
+        screenOff()
+
+        assertFalse(watchingScreenOn())
+    }
+
+    @Test
+    fun an_opt_in_that_arrives_after_the_service_bound_arms_it() {
+        service.start(TvConfig())
+        PowerMenu.bind(service)
+
+        optInToStandbyExit()
+        GuardKeep.ensureKeyService(app)
+        screenOff()
+
+        assertTrue(watchingScreenOn())
+    }
+
+    @Test
+    fun turning_the_opt_in_off_disarms_a_bound_service() {
+        optInToStandbyExit()
+        service.start(TvConfig())
+        PowerMenu.bind(service)
+
+        GuardKeep.setOffInStandby(app, false)
+        GuardKeep.ensureKeyService(app)
+        screenOff()
+
+        assertFalse(watchingScreenOn())
+    }
+
+    @Test
+    fun a_service_armed_while_the_screen_is_already_off_steps_out_at_once() {
+        optInToStandbyExit()
+        shadowOf(app.getSystemService(PowerManager::class.java)).turnScreenOn(false)
+
+        service.start(TvConfig())
+
+        assertTrue(watchingScreenOn())
+    }
+
+    @Test
+    fun a_service_that_stepped_out_for_standby_keeps_its_repair_record_when_it_unbinds() {
+        optInToStandbyExit()
+        service.start(TvConfig(restoreKeyServices = true))
+
+        screenOff()
+        service.onUnbind(Intent())
+
+        assertEquals(setOf(KeyService::class.java.name), ServiceRepair.recorded(app))
     }
 }

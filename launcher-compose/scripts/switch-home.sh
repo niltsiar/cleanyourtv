@@ -16,6 +16,14 @@
 #                                   the theme Home puts KeyService back on the enabled list after a force stop. `new` without
 #                                   it revokes the grant. The permission opens every secure and global setting, not only the
 #                                   accessibility list, so it stays off unless asked for.
+#          GUARD=1   with `new`: the standby guard, for a TV whose power key cannot wake the set while the key service stays
+#                    bound with the screen off (TCL tc8000_ay30a2, Android 11) or whose firmware force-stops third-party apps
+#                    (TCL, Xiaomi China). It grants WRITE_SECURE_SETTINGS (as RESTORE_KEY_SERVICES=1 does, so pass either on
+#                    every run: a run with neither revokes it and the guard then does nothing), allows the notification
+#                    listener GuardRevival (reads no notification; the system binds it again after a kill) and sends the
+#                    opt-in broadcast, whose reply it prints. The key service then leaves the accessibility list at screen-off
+#                    and returns at screen-on. With `old` it sends the opt-out and disallows the listener. Without GUARD=1
+#                    `new` leaves an earlier opt-in as it is.
 #
 # Stages: `KEYS=keep SCREENSAVER=keep scripts/switch-home.sh new` changes only Home. Run it again without the two
 # variables to move the key service and the screensaver after Home has been seen working.
@@ -261,6 +269,32 @@ switch_screensaver() {
   put_setting screensaver_components "$before" "$want"
 }
 
+# The standby guard. The broadcast's reply is the line `am broadcast` prints; the receiver answers guard_off_in_standby=<value>.
+guard_opt_in() {
+  adb_tv shell am broadcast -a "$NEW_PACKAGE.GUARD" -n "$NEW_PACKAGE/.service.keys.GuardConfig" --ez guard_off_in_standby "$1" 2>&1 \
+    | tr -d '\r' | grep 'Broadcast completed' || echo "no reply from $NEW_PACKAGE.GUARD"
+}
+
+switch_guard() {
+  local listener="$NEW_PACKAGE/.service.keys.GuardRevival"
+  echo "== Standby guard"
+  if [ "$1" = new ]; then
+    if [ "${GUARD:-0}" != 1 ]; then
+      echo "not requested (GUARD=1 turns it on)"
+      return 0
+    fi
+    adb_tv shell cmd notification allow_listener "$listener" > /dev/null 2>&1 \
+      && echo "notification listener allowed: $listener" \
+      || echo "not allowed: $listener; nothing starts the launcher again after the firmware kills it"
+    guard_opt_in true
+  else
+    guard_opt_in false
+    adb_tv shell cmd notification disallow_listener "$listener" > /dev/null 2>&1 \
+      && echo "notification listener disallowed: $listener" \
+      || echo "could not disallow $listener"
+  fi
+}
+
 # restore_setting NAME RAW: put a setting back to RAW as read_raw gave it; "null" means unset.
 restore_setting() {
   local now
@@ -389,14 +423,14 @@ if [ "$1" = new ]; then
   echo "== Grant location (for the Wi-Fi name)"
   adb_tv shell pm grant "$PACKAGE" android.permission.ACCESS_FINE_LOCATION > /dev/null 2>&1 || echo "not granted; the network button will not show the Wi-Fi name"
   # The grant follows the switch on every run: it survives a reinstall, so a run without the switch takes it back.
-  echo "== Secure settings permission (restore_key_services)"
-  if [ "${RESTORE_KEY_SERVICES:-0}" = 1 ]; then
+  echo "== Secure settings permission (restore_key_services, GUARD)"
+  if [ "${RESTORE_KEY_SERVICES:-0}" = 1 ] || [ "${GUARD:-0}" = 1 ]; then
     adb_tv shell pm grant "$PACKAGE" android.permission.WRITE_SECURE_SETTINGS > /dev/null 2>&1 \
-      && echo "granted; restore_key_services in the theme now works" \
-      || echo "not granted; restore_key_services cannot put the key service back after a force stop"
+      && echo "granted; restore_key_services in the theme and the standby guard can now write the key service list" \
+      || echo "not granted; the key service cannot be put back after a force stop or a standby"
   else
     adb_tv shell pm revoke "$PACKAGE" android.permission.WRITE_SECURE_SETTINGS > /dev/null 2>&1 || true
-    echo "revoked (RESTORE_KEY_SERVICES=1 grants it)"
+    echo "revoked (RESTORE_KEY_SERVICES=1 or GUARD=1 grants it)"
   fi
 fi
 
@@ -440,6 +474,9 @@ if [ "$IN_FRONT" != 1 ]; then
 fi
 echo "Home is $PACKAGE and in front"
 
+# old opts out before the key service goes, so no screen-on watch lists ours again.
+if [ "$1" = old ]; then switch_guard old; fi
+
 echo "== Remote key service"
 if [ "$KEYS" = keep ]; then
   echo "KEYS=keep: left as it is"
@@ -456,6 +493,9 @@ else
     exit 1
   fi
 fi
+
+# new opts in once the key service is bound, so the opt-in arms the bound service at once.
+if [ "$1" = new ]; then switch_guard new; fi
 
 echo "== Screensaver"
 if [ "$SCREENSAVER" = keep ]; then
