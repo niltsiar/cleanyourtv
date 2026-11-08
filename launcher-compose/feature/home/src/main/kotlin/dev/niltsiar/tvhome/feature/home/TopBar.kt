@@ -17,6 +17,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -64,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.ChromeShadow
+import dev.niltsiar.tvhome.core.designsystem.FocusInk
 import dev.niltsiar.tvhome.core.designsystem.GlassIconButton
 import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.designsystem.GlassSurface
@@ -105,6 +107,7 @@ private val OfflineRed = Color(0xFFFF453A)
  * icon at rest and the focused one grows into its labelled pill; a [wifiLabelWidth] over 0 keeps the network name beside
  * the icon, capping the button at that many dp. [labelsAtRest] (the theme's icon_only_buttons false) keeps the network
  * name too, capped at 180 dp when [wifiLabelWidth] is 0, and gives the Settings button its label at rest.
+ * [inputsLabelAtRest] (the theme's icon_only_inputs false) does the same for the Inputs button.
  * [wifiStatusColor] tints the icon by the connection ([wifiStatusWarnings] adds orange and red). [vpnApp] says a VPN app is set, so a VPN that is down is worth a badge. [dateBelowClock] stacks the date under the clock.
  * [reorderButton] adds a button that turns reorder mode on and off, [libraryButton] one that opens the App library.
  * [animated] is false with animations off or reduced_motion.
@@ -115,6 +118,7 @@ public data class TopBarLayout(
     val showInputsPill: Boolean = true,
     val wifiLabelWidth: Int = 0,
     val labelsAtRest: Boolean = false,
+    val inputsLabelAtRest: Boolean = false,
     val wifiStatusColor: Boolean = false,
     val wifiStatusWarnings: Boolean = false,
     val vpnApp: Boolean = false,
@@ -131,6 +135,7 @@ public fun TvConfig.topBarLayout(): TopBarLayout =
         showInputsPill = showInputsPill,
         wifiLabelWidth = wifiLabelWidth,
         labelsAtRest = iconOnlyButtons == false,
+        inputsLabelAtRest = iconOnlyInputs == false,
         wifiStatusColor = wifiStatusColor,
         wifiStatusWarnings = wifiStatusWarnings,
         vpnApp = vpnApp != null,
@@ -243,7 +248,8 @@ internal fun TopBar(
                         .nameInBand(input, BarControl.Inputs)
                         .onGloballyPositioned { input.inputsBounds.value = it.boundsInRoot() },
                 interactionSource = inputsSource,
-                focusLabel = offer?.label ?: inputs,
+                label = if (layout.inputsLabelAtRest) restLabel(offer?.label ?: inputs) else null,
+                focusLabel = (offer?.label ?: inputs).takeUnless { layout.inputsLabelAtRest },
                 offerToken = offer?.token ?: 0,
                 active = inputsOpen,
             ) { _, ink ->
@@ -282,19 +288,7 @@ internal fun TopBar(
                         input.anchor.value = bounds
                         input.actions.onSettingsMenu()
                     }),
-            label =
-                if (layout.labelsAtRest) {
-                    { ink ->
-                        BasicText(
-                            text = settings,
-                            style = TvTheme.typography.pillLabel,
-                            maxLines = 1,
-                            color = { ink.content().let { it.copy(alpha = it.alpha * unfocusedLabelAlpha(ink.progress())) } },
-                        )
-                    }
-                } else {
-                    null
-                },
+            label = if (layout.labelsAtRest) restLabel(settings) else null,
             focusLabel = settings.takeUnless { layout.labelsAtRest },
             active = settingsOpen,
         ) { focus, ink ->
@@ -302,6 +296,17 @@ internal fun TopBar(
         }
     }
 }
+
+/** A button's label at rest: the pill label, dimmed until the button takes focus. */
+private fun restLabel(text: String): @Composable RowScope.(FocusInk) -> Unit =
+    { ink ->
+        BasicText(
+            text = text,
+            style = TvTheme.typography.pillLabel,
+            maxLines = 1,
+            color = { ink.content().let { it.copy(alpha = it.alpha * unfocusedLabelAlpha(ink.progress())) } },
+        )
+    }
 
 /** The nine-square icon of the App library; it grows with focus. */
 @Composable

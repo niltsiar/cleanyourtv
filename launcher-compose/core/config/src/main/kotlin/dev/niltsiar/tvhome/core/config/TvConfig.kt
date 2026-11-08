@@ -75,6 +75,8 @@ public data class TvConfig(
     val showInputsPill: Boolean = true,
     /** Null with no theme applied: every top-bar button is a round icon at rest and shows its label on focus. A theme without the key gets false, as in the Java launcher: then the Wi-Fi and Settings buttons keep their labels. */
     val iconOnlyButtons: Boolean? = null,
+    /** Null with no theme applied: the Inputs button is a round icon at rest and shows its label on focus. A theme without the key gets false, as in the Java launcher: the button then keeps its label at rest. */
+    val iconOnlyInputs: Boolean? = null,
     /** 0 to 300 dp: the network name stays beside the Wi-Fi icon at rest, up to this width; 0 leaves the icon alone. */
     val wifiLabelWidth: Int = 0,
     /** The Wi-Fi icon turns green while the TV is online. */

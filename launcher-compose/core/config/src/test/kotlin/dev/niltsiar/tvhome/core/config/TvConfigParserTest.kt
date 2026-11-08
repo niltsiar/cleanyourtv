@@ -6,8 +6,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TvConfigParserTest {
-    /** What a theme that sets nothing gives: the defaults, with the Java launcher's icon_only_buttons false. */
-    private val applied = TvConfig(iconOnlyButtons = false)
+    /** What a theme that sets nothing gives: the defaults, with the Java launcher's icon_only_buttons and icon_only_inputs false. */
+    private val applied = TvConfig(iconOnlyButtons = false, iconOnlyInputs = false)
 
     @Test
     fun an_empty_object_keeps_every_default_and_reports_nothing() {
@@ -384,6 +384,23 @@ class TvConfigParserTest {
     }
 
     @Test
+    fun icon_only_inputs_is_false_in_a_theme_that_leaves_it_out_and_null_with_no_theme() {
+        assertEquals(false, parseTvConfig("""{"columns": 6}""").config.iconOnlyInputs)
+        assertEquals(false, parseTvConfig("{}").config.iconOnlyInputs)
+        assertEquals(null, parseTvConfig("[1, 2]").config.iconOnlyInputs)
+        assertEquals(null, parseTvConfig("").config.iconOnlyInputs)
+        assertEquals(true, parseTvConfig("""{"icon_only_inputs": true}""").config.iconOnlyInputs)
+        assertEquals(false, parseTvConfig("""{"icon_only_inputs": false}""").config.iconOnlyInputs)
+    }
+
+    @Test
+    fun icon_only_inputs_of_the_wrong_type_is_rejected_and_reads_as_false() {
+        val parsed = parseTvConfig("""{"icon_only_inputs": "true"}""")
+        assertEquals(false, parsed.config.iconOnlyInputs)
+        assertEquals(listOf("icon_only_inputs"), parsed.rejectedKeys)
+    }
+
+    @Test
     fun the_network_button_keys_are_read_and_a_blank_vpn_app_is_none() {
         val parsed =
             parseTvConfig(
@@ -514,6 +531,7 @@ class TvConfigParserTest {
             "show_network_pill" to ("false" to defaults.copy(showNetworkPill = false)),
             "show_inputs_pill" to ("false" to defaults.copy(showInputsPill = false)),
             "icon_only_buttons" to ("true" to defaults.copy(iconOnlyButtons = true)),
+            "icon_only_inputs" to ("true" to defaults.copy(iconOnlyInputs = true)),
             "wifi_label_width" to ("120" to defaults.copy(wifiLabelWidth = 120)),
             "wifi_status_color" to ("true" to defaults.copy(wifiStatusColor = true)),
             "wifi_status_warnings" to ("true" to defaults.copy(wifiStatusWarnings = true)),

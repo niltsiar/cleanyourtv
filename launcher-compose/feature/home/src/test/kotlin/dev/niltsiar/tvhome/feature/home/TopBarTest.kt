@@ -18,6 +18,7 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.config.parseTvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
+import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
 import org.junit.Assert.assertEquals
@@ -77,8 +78,18 @@ class TopBarTest {
         config: TvConfig = SixColumns,
         network: NetworkState = Wifi,
         topBarApps: List<AppEntry> = emptyList(),
+        inputs: InputsMenu = InputsMenu(available = false),
     ) {
-        val state = homeUiState(homeApps(config = config), Evening, null, Locale.ENGLISH, network = network, topBarApps = topBarApps)
+        val state =
+            homeUiState(
+                homeApps(config = config),
+                Evening,
+                null,
+                Locale.ENGLISH,
+                network = network,
+                topBarApps = topBarApps,
+                inputs = inputs,
+            )
         compose.setContent {
             TvTheme {
                 HomeScreen(
@@ -194,6 +205,42 @@ class TopBarTest {
         compose.onNodeWithText("Settings").assertDoesNotExist()
         val rest = compose.onNodeWithContentDescription("Settings").getBoundsInRoot()
         assertEquals(rest.width, rest.height)
+    }
+
+    @Test
+    fun the_inputs_button_is_a_round_icon_at_rest_with_no_theme() {
+        show(TvConfig(columns = 6), inputs = FourPorts)
+        compose.onNodeWithText("Inputs").assertDoesNotExist()
+        val rest = compose.onNodeWithContentDescription("Inputs").getBoundsInRoot()
+        assertEquals(rest.width, rest.height)
+    }
+
+    @Test
+    fun icon_only_inputs_true_leaves_the_inputs_button_a_round_icon_at_rest() {
+        show(TvConfig(columns = 6, iconOnlyInputs = true), inputs = FourPorts)
+        compose.onNodeWithText("Inputs").assertDoesNotExist()
+        val rest = compose.onNodeWithContentDescription("Inputs").getBoundsInRoot()
+        assertEquals(rest.width, rest.height)
+    }
+
+    @Test
+    fun icon_only_inputs_false_keeps_the_inputs_label_at_rest() {
+        show(TvConfig(columns = 6, iconOnlyInputs = false), inputs = FourPorts)
+        compose.onNodeWithText("Inputs").assertIsDisplayed()
+        val rest = compose.onNodeWithContentDescription("Inputs").getBoundsInRoot()
+        assertTrue(rest.width > rest.height)
+    }
+
+    @Test
+    fun a_theme_that_leaves_icon_only_inputs_out_keeps_the_inputs_label_at_rest() {
+        show(parseTvConfig("""{"columns": 6}""").config, inputs = FourPorts)
+        compose.onNodeWithText("Inputs").assertIsDisplayed()
+    }
+
+    @Test
+    fun icon_only_buttons_true_leaves_the_inputs_label_at_rest() {
+        show(parseTvConfig("""{"columns": 6, "icon_only_buttons": true}""").config, inputs = FourPorts)
+        compose.onNodeWithText("Inputs").assertIsDisplayed()
     }
 
     @Test
