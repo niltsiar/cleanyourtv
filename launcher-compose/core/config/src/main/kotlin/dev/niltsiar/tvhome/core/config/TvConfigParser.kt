@@ -170,6 +170,7 @@ public fun parseTvConfig(json: String): ParsedConfig {
             consumeVolumeKeys = o.bool("consume_volume_keys", d.consumeVolumeKeys),
             stockHomeRedirect = o.optionalString("stock_home_redirect", d.stockHomeRedirect),
             homeLongPressHome = o.bool("home_long_press_home", d.homeLongPressHome),
+            homeIgnoreChannelKeys = o.bool("home_ignore_channel_keys", d.homeIgnoreChannelKeys),
             powerOnHome = o.bool("power_on_home", d.powerOnHome),
             powerOnHomeAlways = o.bool("power_on_home_always", d.powerOnHomeAlways),
             homeIdleClockMinutes = o.int("home_idle_clock_minutes", d.homeIdleClockMinutes, 0..1440),

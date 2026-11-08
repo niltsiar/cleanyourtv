@@ -70,7 +70,7 @@ class TvConfigParserTest {
         assertEquals(0, config.openOnStartNetworkWait)
         assertTrue(config.keyFilter)
         assertFalse(config.gamepadPassthrough || config.consumeVolumeKeys || config.homeLongPressHome || config.captureInputKeys)
-        assertFalse(config.backOpensClock || config.powerOnHome)
+        assertFalse(config.backOpensClock || config.powerOnHome || config.homeIgnoreChannelKeys)
         assertEquals(emptyList<Int>(), config.settingsKeyKeycodes + config.settingsKeyScancodes + config.inputKeyKeycodes)
         assertEquals(null, config.stockHomeRedirect)
     }
@@ -172,6 +172,19 @@ class TvConfigParserTest {
 
         assertTrue(parsed.config.captureInputKeys)
         assertEquals(emptyList<String>(), parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys)
+    }
+
+    @Test
+    fun home_ignore_channel_keys_is_read_and_a_wrong_type_keeps_the_default() {
+        val on = parseTvConfig("""{"home_ignore_channel_keys": true}""")
+        assertTrue(on.config.homeIgnoreChannelKeys)
+        assertEquals(emptyList<String>(), on.unsupportedKeys + on.unknownKeys + on.rejectedKeys)
+
+        assertFalse(parseTvConfig("""{"home_ignore_channel_keys": false}""").config.homeIgnoreChannelKeys)
+        assertFalse(parseTvConfig("{}").config.homeIgnoreChannelKeys)
+        val wrong = parseTvConfig("""{"home_ignore_channel_keys": "yes"}""")
+        assertFalse(wrong.config.homeIgnoreChannelKeys)
+        assertEquals(listOf("home_ignore_channel_keys"), wrong.rejectedKeys)
     }
 
     @Test
@@ -541,6 +554,7 @@ class TvConfigParserTest {
             "consume_volume_keys" to ("true" to defaults.copy(consumeVolumeKeys = true)),
             "stock_home_redirect" to (""""com.stock"""" to defaults.copy(stockHomeRedirect = "com.stock")),
             "home_long_press_home" to ("true" to defaults.copy(homeLongPressHome = true)),
+            "home_ignore_channel_keys" to ("true" to defaults.copy(homeIgnoreChannelKeys = true)),
             "power_on_home" to ("true" to defaults.copy(powerOnHome = true)),
             "power_on_home_always" to ("true" to defaults.copy(powerOnHomeAlways = true)),
             "home_idle_clock_minutes" to ("10" to defaults.copy(homeIdleClockMinutes = 10)),

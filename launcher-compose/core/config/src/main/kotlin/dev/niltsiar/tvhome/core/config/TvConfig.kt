@@ -189,6 +189,8 @@ public data class TvConfig(
     val stockHomeRedirect: String? = null,
     /** The key service takes every Home press, a held one too, instead of Android's long-press action. */
     val homeLongPressHome: Boolean = false,
+    /** Channel Up and Down do nothing while Home is in front, where the TV would open its Live TV app for them. */
+    val homeIgnoreChannelKeys: Boolean = false,
     val powerOnHome: Boolean = false,
     val powerOnHomeAlways: Boolean = false,
     /** Minutes Home may sit untouched before the clock screensaver, 0 to 1440; 0 is off. */
