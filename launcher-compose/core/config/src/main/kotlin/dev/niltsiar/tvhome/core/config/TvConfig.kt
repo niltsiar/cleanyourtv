@@ -108,6 +108,8 @@ public data class TvConfig(
     val dockBand: Boolean = true,
     /** The focused dock tile lights the dock's top rim and floor in its colour. */
     val dockEdgeLight: Boolean = true,
+    /** The dock panel's padding is the same on all four sides: its side padding, the room the focus ring needs, all round. */
+    val dockEvenPadding: Boolean = false,
     /** Opaque ARGB. */
     val backgroundColor: Int = OPAQUE_BLACK,
     val headerScrim: HeaderScrim = HeaderScrim.Auto,

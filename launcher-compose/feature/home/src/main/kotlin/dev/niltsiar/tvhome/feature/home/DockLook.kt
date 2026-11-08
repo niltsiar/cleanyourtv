@@ -8,7 +8,7 @@ import kotlin.math.pow
 /**
  * The dock panel's look, from the theme: whether it is drawn at all ([band]), the percent [opacity] that sets its tint
  * (null: a tint that lightens on a bright wallpaper), [glass] for the light tint whatever the TV's night mode, and the
- * [edgeLight] of the focused tile on its rim and floor.
+ * [edgeLight] of the focused tile on its rim and floor. With [evenPadding] the panel pads its tiles the same on all four sides.
  */
 @Immutable
 public data class DockLook(
@@ -16,6 +16,7 @@ public data class DockLook(
     val opacity: Int? = null,
     val glass: Boolean = false,
     val edgeLight: Boolean = true,
+    val evenPadding: Boolean = false,
 )
 
 public fun TvConfig.dockLook(): DockLook =
@@ -24,6 +25,7 @@ public fun TvConfig.dockLook(): DockLook =
         opacity = dockOpacity,
         glass = dockGlass,
         edgeLight = dockEdgeLight && dockBand && animations && !reducedMotion,
+        evenPadding = dockEvenPadding,
     )
 
 private val DarkTint = Color(0xFF0B0D12)

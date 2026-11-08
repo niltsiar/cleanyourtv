@@ -51,7 +51,7 @@ internal const val TILE_ASPECT = 16f / 9f
 
 /**
  * The share of the grid's [gridWidth] that its tiles may use so that the dock and [rowsBelowDock] rows below it fit
- * in [availableHeight] (all in dp, [gap] between tiles and as the dock panel's padding). 1 when they fit at full
+ * in [availableHeight] (all in dp, [gap] between tiles, [dockPadding] above and below the dock's tiles). 1 when they fit at full
  * width or [rowsBelowDock] is 0; never under 0.85, so tiles stay a recognisable size and the extra rows scroll.
  */
 internal fun tileWidthShare(
@@ -60,11 +60,12 @@ internal fun tileWidthShare(
     columns: Int,
     rowsBelowDock: Int,
     gap: Float,
+    dockPadding: Float = gap,
 ): Float {
     if (rowsBelowDock <= 0 || columns <= 0 || gridWidth <= 0f || availableHeight <= 0f) return 1f
     // The height of the dock panel (a tile and its padding) plus the rows is linear in the grid width; solve for the width.
     val rows = rowsBelowDock
-    val tilesWidth = (availableHeight - (rows + 2) * gap) * TILE_ASPECT * columns
+    val tilesWidth = (availableHeight - 2 * dockPadding - rows * gap) * TILE_ASPECT * columns
     val fitting = (tilesWidth + (columns + 1) * gap + rows * (columns - 1) * gap) / (rows + 1)
     return (fitting / gridWidth).coerceIn(MIN_TILE_SHARE, 1f)
 }
@@ -75,7 +76,7 @@ internal const val DOCK_LOWERING = 120f
 /**
  * How much of [DOCK_LOWERING] dock focus uses, in dp: all of it for the peek of the first row ([rowsBelowDock] 0), and
  * with [rowsBelowDock] full rows to show (at most the [gridRows] there are) only what is left of the screen under the
- * last of them and [bottomMargin]. [shelfBottom] is where the dock panel starts; the dock panel is a tile and a [gap]
+ * last of them and [bottomMargin]. [shelfBottom] is where the dock panel starts; the dock panel is a tile and a [dockPadding]
  * above and below it, and a row is a [gap] and a tile; the dock panel and each row also hold [nameRoom] for a tile's name.
  */
 internal fun dockLowering(
@@ -83,13 +84,14 @@ internal fun dockLowering(
     shelfBottom: Float,
     tileHeight: Float,
     gap: Float,
+    dockPadding: Float = gap,
     gridRows: Int,
     rowsBelowDock: Int,
     bottomMargin: Float = 48f,
     nameRoom: Float = 0f,
 ): Float {
     val rows = minOf(rowsBelowDock, gridRows).coerceAtLeast(0)
-    val lastBottom = shelfBottom + tileHeight + nameRoom + 2 * gap + rows * (gap + tileHeight + nameRoom)
+    val lastBottom = shelfBottom + tileHeight + nameRoom + 2 * dockPadding + rows * (gap + tileHeight + nameRoom)
     return (windowHeight - bottomMargin - lastBottom).coerceIn(0f, DOCK_LOWERING)
 }
 

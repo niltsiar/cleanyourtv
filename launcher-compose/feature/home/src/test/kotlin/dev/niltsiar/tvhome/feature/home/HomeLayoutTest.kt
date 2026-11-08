@@ -16,11 +16,12 @@ class HomeLayoutTest {
         share: Float,
         rows: Int,
         columns: Int = 6,
+        dockPadding: Float = gap,
     ): Float {
         val inner = gridWidth * share
         val dockTile = (inner - (columns + 1) * gap) / columns * 9 / 16
         val gridTile = (inner - (columns - 1) * gap) / columns * 9 / 16
-        return dockTile + 2 * gap + rows * (gridTile + gap)
+        return dockTile + 2 * dockPadding + rows * (gridTile + gap)
     }
 
     @Test
@@ -38,6 +39,14 @@ class HomeLayoutTest {
         val share = tileWidthShare(gridWidth, height, columns = 6, rowsBelowDock = 3, gap = gap)
         assertTrue("share $share", share < 1f && share > 0.85f)
         assertEquals(height, needed(share, rows = 3), 0.5f)
+    }
+
+    @Test
+    fun a_dock_panel_padded_more_than_a_gap_shrinks_the_tiles_further_so_the_rows_still_fit() {
+        val padded = tileWidthShare(gridWidth, height, columns = 6, rowsBelowDock = 3, gap = gap, dockPadding = 15f)
+
+        assertTrue(padded < tileWidthShare(gridWidth, height, columns = 6, rowsBelowDock = 3, gap = gap))
+        assertEquals(height, needed(padded, rows = 3, dockPadding = 15f), 0.5f)
     }
 
     @Test
@@ -78,6 +87,22 @@ class HomeLayoutTest {
         assertEquals(540f - 48f - (245f + 70f + 48f + 94f), lowering(gridRows = 3, rowsBelowDock = 1), 0.01f)
         assertEquals(0f, lowering(gridRows = 3, rowsBelowDock = 3), 0f)
         assertEquals(lowering(gridRows = 3, rowsBelowDock = 1), lowering(gridRows = 1, rowsBelowDock = 3), 0.01f)
+    }
+
+    @Test
+    fun a_dock_panel_padded_more_than_a_gap_lowers_the_dock_by_twice_the_extra_less() {
+        fun lowering(dockPadding: Float) =
+            dockLowering(
+                windowHeight = 600f,
+                shelfBottom = 245f,
+                tileHeight = 70f,
+                gap = 24f,
+                dockPadding = dockPadding,
+                gridRows = 3,
+                rowsBelowDock = 1,
+            )
+
+        assertEquals(lowering(24f) - 2 * 5.8f, lowering(29.8f), 0.01f)
     }
 
     @Test

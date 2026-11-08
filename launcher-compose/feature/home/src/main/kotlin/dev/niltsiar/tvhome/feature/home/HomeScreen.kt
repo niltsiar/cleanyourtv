@@ -245,6 +245,47 @@ private val DockShrunkSide = 28.dp
 /** From the outer edge of a focused end dock tile's ring to the dock panel's wall, at least. */
 private val DockRingWallClear = 12.dp
 
+/** The dock panel's padding: [side] left and right of the tiles, [vertical] above and below them. */
+@Immutable
+internal data class DockPadding(
+    val side: Dp,
+    val vertical: Dp = TileGap,
+)
+
+/**
+ * The padding of a dock panel whose focused end tile's ring needs [ringSide] to the wall. A [shrunk] panel (fewer tiles than
+ * the row holds) keeps at least [DockShrunkSide]. With [even] the top and bottom take the side's padding, or [TileGap] if
+ * that is more, and so does the side.
+ */
+internal fun dockPadding(
+    ringSide: Dp,
+    shrunk: Boolean,
+    even: Boolean,
+): DockPadding {
+    val side = if (shrunk) maxOf(DockShrunkSide, ringSide) else ringSide
+    if (!even) return DockPadding(side)
+    val all = maxOf(side, TileGap)
+    return DockPadding(all, all)
+}
+
+/** The width of a tile of the dock's row, from the [gridWidth] of [columns] tiles and the gaps between them. */
+private fun dockRowTileWidth(
+    gridWidth: Dp,
+    columns: Int,
+): Dp = (gridWidth - TileGap * (columns - 1)) / columns
+
+/** The padding a focused end tile of the dock row, grown [scale] times, needs: its ring's reach and [DockRingWallClear]. */
+private fun Density.dockRingSide(
+    rowTileWidth: Dp,
+    scale: Float,
+): Dp = ringReach(rowTileWidth.toPx(), scale).toDp() + DockRingWallClear
+
+/** Whether the dock panel is drawn only as wide as its [dockSize] tiles: it holds fewer than the row has room for. */
+private fun DockLook.shrinks(
+    layout: HomeLayout,
+    dockSize: Int,
+): Boolean = band && !layout.singleRow && dockSize < layout.columns
+
 /** From the shelf's bottom edge up to the line under which a row at the top of the grid counts as fully visible. */
 private val ShelfToFade = 16.dp
 
@@ -337,7 +378,8 @@ public fun HomeScreen(
     val currentOpenLibrary = rememberUpdatedState(onOpenLibrary)
     val shelfHeight = if (shelfLayout.cinematic) CinematicShelfHeight else ShelfHeight
     val shelfBottom = ContentTop + shelfHeight
-    val dim = rememberFocusDim(currentState, shelfBottom, layout)
+    val dockPadding = rememberDockPadding(currentState, layout, dockLook)
+    val dim = rememberFocusDim(currentState, shelfBottom, layout, dockPadding)
     val windowHeight =
         with(LocalDensity.current) {
             LocalWindowInfo.current.containerSize.height
@@ -472,6 +514,7 @@ public fun HomeScreen(
                 layout,
                 shelfLayout,
                 dockLook,
+                dockPadding,
                 edge,
                 shelfBottom,
                 onFocus,
@@ -561,6 +604,7 @@ public fun HomeScreen(
                         bandBottom = shelfBottom - ShelfToFade,
                         onPick = input.actions.onMenuPick,
                         dockTile = menuDockTile,
+                        dockPadding = dockPadding.vertical,
                     )
                 }
             }
@@ -594,6 +638,7 @@ private fun HomeContent(
     layout: HomeLayout,
     shelfLayout: ShelfLayout,
     dockLook: DockLook,
+    dockPadding: DockPadding,
     edge: DockEdgeLight?,
     shelfBottom: Dp,
     onFocus: (String) -> Unit,
@@ -603,19 +648,19 @@ private fun HomeContent(
     onOpenLibrary: () -> Unit,
 ) {
     val density = LocalDensity.current
-    // The focused tile rests one gap inside the dock panel, so at rest the dock panel's top edge is the shelf's bottom edge.
-    val pivotPx = with(density) { (shelfBottom + TileGap).toPx() }
+    // The focused tile rests the panel's top padding inside the dock panel, so at rest the panel's top edge is the shelf's bottom edge.
+    val pivotPx = with(density) { (shelfBottom + dockPadding.vertical).toPx() }
     val pivotSpec = remember(pivotPx, dim) { PivotBringIntoViewSpec(pivotPx, dim::lowPx) }
     val shelfBottomPx = with(density) { shelfBottom.toPx() }
     val window = LocalWindowInfo.current.containerSize
     val gridWidth = with(density) { window.width.toDp() } - ScreenMargin * 2
-    val share = gridShare(layout, gridWidth, with(density) { window.height.toDp() }, shelfBottom)
+    val share = gridShare(layout, gridWidth, with(density) { window.height.toDp() }, shelfBottom, dockPadding.vertical)
     val startMargin = gridStart(gridWidth, share)
     val endMargin = ScreenMargin + gridWidth * (1f - share) - (startMargin - ScreenMargin)
     // The pill ends the grid: scrolled to the end it stands whole above the bottom fade, not a bottom margin higher.
     val pillAfterGrid = layout.libraryPill && !layout.singleRow
     val bottomMargin = if (pillAfterGrid) with(density) { (settleOf(window.height.toFloat()) + 1f).toDp() } else GridBottom
-    val rowTileWidth = (gridWidth - TileGap * (layout.columns - 1)) / layout.columns
+    val rowTileWidth = dockRowTileWidth(gridWidth, layout.columns)
     val firstDockTile = remember { FocusRequester() }
     val dockRow = rememberLazyListState()
     // Read here and not in the grid's content: a state the items read, even one that ignores equal lists, recomposes
@@ -703,6 +748,7 @@ private fun HomeContent(
                     layout = layout,
                     shelfLayout = shelfLayout,
                     look = dockLook,
+                    padding = dockPadding,
                     edge = edge,
                     shade = remember(dim) { { dim.shade.value } },
                     rowTileWidth = rowTileWidth,
@@ -923,11 +969,27 @@ private class FocusDim(
 private const val GROUP_MS = 320
 private const val GROUP_OVERSHOOT_DAMPING = 0.7f
 
+/** The dock panel's padding in this window, from the width of the dock row's tiles, which sets the room a focused end tile's ring needs. */
+@Composable
+private fun rememberDockPadding(
+    state: State<() -> HomeUiState>,
+    layout: HomeLayout,
+    look: DockLook,
+): DockPadding {
+    val density = LocalDensity.current
+    val windowWidth = LocalWindowInfo.current.containerSize.width
+    val shrunk by remember(state, layout, look) { derivedStateOf { look.shrinks(layout, state.value().dock.size) } }
+    val scale = TvTheme.motion.focusScale(TILE_FOCUSED_SCALE)
+    val tileWidth = dockRowTileWidth(with(density) { windowWidth.toDp() } - ScreenMargin * 2, layout.columns)
+    return dockPadding(density.dockRingSide(tileWidth, scale), shrunk, look.evenPadding)
+}
+
 @Composable
 private fun rememberFocusDim(
     state: State<() -> HomeUiState>,
     shelfBottom: Dp,
     layout: HomeLayout,
+    dockPadding: DockPadding,
 ): FocusDim {
     val density = LocalDensity.current
     val window = LocalWindowInfo.current.containerSize
@@ -938,7 +1000,7 @@ private fun rememberFocusDim(
             val width = window.width.toDp()
             val height = window.height.toDp()
             val gridWidth = width - ScreenMargin * 2
-            val share = gridShare(layout, gridWidth, height, shelfBottom)
+            val share = gridShare(layout, gridWidth, height, shelfBottom, dockPadding.vertical)
             val tileWidth = (gridWidth * share - TileGap * (layout.columns - 1)) / layout.columns
             val tileHeight = tileWidth / TILE_ASPECT
             val gridRows = if (layout.singleRow) 0 else (gridCount + layout.columns - 1) / layout.columns
@@ -951,6 +1013,7 @@ private fun rememberFocusDim(
                         shelfBottom = shelfBottom.value,
                         tileHeight = tileHeight.value,
                         gap = TileGap.value,
+                        dockPadding = dockPadding.vertical.value,
                         gridRows = gridRows,
                         rowsBelowDock = layout.rowsBelowDock,
                         bottomMargin = GridBottom.value,
@@ -964,7 +1027,12 @@ private fun rememberFocusDim(
             val heroTop = ContentTop + lowered
             Triple(
                 lowered.toPx(),
-                Rect(edge, top / height, end, (top + tileHeight + TileGap * 2 + layout.nameRoom(tileHeight.value, scale).dp) / height),
+                Rect(
+                    edge,
+                    top / height,
+                    end,
+                    (top + tileHeight + dockPadding.vertical * 2 + layout.nameRoom(tileHeight.value, scale).dp) / height,
+                ),
                 Rect(
                     ScreenMargin / width,
                     heroTop / height,
@@ -981,13 +1049,14 @@ private fun rememberFocusDim(
 
 /**
  * The share of the grid's width its tiles use, so that [HomeLayout.rowsBelowDock] rows fit under a dock whose panel starts at
- * [shelfBottom]. The names under the tiles do not change it.
+ * [shelfBottom] and pads its tiles [dockPadding] above and below. The names under the tiles do not change it.
  */
 internal fun gridShare(
     layout: HomeLayout,
     gridWidth: Dp,
     windowHeight: Dp,
     shelfBottom: Dp,
+    dockPadding: Dp = TileGap,
 ): Float {
     if (layout.singleRow) return 1f
     return tileWidthShare(
@@ -996,6 +1065,7 @@ internal fun gridShare(
         layout.columns,
         layout.rowsBelowDock,
         TileGap.value,
+        dockPadding.value,
     )
 }
 
@@ -1616,6 +1686,7 @@ private fun Dock(
     layout: HomeLayout,
     shelfLayout: ShelfLayout,
     look: DockLook,
+    padding: DockPadding,
     edge: DockEdgeLight?,
     shade: () -> Float,
     rowTileWidth: Dp,
@@ -1627,10 +1698,7 @@ private fun Dock(
     // One gap wider on each side than the grid. The padding inside leaves a focused end tile's ring DockRingWallClear from
     // the wall, so the tiles are a little narrower than the grid's columns. With fewer tiles than the row holds the panel
     // is as wide as they are, centred.
-    val side =
-        with(LocalDensity.current) { ringReach(rowTileWidth.toPx(), TvTheme.motion.focusScale(TILE_FOCUSED_SCALE)).toDp() } +
-            DockRingWallClear
-    val shrunk = look.band && !layout.singleRow && dock.size < layout.columns
+    val shrunk = look.shrinks(layout, dock.size)
     val width = if (shrunk) Modifier.wrapContentWidth() else Modifier.fillMaxWidth()
     DockPanel(glass, look, edge, shade, modifier.outset(TileGap).then(width).testTag("dock")) {
         if (layout.singleRow) {
@@ -1639,7 +1707,7 @@ private fun Dock(
                 LazyRow(
                     state = row,
                     modifier = Modifier.focusRequester(focus).focusRestorer().upToOffer(input, layout),
-                    contentPadding = PaddingValues(horizontal = side, vertical = TileGap),
+                    contentPadding = PaddingValues(horizontal = padding.side, vertical = padding.vertical),
                     horizontalArrangement = Arrangement.spacedBy(TileGap),
                 ) {
                     itemsIndexed(dock, key = { _, app -> app.key }) { index, app ->
@@ -1687,7 +1755,7 @@ private fun Dock(
                         .focusRestorer()
                         .focusGroup()
                         .upToOffer(input, layout)
-                        .padding(horizontal = if (shrunk) maxOf(DockShrunkSide, side) else side, vertical = TileGap),
+                        .padding(horizontal = padding.side, vertical = padding.vertical),
                 horizontalArrangement = Arrangement.spacedBy(TileGap),
             ) {
                 dock.forEachIndexed { index, app ->

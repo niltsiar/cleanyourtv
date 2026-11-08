@@ -31,14 +31,14 @@ private val SettingsRowHeight = 42.dp
 private val DockMenuRowHeight = 40.dp
 private val TileRowHeight = 46.dp
 
-/** The space between a dock tile menu and the dock's panel, which starts [TileGap] above the tile. */
+/** The space between a dock tile menu and the dock's panel, which starts the dock's top padding above the tile. */
 private val TrayClearance = 20.dp
 
 /**
  * The tile menu or the Settings menu: [rows], each tagged `menu:<row name>`, never over the top bar. A [tileMenu] is a
  * whole number of tiles wide and lines up with its tile's column ([anchor] is the tile). A dock tile's menu ([dockTile] is
- * the app's name, which heads it) opens above the tile with shorter rows, ending [TrayClearance] above the dock's panel;
- * a grid tile's sits beside it and under [bandBottom], the bottom of the band over the grid, when it fits there. The
+ * the app's name, which heads it) opens above the tile with shorter rows, ending [TrayClearance] above the dock's panel, which
+ * starts [dockPadding] above the tile; a grid tile's sits beside it and under [bandBottom], the bottom of the band over the grid, when it fits there. The
  * Settings menu hangs from the Settings button with shorter rows, so it ends clear of the dock, and a line sets its
  * restart row apart, which draws its text in coral.
  */
@@ -51,6 +51,7 @@ internal fun MenuOverlay(
     onPick: (MenuRow) -> Unit,
     modifier: Modifier = Modifier,
     dockTile: String? = null,
+    dockPadding: Dp = TileGap,
 ) {
     if (tileMenu) {
         GlassMenu(
@@ -75,7 +76,7 @@ internal fun MenuOverlay(
                 },
             title = dockTile,
             above = dockTile != null,
-            anchorGap = TileGap + TrayClearance,
+            anchorGap = (if (dockTile != null) dockPadding else TileGap) + TrayClearance,
             rowHeight = if (dockTile != null) DockMenuRowHeight else TileRowHeight,
             columnGap = TileGap,
             edgeMargin = ScreenMargin,

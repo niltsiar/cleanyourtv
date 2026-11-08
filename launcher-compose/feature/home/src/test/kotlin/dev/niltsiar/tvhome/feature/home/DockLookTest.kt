@@ -173,4 +173,10 @@ class DockLookTest {
         assertFalse(TvConfig(reducedMotion = true).dockLook().edgeLight)
         assertFalse(TvConfig(dockEdgeLight = false).dockLook().edgeLight)
     }
+
+    @Test
+    fun even_padding_follows_the_themes_dock_even_padding() {
+        assertFalse(TvConfig().dockLook().evenPadding)
+        assertTrue(TvConfig(dockEvenPadding = true).dockLook().evenPadding)
+    }
 }

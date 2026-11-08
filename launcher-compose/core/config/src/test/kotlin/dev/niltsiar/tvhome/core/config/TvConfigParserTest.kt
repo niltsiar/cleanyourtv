@@ -394,6 +394,16 @@ class TvConfigParserTest {
     }
 
     @Test
+    fun dock_even_padding_is_false_when_absent_true_when_set_and_rejected_when_not_a_boolean() {
+        assertEquals(false, parseTvConfig("""{"columns": 6}""").config.dockEvenPadding)
+        assertEquals(true, parseTvConfig("""{"dock_even_padding": true}""").config.dockEvenPadding)
+        assertEquals(false, parseTvConfig("""{"dock_even_padding": false}""").config.dockEvenPadding)
+        val wrong = parseTvConfig("""{"dock_even_padding": "true"}""")
+        assertEquals(false, wrong.config.dockEvenPadding)
+        assertEquals(listOf("dock_even_padding"), wrong.rejectedKeys)
+    }
+
+    @Test
     fun icon_only_inputs_of_the_wrong_type_is_rejected_and_reads_as_false() {
         val parsed = parseTvConfig("""{"icon_only_inputs": "true"}""")
         assertEquals(false, parsed.config.iconOnlyInputs)
@@ -499,7 +509,7 @@ class TvConfigParserTest {
 
     @Test
     fun keys_with_no_reader_in_this_launcher_are_unsupported_and_change_nothing() {
-        val keys = listOf("app_banners", "dock_even_padding", "locale", "open_on_start_choice", "open_on_start_on_wake")
+        val keys = listOf("app_banners", "locale", "open_on_start_choice", "open_on_start_on_wake")
         val parsed = parseTvConfig(keys.joinToString(prefix = "{", postfix = "}") { "\"$it\": true" })
 
         assertEquals(keys, parsed.unsupportedKeys)
@@ -548,6 +558,7 @@ class TvConfigParserTest {
             "dock_glass" to ("true" to defaults.copy(dockGlass = true)),
             "dock_band" to ("false" to defaults.copy(dockBand = false)),
             "dock_edge_light" to ("false" to defaults.copy(dockEdgeLight = false)),
+            "dock_even_padding" to ("true" to defaults.copy(dockEvenPadding = true)),
             "background_color" to (""""#112233"""" to defaults.copy(backgroundColor = 0xFF112233.toInt())),
             "header_scrim" to (""""off"""" to defaults.copy(headerScrim = HeaderScrim.Off)),
             "wallpaper" to ("false" to defaults.copy(wallpaper = false)),
