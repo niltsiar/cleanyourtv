@@ -100,7 +100,7 @@ public fun parseTvConfig(json: String): ParsedConfig {
             dateBelowClock = o.bool("date_below_clock", d.dateBelowClock),
             showNetworkPill = o.bool("show_network_pill", d.showNetworkPill),
             showInputsPill = o.bool("show_inputs_pill", d.showInputsPill),
-            iconOnlyButtons = o.optionalBool("icon_only_buttons", d.iconOnlyButtons),
+            iconOnlyButtons = o.optionalBool("icon_only_buttons", false),
             wifiLabelWidth = o.int("wifi_label_width", d.wifiLabelWidth, 0..300),
             wifiStatusColor = o.bool("wifi_status_color", d.wifiStatusColor),
             wifiStatusWarnings = o.bool("wifi_status_warnings", d.wifiStatusWarnings),

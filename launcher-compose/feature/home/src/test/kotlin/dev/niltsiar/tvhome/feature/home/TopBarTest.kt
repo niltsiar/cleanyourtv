@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.config.parseTvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.NetworkLink
@@ -169,6 +170,37 @@ class TopBarTest {
     fun icon_only_buttons_false_shows_the_network_name_at_rest() {
         show(TvConfig(columns = 6, iconOnlyButtons = false))
         compose.onNodeWithText("Home").assertIsDisplayed()
+    }
+
+    @Test
+    fun icon_only_buttons_false_shows_the_settings_label_at_rest() {
+        show(TvConfig(columns = 6, iconOnlyButtons = false))
+        compose.onNodeWithText("Settings").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Settings").performClick()
+        assertEquals(1, settingsOpened)
+    }
+
+    @Test
+    fun the_settings_button_is_a_round_icon_at_rest_with_no_theme() {
+        show(TvConfig(columns = 6))
+        compose.onNodeWithText("Settings").assertDoesNotExist()
+        val rest = compose.onNodeWithContentDescription("Settings").getBoundsInRoot()
+        assertEquals(rest.width, rest.height)
+    }
+
+    @Test
+    fun icon_only_buttons_true_leaves_the_settings_button_a_round_icon_at_rest() {
+        show(TvConfig(columns = 6, iconOnlyButtons = true))
+        compose.onNodeWithText("Settings").assertDoesNotExist()
+        val rest = compose.onNodeWithContentDescription("Settings").getBoundsInRoot()
+        assertEquals(rest.width, rest.height)
+    }
+
+    @Test
+    fun a_theme_that_leaves_icon_only_buttons_out_shows_the_network_and_settings_labels_at_rest() {
+        show(parseTvConfig("""{"columns": 6}""").config)
+        compose.onNodeWithText("Home").assertIsDisplayed()
+        compose.onNodeWithText("Settings").assertIsDisplayed()
     }
 
     @Test

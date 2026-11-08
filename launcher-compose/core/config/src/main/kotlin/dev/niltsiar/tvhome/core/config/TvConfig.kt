@@ -71,7 +71,7 @@ public data class TvConfig(
     val dateBelowClock: Boolean = false,
     val showNetworkPill: Boolean = true,
     val showInputsPill: Boolean = true,
-    /** Null when the theme leaves it out. Every top-bar button is a round icon at rest unless this is false: then the Wi-Fi button keeps its label. */
+    /** Null with no theme applied: every top-bar button is a round icon at rest and shows its label on focus. A theme without the key gets false, as in the Java launcher: then the Wi-Fi and Settings buttons keep their labels. */
     val iconOnlyButtons: Boolean? = null,
     /** 0 to 300 dp: the network name stays beside the Wi-Fi icon at rest, up to this width; 0 leaves the icon alone. */
     val wifiLabelWidth: Int = 0,

@@ -16,6 +16,7 @@ Defaults that differ:
 
 - `focus_overshoot` is false here. It is true in the Java launcher.
 - `app_glow` is true here, so grid tiles also get the ring in the app's colour. It is false in the Java launcher, where only the cinematic dock takes the app's colour. `cinematic_white_focus` keeps every ring white.
+- With no theme applied, every top-bar button is a round icon at rest and shows its label on focus. A theme without `icon_only_buttons` gets `false`, as in the Java launcher: the Wi-Fi and Settings buttons then keep their labels at rest.
 - An absent `dock_opacity` gives a translucent dock. Its tint lightens on a bright wallpaper. In the Java launcher an absent value is 100, a solid band. A value from 30 to 100 sets the tint to 0.85 times that percent.
 
 Behaviour that differs:

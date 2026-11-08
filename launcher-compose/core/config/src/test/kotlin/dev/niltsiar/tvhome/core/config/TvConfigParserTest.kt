@@ -6,10 +6,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TvConfigParserTest {
+    /** What a theme that sets nothing gives: the defaults, with the Java launcher's icon_only_buttons false. */
+    private val applied = TvConfig(iconOnlyButtons = false)
+
     @Test
     fun an_empty_object_keeps_every_default_and_reports_nothing() {
         val parsed = parseTvConfig("{}")
-        assertEquals(TvConfig(), parsed.config)
+        assertEquals(applied, parsed.config)
         assertTrue(parsed.overlayApplied)
         assertEquals(emptyList<String>(), parsed.unknownKeys + parsed.unsupportedKeys + parsed.rejectedKeys)
     }
@@ -144,7 +147,7 @@ class TvConfigParserTest {
                 """{"columns": "6", "fill_dock": "false", "dock_apps": "com.a", "greeting_name": 7,
                    "wifi_label_width": null, "animations": 0, "sky_intensity": 2147483648}""",
             )
-        assertEquals(TvConfig(), parsed.config)
+        assertEquals(applied, parsed.config)
         assertEquals(
             listOf("columns", "fill_dock", "dock_apps", "greeting_name", "wifi_label_width", "animations", "sky_intensity"),
             parsed.rejectedKeys,
@@ -277,7 +280,7 @@ class TvConfigParserTest {
         assertEquals(WallpaperOrder.Sequential, good.config.wallpaperOrder)
 
         val bad = parseTvConfig("""{"clock_format": "13", "wallpaper_order": "random"}""")
-        assertEquals(TvConfig(), bad.config)
+        assertEquals(applied, bad.config)
         assertEquals(listOf("clock_format", "wallpaper_order"), bad.rejectedKeys)
     }
 
@@ -352,16 +355,19 @@ class TvConfigParserTest {
     }
 
     @Test
-    fun icon_only_buttons_tells_an_absent_key_from_true_and_from_false() {
-        assertEquals(null, parseTvConfig("""{"columns": 6}""").config.iconOnlyButtons)
+    fun icon_only_buttons_is_false_in_a_theme_that_leaves_it_out_and_null_with_no_theme() {
+        assertEquals(false, parseTvConfig("""{"columns": 6}""").config.iconOnlyButtons)
+        assertEquals(false, parseTvConfig("{}").config.iconOnlyButtons)
+        assertEquals(null, parseTvConfig("[1, 2]").config.iconOnlyButtons)
+        assertEquals(null, parseTvConfig("").config.iconOnlyButtons)
         assertEquals(true, parseTvConfig("""{"icon_only_buttons": true}""").config.iconOnlyButtons)
         assertEquals(false, parseTvConfig("""{"icon_only_buttons": false}""").config.iconOnlyButtons)
     }
 
     @Test
-    fun icon_only_buttons_of_the_wrong_type_is_rejected_and_stays_absent() {
-        val parsed = parseTvConfig("""{"icon_only_buttons": "false"}""")
-        assertEquals(null, parsed.config.iconOnlyButtons)
+    fun icon_only_buttons_of_the_wrong_type_is_rejected_and_reads_as_absent() {
+        val parsed = parseTvConfig("""{"icon_only_buttons": "true"}""")
+        assertEquals(false, parsed.config.iconOnlyButtons)
         assertEquals(listOf("icon_only_buttons"), parsed.rejectedKeys)
     }
 
@@ -469,10 +475,10 @@ class TvConfigParserTest {
 
         assertEquals(keys, parsed.unsupportedKeys)
         assertEquals(emptyList<String>(), parsed.unknownKeys + parsed.rejectedKeys)
-        assertEquals(TvConfig(), parsed.config)
+        assertEquals(applied, parsed.config)
     }
 
-    private val defaults = TvConfig()
+    private val defaults = applied
 
     /** key to (JSON value, the config that value alone produces); latitude and longitude set one field, so they share a row. */
     private val nonDefaults: Map<String, Pair<String, TvConfig>> =
