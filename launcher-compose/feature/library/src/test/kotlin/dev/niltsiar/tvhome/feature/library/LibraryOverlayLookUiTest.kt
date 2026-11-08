@@ -387,6 +387,41 @@ class LibraryOverlayLookUiTest {
         assertTrue("${ringRoomUnderKeyCaps("Aaa")}", ringRoomUnderKeyCaps("Aaa") >= 16.dp)
     }
 
+    /** The dp from the panel's top edge to the title's first row of ink: a pixel of its box that differs from the panel beside it. */
+    private fun titleInkTop(): Dp {
+        val density = compose.activity.resources.displayMetrics.density
+        val panelTop = bounds("library:panel").top
+        val title = bounds("library:title")
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val xs = (title.left.value * density).toInt() until (title.right.value * density).toInt()
+        val ground = ((title.left.value - 4f) * density).toInt()
+        val ink =
+            (((panelTop.value + 3f) * density).toInt() until (title.bottom.value * density).toInt()).first { y ->
+                xs.any { x -> abs(pixels[x, y].red - pixels[ground, y].red) * 255 >= TEXT_OVER_GROUND }
+            }
+        return (ink / density).dp - panelTop
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_title_ink_starts_at_least_20_dp_under_the_panels_top_edge() {
+        showLibrary(nineApps)
+
+        val top = titleInkTop()
+
+        assertTrue("$top", top >= 20.dp)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun in_the_chooser_the_title_ink_starts_at_least_20_dp_under_the_panels_top_edge() {
+        showChooser()
+
+        val top = titleInkTop()
+
+        assertTrue("$top", top >= 20.dp)
+    }
+
     /** The names of the apps whose cards have focus: one, when the focus is in the grid. */
     private fun focusedApps(): List<String> =
         compose.onAllNodes(isFocused()).fetchSemanticsNodes().map { it.config[SemanticsProperties.ContentDescription].single() }
@@ -515,11 +550,11 @@ class LibraryOverlayLookUiTest {
     }
 
     @Test
-    fun a_card_keeps_its_outer_size_of_111_dp_tall_and_a_sixth_of_the_grid_wide() {
+    fun a_card_keeps_its_outer_size_of_109_dp_tall_and_a_sixth_of_the_grid_wide() {
         showLibrary(listOf(libraryApp("Aaa"), libraryApp("Bbb $describedName")), art = LibraryArt(red, Color.Red), config = chooser)
 
         for (name in listOf("Aaa", "Bbb $describedName")) {
-            assertEquals(111f, card(name).height.value, 0.5f)
+            assertEquals(109f, card(name).height.value, 0.5f)
             assertEquals(108.3f, card(name).width.value, 0.5f)
         }
     }
@@ -563,10 +598,10 @@ class LibraryOverlayLookUiTest {
         )
 
         val (above, below) = roomAboveAndBelow("Bbb")
-        assertNear(6.dp, above)
+        assertNear(4.dp, above)
         assertNear(33.dp, below)
         val (aboveTwo, belowTwo) = roomAboveAndBelow("Ccc $describedName")
-        assertNear(6.dp, aboveTwo)
+        assertNear(4.dp, aboveTwo)
         assertNear(28.dp, belowTwo)
     }
 

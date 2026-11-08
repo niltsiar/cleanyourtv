@@ -113,26 +113,27 @@ private val PanelMargin = 32.dp
 private val PanelEdge = 12.dp
 private val EmptyPanelHeight = 282.dp
 private val PanelSide = 12.dp
-private val PanelTop = 0.dp
+private val PanelTop = 13.dp
 private val PanelBottom = 31.dp
-private val HeaderTitleHeight = 42.dp
+private val HeaderTitleHeight = 37.5.dp
 private val HeaderHintHeight = KeyChipHeight
 
 /** Under the hint row: a focused top-row card's ring starts at the grid's top edge, and this keeps the key caps 16 dp clear of it. */
-private val HeaderGridGap = 12.dp
+private val HeaderGridGap = 11.5.dp
 private val PanelRise = 56.dp
 private const val PANEL_START_SCALE = 0.92f
 
-/** The grid: [COLUMNS] cards across and [ROWS] rows in view, [CardGap] apart. */
+/** The grid: [COLUMNS] cards across, [CardGap] apart, and [ROWS] rows in view, [RowGap] apart. */
 private const val COLUMNS = 6
 private const val ROWS = 3
 private val CardGap = 20.dp
+private val RowGap = 19.dp
 
 /** A focused card's growth and ring reach 13 dp past its sides, and the grid clips at its edges. */
 private val GridEdge = 13.dp
 
 private val PanelHeight =
-    PanelTop + HeaderTitleHeight + HeaderHintHeight + HeaderGridGap + GridEdge * 2 + CardHeight * ROWS + CardGap * (ROWS - 1) + PanelBottom
+    PanelTop + HeaderTitleHeight + HeaderHintHeight + HeaderGridGap + GridEdge * 2 + CardHeight * ROWS + RowGap * (ROWS - 1) + PanelBottom
 private val MenuEdge = 48.dp
 
 /**
@@ -279,7 +280,7 @@ private fun Header(
                 style = title,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).testTag("library:title"),
             )
             if (layout.leastUsed) {
                 val end = Modifier.padding(end = ChipEnd)
@@ -511,7 +512,7 @@ private fun Cards(
     val measurer = rememberTextMeasurer()
     val scope = rememberCoroutineScope()
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    val pitch = with(density) { (CardHeight + CardGap).toPx() }
+    val pitch = with(density) { (CardHeight + RowGap).toPx() }
     val bringIntoView = remember(gridState, density) { RowBringIntoViewSpec(gridState, with(density) { GridEdge.toPx() }) }
     // Read here, not in the grid's content, so a focus move does not rebuild what the grid lists.
     val cards = remember(state) { derivedStateOf { state().cards } }.value
@@ -530,7 +531,7 @@ private fun Cards(
                 state = gridState,
                 contentPadding = PaddingValues(GridEdge),
                 horizontalArrangement = Arrangement.spacedBy(CardGap),
-                verticalArrangement = Arrangement.spacedBy(CardGap),
+                verticalArrangement = Arrangement.spacedBy(RowGap),
                 modifier =
                     Modifier.fillMaxSize().testTag("library:cards").onPreviewKeyEvent { event ->
                         val move = event.gridMove(rtl) ?: return@onPreviewKeyEvent false

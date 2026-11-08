@@ -79,7 +79,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
-internal val CardHeight = 111.dp
+internal val CardHeight = 109.dp
 private val CardShape = RoundedCornerShape(16.dp)
 private val ArtShape = RoundedCornerShape(8.dp)
 private const val ART_ASPECT = 16f / 9f
