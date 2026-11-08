@@ -57,25 +57,24 @@ private val LiftShadowColor = Color.Black.copy(alpha = 0.55f)
 private val LiftHeight = TileGap - FocusRingReach - TrayRimClear
 
 /**
- * The chevron: [ChevronHeight] tall and [ChevronDepth] wide, drawn with a [ChevronStroke] stroke and an outline
- * [ChevronOutline] wide round it. It stands in the middle of the gutter between a carried tile's ring and the next
- * tile, [ChevronRingClear] from each.
+ * A move arrow: a round [ArrowDisc] of black at 0.60 centred on the outer edge of a carried tile's ring, so that it covers
+ * half its width of ring and tile and the other half, [ArrowDisc] / 2 past the ring, leaves the rest of the [TileGap]
+ * (4 dp) to the next tile. On it stands a white chevron at 0.95, [ChevronHeight] tall and [ChevronDepth] deep, drawn with a
+ * round-capped [ChevronStroke] stroke; the disc keeps it readable, so the chevron has no outline of its own.
  */
-private val ChevronHeight = 10.dp
-private val ChevronDepth = 5.dp
-private val ChevronStroke = 2.dp
-private val ChevronOutline = 1.dp
-private val ChevronFootprint = ChevronDepth + ChevronStroke + ChevronOutline * 2
-private val ChevronRingClear = (TileGap - FocusRingReach - ChevronFootprint) / 2
-private val ChevronColor = Color.White.copy(alpha = 0.90f)
-private val ChevronOutlineColor = Color.Black.copy(alpha = 0.45f)
+private val ArrowDisc = 22.dp
+private val ArrowDiscColor = Color.Black.copy(alpha = 0.60f)
+private val ChevronHeight = 12.dp
+private val ChevronDepth = 6.dp
+private val ChevronStroke = 2.5.dp
+private val ChevronColor = Color.White.copy(alpha = 0.95f)
 
 /**
  * A tile's look in reorder and edit-dock modes: dimmed unless it is the carried one, which lifts, is drawn at its rest size
- * (a focused tile is grown), casts a shadow in its [shape], wiggles a little and shows a white chevron in the gutter beside
- * each edge it can still move towards, clear of its ring and of the next tile; it settles back with a spring when it is put
- * down. No other tile moves. [growthAnchorX] is where across its width the tile's focus growth is anchored (0 left edge, 1 right
- * edge), which the lift undoes. The animated values are read in the layer and draw lambdas only.
+ * (a focused tile is grown), casts a shadow in its [shape], wiggles a little and shows a move arrow on its ring beside each
+ * edge it can still move towards; it settles back with a spring when it is put down. No other tile moves. [growthAnchorX]
+ * is where across its width the tile's focus growth is anchored (0 left edge, 1 right edge), which the lift undoes. The
+ * animated values are read in the layer and draw lambdas only.
  */
 @Composable
 internal fun Modifier.reorderLook(
@@ -147,7 +146,7 @@ internal fun Modifier.reorderLook(
             // The layer is scaled by the lift: draw in the tile's own measures by undoing that.
             val raised = 1f + (1f / grown - 1f) * lift.value
             val centre = chevronCentre(size.width, grown * raised)
-            // The lift's translationX carries the chevrons too; they stand where the tile rests.
+            // The lift's translationX carries the arrows too; they stand where the tile rests.
             val shifted = regrownX(size.width, growthAnchorX, grown) * lift.value
             scale(1f / raised, Offset(size.width / 2f, size.height / 2f)) {
                 val middle = size.height / 2f
@@ -169,25 +168,26 @@ private fun regrownX(
 ): Float = width * (anchorX - 0.5f) * (1f - 1f / grown)
 
 /**
- * How far outside the edge of a carried tile, [width] wide and drawn [scale] times its size, its chevron is centred: it
- * stands [ChevronRingClear] past the ring, which reaches [FocusRingReach] x [scale] past the art.
+ * How far outside the edge of a carried tile, [width] wide and drawn [scale] times its size, its arrow is centred: on the
+ * ring's outer edge, [FocusRingReach] x [scale] past the art.
  */
 private fun Density.chevronCentre(
     width: Float,
     scale: Float,
-): Float = width * (scale - 1f) / 2f + FocusRingReach.toPx() * scale + ChevronRingClear.toPx() + ChevronFootprint.toPx() / 2f
+): Float = width * (scale - 1f) / 2f + FocusRingReach.toPx() * scale
 
 private fun HomeInput.badgeAtStart(
     key: String,
     side: State<Boolean>,
 ): Float = Snapshot.withoutReadObservation { if (carried.value == key && side.value) 1f else 0f }
 
-/** A chevron centred on [center], pointing left or right, at [alpha]: its outline, then its stroke. */
+/** A move arrow centred on [center], at [alpha]: its disc, then its chevron pointing left or right. */
 internal fun DrawScope.drawChevron(
     center: Offset,
     pointsLeft: Boolean,
     alpha: Float,
 ) {
+    drawCircle(ArrowDiscColor, radius = ArrowDisc.toPx() / 2f, center = center, alpha = alpha)
     val half = ChevronHeight.toPx() / 2f
     val tip = if (pointsLeft) -ChevronDepth.toPx() / 2f else ChevronDepth.toPx() / 2f
     val path =
@@ -196,12 +196,6 @@ internal fun DrawScope.drawChevron(
             lineTo(center.x + tip, center.y)
             lineTo(center.x - tip, center.y + half)
         }
-    drawPath(
-        path,
-        ChevronOutlineColor,
-        alpha = alpha,
-        style = Stroke((ChevronStroke + ChevronOutline * 2).toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
-    )
     drawPath(path, ChevronColor, alpha = alpha, style = Stroke(ChevronStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
 }
 

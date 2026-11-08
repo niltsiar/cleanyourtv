@@ -504,7 +504,7 @@ class HomeLookUiTest {
 
     @Test
     @Config(qualifiers = "+night")
-    fun a_chevron_covers_none_of_the_carried_tiles_art_and_none_of_the_tiles_beside_it() {
+    fun an_arrows_white_stroke_covers_none_of_the_carried_tiles_art_and_none_of_the_tiles_beside_it() {
         showHome(apps = clearApps(3))
         val rest = restTiles(3)
         carryFirstTile()
@@ -548,18 +548,6 @@ class HomeLookUiTest {
 
     private fun isRingOrange(pixel: Color) = pixel.red > 0.9f && pixel.green in 0.3f..0.55f && pixel.blue < 0.4f
 
-    /** The columns, in dp, from [from] to [to] dp whose pixel at [row] dp is the reorder ring's orange. */
-    private fun ringColumns(
-        from: Float,
-        to: Float,
-        row: Float,
-    ): ClosedFloatingPointRange<Float> {
-        val pixels = compose.onRoot().captureToImage().toPixelMap()
-        val density = compose.activity.resources.displayMetrics.density
-        val orange = (((from * density).toInt())..((to * density).toInt())).filter { isRingOrange(pixels[it, (row * density).toInt()]) }
-        return (orange.min() / density)..((orange.max() + 1) / density)
-    }
-
     /** The first row, in dp, from [from] down to [to] dp whose pixel in the column at [x] dp is the reorder ring's orange. */
     private fun ringTop(
         x: Float,
@@ -571,22 +559,33 @@ class HomeLookUiTest {
         return ((from * density).toInt()..(to * density).toInt()).first { isRingOrange(pixels[(x * density).toInt(), it]) } / density
     }
 
-    /** The chevron's black outline round its white stroke, which the gutter counts as part of the chevron: 1 dp. */
-    private val chevronOutline = 1f
+    /** A reorder arrow stands on a dark disc this many dp across. */
+    private val arrowDisc = 22f
+
+    /** What [carriedClearances] reads, in dp. */
+    private data class ArrowClearances(
+        /** From the disc's outer edge to the next tile's art, on the right then on the left. */
+        val nextRight: Float,
+        val nextLeft: Float,
+        /** From the ring's outer edge out to the disc's centre, on the right then on the left; zero when it is centred on the edge. */
+        val centreRight: Float,
+        val centreLeft: Float,
+        /** The ring's room under the tray's rim. */
+        val underRim: Float,
+    )
 
     /**
-     * Carries the first of [tiles] dock tiles, of clear art among white, to [slot] (from 1) and returns, in dp, the
-     * chevron's clearance from the ring and from the next tile on the right, then on the left, the ring's room under the
-     * tray's rim, and the width of a chevron with its outline.
+     * Carries the first of [tiles] dock tiles, of clear art among white, to [slot] (from 1) and reads where its arrows stand:
+     * each disc is centred on its chevron, whose white stroke is the only white in the gutter, and is [arrowDisc] across.
      */
     private fun carriedClearances(
         tiles: Int,
         slot: Int,
         config: TvConfig,
-    ): List<Float> {
+    ): ArrowClearances {
         showHome(apps = clearApps(1) + whiteApps(tiles).drop(1), config = config)
         val rest = restTiles(tiles)
-        // Below the chevrons and clear of the tile's rounded corners.
+        // Below the arrows and clear of the tile's rounded corners.
         val artRow = (rest[1].top.value + rest[1].bottom.value) / 2f + 14f
         carryFirstTile()
         repeat(slot - 1) { press(Key.DirectionRight) }
@@ -595,23 +594,26 @@ class HomeLookUiTest {
         val halo = 3f
         val middle = (at.top.value + at.bottom.value) / 2f - 7f
         val centre = (at.left.value + at.right.value) / 2f
-        val ringRight = ringColumns(centre, at.right.value + 30f, middle).endInclusive + halo
-        val ringLeft = ringColumns(at.left.value - 30f, centre, middle).start - halo
+        // The carried tile is drawn at its rest size, so its ring's outer edge is where the tile's bounds put it.
+        val ringRight = at.right.value + ringReach
+        val ringLeft = at.left.value - ringReach
 
-        val chevronRight = whiteRuns(ringRight - halo, at.right.value + 80f, middle - 10f, middle + 10f).single()
-        val chevronLeft = whiteRuns(at.left.value - 80f, ringLeft + halo, middle - 10f, middle + 10f).single()
-        // The tiles beside it are dimmed to 0.65, and their art starts and ends at the row above the chevrons.
+        // The disc covers the ring there, so the chevron's whole width is searched for from well inside the ring.
+        val chevronRight = whiteRuns(ringRight - 8f, at.right.value + 80f, middle - 10f, middle + 10f).single()
+        val chevronLeft = whiteRuns(at.left.value - 80f, ringLeft + 8f, middle - 10f, middle + 10f).single()
+        val centreRight = (chevronRight.start + chevronRight.endInclusive) / 2f
+        val centreLeft = (chevronLeft.start + chevronLeft.endInclusive) / 2f
+        // The tiles beside it are dimmed to 0.65, and their art starts and ends at the row below the arrows.
         val neighbourRight = whiteRuns(ringRight, at.right.value + 80f, artRow, artRow + 1f, level = 0.5f).first().start
         val neighbourLeft = whiteRuns(at.left.value - 80f, ringLeft, artRow, artRow + 1f, level = 0.5f).last().endInclusive
         val underRim = ringTop(centre, bounds("dock").top.value, at.top.value + 40f) - halo - bounds("dock").top.value
 
-        return listOf(
-            chevronRight.start - chevronOutline - ringRight,
-            neighbourRight - (chevronRight.endInclusive + chevronOutline),
-            ringLeft - (chevronLeft.endInclusive + chevronOutline),
-            chevronLeft.start - chevronOutline - neighbourLeft,
-            underRim,
-            chevronRight.endInclusive - chevronRight.start + 2f * chevronOutline,
+        return ArrowClearances(
+            nextRight = neighbourRight - (centreRight + arrowDisc / 2f),
+            nextLeft = (centreLeft - arrowDisc / 2f) - neighbourLeft,
+            centreRight = centreRight - ringRight,
+            centreLeft = ringLeft - centreLeft,
+            underRim = underRim,
         )
     }
 
@@ -622,45 +624,67 @@ class HomeLookUiTest {
     ) {
         val clearances = carriedClearances(tiles, slot, config)
 
-        val (ringRight, nextRight, ringLeft, nextLeft) = clearances
-        val underRim = clearances[4]
-        val footprint = clearances[5]
-        assertTrue("chevron clearance from the ring, right then left: $ringRight $ringLeft", ringRight >= 3f && ringLeft >= 3f)
-        assertTrue("chevron clearance from the next tile, right then left: $nextRight $nextLeft", nextRight >= 3f && nextLeft >= 3f)
-        assertTrue("the ring is $underRim dp under the rim", underRim >= 7.5f)
-        assertTrue("the chevron is $footprint dp wide with its outline", footprint in 8.5f..9.5f)
+        assertTrue(
+            "disc clearance from the next tile: $clearances",
+            clearances.nextRight >= 4f && clearances.nextLeft >= 4f,
+        )
+        assertTrue(
+            "disc centre past the ring's outer edge: $clearances",
+            abs(clearances.centreRight) <= 1f && abs(clearances.centreLeft) <= 1f,
+        )
+        assertTrue("the ring is ${clearances.underRim} dp under the rim", clearances.underRim >= 7.5f)
+    }
+
+    /** A 100 px square of [ground], 2 px to a dp, with an arrow centred in it. */
+    private fun arrowOn(
+        ground: Color,
+        pointsLeft: Boolean = false,
+    ): PixelMap {
+        val image = ImageBitmap(100, 100)
+        Canvas(image).drawRect(Rect(0f, 0f, 100f, 100f), Paint().apply { color = ground })
+        CanvasDrawScope().draw(Density(2f), LayoutDirection.Ltr, Canvas(image), Size(100f, 100f)) {
+            drawChevron(Offset(50f, 50f), pointsLeft = pointsLeft, alpha = 1f)
+        }
+        return image.toPixelMap()
     }
 
     @Test
-    fun a_chevron_is_a_10_dp_glyph_with_a_2_dp_white_stroke_and_a_black_outline_1_dp_wide_all_round_it() {
-        val image = ImageBitmap(80, 80)
-        Canvas(image).drawRect(Rect(0f, 0f, 80f, 80f), Paint().apply { color = Color.White })
-        CanvasDrawScope().draw(Density(2f), LayoutDirection.Ltr, Canvas(image), Size(80f, 80f)) {
-            drawChevron(Offset(40f, 40f), pointsLeft = false, alpha = 1f)
-        }
+    fun an_arrow_stands_on_a_disc_22_dp_across_of_black_at_60_percent() {
+        val pixels = arrowOn(Color.White)
 
-        // At 2 pixels to a dp the glyph's ends are at (35, 30) and (35, 50): 10 dp apart. On a white ground the outline is black at
-        // 0.45, so 0.55; the stroke is white at 0.90 over it, so 0.955. Pixel rows 29 and 51 lie in the round caps' stroke (2 px
-        // from the end), rows 27 and 53 in the outline (4 px), rows 24 and 56 past it.
-        val pixels = image.toPixelMap()
-        for ((stroke, outline, clear) in listOf(Triple(29, 27, 24), Triple(51, 53, 56))) {
-            assertEquals("the stroke at row $stroke", 0.955f, pixels[35, stroke].red, 0.03f)
-            assertEquals("the outline at row $outline", 0.55f, pixels[35, outline].red, 0.05f)
-            assertEquals("clear at row $clear", 1f, pixels[35, clear].red, 0.01f)
-        }
+        // On a white ground the disc reads 0.4; the row through the centre also crosses the chevron's tip, which is lighter.
+        val columns = (0 until 100).filter { pixels[it, 50].red < 0.9f }
+        val across = (columns.max() - columns.min() + 1) / 2f
+        assertEquals("the disc's width in dp", 22f, across, 0.6f)
+        assertEquals("the disc's fill, left of the chevron", 0.4f, pixels[36, 50].red, 0.03f)
+        assertEquals("the disc's fill, above the chevron", 0.4f, pixels[50, 34].red, 0.03f)
     }
 
     @Test
-    fun a_chevron_holds_3_to_1_a_white_stroke_on_a_near_black_tile_and_its_outline_on_a_white_one() {
-        fun drawnOn(ground: Color): PixelMap {
-            val image = ImageBitmap(80, 80)
-            Canvas(image).drawRect(Rect(0f, 0f, 80f, 80f), Paint().apply { color = ground })
-            CanvasDrawScope().draw(Density(2f), LayoutDirection.Ltr, Canvas(image), Size(80f, 80f)) {
-                drawChevron(Offset(40f, 40f), pointsLeft = false, alpha = 1f)
-            }
-            return image.toPixelMap()
-        }
+    fun an_arrows_chevron_is_a_12_dp_tall_6_dp_deep_white_stroke_with_round_caps_and_no_outline() {
+        val pixels = arrowOn(Color.White)
 
+        // At 2 px to a dp the chevron's ends are at (44, 38) and (44, 62) and its tip at (56, 50); the round caps reach 2.5 px past
+        // them. White at 0.95 over the disc's 0.4 reads 0.97.
+        for ((stroke, clear) in listOf(36 to 34, 63 to 65)) {
+            assertEquals("the stroke at row $stroke", 0.97f, pixels[44, stroke].red, 0.03f)
+            assertEquals("the disc's fill at row $clear", 0.4f, pixels[44, clear].red, 0.03f)
+        }
+        assertEquals("the tip", 0.97f, pixels[56, 50].red, 0.03f)
+        assertEquals("past the tip", 0.4f, pixels[60, 50].red, 0.03f)
+    }
+
+    @Test
+    fun an_arrows_chevron_points_the_way_it_names() {
+        val pixels = arrowOn(Color.White, pointsLeft = true)
+
+        assertEquals("the tip, left of the centre", 0.97f, pixels[44, 50].red, 0.03f)
+        assertEquals("past the tip", 0.4f, pixels[40, 50].red, 0.03f)
+        assertEquals("the open end", 0.4f, pixels[56, 50].red, 0.03f)
+    }
+
+    @Test
+    fun an_arrows_white_stroke_holds_3_to_1_against_its_disc_on_a_near_black_tile_and_on_a_white_one() {
         fun contrast(
             first: Color,
             second: Color,
@@ -669,39 +693,38 @@ class HomeLookUiTest {
         val nearBlack = Color(0xFF0F1115)
         val white = Color(0xFFF5F5F5)
 
-        // The stroke's cap at row 29 and the outline's at row 27, as in the glyph test above.
-        val stroke = contrast(drawnOn(nearBlack)[35, 29], nearBlack)
-        val outline = contrast(drawnOn(white)[35, 27], white)
-        assertTrue("the stroke on near black: $stroke, the outline on white: $outline", stroke >= 3f && outline >= 3f)
+        val onDark = arrowOn(nearBlack).let { contrast(it[44, 36], it[36, 50]) }
+        val onLight = arrowOn(white).let { contrast(it[44, 36], it[36, 50]) }
+        assertTrue("the stroke on near black: $onDark, on white: $onLight", onDark >= 3f && onLight >= 3f)
     }
 
     @Test
     @Config(qualifiers = "+night")
-    fun with_four_dock_tiles_a_carried_tiles_chevrons_fit_its_gutter_and_its_ring_stays_8_dp_under_the_rim() {
+    fun with_four_dock_tiles_a_carried_tiles_arrows_clear_the_next_tile_by_4_dp_and_its_ring_stays_8_dp_under_the_rim() {
         assertCarriedClearances(tiles = 4, slot = 2)
     }
 
     @Test
     @Config(qualifiers = "+night")
-    fun with_five_dock_tiles_a_carried_tiles_chevrons_fit_its_gutter_and_its_ring_stays_8_dp_under_the_rim() {
+    fun with_five_dock_tiles_a_carried_tiles_arrows_clear_the_next_tile_by_4_dp_and_its_ring_stays_8_dp_under_the_rim() {
         assertCarriedClearances(tiles = 5, slot = 2)
     }
 
     @Test
     @Config(qualifiers = "+night")
-    fun with_six_dock_tiles_a_carried_tiles_chevrons_fit_its_gutter_and_its_ring_stays_8_dp_under_the_rim() {
+    fun with_six_dock_tiles_a_carried_tiles_arrows_clear_the_next_tile_by_4_dp_and_its_ring_stays_8_dp_under_the_rim() {
         assertCarriedClearances(tiles = 6, slot = 2)
     }
 
     @Test
     @Config(qualifiers = "+night")
-    fun the_chevrons_keep_their_clearances_with_the_carried_tile_in_the_middle_of_a_full_dock() {
+    fun the_arrows_keep_their_clearances_with_the_carried_tile_in_the_middle_of_a_full_dock() {
         assertCarriedClearances(tiles = 6, slot = 4)
     }
 
     @Test
     @Config(qualifiers = "+night")
-    fun with_four_columns_a_carried_tiles_chevrons_keep_their_clearances() {
+    fun with_four_columns_a_carried_tiles_arrows_keep_their_clearances() {
         assertCarriedClearances(tiles = 4, slot = 2, config = TvConfig(columns = 4))
     }
 
