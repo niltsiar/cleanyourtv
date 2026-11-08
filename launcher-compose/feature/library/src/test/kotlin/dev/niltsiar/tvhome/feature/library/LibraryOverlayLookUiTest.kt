@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PixelMap
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
@@ -1449,6 +1450,46 @@ class LibraryOverlayLookUiTest {
 
         compose.onNodeWithTag("library:order").assertIsFocused()
         assertTrue("cap text is dark", darkestRed(cap) < 90)
+    }
+
+    private fun ratio(
+        a: Color,
+        b: Color,
+    ): Float = (maxOf(a.luminance(), b.luminance()) + 0.05f) / (minOf(a.luminance(), b.luminance()) + 0.05f)
+
+    /** The contrast of the focused order chip's key cap against the chip fill, then of the cap's text against the cap. */
+    private fun focusedKeyCapContrast(): Pair<Float, Float> {
+        showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
+        val chip = bounds("library:order")
+        val cap = compose.onNodeWithTag("library:order:key", useUnmergedTree = true).getBoundsInRoot()
+        press(Key.DirectionUp)
+        compose.onNodeWithTag("library:order").assertIsFocused()
+        val density = compose.activity.resources.displayMetrics.density
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val middle = ((cap.top + cap.bottom) / 2).value * density
+        val fill = pixels[((chip.left.value + 3f) * density).toInt(), middle.toInt()]
+        val keyCap = pixels[((cap.left.value + 1.5f) * density).toInt(), middle.toInt()]
+        val xs = ((cap.left.value + 6f) * density).toInt() until ((cap.right.value - 6f) * density).toInt()
+        val ys = ((cap.top.value + 2f) * density).toInt() until ((cap.bottom.value - 2f) * density).toInt()
+        val text = ys.flatMap { y -> xs.map { x -> pixels[x, y] } }.maxBy { abs(it.luminance() - keyCap.luminance()) }
+        return ratio(keyCap, fill) to ratio(text, keyCap)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun a_focused_order_chip_keeps_its_key_cap_3_to_1_on_the_chip_with_its_text_4_5_to_1_on_the_cap() {
+        val (capOnChip, textOnCap) = focusedKeyCapContrast()
+
+        assertTrue("cap on chip $capOnChip", capOnChip >= 3f)
+        assertTrue("text on cap $textOnCap", textOnCap >= 4.5f)
+    }
+
+    @Test
+    fun on_the_light_menu_a_focused_order_chip_keeps_its_key_cap_3_to_1_on_the_chip_with_its_text_4_5_to_1_on_the_cap() {
+        val (capOnChip, textOnCap) = focusedKeyCapContrast()
+
+        assertTrue("cap on chip $capOnChip", capOnChip >= 3f)
+        assertTrue("text on cap $textOnCap", textOnCap >= 4.5f)
     }
 
     @Test

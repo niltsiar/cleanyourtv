@@ -68,6 +68,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
@@ -88,6 +89,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.util.lerp
 import dev.niltsiar.tvhome.core.designsystem.BesideAnchor
 import dev.niltsiar.tvhome.core.designsystem.FocusPill
 import dev.niltsiar.tvhome.core.designsystem.GlassMenu
@@ -369,6 +371,14 @@ private fun OrderChip(
     val typography = TvTheme.typography
     val rest = TvTheme.colors.onSurface
     val key = remember(typography) { typography.chipKey.copy(fontSize = 12.sp) }
+    val keyFocusedAlpha =
+        if (TvTheme.surfaces.pillFill.luminance() >
+            0.5f
+        ) {
+            CHIP_KEY_FOCUSED_ON_LIGHT_ALPHA
+        } else {
+            CHIP_KEY_FOCUSED_ON_DARK_ALPHA
+        }
     FocusPill(
         onClick = onClick,
         shape = CircleShape,
@@ -406,7 +416,7 @@ private fun OrderChip(
                     .clearAndSetSemantics { testTag = "library:order:key" }
                     .drawBehind {
                         drawRoundRect(
-                            ink.content().copy(alpha = CHIP_KEY_FILL_ALPHA),
+                            ink.content().copy(alpha = lerp(CHIP_KEY_FILL_ALPHA, keyFocusedAlpha, ink.progress())),
                             cornerRadius =
                                 CornerRadius(size.height / 2f),
                         )
@@ -447,6 +457,8 @@ private val ChipGlyphStroke = 1.5.dp
 private const val CHIP_FILL_ALPHA = 0.10f
 private const val CHIP_RIM_ALPHA = 0.24f
 private const val CHIP_KEY_FILL_ALPHA = 0.16f
+private const val CHIP_KEY_FOCUSED_ON_LIGHT_ALPHA = 0.47f
+private const val CHIP_KEY_FOCUSED_ON_DARK_ALPHA = 0.39f
 
 @StringRes
 private fun LibraryOrder.label(): Int =
