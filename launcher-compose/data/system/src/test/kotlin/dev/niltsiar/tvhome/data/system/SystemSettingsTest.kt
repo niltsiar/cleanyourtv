@@ -49,6 +49,28 @@ class SystemSettingsTest {
     }
 
     @Test
+    fun settings_open_in_a_new_task_and_clear_the_old_one_only_when_asked() {
+        answerStandardAction("com.android.settings.Settings")
+
+        assertEquals(true, settings().openSettings())
+        assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK, shadowOf(app).nextStartedActivity.flags)
+
+        assertEquals(true, settings().openSettings(clearTask = true))
+        assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK, shadowOf(app).nextStartedActivity.flags)
+    }
+
+    @Test
+    fun a_vendor_settings_activity_keeps_the_clear_task_flag() {
+        install("com.vendor.settings")
+
+        assertEquals(true, settings().openSettings(clearTask = true))
+
+        val started = shadowOf(app).nextStartedActivity
+        assertEquals(ComponentName.unflattenFromString(vendor), started.component)
+        assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK, started.flags)
+    }
+
+    @Test
     fun the_fire_os_stub_counts_as_missing_and_the_installed_vendor_entry_opens() {
         answerStandardAction("com.amazon.CTSDummyActivity")
         install("com.vendor.settings")

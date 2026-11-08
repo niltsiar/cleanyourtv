@@ -11,6 +11,9 @@ import dev.niltsiar.tvhome.core.model.tvLaunchIntent
 
 private val AospTvSettings = ComponentName("com.android.tv.settings", "com.android.tv.settings.MainSettings")
 
+internal fun newTaskFlags(clearTask: Boolean): Int =
+    if (clearTask) Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK else Intent.FLAG_ACTIVITY_NEW_TASK
+
 /**
  * Opens the TV's system settings the way the reference launcher does. [fallbackComponents] are vendor settings
  * activities ("package/class") tried in order when no standard handler is usable. [vpnApp] is the package the
@@ -25,8 +28,8 @@ public class SystemSettings internal constructor(
     public constructor(context: Context, vpnApp: String?) :
         this(context, context.resources.getStringArray(R.array.settings_fallback_components).toList(), vpnApp)
 
-    /** True when the system accepted the intent. */
-    public fun openSettings(): Boolean = open(intent(Settings.ACTION_SETTINGS))
+    /** True when the system accepted the intent. [clearTask] starts Settings in a fresh task, so Back from it goes Home. */
+    public fun openSettings(clearTask: Boolean = false): Boolean = open(intent(Settings.ACTION_SETTINGS), clearTask)
 
     /** The VPN app when one is set and launchable, else Wi-Fi settings. */
     public fun openNetwork(): Boolean = open(vpnAppIntent() ?: intent(Settings.ACTION_WIFI_SETTINGS))
@@ -80,5 +83,8 @@ public class SystemSettings internal constructor(
             false
         }
 
-    private fun open(intent: Intent): Boolean = context.startActivitySafely(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    private fun open(
+        intent: Intent,
+        clearTask: Boolean = false,
+    ): Boolean = context.startActivitySafely(intent.addFlags(newTaskFlags(clearTask)))
 }

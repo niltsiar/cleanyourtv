@@ -211,6 +211,17 @@ class TvConfigParserTest {
     }
 
     @Test
+    fun settings_key_clear_task_is_off_unless_the_theme_turns_it_on() {
+        assertFalse(parseTvConfig("{}").config.settingsKeyClearTask)
+        assertTrue(parseTvConfig("""{"settings_key_clear_task": true}""").config.settingsKeyClearTask)
+        assertFalse(parseTvConfig("""{"settings_key_clear_task": false}""").config.settingsKeyClearTask)
+
+        val wrong = parseTvConfig("""{"settings_key_clear_task": "yes"}""")
+        assertFalse(wrong.config.settingsKeyClearTask)
+        assertEquals(listOf("settings_key_clear_task"), wrong.rejectedKeys)
+    }
+
+    @Test
     fun settings_key_panel_stays_unsupported_because_the_panel_does_not_exist() {
         val parsed = parseTvConfig("""{"settings_key_panel": true}""")
         assertEquals(listOf("settings_key_panel"), parsed.unsupportedKeys)
@@ -547,6 +558,7 @@ class TvConfigParserTest {
             "app_keys" to ("""["172:com.a"]""" to defaults.copy(appKeys = listOf("172:com.a"))),
             "settings_key_keycodes" to ("[172]" to defaults.copy(settingsKeyKeycodes = listOf(172))),
             "settings_key_scancodes" to ("[159]" to defaults.copy(settingsKeyScancodes = listOf(159))),
+            "settings_key_clear_task" to ("true" to defaults.copy(settingsKeyClearTask = true)),
             "input_key_keycodes" to ("[1001]" to defaults.copy(inputKeyKeycodes = listOf(1001))),
             "capture_input_keys" to ("true" to defaults.copy(captureInputKeys = true)),
             "key_filter" to ("false" to defaults.copy(keyFilter = false)),

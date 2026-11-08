@@ -46,7 +46,7 @@ class MainActivity : ComponentActivity() {
      * when that key opened another app.
      */
     private var resumed = false
-    private val vendorKeys by lazy { VendorKeys(this, graph.config, graph.systemSettings, ::openSettings) }
+    private val vendorKeys by lazy { VendorKeys(this, graph.config, graph.systemSettings, ::openSettingsFromKey) }
     private val idleClock by lazy {
         IdleClock(TimeUnit.MINUTES.toMillis(graph.config.homeIdleClockMinutes.toLong()), { resumed }, ::showClock)
     }
@@ -252,6 +252,10 @@ class MainActivity : ComponentActivity() {
 
     private fun openSettings() {
         if (!graph.systemSettings.openSettings()) cantOpen(getString(FeatureR.string.settings))
+    }
+
+    private fun openSettingsFromKey() {
+        if (!graph.systemSettings.openSettings(graph.config.settingsKeyClearTask)) cantOpen(getString(FeatureR.string.settings))
     }
 
     private fun openNetwork() {

@@ -175,6 +175,8 @@ public data class TvConfig(
     val settingsKeyKeycodes: List<Int> = emptyList(),
     /** Raw scancodes of remote buttons that open Settings, for remotes that send no usable keycode. */
     val settingsKeyScancodes: List<Int> = emptyList(),
+    /** A remote Settings button clears the TV Settings task before opening it, so Back goes Home on boards whose firmware adds its own page to that task. */
+    val settingsKeyClearTask: Boolean = false,
     /** More remote buttons that open the input switcher, taken by the key service whatever [captureInputKeys] says. */
     val inputKeyKeycodes: List<Int> = emptyList(),
     /** The key service takes KEYCODE_TV and KEYCODE_TV_INPUT to open the input switcher; off leaves them to the TV. */

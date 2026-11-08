@@ -191,6 +191,18 @@ class KeyServiceTest {
         assertEquals(Settings.ACTION_SETTINGS, started()?.action)
     }
 
+    @Test
+    fun the_settings_key_clears_the_settings_task_only_with_settings_key_clear_task() {
+        service.start(TvConfig())
+        assertTrue(tap(KeyEvent.KEYCODE_SETTINGS))
+        assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK, started()?.flags)
+
+        device += 1
+        service.start(TvConfig(settingsKeyClearTask = true))
+        assertTrue(tap(KeyEvent.KEYCODE_SETTINGS))
+        assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK, started()?.flags)
+    }
+
     private fun pressInputButton(code: Int): Pair<Boolean, Boolean> {
         val down = service.onKeyEvent(key(KeyEvent.ACTION_DOWN, code))
         val up = service.onKeyEvent(key(KeyEvent.ACTION_UP, code, at = 1_100))

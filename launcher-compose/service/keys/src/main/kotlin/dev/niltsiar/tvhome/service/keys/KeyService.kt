@@ -206,7 +206,8 @@ public class KeyService : AccessibilityService() {
             (config.captureInputKeys && (keyCode == KeyEvent.KEYCODE_TV || keyCode == KeyEvent.KEYCODE_TV_INPUT))
 
     private fun openSettings() {
-        if (settings?.openSettings() != true) Toast.makeText(this, R.string.not_available, Toast.LENGTH_SHORT).show()
+        val opened = settings?.openSettings(config.settingsKeyClearTask) == true
+        if (!opened) Toast.makeText(this, R.string.not_available, Toast.LENGTH_SHORT).show()
     }
 
     /** The system's input switcher, which the TV's Live TV app or Home answers; on its own it does nothing once the stock launcher is disabled. */

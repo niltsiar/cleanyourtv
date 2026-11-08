@@ -163,6 +163,7 @@ public fun parseTvConfig(json: String): ParsedConfig {
             appKeys = o.stringList("app_keys", d.appKeys),
             settingsKeyKeycodes = o.keycodes("settings_key_keycodes", d.settingsKeyKeycodes),
             settingsKeyScancodes = o.keycodes("settings_key_scancodes", d.settingsKeyScancodes),
+            settingsKeyClearTask = o.bool("settings_key_clear_task", d.settingsKeyClearTask),
             inputKeyKeycodes = o.keycodes("input_key_keycodes", d.inputKeyKeycodes),
             captureInputKeys = o.bool("capture_input_keys", d.captureInputKeys),
             keyFilter = o.bool("key_filter", d.keyFilter),
