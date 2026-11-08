@@ -58,7 +58,8 @@ MAX_COLD_START_MS=1500
 MAX_APK_BYTES=$((6 * 1024 * 1024))
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-GRADLE=("$ROOT/gradlew" --console=plain -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true)
+# The property pins the application ID this script names above, whatever a gradle.properties on this machine sets.
+GRADLE=("$ROOT/gradlew" --console=plain -PlauncherApplicationId="$PACKAGE" -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true)
 
 # The files tools/theme.sh pushes, one path per line. The names go into a shell script, so they stay plain.
 theme_files() {

@@ -29,6 +29,7 @@ SERIAL = "192.168.1.50:5555"
 SECURE_SETTINGS = "android.permission.WRITE_SECURE_SETTINGS"
 GUARD_CONFIG = f"{NEW}/.service.keys.GuardConfig"
 GUARD_LISTENER = f"{NEW}/.service.keys.GuardRevival"
+ALT = "com.example.home"
 
 FAKE_ADB = r'''#!/usr/bin/env python3
 import json
@@ -129,8 +130,9 @@ elif args[:1] == ["shell"]:
         out(f"  mFocusedApp=ActivityRecord{{1a2b u0 {front} t5}}")
     elif line.startswith("dumpsys activity services"):
         services = state["settings"].get("enabled_accessibility_services", "")
-        out("  * ServiceRecord{9f u0 dev.niltsiar.tvhome/.service.keys.KeyService}")
-        if state["key_binds"] and "dev.niltsiar.tvhome/.service.keys.KeyService" in services.split(":"):
+        key_service = state.get("key_service", "dev.niltsiar.tvhome/.service.keys.KeyService")
+        out("  * ServiceRecord{9f u0 " + key_service + "}")
+        if state["key_binds"] and key_service in services.split(":"):
             out("      * IntentBindRecord{7c}:")
             out("        requested=true received=true hasBound=true")
 '''
@@ -246,6 +248,40 @@ class SwitchHomeTest(unittest.TestCase):
         settings = self.read_tv()["settings"]
         self.assertEqual(settings["enabled_accessibility_services"], NEW_KEY)
         self.assertEqual(settings["screensaver_components"], f"{NEW}/.ClockDream")
+
+    def test_new_with_another_application_id_uses_it_for_home_key_service_screensaver_and_theme_folder(self):
+        key = f"{ALT}/{NEW}.service.keys.KeyService"
+        self.tv(key_service=key)
+        result = self.run_script("new", TV_PACKAGE=ALT)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        state = self.read_tv()
+        self.assertEqual(state["home"], f"{ALT}/{NEW}.MainActivity")
+        self.assertEqual(state["settings"]["enabled_accessibility_services"], key)
+        self.assertEqual(state["settings"]["screensaver_components"], f"{ALT}/{NEW}.ClockDream")
+        self.assertIn(["shell", f"test -f /sdcard/Android/data/{ALT}/files/config.json && echo present"], self.calls())
+        self.assertIn(["shell", "pm", "grant", ALT, "android.permission.ACCESS_FINE_LOCATION"], self.calls())
+        self.assertIn(["shell", "pm", "path", ALT], self.calls())
+
+    def test_new_with_another_application_id_aims_the_guard_at_it(self):
+        self.tv(key_service=f"{ALT}/{NEW}.service.keys.KeyService")
+        result = self.run_script("new", TV_PACKAGE=ALT, GUARD="1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            self.guard_calls(),
+            [f"allow {ALT}/{NEW}.service.keys.GuardRevival", f"opt true {ALT}.GUARD {ALT}/{NEW}.service.keys.GuardConfig"],
+        )
+
+    def test_the_undo_command_keeps_the_application_id(self):
+        self.tv(home_in_front=False)
+        result = self.run_script("new", TV_PACKAGE=ALT)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(f"TV_PACKAGE={ALT} {SCRIPT} old", result.stderr)
+
+    def test_an_application_id_that_is_not_a_package_name_is_refused_before_the_tv_is_asked(self):
+        result = self.run_script("new", TV_PACKAGE="com.example/x; reboot")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("TV_PACKAGE must be an Android package name", result.stderr)
+        self.assertEqual(self.calls(), [])
 
     def test_new_leaves_the_key_service_alone_when_home_never_comes_to_the_front(self):
         self.tv(home_in_front=False)
@@ -615,6 +651,14 @@ class SpikeGateRunTest(unittest.TestCase):
         tasks = [word for word in (self.root / "gradle.log").read_text().split() if word.startswith(":")]
         self.assertIn(":baselineprofile:connectedBenchmarkReleaseAndroidTest", tasks)
         self.assertEqual([task for task in tasks if "install" in task.lower()], [])
+
+    def test_every_gradle_call_pins_the_application_id_the_gate_names(self):
+        result = self.run_gate(34)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        gradle_calls = (self.root / "gradle.log").read_text().splitlines()
+        self.assertTrue(gradle_calls)
+        for call in gradle_calls:
+            self.assertIn(f"-PlauncherApplicationId={NEW} ", call)
 
     def test_below_api_34_the_theme_goes_to_the_benchmark_package_before_the_test_task(self):
         result = self.run_gate(31)

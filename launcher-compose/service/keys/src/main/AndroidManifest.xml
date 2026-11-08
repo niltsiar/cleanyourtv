@@ -38,7 +38,7 @@
             android:exported="true"
             android:permission="android.permission.WRITE_SECURE_SETTINGS">
             <intent-filter>
-                <action android:name="dev.niltsiar.tvhome.GUARD" />
+                <action android:name="${applicationId}.GUARD" />
             </intent-filter>
         </receiver>
 

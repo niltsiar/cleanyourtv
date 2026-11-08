@@ -4,6 +4,10 @@
 # Usage:   scripts/switch-home.sh new|old
 # Env:     TV_SERIAL   adb serial of the TV, such as <tv ip>:5555 (required)
 #          ADB         adb binary (default: adb on PATH)
+#          TV_PACKAGE  application ID of the Compose launcher (default: dev.niltsiar.tvhome). Set it to the value the APK was
+#                      built with, `-PlauncherApplicationId=<id>`, for firmware that accepts only known package names as Home.
+#                      The classes keep the namespace dev.niltsiar.tvhome, so the components are <id>/dev.niltsiar.tvhome.MainActivity
+#                      and so on. Use the same value for tools/theme.sh.
 #          OLD_HOME    package of the old launcher (default: com.gathin.tvhome)
 #          OLD_INPUT_KEY_SERVICE=1   with `old` and no saved state: also turn the old launcher's InputKeyService back on
 #          KEYS=keep         leave enabled_accessibility_services and accessibility_enabled as they are (both directions)
@@ -29,7 +33,7 @@
 # variables to move the key service and the screensaver after Home has been seen working.
 #
 # Order: new checks first (the app is installed, and it has a theme config.json in its external files directory, which a
-# reinstall deletes and without which the key remaps vanish; push one with tools/theme.sh and TV_PACKAGE=dev.niltsiar.tvhome),
+# reinstall deletes and without which the key remaps vanish; push one with tools/theme.sh and TV_PACKAGE set to the application ID, dev.niltsiar.tvhome unless changed),
 # then saves the before-values, sets Home, checks the launcher is in front, and only then moves the key service and the
 # screensaver. If our KeyService does not bind within BIND_WAIT_SECONDS, the key settings go back as they were. A failure
 # after any change prints the command that undoes it.
@@ -71,12 +75,29 @@ if [ "$#" -ne 1 ]; then
   exit 2
 fi
 
-NEW_PACKAGE="dev.niltsiar.tvhome"
+NEW_PACKAGE="${TV_PACKAGE:-dev.niltsiar.tvhome}"
 OLD_PACKAGE="${OLD_HOME:-com.gathin.tvhome}"
+if [[ ! "$NEW_PACKAGE" =~ ^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$ ]]; then
+  echo "TV_PACKAGE must be an Android package name such as dev.niltsiar.tvhome, not '$NEW_PACKAGE'. Nothing was sent to the TV." >&2
+  exit 2
+fi
+
+# The code package of the Compose launcher, whatever its application ID is.
+NAMESPACE="dev.niltsiar.tvhome"
+# component CLASS: our component in the form Android prints, <id>/.Class under the namespace's own ID, else <id>/<namespace>.Class.
+component() {
+  if [ "$NEW_PACKAGE" = "$NAMESPACE" ]; then printf '%s/.%s' "$NEW_PACKAGE" "$1"; else printf '%s/%s.%s' "$NEW_PACKAGE" "$NAMESPACE" "$1"; fi
+}
 
 case "$1" in
-  new) PACKAGE="$NEW_PACKAGE" ;;
-  old) PACKAGE="$OLD_PACKAGE" ;;
+  new)
+    PACKAGE="$NEW_PACKAGE"
+    ACTIVITY="$(component MainActivity)"
+    ;;
+  old)
+    PACKAGE="$OLD_PACKAGE"
+    ACTIVITY="$PACKAGE/.MainActivity"
+    ;;
   *)
     usage
     exit 2
@@ -85,7 +106,6 @@ esac
 
 TV_SERIAL="${TV_SERIAL:?set TV_SERIAL to the TV adb serial, such as <tv ip>:5555}"
 ADB="${ADB:-adb}"
-ACTIVITY="$PACKAGE/.MainActivity"
 
 command -v "$ADB" > /dev/null || {
   echo "missing tool: $ADB" >&2
@@ -172,8 +192,8 @@ put_setting() {
   echo "$1 after:  $(read_setting "$1")"
 }
 
-NEW_KEY_SERVICE="$NEW_PACKAGE/.service.keys.KeyService"
-NEW_DREAM="$NEW_PACKAGE/.ClockDream"
+NEW_KEY_SERVICE="$(component service.keys.KeyService)"
+NEW_DREAM="$(component ClockDream)"
 OLD_HOME_KEY="$OLD_PACKAGE/.HomeKeyService"
 OLD_INPUT_KEY="$OLD_PACKAGE/.InputKeyService"
 OLD_DREAM="$OLD_PACKAGE/.ClockDream"
@@ -199,7 +219,7 @@ STATE_FILE="$STATE_DIR/switch-home-${TV_SERIAL//[^A-Za-z0-9._-]/_}.state"
 CHANGED=0
 CREATED_STATE=0
 
-UNDO="TV_SERIAL=$TV_SERIAL${OLD_HOME:+ OLD_HOME=$OLD_HOME} $0 $([ "$1" = new ] && echo old || echo new)"
+UNDO="TV_SERIAL=$TV_SERIAL${TV_PACKAGE:+ TV_PACKAGE=$TV_PACKAGE}${OLD_HOME:+ OLD_HOME=$OLD_HOME} $0 $([ "$1" = new ] && echo old || echo new)"
 on_exit() {
   local status=$?
   trap - EXIT
@@ -271,12 +291,13 @@ switch_screensaver() {
 
 # The standby guard. The broadcast's reply is the line `am broadcast` prints; the receiver answers guard_off_in_standby=<value>.
 guard_opt_in() {
-  adb_tv shell am broadcast -a "$NEW_PACKAGE.GUARD" -n "$NEW_PACKAGE/.service.keys.GuardConfig" --ez guard_off_in_standby "$1" 2>&1 \
+  adb_tv shell am broadcast -a "$NEW_PACKAGE.GUARD" -n "$(component service.keys.GuardConfig)" --ez guard_off_in_standby "$1" 2>&1 \
     | tr -d '\r' | grep 'Broadcast completed' || echo "no reply from $NEW_PACKAGE.GUARD"
 }
 
 switch_guard() {
-  local listener="$NEW_PACKAGE/.service.keys.GuardRevival"
+  local listener
+  listener="$(component service.keys.GuardRevival)"
   echo "== Standby guard"
   if [ "$1" = new ]; then
     if [ "${GUARD:-0}" != 1 ]; then

@@ -8,7 +8,10 @@ android {
     namespace = "dev.niltsiar.tvhome"
 
     defaultConfig {
-        applicationId = "dev.niltsiar.tvhome"
+        // Opt-in identity for firmware with a package-name HOME allowlist. The namespace, and so every class name, stays.
+        // Xiaomi: docs/devices/xiaomi-mitv-aetp0-dofus.md (com.ts.launcher).
+        // ColorOS TV: docs/devices/oppo-k9-55-oppocnm632.md (com.oneplus.tv.launcher2).
+        applicationId = providers.gradleProperty("launcherApplicationId").getOrElse("dev.niltsiar.tvhome")
         versionCode = 1
         versionName = "0.1.0"
     }
