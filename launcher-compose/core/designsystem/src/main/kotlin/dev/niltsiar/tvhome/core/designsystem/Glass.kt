@@ -46,9 +46,6 @@ public class GlassState internal constructor() {
     /** The mean CIE L* (0 to 100) of the [frost] under the dock: how bright the wallpaper is where the dock sits. */
     public var dockLightness: Float by mutableStateOf(0f)
 
-    /** The mean CIE L* (0 to 100) of the [frost] under the grid: how bright the wallpaper is where its tiles sit. */
-    public var gridLightness: Float by mutableStateOf(0f)
-
     /** The 90th-percentile CIE L* of the wallpaper, before Home's scrim, where the header's text can sit. */
     public var headerLightness: Float by mutableStateOf(0f)
 

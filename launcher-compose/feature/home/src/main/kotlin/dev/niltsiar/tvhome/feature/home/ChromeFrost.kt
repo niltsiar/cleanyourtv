@@ -58,7 +58,6 @@ private class Baked(
     val frost: ImageBitmap,
     val dockFrost: ImageBitmap?,
     val dockLightness: Float,
-    val gridLightness: Float,
     val headerLightness: Float,
     val topBarLightness: Float,
     val heroLuminance: Float,
@@ -66,8 +65,7 @@ private class Baked(
 
 /**
  * Keeps [glass]'s frost on the wallpaper's [Wallpaper.thumbnail] and sky, baked off the main thread each time either
- * changes, and [GlassState.dockLightness] on the part of it under the [dock] and [GlassState.gridLightness] on the part under
- * the [grid] (as fractions of the screen). It also keeps
+ * changes, and [GlassState.dockLightness] on the part of it under the [dock] (as a fraction of the screen). It also keeps
  * [GlassState.headerLightness] and [GlassState.topBarLightness], measured on the thumbnail and sky before the scrim, and
  * [GlassState.heroLuminance] on the [hero] box (as fractions of the screen), in the same pass on [LocalBakeDispatcher]. No
  * thumbnail, no frost and a lightness of 0, which gives the base tint and the fixed scrims. With [dockGlass] it also
@@ -79,12 +77,11 @@ internal fun ChromeFrostEffect(
     wallpaper: () -> Wallpaper,
     skyIntensity: Int,
     dock: Rect,
-    grid: Rect,
     hero: Rect,
     dockGlass: Boolean,
 ) {
     val bakeDispatcher = LocalBakeDispatcher.current
-    LaunchedEffect(glass, skyIntensity, dock, grid, hero, dockGlass, bakeDispatcher) {
+    LaunchedEffect(glass, skyIntensity, dock, hero, dockGlass, bakeDispatcher) {
         snapshotFlow { wallpaper().let { it.thumbnail to it.sky } }.distinctUntilChanged().collectLatest { (thumbnail, sky) ->
             val baked =
                 thumbnail?.let {
@@ -106,7 +103,6 @@ internal fun ChromeFrostEffect(
                                     null
                                 },
                             dockLightness = meanLightness(pixels, frost.width, frost.height, dock),
-                            gridLightness = meanLightness(pixels, frost.width, frost.height, grid),
                             headerLightness = lightnessPercentile(base, it.width, it.height, HeaderBand, LIGHTNESS_PERCENTILE),
                             topBarLightness = lightnessPercentile(base, it.width, it.height, TopBarButtonsBand, LIGHTNESS_PERCENTILE),
                             heroLuminance = meanLuminance(base, it.width, it.height, hero),
@@ -116,7 +112,6 @@ internal fun ChromeFrostEffect(
             glass.frost = baked?.frost
             glass.dockFrost = baked?.dockFrost
             glass.dockLightness = baked?.dockLightness ?: 0f
-            glass.gridLightness = baked?.gridLightness ?: 0f
             glass.headerLightness = baked?.headerLightness ?: 0f
             glass.topBarLightness = baked?.topBarLightness ?: 0f
             glass.heroLuminance = baked?.heroLuminance ?: 0f

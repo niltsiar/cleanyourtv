@@ -231,8 +231,6 @@ private val TileShape = RoundedCornerShape(TileCorner)
 private val LightTileEdgeWidth = 1.dp
 private val LightTileEdge = Color.Black.copy(alpha = 0.75f)
 
-/** The mean L* of the frost from which the wallpaper counts as bright under a tile: the mark where the top-bar buttons thicken their tint. */
-private const val BRIGHT_WALLPAPER_LIGHTNESS = 70f
 private val DockShape = RoundedCornerShape(32.dp)
 private val GridBottom = 48.dp
 
@@ -341,12 +339,6 @@ public fun HomeScreen(
             LocalWindowInfo.current.containerSize.height
                 .toDp()
         }
-    val windowWidth =
-        with(LocalDensity.current) {
-            LocalWindowInfo.current.containerSize.width
-                .toDp()
-        }
-    val gridBand = remember(windowWidth, windowHeight, shelfBottom) { gridBand(windowWidth, windowHeight, shelfBottom) }
     val input =
         remember {
             HomeInput(
@@ -442,7 +434,6 @@ public fun HomeScreen(
             wallpaper = { state().wallpaper },
             skyIntensity = wallpaperLayout.skyIntensity,
             dock = dim.band,
-            grid = gridBand,
             hero = dim.hero,
             dockGlass = dockLook.band && dockLook.glass,
         )
@@ -620,7 +611,6 @@ private fun HomeContent(
     val dock = remember(state) { derivedStateOf(structuralEqualityPolicy()) { state().dock } }.value
     val grid = remember(state) { derivedStateOf(structuralEqualityPolicy()) { state().grid } }.value
     val reordering = input.reordering.value
-    val onBrightWallpaper = remember(glass) { { glass.gridLightness >= BRIGHT_WALLPAPER_LIGHTNESS } }
     LaunchedEffect(gridState) {
         snapshotFlow { state().focusRequest }.filterNotNull().collect { request ->
             focusOn(request.target, gridState, dockRow, layout.singleRow, state, input)
@@ -735,7 +725,6 @@ private fun HomeContent(
                     tileMenu = layout.tileMenu,
                     showName = layout.showNames,
                     fadeUnused = true,
-                    lightEdge = onBrightWallpaper.takeIf { app.lightArt },
                     modifier =
                         Modifier
                             .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = TvTheme.motion.placementSpec)
@@ -921,13 +910,6 @@ private class FocusDim(
 /** How long the group takes to move, and the damping of its spring when focus_overshoot is on. */
 private const val GROUP_MS = 320
 private const val GROUP_OVERSHOOT_DAMPING = 0.7f
-
-/** The window under the grid's tiles, as fractions of it: from the shelf's bottom edge to the grid's bottom margin. */
-private fun gridBand(
-    width: Dp,
-    height: Dp,
-    shelfBottom: Dp,
-): Rect = Rect(ScreenMargin / width, shelfBottom / height, 1f - ScreenMargin / width, (height - GridBottom) / height)
 
 @Composable
 private fun rememberFocusDim(
@@ -1562,8 +1544,6 @@ private fun Dock(
     // tiles than the row holds the panel is as wide as they are, centred.
     val shrunk = look.band && !layout.singleRow && dock.size < layout.columns
     val width = if (shrunk) Modifier.wrapContentWidth() else Modifier.fillMaxWidth()
-    val darkSurfaces = TvTheme.surfaces.dark
-    val onLight = remember(look, darkSurfaces, glass) { dockOnLight(look, darkSurfaces, glass) }
     DockPanel(glass, look, edge, shade, modifier.outset(TileGap).then(width).testTag("dock")) {
         if (layout.singleRow) {
             // The grid's pivot scroll is vertical; this row scrolls sideways the usual way.
@@ -1590,7 +1570,6 @@ private fun Dock(
                             tileMenu = layout.tileMenu,
                             showName = layout.showNames,
                             edge = edge,
-                            lightEdge = onLight.takeIf { app.lightArt },
                             growthAnchorX =
                                 dockGrowthAnchor(
                                     first = index == 0,
@@ -1652,7 +1631,6 @@ private fun Dock(
                             tileMenu = layout.tileMenu,
                             showName = layout.showNames,
                             edge = edge,
-                            lightEdge = onLight.takeIf { app.lightArt },
                             growthAnchorX =
                                 dockGrowthAnchor(
                                     first = index == 0,
@@ -1686,16 +1664,6 @@ private fun dockGrowthAnchor(
         last && !first -> 1f
         else -> 0.5f
     }
-
-/** Whether the surface under a dock tile is light: a light tray, or with a dark tray or none the wallpaper. Read it in a draw lambda. */
-private fun dockOnLight(
-    look: DockLook,
-    darkSurfaces: Boolean,
-    glass: GlassState,
-): () -> Boolean {
-    if (!look.band || !look.light(darkSurfaces)) return { glass.dockLightness >= BRIGHT_WALLPAPER_LIGHTNESS }
-    return { true }
-}
 
 /** With input_arrival, Up from a dock tile goes to the Inputs button while it offers a device. Read when focus moves. */
 private fun Modifier.upToOffer(
@@ -1820,7 +1788,6 @@ private fun AppTile(
     habitMark: Boolean = true,
     fadeUnused: Boolean = false,
     edge: DockEdgeLight? = null,
-    lightEdge: (() -> Boolean)? = null,
     bannerName: Boolean = true,
     growthPivot: ((Float) -> Float)? = null,
     growthAnchorX: Float = 0.5f,
@@ -1846,7 +1813,6 @@ private fun AppTile(
                 habitMark = false,
                 fadeUnused = fadeUnused,
                 edge = edge,
-                lightEdge = lightEdge,
                 bannerName = false,
                 growthPivot = pivot,
                 growthAnchorX = growthAnchorX,
@@ -1924,10 +1890,10 @@ private fun AppTile(
                 .fillMaxSize()
                 .drawBehind { drawRect(surface) }
                 .then(
-                    if (lightEdge != null) {
+                    if (app.lightArt) {
                         Modifier.drawWithContent {
                             drawContent()
-                            if (lightEdge()) drawLightTileEdge()
+                            drawLightTileEdge()
                         }
                     } else {
                         Modifier
@@ -2009,7 +1975,7 @@ private fun NameChip(
     }
 }
 
-/** A 1 dp edge drawn inside the tile's shape over its art, so a light tile holds on a light surface. */
+/** A 1 dp edge drawn inside the tile's shape over its art, so a light tile holds on any surface, and a dark one costs it nothing. */
 private fun ContentDrawScope.drawLightTileEdge() {
     val width = LightTileEdgeWidth.toPx()
     drawRoundRect(

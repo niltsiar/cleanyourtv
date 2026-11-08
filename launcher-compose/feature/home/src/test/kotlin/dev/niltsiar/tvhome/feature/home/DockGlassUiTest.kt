@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -564,6 +565,57 @@ class DockGlassUiTest {
         assertEdgeHolds("tile:pkg.9")
     }
 
+    /** White on one half and black on the other: a mean L* near 50 over the screen, with a bright patch next to a tile on the white half. */
+    private fun halved(whiteLeft: Boolean): ImageBitmap {
+        val wallpaper = bitmap(40, 40) { x, _ -> grey(if ((x < 20) == whiteLeft) 255 else 0) }
+        val baked = bakeFrost(wallpaper, null, 0f)
+        val pixels = IntArray(baked.width * baked.height).also { baked.readPixels(it) }
+        val mean = meanLightness(pixels, baked.width, baked.height, Rect(0f, 0f, 1f, 1f))
+        assertTrue("mean L* $mean", mean < 70f)
+        return wallpaper
+    }
+
+    private fun screenCentre() = compose.onRoot().getBoundsInRoot().let { (it.left.value + it.right.value) / 2f }
+
+    @Test
+    fun the_edge_of_a_white_grid_tile_holds_3_to_1_where_the_wallpaper_is_white_beside_it_and_dark_on_average() {
+        val wallpaper = halved(whiteLeft = true)
+        showHome(wallpaper, wallpaper = flowOf(Wallpaper(picture = wallpaper, thumbnail = wallpaper)), shown = whiteApps)
+        press(Key.DirectionDown)
+
+        assertTrue(
+            "the tile lies on the white left half",
+            compose
+                .onNodeWithTag("tile:pkg.9")
+                .getBoundsInRoot()
+                .right.value < screenCentre(),
+        )
+        assertEdgeHolds("tile:pkg.9")
+    }
+
+    @Test
+    fun the_edge_of_a_white_dock_tile_holds_3_to_1_on_the_dark_tray_where_the_wallpaper_is_white_beside_it_and_dark_on_average() {
+        val wallpaper = halved(whiteLeft = false)
+        showHome(wallpaper, wallpaper = flowOf(Wallpaper(picture = wallpaper, thumbnail = wallpaper)), shown = whiteApps)
+
+        assertTrue("the tile and the 4 dp beside it lie on the white right half", dockTile(6).left.value - 4f > screenCentre())
+        assertEdgeHolds("tile:pkg.6")
+    }
+
+    @Test
+    fun the_edge_of_a_white_dock_tile_holds_3_to_1_with_no_tray_where_the_wallpaper_is_white_beside_it_and_dark_on_average() {
+        val wallpaper = halved(whiteLeft = false)
+        showHome(
+            wallpaper,
+            cinematic.copy(dockBand = false),
+            wallpaper = flowOf(Wallpaper(picture = wallpaper, thumbnail = wallpaper)),
+            shown = whiteApps,
+        )
+
+        assertTrue("the tile and the 4 dp beside it lie on the white right half", dockTile(6).left.value - 4f > screenCentre())
+        assertEdgeHolds("tile:pkg.6")
+    }
+
     @Test
     fun the_light_tray_of_a_day_mode_dock_gives_a_light_tile_the_same_edge() {
         showHome(uniform, darkTheme = false, shown = lightApps)
@@ -572,10 +624,10 @@ class DockGlassUiTest {
     }
 
     @Test
-    fun a_dark_tray_gives_a_light_tile_no_edge() {
+    fun a_dark_tray_gives_a_light_tile_the_edge_whatever_the_wallpaper() {
         showHome(uniform, shown = lightApps)
 
-        assertNoEdge("tile:pkg.2", level245)
+        assertEdge("tile:pkg.2", level245)
     }
 
     @Test
@@ -594,11 +646,11 @@ class DockGlassUiTest {
     }
 
     @Test
-    fun a_light_grid_tile_over_a_dim_wallpaper_gets_no_edge() {
+    fun a_light_grid_tile_over_a_dim_wallpaper_gets_the_edge() {
         showHome(uniform, shown = lightApps)
         press(Key.DirectionDown)
 
-        assertNoEdge("tile:pkg.8", level245)
+        assertEdge("tile:pkg.8", level245)
     }
 
     @Test
