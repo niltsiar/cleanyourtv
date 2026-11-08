@@ -81,6 +81,7 @@ internal fun Modifier.reorderLook(
     key: String,
     input: HomeInput,
     shape: Shape,
+    growthPivot: ((Float) -> Float)? = null,
 ): Modifier {
     val motion = TvTheme.motion
     // A tile built mid-session (it crossed from the grid into the dock) starts where it ends up.
@@ -125,7 +126,9 @@ internal fun Modifier.reorderLook(
         val raised = lift.value
         scaleX = 1f + (1f / grown - 1f) * raised
         scaleY = scaleX
-        translationY = -LiftHeight.toPx() * raised
+        // A growth anchored under the tile's centre, cancelled about the centre, would leave the tile this much higher than at rest.
+        val regrown = growthPivot?.let { (it(size.height) - size.height / 2f) * (1f - 1f / grown) } ?: 0f
+        translationY = (regrown - LiftHeight.toPx()) * raised
         rotationZ = WIGGLE_DEGREES * wiggle.value * raised
         shadowElevation = LiftShadow.toPx() * raised.coerceIn(0f, 1f)
         this.shape = shape

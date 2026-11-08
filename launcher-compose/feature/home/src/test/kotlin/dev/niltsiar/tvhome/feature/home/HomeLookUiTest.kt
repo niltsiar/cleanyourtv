@@ -431,6 +431,20 @@ class HomeLookUiTest {
         assertNear((restTop + restBottom) / 2 - 7f, (top + bottom) / 2, 1f)
     }
 
+    @Test
+    fun with_names_a_carried_tile_is_drawn_where_it_is_without_them_lifted_7_dp_at_its_rest_size() {
+        showHome(apps = whiteApps(9), config = SixColumns.copy(alwaysShowNames = true))
+        val rest = bounds("tile:pkg.1")
+        val x = (rest.left.value + rest.right.value) / 2
+        val middle = (rest.top.value + rest.bottom.value) / 2
+
+        carryFirstTile()
+        val (top, bottom) = artSpan(x, middle - 7f)
+
+        assertNear(rest.top.value - 7f, top, 0.5f)
+        assertNear(rest.bottom.value - 7f, bottom, 0.5f)
+    }
+
     /** Whether the screen holds a white pixel in the box from ([left], [top]) to ([right], [bottom]), in dp. */
     private fun whiteIn(
         left: Float,

@@ -1,7 +1,6 @@
 package dev.niltsiar.tvhome.core.designsystem
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -15,6 +14,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -72,7 +72,8 @@ public val FocusRingReach: Dp = RingGap + RingWidth + HairlineWidth + OuterStrok
  * a translucent surface, as a dark patch. The animation starts in the focus callback and is read in the layer and draw
  * lambdas, so a focus change neither recomposes nor relays out. [focusedScale] is the size it grows to. The growth is
  * drawn, not a layer scale, so the surface's bounds stay put while it grows and accessibility has nothing to update.
- * [focusProgress], from 0 to 1, is the animation that grows it, for a caller that moves something else with it.
+ * [growthPivot], given the surface's height in pixels, says how far under its top the growth is anchored, in the middle
+ * of its width; without it the surface grows about its centre.
  */
 @Composable
 public fun FocusSurface(
@@ -87,11 +88,11 @@ public fun FocusSurface(
     ring: ColorProducer? = null,
     ringBlends: Boolean = false,
     plate: Color = Color.Unspecified,
-    focusProgress: Animatable<Float, AnimationVector1D>? = null,
+    growthPivot: ((Float) -> Float)? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val motion = TvTheme.motion
-    val focus = focusProgress ?: remember { Animatable(0f) }
+    val focus = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val grownScale = motion.focusScale(focusedScale)
     val glowColor = accent.takeOrElse { TvTheme.colors.accent }
@@ -108,11 +109,17 @@ public fun FocusSurface(
             modifier
                 .graphicsLayer {
                     shadowElevation = if (glow) GlowElevation.toPx() * focus.value.coerceIn(0f, 1f) else 0f
-                    this.shape = ScaledShape(shape, 1f + (grownScale - 1f) * focus.value)
+                    this.shape = ScaledShape(shape, 1f + (grownScale - 1f) * focus.value, growthPivot)
                     ambientShadowColor = glowColor
                     spotShadowColor = glowColor
                 }.drawWithContent {
-                    scale(1f + (grownScale - 1f) * focus.value) {
+                    scale(
+                        1f + (grownScale - 1f) * focus.value,
+                        Offset(
+                            size.width / 2f,
+                            growthPivot?.invoke(size.height) ?: (size.height / 2f),
+                        ),
+                    ) {
                         val progress = focus.value.coerceIn(0f, 1f)
                         val outline = if (progress > 0f) shape.createOutline(size, layoutDirection, this) else null
                         val width = RingWidth.toPx()
@@ -188,10 +195,11 @@ internal fun Outline.grownBy(delta: Float): Outline =
 
 private fun CornerRadius.grownBy(delta: Float): CornerRadius = CornerRadius(x + delta, y + delta)
 
-/** [base] grown [scale] times about its centre, as the drawn growth shows it, so the glow under it grows with it. */
+/** [base] grown [scale] times about its centre, or about [pivot]'s height under its top, as the drawn growth shows it, so the glow under it grows with it. */
 private data class ScaledShape(
     val base: Shape,
     val scale: Float,
+    val pivot: ((Float) -> Float)?,
 ) : Shape {
     override fun createOutline(
         size: Size,
@@ -201,7 +209,7 @@ private data class ScaledShape(
         val outline = base.createOutline(size, layoutDirection, density)
         if (scale == 1f) return outline
         val cx = size.width / 2f
-        val cy = size.height / 2f
+        val cy = pivot?.invoke(size.height) ?: (size.height / 2f)
         if (outline is Outline.Rounded) {
             val r = outline.roundRect
             return Outline.Rounded(

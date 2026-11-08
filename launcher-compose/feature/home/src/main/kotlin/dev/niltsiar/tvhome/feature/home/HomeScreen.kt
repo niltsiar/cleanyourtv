@@ -5,7 +5,6 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -168,11 +167,41 @@ internal val ScreenMargin = 40.dp
 internal val TileGap = 24.dp
 
 /**
- * The gap between a tile and its name's pill at rest. The pill of the focused tile slides down with the focus growth until
- * it clears the grown ring by [NameRingClearance].
+ * The gap between a tile and its name's pill, for a tile that grows about its bottom edge: its ring then reaches
+ * [FocusRingReach] x 1.08 = 9.72 dp under it, and the pill, which never moves, stays [NameRingClearance] clear of it.
+ * [nameGap] adds to it for a tile too tall for that.
  */
-private val TileNameGap = 6.dp
-private val NameRingClearance = 8.dp
+private val TileNameGap = 14.dp
+private val NameRingClearance = 4.dp
+
+/**
+ * How far under the top of a tile [tileHeight] dp high its focus growth, grown [scale] times, is anchored: its bottom edge, or
+ * higher when the grown ring would reach within [NameRingClearance] of the [TileGap] over the tile (the row above's pills, the
+ * dock panel's rim).
+ */
+internal fun namePivot(
+    tileHeight: Float,
+    scale: Float,
+): Float {
+    if (scale <= 1f) return tileHeight
+    val reach = TileGap.value - NameRingClearance.value - FocusRingReach.value * scale
+    return minOf(tileHeight, reach / (scale - 1f))
+}
+
+/** The gap under a tile [tileHeight] dp high to its pill: [TileNameGap], and the tile's growth under its bottom edge past it. */
+internal fun nameGap(
+    tileHeight: Float,
+    scale: Float,
+): Float = TileNameGap.value + (scale - 1f).coerceAtLeast(0f) * (tileHeight - namePivot(tileHeight, scale))
+
+/** The least the space under a pill is of its [nameGap], so that the pill reads as the name of the tile over it. */
+private const val NAME_BELOW_RATIO = 1.5f
+
+/** What a tile [tileHeight] dp high adds under its pill, so that the space to what follows (a [TileGap] away) is [NAME_BELOW_RATIO] times its gap. */
+internal fun nameBelow(
+    tileHeight: Float,
+    scale: Float,
+): Float = maxOf(0f, NAME_BELOW_RATIO * nameGap(tileHeight, scale) - TileGap.value)
 
 /** One line of a tile's name and the padding of its pill. */
 private val NameLine = 20.dp
@@ -182,7 +211,7 @@ private val NamePillDown = 2.dp
 /** The radius of every name pill: half the height of a pill of one line. */
 private val NamePillRadius = (NameLine + NamePillDown * 2) / 2
 
-/** The room always_show_names adds under a tile: the gap and a pill of one line. */
+/** The room always_show_names adds under a tile that grows about its bottom edge: the gap and a pill of one line. */
 internal val TileNameRoom = TileNameGap + NameLine + NamePillDown * 2
 
 /** How far the name of another launcher's banner stands from the banner's bottom and left edges. */
@@ -245,10 +274,9 @@ private const val HERO_MENU_MS = 120
 /** The row the dock is in; rows count from 0 at the first grid row. */
 private const val DOCK_ROW = -1
 private val ReorderRing = Color(0xFFFF6B4A)
-private const val TILE_ASPECT = 16f / 9f
 
 /** The grid items before the first grid tile: the shelf spacer and the dock. */
-private const val GRID_ITEMS_BEFORE = 2
+internal const val GRID_ITEMS_BEFORE = 2
 
 /**
  * The Home screen. [state] is read lazily, inside the parts that show each field. The grid reads the dock and grid
@@ -628,7 +656,7 @@ private fun HomeContent(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .gridEdges(gridState, dim::lowPx, cutoff = shelfBottom - ShelfToFade)
+                    .gridEdges(gridState, dim::lowPx, cutoff = shelfBottom - ShelfToFade, names = layout.showNames)
                     .onFocusChanged {
                         input.gridFocused = it.hasFocus
                         if (!it.hasFocus) input.travel.reset()
@@ -888,6 +916,7 @@ private fun rememberFocusDim(
     val density = LocalDensity.current
     val window = LocalWindowInfo.current.containerSize
     val gridCount by remember(state) { derivedStateOf { state.value().grid.size } }
+    val scale = TvTheme.motion.focusScale(TILE_FOCUSED_SCALE)
     val (lowering, band, hero) =
         with(density) {
             val width = window.width.toDp()
@@ -909,7 +938,7 @@ private fun rememberFocusDim(
                         gridRows = gridRows,
                         rowsBelowDock = layout.rowsBelowDock,
                         bottomMargin = GridBottom.value,
-                        nameRoom = layout.nameRoom(),
+                        nameRoom = layout.nameRoom(tileHeight.value, scale),
                     ).dp
                 }
             val start = gridStart(gridWidth, share)
@@ -919,7 +948,7 @@ private fun rememberFocusDim(
             val heroTop = ContentTop + lowered
             Triple(
                 lowered.toPx(),
-                Rect(edge, top / height, end, (top + tileHeight + TileGap * 2 + layout.nameRoom().dp) / height),
+                Rect(edge, top / height, end, (top + tileHeight + TileGap * 2 + layout.nameRoom(tileHeight.value, scale).dp) / height),
                 Rect(
                     ScreenMargin / width,
                     heroTop / height,
@@ -960,8 +989,11 @@ private fun gridStart(
     share: Float,
 ): Dp = ScreenMargin + gridWidth * ((1f - share) / 2f)
 
-/** The room a tile's name takes under it, in dp; 0 with the names off. */
-private fun HomeLayout.nameRoom(): Float = if (showNames) TileNameRoom.value else 0f
+/** The room the name of a tile [tileHeight] dp high takes under it, in dp; 0 with the names off. */
+private fun HomeLayout.nameRoom(
+    tileHeight: Float,
+    scale: Float,
+): Float = if (showNames) nameGap(tileHeight, scale) + (NameLine + NamePillDown * 2).value + nameBelow(tileHeight, scale) else 0f
 
 /** The row focus is on, as [FocusDim.row] counts it. */
 private fun focusRowOf(
@@ -1055,7 +1087,7 @@ private fun FocusDimEffects(
         var first = true
         snapshotFlow {
             val rows = (state.value().grid.size + layout.columns - 1) / layout.columns
-            minOf(dim.hiddenFromRow(grid.layoutInfo, layout.columns, minVisible), rows).toFloat()
+            minOf(dim.hiddenFromRow(grid.layoutInfo, layout.columns, minVisible, layout.showNames), rows).toFloat()
         }.collectLatest { target ->
             if (first) dim.fold.snapTo(target) else dim.fold.animateTo(target, motion.tweenSpec(ROW_DIM_MS))
             first = false
@@ -1136,9 +1168,10 @@ private fun FocusDim.hiddenFromRow(
     info: LazyGridLayoutInfo,
     columns: Int,
     minVisible: Float,
+    names: Boolean,
 ): Int {
     val shift = lowPx() - info.viewportStartOffset
-    val end = bottomFade(info, shift, info.viewportSize.height.toFloat(), minVisible).end
+    val end = bottomFade(info, shift, info.viewportSize.height.toFloat(), minVisible, names).end
     var first = Int.MAX_VALUE
     for (i in info.visibleItemsInfo.indices) {
         val item = info.visibleItemsInfo[i]
@@ -1743,11 +1776,16 @@ private fun AppTile(
     edge: DockEdgeLight? = null,
     lightEdge: (() -> Boolean)? = null,
     bannerName: Boolean = true,
-    focus: Animatable<Float, AnimationVector1D>? = null,
+    growthPivot: ((Float) -> Float)? = null,
 ) {
     val marked = if (habitMark) modifier.habitMark(input.habit, app.packageName) else modifier
     if (showName) {
-        NameUnder(app, marked) { grown ->
+        val scale = TvTheme.motion.focusScale(TILE_FOCUSED_SCALE)
+        val density = LocalDensity.current
+        val pivot: (
+            Float,
+        ) -> Float = remember(density, scale) { { height -> with(density) { namePivot(height.toDp().value, scale).dp.toPx() } } }
+        NameUnder(app, scale, marked) {
             AppTile(
                 app,
                 accent,
@@ -1763,7 +1801,7 @@ private fun AppTile(
                 edge = edge,
                 lightEdge = lightEdge,
                 bannerName = false,
-                focus = grown,
+                growthPivot = pivot,
             )
         }
         return
@@ -1794,10 +1832,10 @@ private fun AppTile(
         accent = accent,
         ring = ringColour,
         ringBlends = ringBlends,
-        focusProgress = focus,
+        growthPivot = growthPivot,
         modifier =
             (if (fadeUnused) marked.unusedFade(input.faded, key) else marked)
-                .then(if (reordering) Modifier.reorderLook(key, input, TileShape) else Modifier)
+                .then(if (reordering) Modifier.reorderLook(key, input, TileShape, growthPivot) else Modifier)
                 .aspectRatio(TILE_ASPECT)
                 .then(
                     if (edge != null) {
@@ -1864,43 +1902,31 @@ private fun AppTile(
 
 /**
  * [tile] with [app]'s name under it, on one line, on a pill as wide as the text and no wider than the tile, which looks the same
- * with focus or without. The pill is [TileNameGap] under the tile and slides down with the tile's focus growth, which [tile]
- * gets as its argument, until it clears the grown ring.
+ * with focus or without. The pill is [nameGap] under the tile and does not move with focus.
  */
 @Composable
 private fun NameUnder(
     app: AppEntry,
+    scale: Float,
     modifier: Modifier = Modifier,
-    tile: @Composable (focus: Animatable<Float, AnimationVector1D>) -> Unit,
+    tile: @Composable () -> Unit,
 ) {
-    val grownScale = TvTheme.motion.focusScale(TILE_FOCUSED_SCALE)
-    val focus = remember { Animatable(0f) }
     Layout(
         content = {
-            tile(focus)
+            tile()
             NameChip(app)
         },
         modifier = modifier,
     ) { measurables, constraints ->
         val art = measurables[0].measure(constraints)
         val name = measurables[1].measure(Constraints(maxWidth = art.width))
-        val gap = TileNameGap.roundToPx()
-        val slide = nameSlide(art.height, grownScale, gap)
-        layout(art.width, art.height + gap + name.height) {
+        val gap = nameGap(art.height.toDp().value, scale).dp.roundToPx()
+        val below = nameBelow(art.height.toDp().value, scale).dp.roundToPx()
+        layout(art.width, art.height + gap + name.height + below) {
             art.place(0, 0)
-            name.placeWithLayer((art.width - name.width) / 2, art.height + gap) { translationY = slide * focus.value }
+            name.place((art.width - name.width) / 2, art.height + gap)
         }
     }
-}
-
-/** How far the pill, [gap] under a tile [tileHeight] high, slides down to clear the ring grown by [scale] by [NameRingClearance]. */
-private fun Density.nameSlide(
-    tileHeight: Int,
-    scale: Float,
-    gap: Int,
-): Float {
-    val ringEnd = tileHeight * (scale - 1f) / 2f + FocusRingReach.toPx() * scale
-    return maxOf(0f, ringEnd + NameRingClearance.toPx() - gap)
 }
 
 /** [app]'s name in a pill of one line, [NameLine] high. */

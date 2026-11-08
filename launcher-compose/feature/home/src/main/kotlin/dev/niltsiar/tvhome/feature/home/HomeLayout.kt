@@ -44,7 +44,7 @@ public fun TvConfig.homeLayout(): HomeLayout =
     )
 
 private const val MIN_TILE_SHARE = 0.85f
-private const val TILE_ASPECT = 16f / 9f
+internal const val TILE_ASPECT = 16f / 9f
 
 /**
  * The share of the grid's [gridWidth] that its tiles may use so that the dock and [rowsBelowDock] rows below it fit
