@@ -33,7 +33,8 @@ private const val PROBE_BOOT_KEY = "probe_boot"
  * app_keys (keycodes, scancodes, "hold:" and "front:" entries), the Settings key, the Input button (input_key_keycodes,
  * and with capture_input_keys KEYCODE_TV and KEYCODE_TV_INPUT), KEYCODE_ALL_APPS and, with home_long_press_home, the
  * Home key itself, which opens Home. Every other key passes through untouched. Also the redirects that bring Home back:
- * stock_home_redirect, power_on_home and power_on_home_always.
+ * stock_home_redirect, power_on_home and power_on_home_always. With restore_key_services, [ServiceRepair] puts the service
+ * back on the enabled list after a force stop.
  *
  * Enable over adb with scripts/switch-home.sh, or in the TV's accessibility settings.
  */
@@ -51,6 +52,7 @@ public class KeyService : AccessibilityService() {
     private var unlockReceiver: BroadcastReceiver? = null
     private var screenOnReceiver: BroadcastReceiver? = null
     private var gamepads: GamepadPassthrough? = null
+    private var recorded = false
     private val homeAfterKey = Runnable { openHome() }
 
     override fun onServiceConnected() {
@@ -98,6 +100,9 @@ public class KeyService : AccessibilityService() {
     internal fun start(config: TvConfig) {
         tearDown()
         this.config = config
+        // The record is in credential-protected storage, so it is written here, after the unlock, not at bind.
+        recorded = config.restoreKeyServices
+        if (recorded) ServiceRepair.connected(this, javaClass)
         keys = AppKeys(config.appKeys)
         val settings = SystemSettings(this, null).also { settings = it }
         launcher = TargetLauncher(this, settings, ::performGlobalAction, config.liveTvPackage)
@@ -271,6 +276,7 @@ public class KeyService : AccessibilityService() {
     /** Unbound by Android: no UP will reach the service to cancel a hold it saw go down. */
     override fun onUnbind(intent: Intent): Boolean {
         SharedPresses.release(this)
+        if (recorded) ServiceRepair.disconnected(this, javaClass)
         return super.onUnbind(intent)
     }
 

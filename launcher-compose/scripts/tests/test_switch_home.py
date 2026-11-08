@@ -26,6 +26,7 @@ OLD = "com.gathin.tvhome"
 OLD_HOME_KEY = f"{OLD}/.HomeKeyService"
 OLD_INPUT_KEY = f"{OLD}/.InputKeyService"
 SERIAL = "192.168.1.50:5555"
+SECURE_SETTINGS = "android.permission.WRITE_SECURE_SETTINGS"
 
 FAKE_ADB = r'''#!/usr/bin/env python3
 import json
@@ -83,6 +84,10 @@ elif args[:1] == ["shell"]:
         out("       TOTAL PSS:    51200            TOTAL RSS:    90000")
     elif line.startswith("pm grant"):
         pass
+    elif line.startswith("pm revoke"):
+        if state.get("revoke_fails"):
+            sys.stderr.write("Security exception: Package has not requested permission\n")
+            sys.exit(1)
     elif line.startswith("cmd appops set"):
         if cmd[5] in state.get("unknown_ops", []):
             out(f"Error: Unknown operation string: {cmd[5]}")
@@ -318,6 +323,33 @@ class SwitchHomeTest(unittest.TestCase):
         self.assertLess(max(grants), persisted)
         self.assertLess(persisted, first_key_write)
         self.assertEqual(len(self.appops_calls()), len(APP_OPS) + 1)
+
+    def secure_settings_calls(self, verb):
+        return [call for call in self.calls() if call[1:3] == ["pm", verb] and call[-1] == SECURE_SETTINGS]
+
+    def test_new_with_restore_key_services_grants_write_secure_settings_and_revokes_nothing(self):
+        result = self.run_script("new", RESTORE_KEY_SERVICES="1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.secure_settings_calls("grant"), [["shell", "pm", "grant", NEW, SECURE_SETTINGS]])
+        self.assertEqual(self.secure_settings_calls("revoke"), [])
+
+    def test_new_without_restore_key_services_revokes_write_secure_settings_and_grants_nothing(self):
+        result = self.run_script("new")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.secure_settings_calls("revoke"), [["shell", "pm", "revoke", NEW, SECURE_SETTINGS]])
+        self.assertEqual(self.secure_settings_calls("grant"), [])
+
+    def test_a_revoke_the_tv_refuses_does_not_stop_the_switch(self):
+        self.tv(revoke_fails=True)
+        result = self.run_script("new")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.read_tv()["home"], f"{NEW}/.MainActivity")
+
+    def test_old_touches_no_secure_settings_grant_even_with_restore_key_services(self):
+        self.assertEqual(self.run_script("new").returncode, 0)
+        Path(str(self.state_path) + ".log").unlink()
+        self.assertEqual(self.run_script("old", RESTORE_KEY_SERVICES="1").returncode, 0)
+        self.assertEqual(self.secure_settings_calls("grant") + self.secure_settings_calls("revoke"), [])
 
     def test_keys_keep_grants_no_app_ops(self):
         self.assertEqual(self.run_script("new", KEYS="keep").returncode, 0)

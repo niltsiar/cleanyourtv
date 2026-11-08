@@ -41,7 +41,7 @@ class TvConfigParserTest {
         assertEquals(WallpaperOrder.Shuffle, config.wallpaperOrder)
         assertEquals(0xFF000000.toInt(), config.backgroundColor)
         assertTrue(config.wallpaper && config.fillDock && config.showGreeting && config.tileMenu && config.clockGlow)
-        assertFalse(config.appLibrary || config.cinematicHome || config.singleRow || config.powerOnHomeAlways)
+        assertFalse(config.appLibrary || config.cinematicHome || config.singleRow || config.powerOnHomeAlways || config.restoreKeyServices)
         assertTrue(config.cinematicDots && config.ambientGlow)
         assertFalse(config.cinematicWhiteFocus || config.glowSnap)
         assertTrue(config.appGlow)
@@ -588,6 +588,7 @@ class TvConfigParserTest {
             "home_ignore_channel_keys" to ("true" to defaults.copy(homeIgnoreChannelKeys = true)),
             "power_on_home" to ("true" to defaults.copy(powerOnHome = true)),
             "power_on_home_always" to ("true" to defaults.copy(powerOnHomeAlways = true)),
+            "restore_key_services" to ("true" to defaults.copy(restoreKeyServices = true)),
             "home_idle_clock_minutes" to ("10" to defaults.copy(homeIdleClockMinutes = 10)),
             "back_opens_clock" to ("true" to defaults.copy(backOpensClock = true)),
             "clock_wallpaper" to ("true" to defaults.copy(clockWallpaper = true)),

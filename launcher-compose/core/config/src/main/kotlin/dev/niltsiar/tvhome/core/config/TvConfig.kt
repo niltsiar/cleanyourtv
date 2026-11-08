@@ -197,6 +197,8 @@ public data class TvConfig(
     val homeIgnoreChannelKeys: Boolean = false,
     val powerOnHome: Boolean = false,
     val powerOnHomeAlways: Boolean = false,
+    /** After a force stop, Home puts the key service back on the enabled list; needs WRITE_SECURE_SETTINGS granted over adb. */
+    val restoreKeyServices: Boolean = false,
     /** Minutes Home may sit untouched before the clock screensaver, 0 to 1440; 0 is off. */
     val homeIdleClockMinutes: Int = 0,
     /** Back on Home opens the clock screensaver instead of doing nothing. */

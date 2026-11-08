@@ -27,6 +27,7 @@ import dev.niltsiar.tvhome.core.model.startActivitySafely
 import dev.niltsiar.tvhome.data.apps.LaunchResult
 import dev.niltsiar.tvhome.feature.library.MoleculeLibraryViewModel
 import dev.niltsiar.tvhome.service.keys.PowerMenu
+import dev.niltsiar.tvhome.service.keys.ServiceRepair
 import dev.niltsiar.tvhome.service.keys.VendorKeys
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -69,6 +70,7 @@ class MainActivity : ComponentActivity() {
         // Not after a recreate: the launch intent survives it and would open the library or the list again.
         if (savedInstanceState == null) homeRequestOf(intent).takeIf { it != HomeRequest.HomeKey }?.let(::handle)
         applyViewInputsHandler(graph.config.handleViewInputs)
+        if (graph.config.restoreKeyServices) ServiceRepair.restore(this)
         setContent {
             TvTheme(motion = graph.config.motion()) {
                 val glass = rememberGlassState()

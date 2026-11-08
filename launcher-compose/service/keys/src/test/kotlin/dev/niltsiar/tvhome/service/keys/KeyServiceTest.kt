@@ -471,4 +471,24 @@ class KeyServiceTest {
         assertEquals(listOf(AccessibilityService.GLOBAL_ACTION_POWER_DIALOG), shadowOf(replacement).globalActionsPerformed)
         replacement.onDestroy()
     }
+
+    private fun recordedServices(): Set<String> = ServiceRepair.recorded(app)
+
+    @Test
+    fun with_restore_key_services_the_service_records_itself_on_load_and_drops_the_record_when_unbound() {
+        service.start(TvConfig(restoreKeyServices = true))
+
+        assertEquals(setOf(KeyService::class.java.name), recordedServices())
+
+        service.onUnbind(Intent())
+
+        assertEquals(emptySet<String>(), recordedServices())
+    }
+
+    @Test
+    fun without_restore_key_services_nothing_is_recorded() {
+        service.start(TvConfig())
+
+        assertEquals(emptySet<String>(), recordedServices())
+    }
 }

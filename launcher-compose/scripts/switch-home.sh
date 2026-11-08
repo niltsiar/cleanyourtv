@@ -12,6 +12,10 @@
 #          BIND_WAIT_SECONDS, FOCUS_WAIT_SECONDS   how long to wait for the key service to bind and for Home to be in
 #                                                  front (default: 10 each)
 #          CYCLE_WAIT_SECONDS   pause between switching accessibility off and writing the list back (default: 1)
+#          RESTORE_KEY_SERVICES=1   with `new`: grant the launcher WRITE_SECURE_SETTINGS, so that with restore_key_services in
+#                                   the theme Home puts KeyService back on the enabled list after a force stop. `new` without
+#                                   it revokes the grant. The permission opens every secure and global setting, not only the
+#                                   accessibility list, so it stays off unless asked for.
 #
 # Stages: `KEYS=keep SCREENSAVER=keep scripts/switch-home.sh new` changes only Home. Run it again without the two
 # variables to move the key service and the screensaver after Home has been seen working.
@@ -384,6 +388,16 @@ if [ "$1" = new ]; then
   # Reading the Wi-Fi name needs it and the launcher never asks; a TV that refuses leaves the network button without a name.
   echo "== Grant location (for the Wi-Fi name)"
   adb_tv shell pm grant "$PACKAGE" android.permission.ACCESS_FINE_LOCATION > /dev/null 2>&1 || echo "not granted; the network button will not show the Wi-Fi name"
+  # The grant follows the switch on every run: it survives a reinstall, so a run without the switch takes it back.
+  echo "== Secure settings permission (restore_key_services)"
+  if [ "${RESTORE_KEY_SERVICES:-0}" = 1 ]; then
+    adb_tv shell pm grant "$PACKAGE" android.permission.WRITE_SECURE_SETTINGS > /dev/null 2>&1 \
+      && echo "granted; restore_key_services in the theme now works" \
+      || echo "not granted; restore_key_services cannot put the key service back after a force stop"
+  else
+    adb_tv shell pm revoke "$PACKAGE" android.permission.WRITE_SECURE_SETTINGS > /dev/null 2>&1 || true
+    echo "revoked (RESTORE_KEY_SERVICES=1 grants it)"
+  fi
 fi
 
 echo "== Set $ACTIVITY as Home"
