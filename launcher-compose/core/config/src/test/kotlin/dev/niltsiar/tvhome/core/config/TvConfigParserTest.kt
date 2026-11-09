@@ -525,8 +525,23 @@ class TvConfigParserTest {
     }
 
     @Test
+    fun the_settings_entry_keys_default_off_read_true_and_reject_a_wrong_type() {
+        val keys = listOf("launcher_settings_button", "open_on_start_choice", "open_on_start_on_wake")
+        val flags = { c: TvConfig -> listOf(c.launcherSettingsButton, c.openOnStartChoice, c.openOnStartOnWake) }
+        assertEquals(listOf(false, false, false), flags(parseTvConfig("{}").config))
+
+        val on = parseTvConfig(keys.joinToString(prefix = "{", postfix = "}") { "\"$it\": true" })
+        assertEquals(listOf(true, true, true), flags(on.config))
+        assertEquals(emptyList<String>(), on.unsupportedKeys + on.unknownKeys + on.rejectedKeys)
+
+        val wrong = parseTvConfig(keys.joinToString(prefix = "{", postfix = "}") { "\"$it\": \"yes\"" })
+        assertEquals(listOf(false, false, false), flags(wrong.config))
+        assertEquals(keys, wrong.rejectedKeys)
+    }
+
+    @Test
     fun keys_with_no_reader_in_this_launcher_are_unsupported_and_change_nothing() {
-        val keys = listOf("app_banners", "locale", "open_on_start_choice", "open_on_start_on_wake")
+        val keys = listOf("app_banners", "locale")
         val parsed = parseTvConfig(keys.joinToString(prefix = "{", postfix = "}") { "\"$it\": true" })
 
         assertEquals(keys, parsed.unsupportedKeys)
@@ -595,6 +610,7 @@ class TvConfigParserTest {
             "focus_overshoot" to ("true" to defaults.copy(focusOvershoot = true)),
             "tile_menu" to ("false" to defaults.copy(tileMenu = false)),
             "reorder_button" to ("true" to defaults.copy(reorderButton = true)),
+            "launcher_settings_button" to ("true" to defaults.copy(launcherSettingsButton = true)),
             "app_library" to ("true" to defaults.copy(appLibrary = true)),
             "app_library_selection" to ("true" to defaults.copy(appLibrarySelection = true)),
             "library_button" to ("true" to defaults.copy(libraryButton = true)),
@@ -621,6 +637,8 @@ class TvConfigParserTest {
             "unused_fade_days" to ("60" to defaults.copy(unusedFadeDays = 60)),
             "handle_view_inputs" to ("true" to defaults.copy(handleViewInputs = true)),
             "open_on_start_network_wait" to ("30" to defaults.copy(openOnStartNetworkWait = 30)),
+            "open_on_start_choice" to ("true" to defaults.copy(openOnStartChoice = true)),
+            "open_on_start_on_wake" to ("true" to defaults.copy(openOnStartOnWake = true)),
             "app_keys" to ("""["172:com.a"]""" to defaults.copy(appKeys = listOf("172:com.a"))),
             "settings_key_keycodes" to ("[172]" to defaults.copy(settingsKeyKeycodes = listOf(172))),
             "settings_key_scancodes" to ("[159]" to defaults.copy(settingsKeyScancodes = listOf(159))),

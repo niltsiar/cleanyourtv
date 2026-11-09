@@ -147,6 +147,8 @@ public data class TvConfig(
     val tileMenu: Boolean = true,
     /** A top-bar button turns reorder mode on and off. */
     val reorderButton: Boolean = false,
+    /** The header Settings action opens Launcher settings directly. */
+    val launcherSettingsButton: Boolean = false,
     val appLibrary: Boolean = false,
     /** With [appLibrary]: OK in the library changes an app's Home shortcut, never opens it. */
     val appLibrarySelection: Boolean = false,
@@ -186,6 +188,10 @@ public data class TvConfig(
     val handleViewInputs: Boolean = false,
     /** Seconds the boot's app waits for a validated network, 0 to 600; 0 opens it at once. */
     val openOnStartNetworkWait: Int = 0,
+    /** Launcher settings gets an Open on start row. */
+    val openOnStartChoice: Boolean = false,
+    /** With [openOnStartChoice]: the chosen app also opens when the screen comes back on. */
+    val openOnStartOnWake: Boolean = false,
     /** "keycode:package" or "KEYCODE_NAME:package" entries, parsed where the key service reads them. */
     val appKeys: List<String> = emptyList(),
     val settingsKeyKeycodes: List<Int> = emptyList(),
