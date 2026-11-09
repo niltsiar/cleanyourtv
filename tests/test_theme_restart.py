@@ -44,7 +44,8 @@ def service(component=HOME, user=0, connected=True):
 
 class TV:
     def __init__(self, saved=OTHER + ':' + HOME, delay=1, minimum_off=2, late=None,
-                 never=False, user=0, flag='1', home='com.gathin.tvhome/.MainActivity'):
+                 never=False, user=0, flag='1', home='com.gathin.tvhome/.MainActivity',
+                 launch='com.gathin.tvhome/.MainActivity', launch_categories=('HOME', 'LEANBACK_LAUNCHER')):
         self.saved = saved
         self.value = saved
         self.flag = flag
@@ -57,6 +58,8 @@ class TV:
         self.never = never
         self.user = user
         self.home = home
+        self.launch = launch
+        self.launch_categories = launch_categories
         self.calls = []
         self.bound = set(restart.components(saved))
         self.clear_count = 0
@@ -95,6 +98,12 @@ class TV:
             args = shlex.split(piece)
             if args[:2] == ['am', 'get-current-user']:
                 output += str(self.user)
+            elif args[:3] == ['cmd', 'package', 'resolve-activity'] and '-p' in args:
+                category = args[args.index('-c') + 1].rsplit('.', 1)[1]
+                if self.launch and category in self.launch_categories:
+                    output += 'priority=0 preferredOrder=0 match=0x0 specificIndex=-1 isDefault=true\n' + self.launch
+                else:
+                    output += 'No activity found'
             elif args[:3] == ['cmd', 'package', 'resolve-activity']:
                 output += self.home
             elif args[:2] == ['am', 'force-stop']:
@@ -222,6 +231,35 @@ class Recovery(unittest.TestCase):
         start = next(x for x in tv.calls if x.startswith('am start '))
         self.assertIn('-c android.intent.category.HOME', start)
         self.assertNotIn(' -n ', start)
+
+    def test_forked_application_id_starts_the_activity_the_tv_resolves(self):
+        forked = 'com.example.home/dev.niltsiar.tvhome.MainActivity'
+        tv = TV(saved='null', launch=forked)
+        with patch.object(restart, 'PACKAGE', 'com.example.home'):
+            restart.restart(tv, tv.pause)
+        resolve = next(x for x in tv.calls if '-p com.example.home' in x)
+        self.assertIn('resolve-activity --brief --user 0', resolve)
+        starts = [x for x in tv.calls if x.startswith('am start ')]
+        self.assertEqual(1, len(starts))
+        self.assertIn('-n ' + forked, starts[0])
+        self.assertNotIn('/.MainActivity', starts[0])
+
+    def test_launch_activity_in_the_leanback_category_is_used_when_home_has_none(self):
+        tv = TV(saved='null', home='com.google.android.apps.tv.launcherx/.HomeActivity',
+                launch_categories=('LEANBACK_LAUNCHER',))
+        restart.restart(tv, tv.pause)
+        start = next(x for x in tv.calls if x.startswith('am start '))
+        self.assertIn('-n com.gathin.tvhome/.MainActivity', start)
+
+    def test_no_resolved_activity_is_an_error_and_starts_nothing(self):
+        for launch in (None, 'other.package/.MainActivity'):
+            with self.subTest(launch=launch):
+                tv = TV(saved='null', launch=launch)
+                with patch.object(restart, 'PACKAGE', 'com.example.home'):
+                    with self.assertRaisesRegex(RuntimeError, r'com\.example\.home.*HOME or LEANBACK_LAUNCHER'):
+                        restart.restart(tv, tv.pause)
+                self.assertFalse(any(x.startswith('am start') for x in tv.calls))
+                self.assertFalse(any('force-stop' in x for x in tv.calls))
 
     def test_unbound_timeout_is_bounded_and_leaves_saved_list(self):
         tv = TV(never=True)

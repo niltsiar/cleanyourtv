@@ -98,6 +98,21 @@ def cycle(dev, user, saved):
                '[ "$cyt_rc" -eq 0 ] && [ "$cyt_restore_rc" -eq 0 ]')
 
 
+def launch_component(dev, user):
+    # The activity class keeps its source package when the application ID differs, so PACKAGE + "/.MainActivity"
+    # cannot be assumed. resolve-activity --brief prints the component on its last line, or "No activity found".
+    tried = ("android.intent.category.HOME", "android.intent.category.LEANBACK_LAUNCHER")
+    for category in tried:
+        lines = shell(dev, f"cmd package resolve-activity --brief --user {user} "
+                           f"-a android.intent.action.MAIN -c {category} -p {PACKAGE}").splitlines()
+        found = lines[-1].strip() if lines else ""
+        if re.fullmatch(re.escape(PACKAGE) + r"/[A-Za-z0-9_.$]+", found):
+            return found
+    raise RuntimeError(f"Could not find the launch activity of {PACKAGE}: no MAIN activity in the "
+                       f"{' or '.join(c.rsplit('.', 1)[1] for c in tried)} category resolved. "
+                       "Nothing was started; check that it is installed and that TV_PACKAGE is its application ID.")
+
+
 def restart(dev, pause=time.sleep):
     user_text = shell(dev, "am get-current-user")
     if not user_text.isdecimal():
@@ -115,11 +130,11 @@ def restart(dev, pause=time.sleep):
         shell(dev, settings_command(user, services, flag))
 
     try:
-        shell(dev, f"am force-stop --user {user} {PACKAGE}")
         if home.splitlines()[-1:] and home.splitlines()[-1].startswith(PACKAGE + "/"):
             start = "-a android.intent.action.MAIN -c android.intent.category.HOME"
         else:
-            start = "-n " + PACKAGE + "/.MainActivity"
+            start = "-n " + shlex.quote(launch_component(dev, user))
+        shell(dev, f"am force-stop --user {user} {PACKAGE}")
         shell(dev, f"am start --user {user} {start}")
         if not helpers:
             return
