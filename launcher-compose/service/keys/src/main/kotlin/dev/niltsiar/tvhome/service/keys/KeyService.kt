@@ -30,10 +30,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -50,8 +49,8 @@ private const val PROBE_BOOT_KEY = "probe_boot"
  * back on the enabled list after a force stop. With the opt-in broadcast of [GuardConfig], the service leaves the list while
  * the screen is off and [GuardKeep] lists it again at screen-on.
  *
- * The config comes from the app's [ConfigRepositoryOwner] and is followed: the maps are read in again when a value the
- * service uses changes (see [KeyServiceConfig]).
+ * The config and the Open on start pick come from the app's [ConfigRepositoryOwner] and are followed: the maps are read in
+ * again when a value the service uses changes (see [KeyServiceConfig]).
  *
  * Enable over adb with scripts/switch-home.sh, or in the TV's accessibility settings.
  */
@@ -59,7 +58,7 @@ public class KeyService : AccessibilityService() {
     private val timer = HandlerTimer()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var following: Job? = null
-    private var config = TvConfig().forKeyService()
+    private var config = TvConfig().forKeyService("")
     private var keys = AppKeys(emptyList())
     private var settings: SystemSettings? = null
     private var launcher: TargetLauncher? = null
@@ -72,6 +71,9 @@ public class KeyService : AccessibilityService() {
     private var screenOnReceiver: BroadcastReceiver? = null
     private var gamepads: GamepadPassthrough? = null
     private var recorded = false
+
+    /** True after the first [start] of a bind: only that one arms the boot window, so a pick changed in Settings cannot send Home again. */
+    private var armedAtBind = false
     private var standbyExit: BroadcastReceiver? = null
 
     /** disableSelf is how the service leaves for standby, not the user turning it off. */
@@ -114,24 +116,41 @@ public class KeyService : AccessibilityService() {
 
     private fun connect() {
         following?.cancel()
+        armedAtBind = false
         val owner = application as ConfigRepositoryOwner
         // The first access builds the repository, which reads the store: off the main thread.
-        following = follow(flow { emitAll(withContext(Dispatchers.IO) { owner.configRepository }.config) })
+        following =
+            scope.launch {
+                val repository = withContext(Dispatchers.IO) { owner.configRepository }
+                collectChanges(repository.config, repository.openOnStartApp)
+            }
     }
 
-    /** Starts the service on each value of [configs] that differs in what it reads. */
-    internal fun follow(configs: Flow<TvConfig>): Job =
-        scope.launch { configs.map { it.forKeyService() }.distinctUntilChanged().collect { start(it) } }
+    /** Starts the service on each value of [configs] and [picks] (the Open on start app) that differs in what it reads. */
+    internal fun follow(
+        configs: Flow<TvConfig>,
+        picks: Flow<String> = flowOf(""),
+    ): Job = scope.launch { collectChanges(configs, picks) }
+
+    private suspend fun collectChanges(
+        configs: Flow<TvConfig>,
+        picks: Flow<String>,
+    ) {
+        combine(configs, picks) { config, pick -> config.forKeyService(pick) }.distinctUntilChanged().collect { start(it) }
+    }
 
     private fun stopWaitingForUnlock() {
         unlockReceiver?.let(::unregisterReceiver)
         unlockReceiver = null
     }
 
-    internal fun start(config: TvConfig) = start(config.forKeyService())
+    internal fun start(config: TvConfig) = start(config.forKeyService(""))
 
     /** Reads [config] in: the maps, the redirects and the window events they need. */
     private fun start(config: KeyServiceConfig) {
+        val armedUntil = powerOn?.armedUntil ?: 0L
+        val atBind = !armedAtBind
+        armedAtBind = true
         tearDown()
         this.config = config
         // The record is in credential-protected storage, so it is written here, after the unlock, not at bind.
@@ -147,7 +166,7 @@ public class KeyService : AccessibilityService() {
         stockHome = stockHomeActivities(this, config.stockHomeRedirect)
         homeOpener = HomeOpener(this, config.stockHomeRedirect, stockHome)
         val plan = config.powerOn
-        if (plan.enabled) armPowerOnHome(plan)
+        if (plan.enabled) armPowerOnHome(plan, armedUntil, atBind)
         // The service XML subscribes to no events, so the redirects ask for window changes only when one is on.
         val windowEvents = stockHome.isNotEmpty() || plan.liveTv.isNotEmpty() || keys.watchesFront
         serviceInfo?.let {
@@ -187,9 +206,13 @@ public class KeyService : AccessibilityService() {
         GuardKeep.stepOut(this)
     }
 
-    private fun armPowerOnHome(plan: PowerOnPlan) {
-        val power = PowerOnHome(plan, SystemClock::elapsedRealtime, timer, ::openHome).also { powerOn = it }
-        power.armAtBind()
+    private fun armPowerOnHome(
+        plan: PowerOnPlan,
+        armedUntil: Long,
+        atBind: Boolean,
+    ) {
+        val power = PowerOnHome(plan, SystemClock::elapsedRealtime, timer, armedUntil, ::openHome).also { powerOn = it }
+        if (atBind) power.armAtBind()
         val receiver =
             object : BroadcastReceiver() {
                 override fun onReceive(

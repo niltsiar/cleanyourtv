@@ -3,8 +3,9 @@ package dev.niltsiar.tvhome.service.keys
 import dev.niltsiar.tvhome.core.config.TvConfig
 
 /**
- * What [KeyService] reads from the config, and nothing else: a change to any other field, such as the columns the person
- * sets on the TV, compares equal and leaves the service as it is.
+ * What [KeyService] reads from the config and the Open on start pick, and nothing else: a change to any other field, such as
+ * the columns the person sets on the TV, or a pick that leaves the power-on plan as it was, compares equal and leaves the
+ * service as it is.
  */
 internal data class KeyServiceConfig(
     val appKeys: List<String>,
@@ -23,14 +24,15 @@ internal data class KeyServiceConfig(
     val captureInputKeys: Boolean,
 )
 
-internal fun TvConfig.forKeyService(): KeyServiceConfig =
+/** [pick] is the Open on start app ([dev.niltsiar.tvhome.core.config.ConfigRepository.openOnStartApp]), which only the power-on plan reads. */
+internal fun TvConfig.forKeyService(pick: String): KeyServiceConfig =
     KeyServiceConfig(
         appKeys = appKeys,
         restoreKeyServices = restoreKeyServices,
         liveTvPackage = liveTvPackage,
         consumeVolumeKeys = consumeVolumeKeys,
         stockHomeRedirect = stockHomeRedirect,
-        powerOn = powerOnPlan(this),
+        powerOn = powerOnPlan(this, pick),
         keyFilter = keyFilter,
         gamepadPassthrough = gamepadPassthrough,
         homeLongPressHome = homeLongPressHome,

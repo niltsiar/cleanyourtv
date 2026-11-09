@@ -404,6 +404,14 @@ class KeyServiceTest {
 
     private fun idleFor(ms: Long) = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ms))
 
+    private fun pick(
+        picks: MutableStateFlow<String>,
+        app: String,
+    ) {
+        picks.value = app
+        shadowOf(Looper.getMainLooper()).idle()
+    }
+
     @Test
     fun power_on_home_always_opens_home_800_ms_after_the_screen_comes_on() {
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMinutes(10)) // past the boot window
@@ -431,6 +439,67 @@ class KeyServiceTest {
         idleFor(POWER_ON_ALWAYS_DELAY_MS)
 
         assertNull(started())
+    }
+
+    private fun homeStarted() = generateSequence { started() }.any { it.hasCategory(Intent.CATEGORY_HOME) }
+
+    private val alwaysOnWithChoice = TvConfig(powerOnHomeAlways = true, openOnStartChoice = true)
+
+    @Test
+    fun a_pick_written_after_the_bind_stops_power_on_home_always_and_clearing_it_brings_it_back() {
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMinutes(10))
+        val picks = MutableStateFlow("")
+        service.follow(MutableStateFlow(alwaysOnWithChoice), picks)
+
+        pick(picks, "com.netflix.ninja")
+        screenOn()
+        idleFor(POWER_ON_ALWAYS_DELAY_MS * 2)
+        assertFalse(homeStarted())
+
+        pick(picks, "")
+        screenOn()
+        idleFor(POWER_ON_ALWAYS_DELAY_MS)
+        assertTrue(homeStarted())
+    }
+
+    @Test
+    fun a_pick_written_after_the_bind_stops_the_live_tv_redirect_when_it_is_live_tv() {
+        val picks = MutableStateFlow("com.netflix.ninja")
+        service.follow(MutableStateFlow(TvConfig(powerOnHome = true, openOnStartChoice = true)), picks)
+        screenOn()
+        service.handleWindow(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED, "com.mediatek.wwtv.tvcenter", null)
+        assertTrue(homeStarted())
+
+        pick(picks, "com.mediatek.wwtv.tvcenter")
+        screenOn()
+        service.handleWindow(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED, "com.mediatek.wwtv.tvcenter", null)
+        assertFalse(homeStarted())
+    }
+
+    @Test
+    fun clearing_the_pick_inside_the_boot_window_does_not_send_home_over_the_screen_in_front() {
+        val picks = MutableStateFlow("com.netflix.ninja")
+        service.follow(MutableStateFlow(alwaysOnWithChoice), picks)
+        idleFor(2_000)
+
+        pick(picks, "")
+        idleFor(2_000)
+
+        assertFalse(homeStarted())
+    }
+
+    @Test
+    fun a_pick_that_leaves_the_plan_as_it_was_does_not_start_the_service_again() {
+        installLeanbackApp("org.xbmc.kodi")
+        val picks = MutableStateFlow("com.netflix.ninja")
+        service.follow(MutableStateFlow(holdKeys()), picks)
+        service.handleKey(key(KeyEvent.ACTION_DOWN, 190))
+
+        pick(picks, "org.xbmc.kodi")
+        idleFor(HOLD_MS)
+        service.handleKey(key(KeyEvent.ACTION_UP, 190, at = 1_000 + HOLD_MS + 50))
+
+        assertEquals("org.xbmc.kodi", started()?.component?.packageName)
     }
 
     @Test

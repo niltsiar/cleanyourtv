@@ -41,7 +41,8 @@ internal fun powerOnRedirect(
 
 /**
  * What the power-on keys ask for. [liveTv] is the Live TV package to send back to Home (power_on_home), empty when off.
- * Both are off with boot_to_live_tv.
+ * Both are off with boot_to_live_tv. An Open on start pick opens its app on purpose: Live TV picked is not sent back
+ * to Home, and any pick turns [always] off.
  */
 internal data class PowerOnPlan(
     val liveTv: String,
@@ -50,11 +51,18 @@ internal data class PowerOnPlan(
     val enabled: Boolean get() = liveTv.isNotEmpty() || always
 }
 
-internal fun powerOnPlan(config: TvConfig): PowerOnPlan =
-    PowerOnPlan(
-        liveTv = if (config.powerOnHome && !config.bootToLiveTv) config.liveTvPackage.orEmpty() else "",
-        always = config.powerOnHomeAlways && !config.bootToLiveTv,
+/** [pick] is the Open on start app, empty for none; it counts only with open_on_start_choice. */
+internal fun powerOnPlan(
+    config: TvConfig,
+    pick: String,
+): PowerOnPlan {
+    val openOnStart = if (config.openOnStartChoice) pick else ""
+    val liveTv = config.liveTvPackage.orEmpty()
+    return PowerOnPlan(
+        liveTv = if (config.powerOnHome && !config.bootToLiveTv && liveTv != openOnStart) liveTv else "",
+        always = config.powerOnHomeAlways && !config.bootToLiveTv && openOnStart.isEmpty(),
     )
+}
 
 /**
  * power_on_home and power_on_home_always. A Live TV window the firmware opens by itself at power-on goes back to Home until
@@ -65,9 +73,12 @@ internal class PowerOnHome(
     private val plan: PowerOnPlan,
     private val uptime: () -> Long,
     private val timer: Timer,
+    carriedArmedUntil: Long = 0L,
     private val openHome: () -> Unit,
 ) {
-    private var armedUntil = 0L
+    /** Up to when the Live TV redirect and the delayed Home stay armed, on the [uptime] clock; 0 when disarmed. */
+    var armedUntil = carriedArmedUntil
+        private set
     private val homeAtPowerOn = Runnable { if (stillArmed(uptime(), armedUntil)) openHome() }
 
     /** The service connected: armed for the boot window when this bind is part of the boot. */

@@ -58,10 +58,39 @@ class PowerOnHomeTest {
     @Test
     fun boot_to_live_tv_switches_the_power_on_keys_off() {
         val both = TvConfig(powerOnHome = true, powerOnHomeAlways = true)
-        assertEquals(PowerOnPlan(tv, always = true), powerOnPlan(both))
-        assertEquals(PowerOnPlan("", always = false), powerOnPlan(both.copy(bootToLiveTv = true)))
-        assertFalse(powerOnPlan(TvConfig()).enabled)
-        assertFalse(powerOnPlan(both.copy(liveTvPackage = null, powerOnHomeAlways = false)).enabled)
+        assertEquals(PowerOnPlan(tv, always = true), powerOnPlan(both, ""))
+        assertEquals(PowerOnPlan("", always = false), powerOnPlan(both.copy(bootToLiveTv = true), ""))
+        assertFalse(powerOnPlan(TvConfig(), "").enabled)
+        assertFalse(powerOnPlan(both.copy(liveTvPackage = null, powerOnHomeAlways = false), "").enabled)
+    }
+
+    private val picking = TvConfig(openOnStartChoice = true)
+
+    @Test
+    fun live_tv_picked_as_the_open_on_start_app_is_not_sent_home() {
+        val config = picking.copy(powerOnHome = true)
+        assertEquals(PowerOnPlan("", always = false), powerOnPlan(config, tv))
+    }
+
+    @Test
+    fun another_app_picked_leaves_the_live_tv_redirect() {
+        val config = picking.copy(powerOnHome = true)
+        assertEquals(PowerOnPlan(tv, always = false), powerOnPlan(config, "com.netflix.ninja"))
+    }
+
+    @Test
+    fun any_pick_turns_power_on_home_always_off_and_no_pick_leaves_it_on() {
+        val config = picking.copy(powerOnHomeAlways = true)
+        assertEquals(PowerOnPlan("", always = false), powerOnPlan(config, "com.netflix.ninja"))
+        assertEquals(PowerOnPlan("", always = false), powerOnPlan(config, tv))
+        assertEquals(PowerOnPlan("", always = true), powerOnPlan(config, ""))
+    }
+
+    @Test
+    fun a_stored_pick_is_ignored_while_open_on_start_choice_is_off() {
+        val config = TvConfig(openOnStartChoice = false, powerOnHome = true, powerOnHomeAlways = true)
+        assertEquals(PowerOnPlan(tv, always = true), powerOnPlan(config, tv))
+        assertEquals(PowerOnPlan(tv, always = true), powerOnPlan(config, "com.netflix.ninja"))
     }
 
     /** The unit on a clock and a timer that move together. */
