@@ -54,23 +54,11 @@ public data class SettingsSection(
     val rows: List<SettingsRow>,
 )
 
-/** The Open on start row, which follows the first section's rows. [value] is the picked app's label, its package when it is gone, or Off. */
-@Immutable
-public data class OpenOnStartRow(
-    val value: OptionLabel,
-)
-
 /** The picker over the page: Off, then [apps] by label. [selected] indexes that list, so 0 is Off. */
 @Immutable
 public data class OpenOnStartPicker(
     val apps: List<OpenOnStartApp>,
     val selected: Int,
-)
-
-/** The Wallpaper row, which follows the Clock row. [value] is the picked picture's name, None, or Theme default. */
-@Immutable
-public data class WallpaperRow(
-    val value: OptionLabel,
 )
 
 /** The picker over the page: Theme default, the theme's pictures, then None. [selected] indexes [entries]. */
@@ -82,31 +70,41 @@ public data class WallpaperPicker(
 
 /**
  * What the screen shows. [followsTheme] is true while no choice is stored. [reorder] adds a Reorder row first
- * (launcher_settings_button). [openOnStart] is there with open_on_start_choice, and [picker] while its picker is open.
- * [wallpaper] is there when the theme has a picture, and [wallpaperPicker] while its picker is open.
+ * (launcher_settings_button). [openOnStart] is the value of the Open on start row, which follows the first section's rows
+ * (the picked app's label, its package when it is gone, Off, or empty while the label loads); it is there with
+ * open_on_start_choice, and [picker] is set while its picker is open. [wallpaper] is the value of the Wallpaper row, which
+ * follows the Clock row (the picked picture's name, None, or Theme default); it is there when the theme has a picture, and
+ * [wallpaperPicker] is set while its picker is open.
  */
 @Immutable
 public data class SettingsUiState(
     val sections: List<SettingsSection>,
     val followsTheme: Boolean,
     val reorder: Boolean = false,
-    val openOnStart: OpenOnStartRow? = null,
+    val openOnStart: OptionLabel? = null,
     val picker: OpenOnStartPicker? = null,
-    val wallpaper: WallpaperRow? = null,
+    val wallpaper: OptionLabel? = null,
     val wallpaperPicker: WallpaperPicker? = null,
 )
 
 /** What the page asks of the rest of the launcher for Open on start and Wallpaper. */
 public class SettingsSources(
-    /** The apps the picker offers, loaded off the main thread. */
+    /** The apps the picker offers, loaded off the main thread. The Open on start row names the pick by the label listed here. */
     public val openOnStartApps: suspend () -> List<OpenOnStartApp>,
-    /** The label of a package, null when it is gone. */
-    public val appLabel: (String) -> String?,
     /** Makes the Home that follows a pick stay Home. */
     public val skipThisBoot: suspend () -> Unit,
     /** The file names of the theme's pictures, in the order the wallpaper picker lists them, loaded off the main thread. */
     public val wallpaperPictures: suspend () -> List<String>,
 )
+
+/** One-shot results the host handles outside the UI state. */
+public sealed interface SettingsEffect {
+    /** The store refused a write. */
+    public data object SaveFailed : SettingsEffect
+
+    /** A picture or None was stored as the wallpaper. */
+    public data object WallpaperApplied : SettingsEffect
+}
 
 internal sealed interface SettingsEvent {
     data class Pick(

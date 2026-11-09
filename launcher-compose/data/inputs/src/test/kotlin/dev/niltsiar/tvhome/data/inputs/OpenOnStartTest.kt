@@ -3,8 +3,6 @@ package dev.niltsiar.tvhome.data.inputs
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
-import android.content.pm.ApplicationInfo
-import android.content.pm.PackageInfo
 import android.content.pm.ResolveInfo
 import android.os.Looper
 import android.provider.Settings
@@ -20,7 +18,6 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -472,24 +469,5 @@ class OpenOnStartTest {
                 listOf("alpha" to "com.alpha", "Beta" to "com.beta", "Zeta" to "com.zeta"),
                 apps.map { it.label to it.packageName },
             )
-        }
-
-    @Test
-    fun an_installed_app_has_its_label_and_a_gone_one_has_none() =
-        runTest {
-            shadowOf(context.packageManager).installPackage(
-                PackageInfo().apply {
-                    packageName = "com.tv.pick"
-                    applicationInfo =
-                        ApplicationInfo().apply {
-                            packageName = "com.tv.pick"
-                            nonLocalizedLabel = "Pick TV"
-                        }
-                },
-            )
-            val opener = pickOpener(MutableStateFlow(chosen))
-
-            assertEquals("Pick TV", opener.label("com.tv.pick"))
-            assertNull(opener.label("com.gone"))
         }
 }

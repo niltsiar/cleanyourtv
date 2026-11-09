@@ -6,6 +6,8 @@ import dev.niltsiar.tvhome.core.config.ClockFormat
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.config.parseTvConfig
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -37,9 +39,9 @@ class SettingsPresenterTest {
     private fun settings(
         theme: String = "{}",
         apps: List<OpenOnStartApp> = emptyList(),
-        labels: Map<String, String> = emptyMap(),
+        appsGate: Deferred<Unit>? = null,
         wallpapers: List<String> = emptyList(),
-    ) = SettingsHarness(app, theme, apps = apps, labels = labels, wallpapers = wallpapers).also { harness = it }
+    ) = SettingsHarness(app, theme, apps = apps, appsGate = appsGate, wallpapers = wallpapers).also { harness = it }
 
     private val withChoice = """{"open_on_start_choice": true}"""
     private val apps =
@@ -185,6 +187,18 @@ class SettingsPresenterTest {
     }
 
     @Test
+    fun picking_the_option_a_row_shows_stores_nothing_in_any_row() {
+        val settings = settings("""{"columns": 5}""")
+        val shown = settings.selections()
+        assertEquals(specs.size, shown.values.count { it >= 0 })
+
+        for ((id, option) in shown) settings.pick(id, option)
+
+        assertTrue(settings.staysFollowingTheme())
+        assertTrue(settings.state.followsTheme)
+    }
+
+    @Test
     fun a_refused_write_is_reported_and_the_row_keeps_what_the_store_holds() {
         val settings = settings()
         settings.pick(SettingsRowId.Columns, 1)
@@ -195,7 +209,7 @@ class SettingsPresenterTest {
             assumeFalse("a root user writes anyway", folder.canWrite())
 
             settings.pick(SettingsRowId.Columns, 2)
-            runBlocking { withTimeout(10_000) { settings.viewModel.saveFailed.first() } }
+            settings.awaitSaveFailed()
 
             assertEquals(1, settings.row(SettingsRowId.Columns).selected)
         } finally {
@@ -220,21 +234,34 @@ class SettingsPresenterTest {
 
     @Test
     fun the_open_on_start_row_reads_off_while_nothing_is_picked() {
-        assertEquals(OpenOnStartRow(OptionLabel.Res(R.string.settings_off)), settings(withChoice).state.openOnStart)
+        assertEquals(OptionLabel.Res(R.string.settings_off), settings(withChoice).state.openOnStart)
+    }
+
+    @Test
+    fun the_open_on_start_row_is_empty_until_the_label_of_the_picked_app_has_loaded() {
+        val gate = CompletableDeferred<Unit>()
+        val settings = settings(withChoice, apps, appsGate = gate)
+
+        settings.storePick("com.beta")
+        settings.awaitState { it.openOnStart == OptionLabel.Text("") }
+        assertEquals(OptionLabel.Text(""), settings.state.openOnStart)
+
+        gate.complete(Unit)
+        settings.awaitState { it.openOnStart == OptionLabel.Text("Beta") }
     }
 
     @Test
     fun the_open_on_start_row_shows_the_label_of_the_picked_app_its_package_when_it_is_gone_and_off_once_cleared() {
-        val settings = settings(withChoice, labels = mapOf("com.beta" to "Beta"))
+        val settings = settings(withChoice, apps)
 
         settings.storePick("com.beta")
-        settings.awaitState { it.openOnStart?.value == OptionLabel.Text("Beta") }
+        settings.awaitState { it.openOnStart == OptionLabel.Text("Beta") }
 
         settings.storePick("com.gone")
-        settings.awaitState { it.openOnStart?.value == OptionLabel.Text("com.gone") }
+        settings.awaitState { it.openOnStart == OptionLabel.Text("com.gone") }
 
         runBlocking { settings.repository.clear(Choices.OpenOnStart) }
-        settings.awaitState { it.openOnStart?.value == OptionLabel.Res(R.string.settings_off) }
+        settings.awaitState { it.openOnStart == OptionLabel.Res(R.string.settings_off) }
     }
 
     @Test
@@ -274,15 +301,15 @@ class SettingsPresenterTest {
 
     @Test
     fun picking_an_app_skips_this_boot_before_it_stores_the_pick_and_closes_the_picker() {
-        val settings = settings(withChoice, apps, mapOf("com.gamma" to "Gamma"))
+        val settings = settings(withChoice, apps)
         settings.viewModel.actions.onOpenPicker()
         settings.awaitState { it.picker != null }
 
         settings.viewModel.actions.onPickStartApp(3)
         val shown =
-            settings.awaitState { it.picker == null && !it.followsTheme && it.openOnStart?.value == OptionLabel.Text("Gamma") }
+            settings.awaitState { it.picker == null && !it.followsTheme && it.openOnStart == OptionLabel.Text("Gamma") }
 
-        assertEquals(OpenOnStartRow(OptionLabel.Text("Gamma")), shown.openOnStart)
+        assertEquals(OptionLabel.Text("Gamma"), shown.openOnStart)
         assertEquals("com.gamma", settings.pickedApp)
         assertEquals(listOf<String?>(null), settings.skippedAt)
     }
@@ -299,7 +326,7 @@ class SettingsPresenterTest {
         settings.awaitState { it.picker == null && it.followsTheme }
 
         assertNull(settings.pickedApp)
-        assertEquals(OpenOnStartRow(OptionLabel.Res(R.string.settings_off)), settings.state.openOnStart)
+        assertEquals(OptionLabel.Res(R.string.settings_off), settings.state.openOnStart)
         assertEquals(emptyList<String?>(), settings.skippedAt)
     }
 
@@ -318,12 +345,12 @@ class SettingsPresenterTest {
 
     @Test
     fun follow_theme_clears_the_open_on_start_pick() {
-        val settings = settings(withChoice, apps, mapOf("com.beta" to "Beta"))
+        val settings = settings(withChoice, apps)
         settings.storePick("com.beta")
-        settings.awaitState { it.openOnStart?.value == OptionLabel.Text("Beta") }
+        settings.awaitState { it.openOnStart == OptionLabel.Text("Beta") }
 
         settings.followTheme()
-        settings.awaitState { it.followsTheme && it.openOnStart?.value == OptionLabel.Res(R.string.settings_off) }
+        settings.awaitState { it.followsTheme && it.openOnStart == OptionLabel.Res(R.string.settings_off) }
 
         assertNull(settings.pickedApp)
     }
@@ -338,7 +365,7 @@ class SettingsPresenterTest {
         val settings = settings(wallpapers = pictures)
 
         assertEquals(
-            WallpaperRow(OptionLabel.Res(R.string.wallpaper_theme_default)),
+            OptionLabel.Res(R.string.wallpaper_theme_default),
             settings.awaitState { it.wallpaper != null }.wallpaper,
         )
     }
@@ -364,13 +391,13 @@ class SettingsPresenterTest {
         settings.awaitState { it.wallpaper != null }
 
         settings.storeWallpaper("dusk.jpg")
-        settings.awaitState { it.wallpaper?.value == OptionLabel.Text("dusk") }
+        settings.awaitState { it.wallpaper == OptionLabel.Text("dusk") }
 
         settings.storeWallpaper("none")
-        settings.awaitState { it.wallpaper?.value == OptionLabel.Res(R.string.wallpaper_none) }
+        settings.awaitState { it.wallpaper == OptionLabel.Res(R.string.wallpaper_none) }
 
         settings.storeWallpaper("gone.jpg")
-        settings.awaitState { it.wallpaper?.value == OptionLabel.Res(R.string.wallpaper_theme_default) }
+        settings.awaitState { it.wallpaper == OptionLabel.Res(R.string.wallpaper_theme_default) }
     }
 
     @Test
@@ -391,19 +418,19 @@ class SettingsPresenterTest {
         settings.viewModel.actions.onClosePicker()
         settings.awaitState { it.wallpaperPicker == null }
         settings.storeWallpaper("dusk.jpg")
-        settings.awaitState { it.wallpaper?.value == OptionLabel.Text("dusk") }
+        settings.awaitState { it.wallpaper == OptionLabel.Text("dusk") }
         assertEquals(WallpaperPicker(entries, 2), settings.openWallpaperPicker())
 
         settings.viewModel.actions.onClosePicker()
         settings.awaitState { it.wallpaperPicker == null }
         settings.storeWallpaper("none")
-        settings.awaitState { it.wallpaper?.value == OptionLabel.Res(R.string.wallpaper_none) }
+        settings.awaitState { it.wallpaper == OptionLabel.Res(R.string.wallpaper_none) }
         assertEquals(WallpaperPicker(entries, 4), settings.openWallpaperPicker())
 
         settings.viewModel.actions.onClosePicker()
         settings.awaitState { it.wallpaperPicker == null }
         settings.storeWallpaper("gone.jpg")
-        settings.awaitState { it.wallpaper?.value == OptionLabel.Res(R.string.wallpaper_theme_default) }
+        settings.awaitState { it.wallpaper == OptionLabel.Res(R.string.wallpaper_theme_default) }
         assertEquals(WallpaperPicker(entries, 0), settings.openWallpaperPicker())
     }
 
@@ -414,13 +441,13 @@ class SettingsPresenterTest {
         settings.openWallpaperPicker()
 
         settings.viewModel.actions.onPickWallpaper(3)
-        settings.awaitState { it.wallpaperPicker == null && !it.followsTheme && it.wallpaper?.value == OptionLabel.Text("dawn") }
+        settings.awaitState { it.wallpaperPicker == null && !it.followsTheme && it.wallpaper == OptionLabel.Text("dawn") }
         assertEquals("dawn.jpg", settings.wallpaperChoice)
         settings.awaitApplied()
 
         settings.openWallpaperPicker()
         settings.viewModel.actions.onPickWallpaper(4)
-        settings.awaitState { it.wallpaperPicker == null && it.wallpaper?.value == OptionLabel.Res(R.string.wallpaper_none) }
+        settings.awaitState { it.wallpaperPicker == null && it.wallpaper == OptionLabel.Res(R.string.wallpaper_none) }
         assertEquals("none", settings.wallpaperChoice)
         settings.awaitApplied()
         assertTrue(settings.noMoreApplied())
@@ -430,7 +457,7 @@ class SettingsPresenterTest {
     fun theme_default_removes_the_choice_and_reports_nothing() {
         val settings = settings(wallpapers = pictures)
         settings.storeWallpaper("dusk.jpg")
-        settings.awaitState { it.wallpaper?.value == OptionLabel.Text("dusk") }
+        settings.awaitState { it.wallpaper == OptionLabel.Text("dusk") }
         settings.openWallpaperPicker()
 
         settings.viewModel.actions.onPickWallpaper(0)
@@ -444,7 +471,7 @@ class SettingsPresenterTest {
     fun closing_the_wallpaper_picker_and_a_pick_with_no_picker_open_change_nothing() {
         val settings = settings(wallpapers = pictures)
         settings.storeWallpaper("dusk.jpg")
-        settings.awaitState { it.wallpaper?.value == OptionLabel.Text("dusk") }
+        settings.awaitState { it.wallpaper == OptionLabel.Text("dusk") }
         settings.openWallpaperPicker()
 
         settings.viewModel.actions.onClosePicker()
@@ -461,10 +488,10 @@ class SettingsPresenterTest {
     fun follow_theme_clears_the_wallpaper_choice() {
         val settings = settings(wallpapers = pictures)
         settings.storeWallpaper("none")
-        settings.awaitState { it.wallpaper?.value == OptionLabel.Res(R.string.wallpaper_none) }
+        settings.awaitState { it.wallpaper == OptionLabel.Res(R.string.wallpaper_none) }
 
         settings.followTheme()
-        settings.awaitState { it.followsTheme && it.wallpaper?.value == OptionLabel.Res(R.string.wallpaper_theme_default) }
+        settings.awaitState { it.followsTheme && it.wallpaper == OptionLabel.Res(R.string.wallpaper_theme_default) }
 
         assertNull(settings.wallpaperChoice)
     }
@@ -481,7 +508,7 @@ class SettingsPresenterTest {
             assumeFalse("a root user writes anyway", folder.canWrite())
 
             settings.viewModel.actions.onPickWallpaper(2)
-            runBlocking { withTimeout(10_000) { settings.viewModel.saveFailed.first() } }
+            settings.awaitSaveFailed()
 
             assertNull(settings.wallpaperChoice)
             assertTrue(settings.noMoreApplied())

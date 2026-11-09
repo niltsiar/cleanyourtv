@@ -72,8 +72,8 @@ class SettingsEdgesUiTest {
                                 settingsSections(TvConfig()),
                                 followsTheme = true,
                                 reorder = reorder,
-                                openOnStart = OpenOnStartRow(OptionLabel.Res(R.string.settings_off)),
-                                wallpaper = WallpaperRow(OptionLabel.Res(R.string.wallpaper_theme_default)),
+                                openOnStart = OptionLabel.Res(R.string.settings_off),
+                                wallpaper = OptionLabel.Res(R.string.wallpaper_theme_default),
                             )
                         },
                         actions = SettingsActions(),

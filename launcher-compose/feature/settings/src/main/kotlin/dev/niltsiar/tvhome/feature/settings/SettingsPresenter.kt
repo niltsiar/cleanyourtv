@@ -11,25 +11,25 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import dev.niltsiar.tvhome.core.config.Choices
 import dev.niltsiar.tvhome.core.config.ConfigRepository
+import dev.niltsiar.tvhome.core.model.OpenOnStartApp
 import kotlinx.coroutines.flow.Flow
 import java.io.IOException
 
 /**
  * The settings screen's state logic: the rows are the repository's config read through [settingsGroups], nothing is
  * kept apart from it, and a pick or Follow theme goes to the repository, which answers through the same flow.
- * Only the open pickers and the theme's picture names are kept here. [onSaveFailed] runs when the store refuses a write,
- * [onWallpaperApplied] after a picture or None was stored as the wallpaper.
+ * Only the open pickers, the theme's picture names and the picked app's label are kept here. [onEffect] gets
+ * [SettingsEffect.SaveFailed] when the store refuses a write and [SettingsEffect.WallpaperApplied] after a picture or None
+ * was stored as the wallpaper.
  */
 @Composable
 internal fun settingsPresenter(
     events: Flow<SettingsEvent>,
     repository: ConfigRepository,
     sources: SettingsSources,
-    onSaveFailed: () -> Unit,
-    onWallpaperApplied: () -> Unit,
+    onEffect: (SettingsEffect) -> Unit,
 ): SettingsUiState {
-    val currentOnSaveFailed by rememberUpdatedState(onSaveFailed)
-    val currentOnWallpaperApplied by rememberUpdatedState(onWallpaperApplied)
+    val currentOnEffect by rememberUpdatedState(onEffect)
     var picker by remember { mutableStateOf<OpenOnStartPicker?>(null) }
     var wallpaperOpen by remember { mutableStateOf(false) }
     val pictures by produceState(emptyList<String>(), sources) { value = sources.wallpaperPictures() }
@@ -67,7 +67,7 @@ internal fun settingsPresenter(
                                 repository.clear(Choices.WallpaperChoice)
                             } else {
                                 repository.set(Choices.WallpaperChoice, value)
-                                currentOnWallpaperApplied()
+                                currentOnEffect(SettingsEffect.WallpaperApplied)
                             }
                         }
                     }
@@ -85,7 +85,7 @@ internal fun settingsPresenter(
                     }
                 }
             } catch (_: IOException) {
-                currentOnSaveFailed()
+                currentOnEffect(SettingsEffect.SaveFailed)
             }
         }
     }
@@ -93,9 +93,20 @@ internal fun settingsPresenter(
     val followsTheme by repository.followsTheme.collectAsState()
     val pick by repository.openOnStartApp.collectAsState()
     val startChoice = config.openOnStartChoice
-    val startRow = remember(pick, startChoice) { if (startChoice) OpenOnStartRow(startValue(pick, sources)) else null }
+    val pickedApp by produceState<OpenOnStartApp?>(null, pick, startChoice) {
+        val pkg = pick
+        if (startChoice && pkg != null) value = sources.openOnStartApps().firstOrNull { it.packageName == pkg } ?: OpenOnStartApp(pkg, pkg)
+    }
+    val startRow =
+        remember(pick, startChoice, pickedApp) {
+            when {
+                !startChoice -> null
+                pick == null -> OptionLabel.Res(R.string.settings_off)
+                else -> OptionLabel.Text(pickedApp?.takeIf { it.packageName == pick }?.label.orEmpty())
+            }
+        }
     val wallpaperChoice by repository.wallpaperChoice.collectAsState()
-    val wallpaperRow = remember(pictures, wallpaperChoice) { wallpaperRow(pictures, wallpaperChoice) }
+    val wallpaperRow = remember(pictures, wallpaperChoice) { wallpaperLabel(pictures, wallpaperChoice) }
     val wallpaperPicker =
         remember(wallpaperOpen, pictures, wallpaperChoice) { if (wallpaperOpen) wallpaperPicker(pictures, wallpaperChoice) else null }
     return remember(config, followsTheme, startRow, picker, wallpaperRow, wallpaperPicker) {
@@ -110,8 +121,3 @@ internal fun settingsPresenter(
         )
     }
 }
-
-private fun startValue(
-    pick: String?,
-    sources: SettingsSources,
-): OptionLabel = if (pick == null) OptionLabel.Res(R.string.settings_off) else OptionLabel.Text(sources.appLabel(pick) ?: pick)

@@ -31,7 +31,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -102,20 +102,97 @@ private val ChevronHeight = 16.dp
 private val ScrollClear = 64.dp
 private const val ROW_FOCUS_MS = 120
 
-/** Follow theme, Choose default home and TV system settings, after the rows. */
-private const val BUTTON_COUNT = 3
 private const val LABEL_IDLE_ALPHA = 0.78f
 private const val HEADING_ALPHA = 0.65f
 private const val RULE_ALPHA = 0.12f
 private const val SELECTED_FILL_ALPHA = 0.16f
 private const val SELECTED_RIM_ALPHA = 0.42f
 
+private const val WALLPAPER_STOP = "wallpaper"
+private const val OPEN_ON_START_STOP = "open_on_start"
+
+/** One thing the list shows, top to bottom. The [Focusable] ones are what Up and Down move between, in this order. */
+private sealed interface PageItem {
+    data class Heading(
+        @StringRes val id: Int,
+    ) : PageItem
+
+    data object Divider : PageItem
+}
+
+private sealed interface Focusable : PageItem {
+    val stop: String
+}
+
+private data object ReorderItem : Focusable {
+    override val stop = "reorder"
+}
+
+private data class SettingItem(
+    val row: SettingsRow,
+) : Focusable {
+    override val stop = "setting:${row.id.name}"
+}
+
+private data class WallpaperItem(
+    val value: OptionLabel,
+) : Focusable {
+    override val stop = WALLPAPER_STOP
+}
+
+private data class OpenOnStartItem(
+    val value: OptionLabel,
+) : Focusable {
+    override val stop = OPEN_ON_START_STOP
+}
+
+private data object FollowThemeItem : Focusable {
+    override val stop = "follow_theme"
+}
+
+private data object DefaultHomeItem : Focusable {
+    override val stop = "default_home"
+}
+
+private data object TvSettingsItem : Focusable {
+    override val stop = "tv_settings"
+}
+
+/** Java's order: the Wallpaper row follows the Clock row, the Open on start row follows the first section's rows. */
+private fun pageItems(ui: SettingsUiState): List<PageItem> =
+    buildList {
+        if (ui.reorder) add(ReorderItem)
+        for ((position, section) in ui.sections.withIndex()) {
+            section.heading?.let { add(PageItem.Heading(it)) }
+            for (row in section.rows) {
+                add(SettingItem(row))
+                if (row.id == SettingsRowId.ClockFormat) ui.wallpaper?.let { add(WallpaperItem(it)) }
+            }
+            if (position == 0) ui.openOnStart?.let { add(OpenOnStartItem(it)) }
+        }
+        add(PageItem.Divider)
+        add(FollowThemeItem)
+        add(DefaultHomeItem)
+        add(TvSettingsItem)
+    }
+
+/** The stops by key, in the order of [keys]: each one's requester, and the requesters above and below it. */
+private fun focusStops(keys: List<String>): Map<String, FocusStop> {
+    val entries = keys.map { FocusRequester() }
+    return keys.withIndex().associate { (at, key) ->
+        key to
+            FocusStop(entries[at], entries.getOrNull(at - 1) ?: FocusRequester.Cancel, entries.getOrNull(at + 1) ?: FocusRequester.Cancel)
+    }
+}
+
 /**
- * Launcher settings as one panel: every row lists its options side by side and OK stores the focused one at once.
- * Up and Down move between rows, onto the selected option of the next one; Left and Right move between a row's options
- * and stop at its ends. Focus cannot leave the screen. [onChooseDefaultHome] opens the system's home picker and
- * [onOpenTvSettings] the TV's own settings. With
- * [SettingsUiState.reorder] the first row is Reorder apps, which has focus when the screen opens, and [onReorder] runs when it is picked.
+ * Launcher settings as one panel. With [SettingsUiState.reorder] the first row is Reorder apps, which has focus when the screen
+ * opens and runs [onReorder]; otherwise the first row's selected option has focus. The setting rows follow in groups, each
+ * listing its options side by side, with the Wallpaper row after Clock and the Open on start row after the first group when the
+ * state has them. Their pickers open over the panel. Follow theme, Choose default home ([onChooseDefaultHome]) and TV system
+ * settings ([onOpenTvSettings]) end the list. OK on an option stores it, unless it is the selected one.
+ * Up and Down move between rows, onto the selected option of the next one; Left and Right move between a row's options and
+ * stop at its ends. Focus cannot leave the screen.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -129,42 +206,31 @@ public fun SettingsScreen(
 ) {
     val reveal = rememberReveal()
     val ui = state()
-    val rowCount = ui.sections.sumOf { it.rows.size }
-    val lead = if (ui.reorder) 1 else 0
-    val startRows = if (ui.openOnStart != null) 1 else 0
-    val wallpaperRows = if (ui.wallpaper != null) 1 else 0
-    val firstRows =
-        ui.sections
-            .firstOrNull()
-            ?.rows
-            .orEmpty()
-    // Java's order: the Wallpaper row follows the Clock row, the Open on start row follows the first section's rows.
-    val wallpaperAt = lead + firstRows.indexOfFirst { it.id == SettingsRowId.ClockFormat } + 1
-    val startAt = lead + firstRows.size + wallpaperRows
-    // The Reorder row if there is one, then one requester per row, the Wallpaper row and the Open on start row, then the three
-    // buttons: each sits on the option a row gets focus on, and links the rows.
-    val firstButton = lead + rowCount + startRows + wallpaperRows
-    val entries = remember(firstButton) { List(firstButton + BUTTON_COUNT) { FocusRequester() } }
-    val currentEntries by rememberUpdatedState(entries)
+    val items = remember(ui) { pageItems(ui) }
+    val keys = items.filterIsInstance<Focusable>().map { it.stop }
+    val stops = remember(keys) { focusStops(keys) }
+    val currentStops by rememberUpdatedState(stops)
     LaunchedEffect(Unit) {
         withFrameNanos { }
-        currentEntries.first().requestFocus()
+        currentStops.getValue(keys.first()).entry.requestFocus()
     }
-    val pickerRow =
+    val pickerStop =
         if (ui.picker != null) {
-            startAt
+            OPEN_ON_START_STOP
         } else if (ui.wallpaperPicker != null) {
-            wallpaperAt
+            WALLPAPER_STOP
         } else {
-            -1
+            null
         }
-    var returnTo by remember { mutableIntStateOf(-1) }
-    LaunchedEffect(pickerRow) {
-        if (pickerRow >= 0) {
-            returnTo = pickerRow
-        } else if (returnTo >= 0) {
-            withFrameNanos { }
-            entries[returnTo].requestFocus()
+    var returnTo by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(pickerStop) {
+        if (pickerStop != null) {
+            returnTo = pickerStop
+        } else {
+            returnTo?.let {
+                withFrameNanos { }
+                currentStops.getValue(it).entry.requestFocus()
+            }
         }
     }
     val scroll = rememberScrollState()
@@ -202,91 +268,91 @@ public fun SettingsScreen(
                                 .verticalScroll(scroll)
                                 .padding(start = PanelSide, end = PanelSide, bottom = PanelSide),
                         ) {
-                            if (ui.reorder) {
-                                ActionRow(
-                                    label = stringResource(R.string.settings_reorder),
-                                    selected = false,
-                                    onClick = onReorder,
-                                    tag = "settings:reorder",
-                                    entry = entries[0],
-                                    upEntry = entries.above(0),
-                                    downEntry = entries.below(0),
-                                )
-                                Spacer(Modifier.height(ChipGap))
-                            }
-                            var index = lead
-                            for ((position, section) in ui.sections.withIndex()) {
-                                section.heading?.let { Heading(it) }
-                                for (row in section.rows) {
-                                    val at = index++
-                                    key(row.id) { SettingRow(row, actions.onPick, entries[at], entries.above(at), entries.below(at)) }
-                                    if (row.id == SettingsRowId.ClockFormat) {
-                                        ui.wallpaper?.let { wallpaper ->
-                                            val wallpaperIndex = index++
-                                            ActionRow(
-                                                label = stringResource(R.string.wallpaper_label),
-                                                value = wallpaper.value.text(),
-                                                selected = false,
-                                                onClick = actions.onOpenWallpaperPicker,
-                                                tag = "settings:wallpaper",
-                                                entry = entries[wallpaperIndex],
-                                                upEntry = entries.above(wallpaperIndex),
-                                                downEntry = entries.below(wallpaperIndex),
-                                            )
-                                        }
+                            for (item in items) {
+                                when (item) {
+                                    is ReorderItem -> {
+                                        ActionRow(
+                                            label = stringResource(R.string.settings_reorder),
+                                            selected = false,
+                                            onClick = onReorder,
+                                            tag = "settings:reorder",
+                                            stop = stops.getValue(item.stop),
+                                        )
+                                        Spacer(Modifier.height(ChipGap))
                                     }
-                                }
-                                if (position == 0) {
-                                    ui.openOnStart?.let { start ->
-                                        val at = index++
+
+                                    is PageItem.Heading -> {
+                                        Heading(item.id)
+                                    }
+
+                                    is SettingItem -> {
+                                        key(item.row.id) { SettingRow(item.row, actions.onPick, stops.getValue(item.stop)) }
+                                    }
+
+                                    is WallpaperItem -> {
+                                        ActionRow(
+                                            label = stringResource(R.string.wallpaper_label),
+                                            value = item.value.text(),
+                                            selected = false,
+                                            onClick = actions.onOpenWallpaperPicker,
+                                            tag = "settings:wallpaper",
+                                            stop = stops.getValue(item.stop),
+                                        )
+                                    }
+
+                                    is OpenOnStartItem -> {
                                         ActionRow(
                                             label = stringResource(R.string.open_on_start_label),
-                                            value = start.value.text(),
+                                            value = item.value.text(),
                                             selected = false,
                                             onClick = actions.onOpenPicker,
                                             tag = "settings:open_on_start",
-                                            entry = entries[at],
-                                            upEntry = entries.above(at),
-                                            downEntry = entries.below(at),
+                                            stop = stops.getValue(item.stop),
+                                        )
+                                    }
+
+                                    is PageItem.Divider -> {
+                                        MenuDivider(Modifier.padding(vertical = 10.dp))
+                                    }
+
+                                    is FollowThemeItem -> {
+                                        ActionRow(
+                                            label = stringResource(R.string.settings_follow_theme),
+                                            selected = ui.followsTheme,
+                                            onClick = actions.onFollowTheme,
+                                            tag = "settings:follow_theme",
+                                            stop = stops.getValue(item.stop),
+                                        )
+                                        Spacer(Modifier.height(ChipGap))
+                                    }
+
+                                    is DefaultHomeItem -> {
+                                        ActionRow(
+                                            label = stringResource(R.string.home_settings),
+                                            selected = false,
+                                            onClick = onChooseDefaultHome,
+                                            tag = "settings:default_home",
+                                            stop = stops.getValue(item.stop),
+                                        )
+                                        Spacer(Modifier.height(ChipGap))
+                                    }
+
+                                    is TvSettingsItem -> {
+                                        ActionRow(
+                                            label = stringResource(R.string.settings_tv_settings),
+                                            selected = false,
+                                            onClick = onOpenTvSettings,
+                                            tag = "settings:tv_settings",
+                                            stop = stops.getValue(item.stop),
                                         )
                                     }
                                 }
                             }
-                            MenuDivider(Modifier.padding(vertical = 10.dp))
-                            ActionRow(
-                                label = stringResource(R.string.settings_follow_theme),
-                                selected = ui.followsTheme,
-                                onClick = actions.onFollowTheme,
-                                tag = "settings:follow_theme",
-                                entry = entries[firstButton],
-                                upEntry = entries.above(firstButton),
-                                downEntry = entries.below(firstButton),
-                            )
-                            Spacer(Modifier.height(ChipGap))
-                            ActionRow(
-                                label = stringResource(R.string.home_settings),
-                                selected = false,
-                                onClick = onChooseDefaultHome,
-                                tag = "settings:default_home",
-                                entry = entries[firstButton + 1],
-                                upEntry = entries.above(firstButton + 1),
-                                downEntry = entries.below(firstButton + 1),
-                            )
-                            Spacer(Modifier.height(ChipGap))
-                            ActionRow(
-                                label = stringResource(R.string.settings_tv_settings),
-                                selected = false,
-                                onClick = onOpenTvSettings,
-                                tag = "settings:tv_settings",
-                                entry = entries[firstButton + 2],
-                                upEntry = entries.above(firstButton + 2),
-                                downEntry = entries.below(firstButton + 2),
-                            )
                         }
                     }
                 }
             }
-            OverlayHost(open = { pickerRow >= 0 }) {
+            OverlayHost(open = { pickerStop != null }) {
                 ui.picker?.let { picker ->
                     val labels =
                         remember(picker) {
@@ -321,10 +387,6 @@ internal fun Modifier.revealed(reveal: Animatable<Float, AnimationVector1D>): Mo
         scaleX = scale
         scaleY = scale
     }
-
-private fun List<FocusRequester>.above(index: Int) = getOrNull(index - 1) ?: FocusRequester.Cancel
-
-private fun List<FocusRequester>.below(index: Int) = getOrNull(index + 1) ?: FocusRequester.Cancel
 
 @Composable
 internal fun PanelTitle(
@@ -373,16 +435,14 @@ private fun Heading(
 }
 
 /**
- * A row: its label, which brightens while an option of the row has focus, and its options. The row's [entry] is on its
- * selected option (the first one when none is), [upEntry] and [downEntry] are the entries of the rows around it.
+ * A row: its label, which brightens while an option of the row has focus, and its options. The [stop]'s entry is on the
+ * selected option (the first one when none is); its up and down are the entries of the rows around it.
  */
 @Composable
 private fun SettingRow(
     row: SettingsRow,
     onPick: (SettingsRowId, Int) -> Unit,
-    entry: FocusRequester,
-    upEntry: FocusRequester,
-    downEntry: FocusRequester,
+    stop: FocusStop,
 ) {
     val motion = TvTheme.motion
     val typography = TvTheme.typography
@@ -427,10 +487,10 @@ private fun SettingRow(
                     modifier =
                         Modifier
                             .testTag("option:${row.id.name}:$index")
-                            .then(if (index == entryOption) Modifier.focusRequester(entry) else Modifier)
+                            .then(if (index == entryOption) Modifier.focusRequester(stop.entry) else Modifier)
                             .focusProperties {
-                                up = upEntry
-                                down = downEntry
+                                up = stop.up
+                                down = stop.down
                             },
                 )
             }
@@ -471,11 +531,17 @@ private fun OptionChip(
     }
 }
 
+/** Where focus arrives in a row ([entry]) and the entries of the rows around it. */
+internal class FocusStop(
+    val entry: FocusRequester,
+    val up: FocusRequester = FocusRequester.Default,
+    val down: FocusRequester = FocusRequester.Default,
+)
+
 /**
  * A full-width button of the panel; a [selected] one is marked with a check. With a [value] the row reads like the others: the
  * label on the start side, the value and a chevron towards the end side, and one description of both for a screen reader.
- * [entry] is where focus arrives, [upEntry] and [downEntry] the entries of the rows around it, which a list that moves focus
- * itself leaves at their defaults.
+ * Without a [stop] focus arrives and moves by the defaults, as in a list that moves focus itself.
  */
 @Composable
 internal fun ActionRow(
@@ -485,9 +551,7 @@ internal fun ActionRow(
     tag: String,
     modifier: Modifier = Modifier,
     value: String? = null,
-    entry: FocusRequester? = null,
-    upEntry: FocusRequester = FocusRequester.Default,
-    downEntry: FocusRequester = FocusRequester.Default,
+    stop: FocusStop? = null,
 ) {
     val typography = TvTheme.typography
     val style = remember(typography) { typography.pillLabel.copy(fontSize = 18.sp) }
@@ -506,10 +570,10 @@ internal fun ActionRow(
                 .semantics {
                     this.selected = selected
                     if (value != null) contentDescription = "$label, $value"
-                }.then(if (entry != null) Modifier.focusRequester(entry) else Modifier)
+                }.then(if (stop != null) Modifier.focusRequester(stop.entry) else Modifier)
                 .focusProperties {
-                    up = upEntry
-                    down = downEntry
+                    up = stop?.up ?: FocusRequester.Default
+                    down = stop?.down ?: FocusRequester.Default
                     left = FocusRequester.Cancel
                     right = FocusRequester.Cancel
                 },

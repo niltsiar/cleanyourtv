@@ -141,7 +141,6 @@ interface AppGraph {
     ): SettingsSources =
         SettingsSources(
             openOnStart::apps,
-            openOnStart::label,
             openOnStart::skipThisBoot,
             WallpaperPictures(ThemeDirectory(application))::names,
         )

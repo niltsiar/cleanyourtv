@@ -7,6 +7,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.feature.settings.MoleculeSettingsViewModel
+import dev.niltsiar.tvhome.feature.settings.SettingsEffect
 import dev.niltsiar.tvhome.feature.settings.SettingsScreen
 
 /** Launcher settings in the TV theme of the config, which the choices on this screen change as they are made. */
@@ -20,8 +21,14 @@ internal fun SettingsHost(
     onSaveFailed: () -> Unit,
     onWallpaperApplied: () -> Unit,
 ) {
-    LaunchedEffect(viewModel) { viewModel.saveFailed.collect { onSaveFailed() } }
-    LaunchedEffect(viewModel) { viewModel.wallpaperApplied.collect { onWallpaperApplied() } }
+    LaunchedEffect(viewModel) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                SettingsEffect.SaveFailed -> onSaveFailed()
+                SettingsEffect.WallpaperApplied -> onWallpaperApplied()
+            }
+        }
+    }
     val config = graph.configRepository.config.collectAsStateWithLifecycle()
     val motion by config.derived(TvConfig::motion)
     val focusStyle by config.derived(TvConfig::focusStyle)

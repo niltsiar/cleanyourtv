@@ -51,11 +51,11 @@ internal fun BoxScope.PickerPanel(
 ) {
     BackHandler(onBack = onClose)
     val reveal = rememberReveal()
-    val entry = remember { FocusRequester() }
+    val stop = remember { FocusStop(FocusRequester()) }
     val list = rememberLazyListState((selected - LEAD_ROWS).coerceAtLeast(0))
     LaunchedEffect(Unit) {
         withFrameNanos { }
-        entry.requestFocus()
+        stop.entry.requestFocus()
     }
     OverlaySurface(
         modifier =
@@ -82,7 +82,7 @@ internal fun BoxScope.PickerPanel(
                         selected = index == selected,
                         onClick = { onPick(index) },
                         tag = "picker:$index",
-                        entry = if (index == selected) entry else null,
+                        stop = if (index == selected) stop else null,
                     )
                 }
             }

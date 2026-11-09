@@ -26,10 +26,13 @@ internal class ChoiceRow<T>(
         return SettingsRow(id, label, options.map { it.label }, options.indexOfFirst { it.value == held })
     }
 
+    /** Stores the option's value, unless it is the option the config already holds: that would pin the theme's value. */
     suspend fun pick(
         repository: ConfigRepository,
         option: Int,
-    ) = repository.set(choice, options[option].value)
+    ) {
+        if (option != row(repository.config.value).selected) repository.set(choice, options[option].value)
+    }
 }
 
 internal class Group(
@@ -164,19 +167,17 @@ private fun honoured(
     names: List<String>,
 ): String? = choice?.takeIf { it == Choices.WALLPAPER_NONE || it in names }
 
-/** The Wallpaper row for a theme with [names] as pictures, or null for a theme with none. */
-internal fun wallpaperRow(
+/** The value of the Wallpaper row for a theme with [names] as pictures, or null for a theme with none. */
+internal fun wallpaperLabel(
     names: List<String>,
     choice: String?,
-): WallpaperRow? {
+): OptionLabel? {
     if (names.isEmpty()) return null
-    val value =
-        when (val held = honoured(choice, names)) {
-            null -> res(R.string.wallpaper_theme_default)
-            Choices.WALLPAPER_NONE -> res(R.string.wallpaper_none)
-            else -> OptionLabel.Text(wallpaperLabels(names)[names.indexOf(held)])
-        }
-    return WallpaperRow(value)
+    return when (val held = honoured(choice, names)) {
+        null -> res(R.string.wallpaper_theme_default)
+        Choices.WALLPAPER_NONE -> res(R.string.wallpaper_none)
+        else -> OptionLabel.Text(wallpaperLabels(names)[names.indexOf(held)])
+    }
 }
 
 /** The picker over [names]: Theme default first, None last, with the entry of the honoured [choice] selected. */

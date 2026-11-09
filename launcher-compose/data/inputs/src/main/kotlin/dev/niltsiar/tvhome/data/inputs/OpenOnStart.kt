@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.provider.Settings
 import androidx.core.content.ContextCompat
 import dev.niltsiar.tvhome.core.config.TvConfig
@@ -110,15 +109,6 @@ public class OpenOnStart(
                 .distinctBy { it.activityInfo.packageName }
                 .map { OpenOnStartApp(it.loadLabel(pm).toString(), it.activityInfo.packageName) }
                 .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.label })
-        }
-
-    /** The label of [pkg], or null when it is gone. */
-    public fun label(pkg: String): String? =
-        try {
-            val pm = context.packageManager
-            pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
-        } catch (_: PackageManager.NameNotFoundException) {
-            null
         }
 
     private fun bootCount() = Settings.Global.getInt(context.contentResolver, Settings.Global.BOOT_COUNT, -1)

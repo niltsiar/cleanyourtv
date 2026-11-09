@@ -39,19 +39,13 @@ public class MoleculeSettingsViewModel(
 ) : ViewModel(coroutineScope) {
     private val events = Channel<SettingsEvent>(Channel.UNLIMITED)
     private val eventFlow = events.receiveAsFlow()
-    private val saveFailures = Channel<Unit>(Channel.BUFFERED)
+    private val effectChannel = Channel<SettingsEffect>(Channel.BUFFERED)
 
-    private val wallpaperPicks = Channel<Unit>(Channel.BUFFERED)
-
-    /** One item each time the store refused a write. */
-    public val saveFailed: Flow<Unit> = saveFailures.receiveAsFlow()
-
-    /** One item each time a picture or None was stored as the wallpaper. */
-    public val wallpaperApplied: Flow<Unit> = wallpaperPicks.receiveAsFlow()
+    public val effects: Flow<SettingsEffect> = effectChannel.receiveAsFlow()
 
     public val uiState: StateFlow<SettingsUiState> =
         viewModelScope.launchMolecule(recompositionMode, context) {
-            settingsPresenter(eventFlow, repository, sources, { saveFailures.trySend(Unit) }) { wallpaperPicks.trySend(Unit) }
+            settingsPresenter(eventFlow, repository, sources, effectChannel::trySend)
         }
 
     public val actions: SettingsActions =

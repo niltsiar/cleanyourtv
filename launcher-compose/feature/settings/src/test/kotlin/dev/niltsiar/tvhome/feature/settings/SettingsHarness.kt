@@ -9,6 +9,7 @@ import dev.niltsiar.tvhome.core.config.ThemeDirectory
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -30,17 +31,18 @@ import kotlin.coroutines.EmptyCoroutineContext
  * Molecule's immediate recompositions then run on the UI thread, as in the app, and not beside the UI frame, which made the
  * list's scroll land in the wrong place from time to time. That scope uses Dispatchers.Main and not Main.immediate: with
  * Immediate recomposition, the immediate dispatcher left the recomposer without a wake-up now and then, and the state
- * stayed old for good. The picker offers [apps]; [labels] names the installed ones
- * and [skippedAt] records the pick stored at each skipThisBoot call. The theme's pictures are [wallpapers], listed off the
+ * stayed old for good. The picker offers [apps], and the Open on start row names the pick by their labels; [skippedAt]
+ * records the pick stored at each skipThisBoot call. The apps are not listed before [appsGate] opens. The apps and the theme's pictures ([wallpapers]) are listed off the
  * calling thread as the app does: a list that came back at once would be stored while the first composition applies, and
- * Molecule's immediate recompositions on the UI thread would stall. [awaitApplied] waits for a wallpaper pick that was stored.
+ * Molecule's immediate recompositions on the UI thread would stall. [awaitApplied] waits for a wallpaper pick that was stored,
+ * [awaitSaveFailed] for a write the store refused.
  */
 internal class SettingsHarness(
     private val app: Application,
     theme: String = "{}",
     uiThread: Boolean = false,
     apps: List<OpenOnStartApp> = emptyList(),
-    labels: Map<String, String> = emptyMap(),
+    appsGate: Deferred<Unit>? = null,
     wallpapers: List<String> = emptyList(),
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -49,17 +51,30 @@ internal class SettingsHarness(
     val viewModel: MoleculeSettingsViewModel
     val skippedAt = CopyOnWriteArrayList<String?>()
     private val applied = Channel<Unit>(Channel.UNLIMITED)
+    private val failed = Channel<Unit>(Channel.UNLIMITED)
 
     init {
         ShadowEnvironment.setExternalStorageState(Environment.MEDIA_MOUNTED)
         File(ThemeDirectory(app).dir!!, "config.json").writeText(theme)
         repository = ConfigRepository(app, scope)
         val sources =
-            SettingsSources({
-                apps
-            }, labels::get, { skippedAt += repository.openOnStartApp.value }, { withContext(Dispatchers.Default) { wallpapers } })
+            SettingsSources(
+                {
+                    appsGate?.await()
+                    withContext(Dispatchers.Default) { apps }
+                },
+                { skippedAt += repository.openOnStartApp.value },
+                { withContext(Dispatchers.Default) { wallpapers } },
+            )
         viewModel = MoleculeSettingsViewModel(repository, sources, presenterScope, RecompositionMode.Immediate, EmptyCoroutineContext)
-        scope.launch { viewModel.wallpaperApplied.collect { applied.trySend(Unit) } }
+        scope.launch {
+            viewModel.effects.collect {
+                when (it) {
+                    SettingsEffect.WallpaperApplied -> applied.trySend(Unit)
+                    SettingsEffect.SaveFailed -> failed.trySend(Unit)
+                }
+            }
+        }
     }
 
     val config: TvConfig get() = repository.config.value
@@ -79,6 +94,12 @@ internal class SettingsHarness(
 
     /** Waits for the next wallpaper pick that was reported as stored. */
     fun awaitApplied() = runBlocking { withTimeout(10_000) { applied.receive() } }
+
+    /** Waits for the next write the store refused. */
+    fun awaitSaveFailed() = runBlocking { withTimeout(10_000) { failed.receive() } }
+
+    /** True when the theme still decides after a short wait: no stored choice turned [SettingsUiState.followsTheme] off. */
+    fun staysFollowingTheme(): Boolean = runBlocking { withTimeoutOrNull(500) { viewModel.uiState.first { !it.followsTheme } } == null }
 
     /** True when no further wallpaper pick is reported within a short wait. */
     fun noMoreApplied(): Boolean = runBlocking { withTimeoutOrNull(300) { applied.receive() } == null }

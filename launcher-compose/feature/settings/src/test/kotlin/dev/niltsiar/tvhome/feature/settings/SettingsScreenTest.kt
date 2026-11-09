@@ -4,6 +4,9 @@ import android.app.Application
 import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
@@ -19,6 +22,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import dev.niltsiar.tvhome.core.config.Choices
+import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
@@ -48,7 +52,9 @@ class SettingsScreenTest {
     private var reordered = 0
 
     @After
-    fun stop() = settings.stop()
+    fun stop() {
+        if (::settings.isInitialized) settings.stop()
+    }
 
     private val installed = (1..12).map { OpenOnStartApp("App %02d".format(it), "com.app$it") }
 
@@ -63,7 +69,6 @@ class SettingsScreenTest {
                 theme,
                 uiThread = true,
                 apps = apps,
-                labels = installed.associate { it.packageName to it.label },
                 wallpapers = wallpapers,
             )
         compose.setContent {
@@ -93,6 +98,17 @@ class SettingsScreenTest {
             condition()
         }
 
+    /** True when no stored choice turns the theme off within a short wait. */
+    private fun stillFollowsTheme(): Boolean {
+        val until = System.nanoTime() + 500_000_000L
+        while (System.nanoTime() < until) {
+            shadowOf(Looper.getMainLooper()).idle()
+            if (!settings.state.followsTheme) return false
+            Thread.sleep(10)
+        }
+        return true
+    }
+
     private fun back() {
         compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
         compose.waitForIdle()
@@ -110,7 +126,7 @@ class SettingsScreenTest {
         show(WITH_CHOICE, apps)
         pick?.let {
             settings.storePick(it)
-            waitUntilIdle { settings.state.openOnStart?.value is OptionLabel.Text }
+            waitUntilIdle { settings.state.openOnStart.let { it is OptionLabel.Text && it.text.isNotEmpty() } }
         }
         repeat(5) { press(Key.DirectionDown) }
         startRow().assertIsFocused()
@@ -130,7 +146,7 @@ class SettingsScreenTest {
         waitUntilIdle { settings.state.wallpaper != null }
         pick?.let {
             settings.storeWallpaper(it)
-            waitUntilIdle { settings.state.wallpaper?.value != OptionLabel.Res(R.string.wallpaper_theme_default) }
+            waitUntilIdle { settings.state.wallpaper != OptionLabel.Res(R.string.wallpaper_theme_default) }
         }
         compose.waitForIdle()
         repeat(4) { press(Key.DirectionDown) }
@@ -292,6 +308,18 @@ class SettingsScreenTest {
         option(SettingsRowId.Columns, 1).assertIsSelected()
         option(SettingsRowId.Columns, 0).assertIsNotSelected()
         assertEquals(1, settings.row(SettingsRowId.Columns).selected)
+    }
+
+    @Test
+    fun ok_on_the_selected_option_stores_nothing_so_the_theme_keeps_deciding() {
+        show("""{"columns": 6}""")
+        option(SettingsRowId.Columns, 2).assertIsFocused()
+        option(SettingsRowId.Columns, 2).assertIsSelected()
+
+        press(Key.DirectionCenter)
+
+        assertTrue(stillFollowsTheme())
+        compose.onNodeWithTag("settings:follow_theme").assertIsSelected()
     }
 
     @Test
@@ -489,7 +517,10 @@ class SettingsScreenTest {
         repeat(3) { press(Key.DirectionDown) }
 
         press(Key.DirectionCenter)
-        waitUntilIdle { settings.pickedApp == "com.app3" && settings.state.picker == null }
+        waitUntilIdle {
+            settings.pickedApp == "com.app3" && settings.state.picker == null &&
+                settings.state.openOnStart == OptionLabel.Text("App 03")
+        }
         compose.waitForIdle()
 
         assertEquals(0, compose.onAllNodesWithTag("settings:picker").fetchSemanticsNodes().size)
@@ -635,6 +666,99 @@ class SettingsScreenTest {
         compose.waitForIdle()
         back()
         startRow().assertIsFocused()
+    }
+
+    /**
+     * A page the module does not list itself: the Clock row is in the second section, not the first, so the Wallpaper row is
+     * too, and the Open on start row follows a first section of two rows. Focus must still walk every stop top to bottom and
+     * back, and each picker must give focus back to its own row.
+     */
+    @Test
+    fun focus_walks_a_page_with_its_rows_in_another_order_and_each_picker_returns_to_its_own_row() {
+        val byId = settingsSections(TvConfig()).flatMap { it.rows }.associateBy { it.id }
+
+        fun section(
+            heading: Int?,
+            vararg ids: SettingsRowId,
+        ) = SettingsSection(heading, ids.map { byId.getValue(it) })
+        val sections =
+            listOf(
+                section(null, SettingsRowId.Columns, SettingsRowId.Animations),
+                section(R.string.settings_group_home, SettingsRowId.DockOpacity, SettingsRowId.ClockFormat, SettingsRowId.ShowGreeting),
+                section(R.string.settings_group_motion, SettingsRowId.InputArrival),
+            )
+        val rows = { id: SettingsRowId -> "option:${id.name}:${byId.getValue(id).selected.coerceAtLeast(0)}" }
+        val topToBottom =
+            listOf(
+                "settings:reorder",
+                rows(SettingsRowId.Columns),
+                rows(SettingsRowId.Animations),
+                "settings:open_on_start",
+                rows(SettingsRowId.DockOpacity),
+                rows(SettingsRowId.ClockFormat),
+                "settings:wallpaper",
+                rows(SettingsRowId.ShowGreeting),
+                rows(SettingsRowId.InputArrival),
+                "settings:follow_theme",
+                "settings:default_home",
+                "settings:tv_settings",
+            )
+        var startPicker by mutableStateOf<OpenOnStartPicker?>(null)
+        var wallpaperPicker by mutableStateOf<WallpaperPicker?>(null)
+        val actions =
+            SettingsActions(
+                onOpenPicker = { startPicker = OpenOnStartPicker(installed.take(2), 0) },
+                onOpenWallpaperPicker = { wallpaperPicker = WallpaperPicker(listOf(OptionLabel.Res(R.string.wallpaper_none)), 0) },
+                onClosePicker = {
+                    startPicker = null
+                    wallpaperPicker = null
+                },
+            )
+        compose.setContent {
+            TvTheme(motion = Motion(animations = false)) {
+                SettingsScreen(
+                    state = {
+                        SettingsUiState(
+                            sections,
+                            followsTheme = true,
+                            reorder = true,
+                            openOnStart = OptionLabel.Res(R.string.settings_off),
+                            picker = startPicker,
+                            wallpaper = OptionLabel.Res(R.string.wallpaper_theme_default),
+                            wallpaperPicker = wallpaperPicker,
+                        )
+                    },
+                    actions = actions,
+                    onChooseDefaultHome = {},
+                    onOpenTvSettings = {},
+                )
+            }
+        }
+        compose.waitForIdle()
+
+        topToBottom.first().let { compose.onNodeWithTag(it).assertIsFocused() }
+        for (tag in topToBottom.drop(1)) {
+            press(Key.DirectionDown)
+            compose.onNodeWithTag(tag).assertIsFocused()
+        }
+        press(Key.DirectionDown)
+        compose.onNodeWithTag(topToBottom.last()).assertIsFocused()
+        for (tag in topToBottom.dropLast(1).reversed()) {
+            press(Key.DirectionUp)
+            compose.onNodeWithTag(tag).assertIsFocused()
+        }
+        press(Key.DirectionUp)
+        compose.onNodeWithTag(topToBottom.first()).assertIsFocused()
+
+        for (tag in listOf("settings:open_on_start", "settings:wallpaper")) {
+            repeat(topToBottom.indexOf(tag)) { press(Key.DirectionDown) }
+            press(Key.DirectionCenter)
+            waitUntilIdle { compose.onAllNodesWithTag("settings:picker").fetchSemanticsNodes().isNotEmpty() }
+            compose.waitForIdle()
+            back()
+            compose.onNodeWithTag(tag).assertIsFocused()
+            repeat(topToBottom.indexOf(tag)) { press(Key.DirectionUp) }
+        }
     }
 
     private fun SettingsHarness.storeWallpaper(value: String) = runBlocking { repository.set(Choices.WallpaperChoice, value) }
