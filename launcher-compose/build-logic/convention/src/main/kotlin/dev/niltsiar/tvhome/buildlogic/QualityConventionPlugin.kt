@@ -33,7 +33,11 @@ class QualityConventionPlugin : Plugin<Project> {
             }
 
             pluginManager.withPlugin("com.android.application") {
-                extensions.configure<ApplicationExtension> { lint.configureLint() }
+                extensions.configure<ApplicationExtension> {
+                    lint.configureLint()
+                    // Off by default in AGP; without an icon the system draws its default robot on toasts.
+                    lint.error += "MissingApplicationIcon"
+                }
                 // The `lint` task covers one variant, so check lints every debug variant.
                 extensions.configure<ApplicationAndroidComponentsExtension> {
                     onVariants(selector().withBuildType("debug")) { variant ->
