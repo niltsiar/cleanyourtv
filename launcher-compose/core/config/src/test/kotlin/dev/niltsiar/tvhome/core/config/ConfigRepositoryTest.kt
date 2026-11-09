@@ -17,6 +17,7 @@ import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -158,6 +159,40 @@ class ConfigRepositoryTest {
     }
 
     @Test
+    fun the_wallpaper_choice_follows_the_store_and_clearing_it_leaves_the_theme_deciding() {
+        pushTheme("""{"columns": 5}""")
+        val repo = repository()
+        assertNull(repo.wallpaperChoice.value)
+
+        repo.choose(Choices.WallpaperChoice, "dusk.jpg")
+        awaitWallpaperChoice(repo, "dusk.jpg")
+        awaitFollowsTheme(repo, false)
+
+        repo.choose(Choices.WallpaperChoice, Choices.WALLPAPER_NONE)
+        awaitWallpaperChoice(repo, "none")
+
+        runBlocking { repo.clear(Choices.WallpaperChoice) }
+        awaitWallpaperChoice(repo, null)
+        awaitFollowsTheme(repo, true)
+
+        repo.choose(Choices.WallpaperChoice, "dusk.jpg")
+        awaitWallpaperChoice(repo, "dusk.jpg")
+        runBlocking { repo.followTheme() }
+        awaitWallpaperChoice(repo, null)
+    }
+
+    @Test
+    fun a_repository_opened_on_a_stored_wallpaper_choice_holds_it_at_once() {
+        pushTheme("{}")
+        chooseAndStop {
+            it.choose(Choices.WallpaperChoice, "dusk.jpg")
+            awaitWallpaperChoice(it, "dusk.jpg")
+        }
+
+        assertEquals("dusk.jpg", repository().wallpaperChoice.value)
+    }
+
+    @Test
     fun the_config_follows_the_theme_until_a_choice_is_stored_open_on_start_included() {
         pushTheme("""{"columns": 5}""")
         val repo = repository()
@@ -188,7 +223,9 @@ class ConfigRepositoryTest {
             it.choose(Choices.Columns, 7)
             it.choose(Choices.ShowGreeting, false)
             it.choose(Choices.OpenOnStart, "com.netflix.ninja")
+            it.choose(Choices.WallpaperChoice, "dusk.jpg")
             awaitConfig(it) { c -> c.columns == 7 }
+            awaitWallpaperChoice(it, "dusk.jpg")
         }
 
         val theme = pushTheme("""{"columns": 6, "rows_below_dock": 2}""")
@@ -196,6 +233,7 @@ class ConfigRepositoryTest {
 
         assertEquals(theme, repo.config.value)
         assertEquals("com.netflix.ninja", repo.openOnStartApp.value)
+        assertNull(repo.wallpaperChoice.value)
     }
 
     @Test
@@ -334,6 +372,11 @@ class ConfigRepositoryTest {
         repo: ConfigRepository,
         expected: String,
     ) = runBlocking { withTimeout(10_000) { repo.openOnStartApp.first { it == expected } } }
+
+    private fun awaitWallpaperChoice(
+        repo: ConfigRepository,
+        expected: String?,
+    ) = runBlocking { withTimeout(10_000) { repo.wallpaperChoice.first { it == expected } } }
 
     private fun themeFile(name: String): File = File(ThemeDirectory(app).dir!!, name)
 

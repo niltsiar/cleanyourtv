@@ -35,4 +35,9 @@
   <string name="settings_reorder">Reorder apps</string>
   <string name="open_on_start_label">Open on start</string>
   <string name="open_on_start_state">Open on start: %1$s</string>
+  <string name="wallpaper_label">Wallpaper</string>
+  <string name="wallpaper_state">Wallpaper: %1$s</string>
+  <string name="wallpaper_none">None</string>
+  <string name="wallpaper_applied">Wallpaper changed</string>
+  <string name="wallpaper_theme_default">Theme default</string>
 </resources>

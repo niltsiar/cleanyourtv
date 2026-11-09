@@ -35,4 +35,9 @@
   <string name="settings_reorder">Reordenar aplicaciones</string>
   <string name="open_on_start_label">Abrir al aniciar</string>
   <string name="open_on_start_state">Abrir al aniciar: %1$s</string>
+  <string name="wallpaper_label">Fondu</string>
+  <string name="wallpaper_state">Fondu: %1$s</string>
+  <string name="wallpaper_none">Nengún</string>
+  <string name="wallpaper_applied">Fondu camudáu</string>
+  <string name="wallpaper_theme_default">Predetermináu del tema</string>
 </resources>

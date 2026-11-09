@@ -35,4 +35,9 @@
   <string name="settings_reorder">Promeni redosled aplikacija</string>
   <string name="open_on_start_label">Otvori pri pokretanju</string>
   <string name="open_on_start_state">Otvori pri pokretanju: %1$s</string>
+  <string name="wallpaper_label">Pozadina</string>
+  <string name="wallpaper_state">Pozadina: %1$s</string>
+  <string name="wallpaper_none">Nema</string>
+  <string name="wallpaper_applied">Pozadina je promenjena</string>
+  <string name="wallpaper_theme_default">Podrazumevano iz teme</string>
 </resources>

@@ -17,8 +17,10 @@ internal fun SettingsHost(
     onOpenTvSettings: () -> Unit,
     onReorder: () -> Unit,
     onSaveFailed: () -> Unit,
+    onWallpaperApplied: () -> Unit,
 ) {
     LaunchedEffect(viewModel) { viewModel.saveFailed.collect { onSaveFailed() } }
+    LaunchedEffect(viewModel) { viewModel.wallpaperApplied.collect { onWallpaperApplied() } }
     val config = graph.configRepository.config.collectAsStateWithLifecycle()
     val motion by config.derived(TvConfig::motion)
     val focusStyle by config.derived(TvConfig::focusStyle)

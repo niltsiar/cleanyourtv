@@ -35,4 +35,9 @@
   <string name="settings_reorder">Seřadit aplikace</string>
   <string name="open_on_start_label">Otevřít po spuštění</string>
   <string name="open_on_start_state">Otevřít po spuštění: %1$s</string>
+  <string name="wallpaper_label">Tapeta</string>
+  <string name="wallpaper_state">Tapeta: %1$s</string>
+  <string name="wallpaper_none">Žádná</string>
+  <string name="wallpaper_applied">Tapeta změněna</string>
+  <string name="wallpaper_theme_default">Podle motivu</string>
 </resources>

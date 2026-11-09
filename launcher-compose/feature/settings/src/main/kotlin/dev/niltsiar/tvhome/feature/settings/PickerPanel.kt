@@ -1,6 +1,7 @@
 package dev.niltsiar.tvhome.feature.settings
 
 import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
@@ -36,24 +37,25 @@ private val PickerGap = 8.dp
 private const val LEAD_ROWS = 2
 
 /**
- * The Open on start picker over the page: Off, then every app of [picker]. Focus starts on the selected entry and cannot
- * leave the panel; OK on an entry runs [onPick] with its index, 0 for Off, and Back runs [onClose].
+ * A picker over the page, titled [title], listing [entries]. Focus starts on the entry at [selected] and cannot leave the
+ * panel; OK on an entry runs [onPick] with its index, and Back runs [onClose].
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-internal fun BoxScope.StartPickerPanel(
-    picker: OpenOnStartPicker,
+internal fun BoxScope.PickerPanel(
+    @StringRes title: Int,
+    entries: List<OptionLabel>,
+    selected: Int,
     onPick: (Int) -> Unit,
     onClose: () -> Unit,
 ) {
     BackHandler(onBack = onClose)
     val reveal = rememberReveal()
-    val selected = remember { FocusRequester() }
-    val entries = remember(picker) { listOf(null) + picker.apps }
-    val list = rememberLazyListState((picker.selected - LEAD_ROWS).coerceAtLeast(0))
+    val entry = remember { FocusRequester() }
+    val list = rememberLazyListState((selected - LEAD_ROWS).coerceAtLeast(0))
     LaunchedEffect(Unit) {
         withFrameNanos { }
-        selected.requestFocus()
+        entry.requestFocus()
     }
     OverlaySurface(
         modifier =
@@ -68,24 +70,22 @@ internal fun BoxScope.StartPickerPanel(
                 .focusGroup(),
     ) {
         Column {
-            PanelTitle(stringResource(R.string.open_on_start_label), "settings:picker:title")
+            PanelTitle(stringResource(title), "settings:picker:title")
             LazyColumn(
                 state = list,
                 contentPadding = PaddingValues(start = PickerSide, end = PickerSide, bottom = PickerSide),
                 verticalArrangement = Arrangement.spacedBy(PickerGap),
             ) {
-                itemsIndexed(entries, key = { _, app -> app?.packageName ?: OFF_KEY }) { index, app ->
+                itemsIndexed(entries) { index, label ->
                     ActionRow(
-                        label = app?.label ?: stringResource(R.string.settings_off),
-                        selected = index == picker.selected,
+                        label = label.text(),
+                        selected = index == selected,
                         onClick = { onPick(index) },
                         tag = "picker:$index",
-                        entry = if (index == picker.selected) selected else null,
+                        entry = if (index == selected) entry else null,
                     )
                 }
             }
         }
     }
 }
-
-private const val OFF_KEY = "off"

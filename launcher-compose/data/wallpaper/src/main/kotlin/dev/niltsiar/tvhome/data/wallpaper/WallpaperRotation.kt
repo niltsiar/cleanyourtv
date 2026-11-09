@@ -1,5 +1,6 @@
 package dev.niltsiar.tvhome.data.wallpaper
 
+import dev.niltsiar.tvhome.core.config.Choices
 import dev.niltsiar.tvhome.core.config.WallpaperOrder
 import java.io.File
 import java.util.Locale
@@ -26,6 +27,31 @@ internal object WallpaperRotation {
         images: List<File>,
         name: String,
     ): File? = images.firstOrNull { it.name == name }
+
+    /** The theme's single wallpaper.jpg when it is there and not empty. */
+    fun usable(single: File?): File? = single?.takeIf { it.isFile && it.length() > 0 }
+
+    /** What the on-TV choice picker offers, in its order: the single wallpaper.jpg, then the pictures of [folder]. */
+    fun offered(
+        folder: File?,
+        single: File?,
+    ): List<File> = listOfNotNull(usable(single)) + images(folder)
+
+    /**
+     * What the on-TV wallpaper [choice] shows in place of the theme's rotation: null when the theme decides (no choice, or
+     * a picture that is gone), an empty list for [Choices.WALLPAPER_NONE], else the one picture from [collection] or the
+     * [single] wallpaper.
+     */
+    fun chosen(
+        collection: List<File>,
+        single: File?,
+        choice: String?,
+    ): List<File>? =
+        when (choice) {
+            null -> null
+            Choices.WALLPAPER_NONE -> emptyList()
+            else -> (find(collection, choice) ?: single?.takeIf { it.name == choice })?.let(::listOf)
+        }
 
     /** A random picture other than [previous], unless that is the only one. */
     fun pick(

@@ -35,4 +35,9 @@
   <string name="settings_reorder">Apps anordnen</string>
   <string name="open_on_start_label">Beim Start öffnen</string>
   <string name="open_on_start_state">Beim Start öffnen: %1$s</string>
+  <string name="wallpaper_label">Hintergrundbild</string>
+  <string name="wallpaper_state">Hintergrundbild: %1$s</string>
+  <string name="wallpaper_none">Keines</string>
+  <string name="wallpaper_applied">Hintergrundbild geändert</string>
+  <string name="wallpaper_theme_default">Standard des Designs</string>
 </resources>

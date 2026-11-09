@@ -35,4 +35,9 @@
   <string name="settings_reorder">Apps ordenen</string>
   <string name="open_on_start_label">Openen bij opstarten</string>
   <string name="open_on_start_state">Openen bij opstarten: %1$s</string>
+  <string name="wallpaper_label">Achtergrond</string>
+  <string name="wallpaper_state">Achtergrond: %1$s</string>
+  <string name="wallpaper_none">Geen</string>
+  <string name="wallpaper_applied">Achtergrond gewijzigd</string>
+  <string name="wallpaper_theme_default">Standaard van het thema</string>
 </resources>

@@ -12,9 +12,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.robolectric.shadows.ShadowEnvironment
 import java.io.File
 import java.util.concurrent.CopyOnWriteArrayList
@@ -25,7 +29,9 @@ import kotlin.coroutines.EmptyCoroutineContext
  * on a background thread, so a test can block the test thread on [awaitState]. A test that draws the screen sets [uiThread]:
  * Molecule's immediate recompositions then run on the UI thread, as in the app, and not beside the UI frame, which made the
  * list's scroll land in the wrong place from time to time. The picker offers [apps]; [labels] names the installed ones
- * and [skippedAt] records the pick stored at each skipThisBoot call.
+ * and [skippedAt] records the pick stored at each skipThisBoot call. The theme's pictures are [wallpapers], listed off the
+ * calling thread as the app does: a list that came back at once would be stored while the first composition applies, and
+ * Molecule's immediate recompositions on the UI thread would stall. [awaitApplied] waits for a wallpaper pick that was stored.
  */
 internal class SettingsHarness(
     private val app: Application,
@@ -33,19 +39,25 @@ internal class SettingsHarness(
     uiThread: Boolean = false,
     apps: List<OpenOnStartApp> = emptyList(),
     labels: Map<String, String> = emptyMap(),
+    wallpapers: List<String> = emptyList(),
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val presenterScope = if (uiThread) CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) else scope
     val repository: ConfigRepository
     val viewModel: MoleculeSettingsViewModel
     val skippedAt = CopyOnWriteArrayList<String>()
+    private val applied = Channel<Unit>(Channel.UNLIMITED)
 
     init {
         ShadowEnvironment.setExternalStorageState(Environment.MEDIA_MOUNTED)
         File(ThemeDirectory(app).dir!!, "config.json").writeText(theme)
         repository = ConfigRepository(app, scope)
-        val sources = SettingsSources({ apps }, labels::get) { skippedAt += repository.openOnStartApp.value }
+        val sources =
+            SettingsSources({
+                apps
+            }, labels::get, { skippedAt += repository.openOnStartApp.value }, { withContext(Dispatchers.Default) { wallpapers } })
         viewModel = MoleculeSettingsViewModel(repository, sources, presenterScope, RecompositionMode.Immediate, EmptyCoroutineContext)
+        scope.launch { viewModel.wallpaperApplied.collect { applied.trySend(Unit) } }
     }
 
     val config: TvConfig get() = repository.config.value
@@ -61,6 +73,13 @@ internal class SettingsHarness(
     fun followTheme() = viewModel.actions.onFollowTheme()
 
     val pickedApp: String get() = repository.openOnStartApp.value
+    val wallpaperChoice: String? get() = repository.wallpaperChoice.value
+
+    /** Waits for the next wallpaper pick that was reported as stored. */
+    fun awaitApplied() = runBlocking { withTimeout(10_000) { applied.receive() } }
+
+    /** True when no further wallpaper pick is reported within a short wait. */
+    fun noMoreApplied(): Boolean = runBlocking { withTimeoutOrNull(300) { applied.receive() } == null }
 
     fun storePick(pkg: String) = runBlocking { repository.set(Choices.OpenOnStart, pkg) }
 

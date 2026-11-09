@@ -24,6 +24,9 @@ public class SettingsActions(
     public val onClosePicker: () -> Unit = {},
     /** The entry at an index of the picker was picked; 0 is Off. */
     public val onPickStartApp: (Int) -> Unit = {},
+    public val onOpenWallpaperPicker: () -> Unit = {},
+    /** The entry at an index of the wallpaper picker was picked; 0 is Theme default. */
+    public val onPickWallpaper: (Int) -> Unit = {},
 )
 
 /** Hosts [settingsPresenter] with Molecule: an event Flow in, a StateFlow out. */
@@ -38,12 +41,17 @@ public class MoleculeSettingsViewModel(
     private val eventFlow = events.receiveAsFlow()
     private val saveFailures = Channel<Unit>(Channel.BUFFERED)
 
+    private val wallpaperPicks = Channel<Unit>(Channel.BUFFERED)
+
     /** One item each time the store refused a write. */
     public val saveFailed: Flow<Unit> = saveFailures.receiveAsFlow()
 
+    /** One item each time a picture or None was stored as the wallpaper. */
+    public val wallpaperApplied: Flow<Unit> = wallpaperPicks.receiveAsFlow()
+
     public val uiState: StateFlow<SettingsUiState> =
         viewModelScope.launchMolecule(recompositionMode, context) {
-            settingsPresenter(eventFlow, repository, sources) { saveFailures.trySend(Unit) }
+            settingsPresenter(eventFlow, repository, sources, { saveFailures.trySend(Unit) }) { wallpaperPicks.trySend(Unit) }
         }
 
     public val actions: SettingsActions =
@@ -53,5 +61,7 @@ public class MoleculeSettingsViewModel(
             onOpenPicker = { events.trySend(SettingsEvent.OpenPicker) },
             onClosePicker = { events.trySend(SettingsEvent.ClosePicker) },
             onPickStartApp = { events.trySend(SettingsEvent.PickStartApp(it)) },
+            onOpenWallpaperPicker = { events.trySend(SettingsEvent.OpenWallpaperPicker) },
+            onPickWallpaper = { events.trySend(SettingsEvent.PickWallpaper(it)) },
         )
 }

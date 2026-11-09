@@ -34,9 +34,10 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -127,30 +128,39 @@ public fun SettingsScreen(
     val rowCount = ui.sections.sumOf { it.rows.size }
     val lead = if (ui.reorder) 1 else 0
     val startRows = if (ui.openOnStart != null) 1 else 0
-    // Where the Open on start row goes: after the first section's rows, which are Java's.
-    val startAt =
-        lead + (
-            ui.sections
-                .firstOrNull()
-                ?.rows
-                ?.size ?: 0
-        )
-    // The Reorder row if there is one, then one requester per row and the Open on start row, then the two buttons: each
-    // sits on the option a row gets focus on, and links the rows.
-    val firstButton = lead + rowCount + startRows
+    val wallpaperRows = if (ui.wallpaper != null) 1 else 0
+    val firstRows =
+        ui.sections
+            .firstOrNull()
+            ?.rows
+            .orEmpty()
+    // Java's order: the Wallpaper row follows the Clock row, the Open on start row follows the first section's rows.
+    val wallpaperAt = lead + firstRows.indexOfFirst { it.id == SettingsRowId.ClockFormat } + 1
+    val startAt = lead + firstRows.size + wallpaperRows
+    // The Reorder row if there is one, then one requester per row, the Wallpaper row and the Open on start row, then the two
+    // buttons: each sits on the option a row gets focus on, and links the rows.
+    val firstButton = lead + rowCount + startRows + wallpaperRows
     val entries = remember(firstButton) { List(firstButton + BUTTON_COUNT) { FocusRequester() } }
-    LaunchedEffect(entries) {
+    val currentEntries by rememberUpdatedState(entries)
+    LaunchedEffect(Unit) {
         withFrameNanos { }
-        entries.first().requestFocus()
+        currentEntries.first().requestFocus()
     }
-    val pickerOpen = ui.picker != null
-    var pickerShown by remember { mutableStateOf(false) }
-    LaunchedEffect(pickerOpen) {
-        if (pickerOpen) {
-            pickerShown = true
-        } else if (pickerShown) {
+    val pickerRow =
+        if (ui.picker != null) {
+            startAt
+        } else if (ui.wallpaperPicker != null) {
+            wallpaperAt
+        } else {
+            -1
+        }
+    var returnTo by remember { mutableIntStateOf(-1) }
+    LaunchedEffect(pickerRow) {
+        if (pickerRow >= 0) {
+            returnTo = pickerRow
+        } else if (returnTo >= 0) {
             withFrameNanos { }
-            entries[startAt].requestFocus()
+            entries[returnTo].requestFocus()
         }
     }
     val scroll = rememberScrollState()
@@ -207,6 +217,20 @@ public fun SettingsScreen(
                                 for (row in section.rows) {
                                     val at = index++
                                     key(row.id) { SettingRow(row, actions.onPick, entries[at], entries.above(at), entries.below(at)) }
+                                    if (row.id == SettingsRowId.ClockFormat) {
+                                        ui.wallpaper?.let { wallpaper ->
+                                            val wallpaperIndex = index++
+                                            ActionRow(
+                                                label = stringResource(R.string.wallpaper_state, wallpaper.value.text()),
+                                                selected = false,
+                                                onClick = actions.onOpenWallpaperPicker,
+                                                tag = "settings:wallpaper",
+                                                entry = entries[wallpaperIndex],
+                                                upEntry = entries.above(wallpaperIndex),
+                                                downEntry = entries.below(wallpaperIndex),
+                                            )
+                                        }
+                                    }
                                 }
                                 if (position == 0) {
                                     ui.openOnStart?.let { start ->
@@ -247,8 +271,18 @@ public fun SettingsScreen(
                     }
                 }
             }
-            OverlayHost(open = { pickerOpen }) {
-                ui.picker?.let { StartPickerPanel(it, actions.onPickStartApp, actions.onClosePicker) }
+            OverlayHost(open = { pickerRow >= 0 }) {
+                ui.picker?.let { picker ->
+                    val labels =
+                        remember(picker) {
+                            listOf<OptionLabel>(OptionLabel.Res(R.string.settings_off)) +
+                                picker.apps.map { OptionLabel.Text(it.label) }
+                        }
+                    PickerPanel(R.string.open_on_start_label, labels, picker.selected, actions.onPickStartApp, actions.onClosePicker)
+                }
+                ui.wallpaperPicker?.let {
+                    PickerPanel(R.string.wallpaper_label, it.entries, it.selected, actions.onPickWallpaper, actions.onClosePicker)
+                }
             }
         }
     }

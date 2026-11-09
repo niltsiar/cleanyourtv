@@ -6,6 +6,7 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.config.WallpaperOrder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -37,15 +38,18 @@ class ScreensaverWallpaperTest {
         listOf("a.jpg", "b.jpg").forEach { File(collection, it).writeBytes(ByteArray(8) { _ -> 1 }) }
     }
 
-    private fun provider(config: TvConfig) =
-        WallpaperProvider(
-            config = MutableStateFlow(config),
-            single = File(themeDir.root, "wallpaper.jpg"),
-            folder = collection,
-            preferences = preferences,
-            decode = { file -> DecodedPicture(pictures.getOrPut(file.name) { ImageBitmap(1, 1) }, null) },
-            zone = { ZoneOffset.UTC },
-        )
+    private fun provider(
+        config: TvConfig,
+        choice: StateFlow<String?> = MutableStateFlow(null),
+    ) = WallpaperProvider(
+        config = MutableStateFlow(config),
+        wallpaperChoice = choice,
+        single = File(themeDir.root, "wallpaper.jpg"),
+        folder = collection,
+        preferences = preferences,
+        decode = { file -> DecodedPicture(pictures.getOrPut(file.name) { ImageBitmap(1, 1) }, null) },
+        zone = { ZoneOffset.UTC },
+    )
 
     @Test
     fun the_screensaver_shows_the_picture_home_was_playing() {
@@ -74,5 +78,17 @@ class ScreensaverWallpaperTest {
         val picture = runBlocking { ScreensaverWallpaper(provider(rotating.copy(wallpaper = false)), Dispatchers.Unconfined).current() }
 
         assertNull(picture)
+    }
+
+    @Test
+    fun the_screensaver_follows_the_on_tv_wallpaper_choice() {
+        val choice = MutableStateFlow<String?>("b.jpg")
+        val screensaver = ScreensaverWallpaper(provider(rotating, choice), Dispatchers.Unconfined)
+
+        val chosen = runBlocking { screensaver.current() }
+        assertSame(pictures.getValue("b.jpg"), chosen)
+
+        choice.value = "none"
+        assertNull(runBlocking { screensaver.current() })
     }
 }

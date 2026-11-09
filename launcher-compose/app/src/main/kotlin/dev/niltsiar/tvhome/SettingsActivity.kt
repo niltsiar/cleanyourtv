@@ -48,6 +48,7 @@ class SettingsActivity : ComponentActivity() {
                 onOpenTvSettings = ::openTvSettings,
                 onReorder = ::reorder,
                 onSaveFailed = { Toast.makeText(this, SettingsR.string.settings_save_failed, Toast.LENGTH_LONG).show() },
+                onWallpaperApplied = { Toast.makeText(this, SettingsR.string.wallpaper_applied, Toast.LENGTH_SHORT).show() },
             )
         }
     }

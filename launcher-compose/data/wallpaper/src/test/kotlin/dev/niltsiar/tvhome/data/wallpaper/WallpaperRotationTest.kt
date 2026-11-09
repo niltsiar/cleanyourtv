@@ -87,4 +87,29 @@ class WallpaperRotationTest {
         assertTrue(WallpaperRotation.due(5 * minute, 10 * minute, 5 * minute))
         assertTrue(WallpaperRotation.due(20 * minute, 10 * minute, 5 * minute)) // clock went back
     }
+
+    @Test
+    fun the_on_tv_choice_is_nothing_for_the_theme_to_decide_none_or_one_picture() {
+        val collection = files("a.jpg", "b.jpg")
+        val single = File("wallpaper.jpg")
+
+        assertNull(WallpaperRotation.chosen(collection, single, null))
+        assertEquals(emptyList<File>(), WallpaperRotation.chosen(collection, single, "none"))
+        assertEquals(files("b.jpg"), WallpaperRotation.chosen(collection, single, "b.jpg"))
+        assertEquals(listOf(single), WallpaperRotation.chosen(collection, single, "wallpaper.jpg"))
+        assertNull(WallpaperRotation.chosen(collection, single, "gone.jpg"))
+        assertNull(WallpaperRotation.chosen(collection, null, "wallpaper.jpg"))
+    }
+
+    @Test
+    fun the_picker_offers_the_single_wallpaper_first_when_it_has_content_then_the_folder() {
+        val wallpapers = folder.newFolder("wallpapers")
+        File(wallpapers, "b.jpg").writeBytes(ByteArray(4))
+        File(wallpapers, "a.jpg").writeBytes(ByteArray(4))
+        val single = touch("wallpaper.jpg", 4)
+
+        assertEquals(listOf("wallpaper.jpg", "a.jpg", "b.jpg"), WallpaperRotation.offered(wallpapers, single).map { it.name })
+        assertEquals(listOf("a.jpg", "b.jpg"), WallpaperRotation.offered(wallpapers, File(folder.root, "missing.jpg")).map { it.name })
+        assertEquals(listOf("a.jpg", "b.jpg"), WallpaperRotation.offered(wallpapers, touch("empty.jpg", 0)).map { it.name })
+    }
 }

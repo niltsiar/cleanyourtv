@@ -18,6 +18,7 @@ import dev.niltsiar.tvhome.data.system.SystemSettings
 import dev.niltsiar.tvhome.data.system.TimeChanges
 import dev.niltsiar.tvhome.data.system.displayOn
 import dev.niltsiar.tvhome.data.wallpaper.ScreensaverWallpaper
+import dev.niltsiar.tvhome.data.wallpaper.WallpaperPictures
 import dev.niltsiar.tvhome.data.wallpaper.WallpaperProvider
 import dev.niltsiar.tvhome.feature.home.FocusMemory
 import dev.niltsiar.tvhome.feature.home.HomeSources
@@ -134,8 +135,16 @@ interface AppGraph {
 
     @Provides
     @SingleIn(AppScope::class)
-    fun provideSettingsSources(openOnStart: OpenOnStart): SettingsSources =
-        SettingsSources(openOnStart::apps, openOnStart::label, openOnStart::skipThisBoot)
+    fun provideSettingsSources(
+        application: Application,
+        openOnStart: OpenOnStart,
+    ): SettingsSources =
+        SettingsSources(
+            openOnStart::apps,
+            openOnStart::label,
+            openOnStart::skipThisBoot,
+            WallpaperPictures(ThemeDirectory(application))::names,
+        )
 
     @Provides
     @SingleIn(AppScope::class)
@@ -149,14 +158,14 @@ interface AppGraph {
     fun provideWallpaperProvider(
         application: Application,
         repository: ConfigRepository,
-    ): WallpaperProvider = WallpaperProvider(application, repository.config, ThemeDirectory(application))
+    ): WallpaperProvider = WallpaperProvider(application, repository.config, repository.wallpaperChoice, ThemeDirectory(application))
 
     @Provides
     @SingleIn(AppScope::class)
     fun provideScreensaverWallpaper(
         application: Application,
         repository: ConfigRepository,
-    ): ScreensaverWallpaper = ScreensaverWallpaper(application, repository.config, ThemeDirectory(application))
+    ): ScreensaverWallpaper = ScreensaverWallpaper(application, repository.config, repository.wallpaperChoice, ThemeDirectory(application))
 
     /** Lives as long as the process, so an activity created again returns to the tile it left. */
     @Provides

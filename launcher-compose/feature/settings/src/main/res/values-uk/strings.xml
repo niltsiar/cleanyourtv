@@ -35,4 +35,9 @@
   <string name="settings_reorder">Упорядкувати застосунки</string>
   <string name="open_on_start_label">Відкривати під час запуску</string>
   <string name="open_on_start_state">Відкривати під час запуску: %1$s</string>
+  <string name="wallpaper_label">Шпалери</string>
+  <string name="wallpaper_state">Шпалери: %1$s</string>
+  <string name="wallpaper_none">Немає</string>
+  <string name="wallpaper_applied">Шпалери змінено</string>
+  <string name="wallpaper_theme_default">Як у темі</string>
 </resources>

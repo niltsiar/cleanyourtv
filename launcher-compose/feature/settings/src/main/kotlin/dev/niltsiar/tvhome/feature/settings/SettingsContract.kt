@@ -67,9 +67,23 @@ public data class OpenOnStartPicker(
     val selected: Int,
 )
 
+/** The Wallpaper row, which follows the Clock row. [value] is the picked picture's name, None, or Theme default. */
+@Immutable
+public data class WallpaperRow(
+    val value: OptionLabel,
+)
+
+/** The picker over the page: Theme default, the theme's pictures, then None. [selected] indexes [entries]. */
+@Immutable
+public data class WallpaperPicker(
+    val entries: List<OptionLabel>,
+    val selected: Int,
+)
+
 /**
  * What the screen shows. [followsTheme] is true while no choice is stored. [reorder] adds a Reorder row first
  * (launcher_settings_button). [openOnStart] is there with open_on_start_choice, and [picker] while its picker is open.
+ * [wallpaper] is there when the theme has a picture, and [wallpaperPicker] while its picker is open.
  */
 @Immutable
 public data class SettingsUiState(
@@ -78,9 +92,11 @@ public data class SettingsUiState(
     val reorder: Boolean = false,
     val openOnStart: OpenOnStartRow? = null,
     val picker: OpenOnStartPicker? = null,
+    val wallpaper: WallpaperRow? = null,
+    val wallpaperPicker: WallpaperPicker? = null,
 )
 
-/** What the page asks of the rest of the launcher for Open on start. */
+/** What the page asks of the rest of the launcher for Open on start and Wallpaper. */
 public class SettingsSources(
     /** The apps the picker offers, loaded off the main thread. */
     public val openOnStartApps: suspend () -> List<OpenOnStartApp>,
@@ -88,6 +104,8 @@ public class SettingsSources(
     public val appLabel: (String) -> String?,
     /** Makes the Home that follows a pick stay Home. */
     public val skipThisBoot: suspend () -> Unit,
+    /** The file names of the theme's pictures, in the order the wallpaper picker lists them, loaded off the main thread. */
+    public val wallpaperPictures: suspend () -> List<String>,
 )
 
 internal sealed interface SettingsEvent {
@@ -100,7 +118,15 @@ internal sealed interface SettingsEvent {
 
     data object OpenPicker : SettingsEvent
 
+    /** Closes whichever picker is open. */
     data object ClosePicker : SettingsEvent
+
+    data object OpenWallpaperPicker : SettingsEvent
+
+    /** The entry at an index of the wallpaper picker: 0 is Theme default, the last is None. */
+    data class PickWallpaper(
+        val index: Int,
+    ) : SettingsEvent
 
     /** The entry at an index of the picker: 0 is Off. */
     data class PickStartApp(

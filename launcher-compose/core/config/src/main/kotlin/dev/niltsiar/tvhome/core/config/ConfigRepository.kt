@@ -60,6 +60,11 @@ public class ConfigRepository(
     /** The package stored by [Choices.OpenOnStart], empty for Off. It changes with [config]. */
     public val openOnStartApp: StateFlow<String> = picked.asStateFlow()
 
+    private val wallpaper = MutableStateFlow<String?>(null)
+
+    /** The stored [Choices.WallpaperChoice], null when the theme decides. It changes with [config]. */
+    public val wallpaperChoice: StateFlow<String?> = wallpaper.asStateFlow()
+
     init {
         val theme = themes.loadConfig().config
         state = MutableStateFlow(theme)
@@ -116,6 +121,7 @@ public class ConfigRepository(
         state.value = overlay(theme, prefs)
         following.value = Choices.all.none { it.key in prefs }
         picked.value = prefs[OpenOnStartKey].orEmpty()
+        wallpaper.value = prefs[WallpaperChoiceKey]
     }
 
     private fun waitForUnlock(users: UserManager) {

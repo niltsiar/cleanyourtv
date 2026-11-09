@@ -38,7 +38,8 @@ class SettingsPresenterTest {
         theme: String = "{}",
         apps: List<OpenOnStartApp> = emptyList(),
         labels: Map<String, String> = emptyMap(),
-    ) = SettingsHarness(app, theme, apps = apps, labels = labels).also { harness = it }
+        wallpapers: List<String> = emptyList(),
+    ) = SettingsHarness(app, theme, apps = apps, labels = labels, wallpapers = wallpapers).also { harness = it }
 
     private val withChoice = """{"open_on_start_choice": true}"""
     private val apps =
@@ -178,10 +179,9 @@ class SettingsPresenterTest {
         assertEquals(7, settings.config.columns)
 
         settings.followTheme()
-        settings.awaitState { it.followsTheme }
+        settings.awaitState { it.followsTheme && it.row(SettingsRowId.Columns).selected == 1 }
 
         assertEquals(parseTvConfig(theme).config, settings.config)
-        assertEquals(1, settings.row(SettingsRowId.Columns).selected)
     }
 
     @Test
@@ -279,12 +279,12 @@ class SettingsPresenterTest {
         settings.awaitState { it.picker != null }
 
         settings.viewModel.actions.onPickStartApp(3)
-        val shown = settings.awaitState { it.picker == null && it.openOnStart?.value == OptionLabel.Text("Gamma") }
+        val shown =
+            settings.awaitState { it.picker == null && !it.followsTheme && it.openOnStart?.value == OptionLabel.Text("Gamma") }
 
         assertEquals(OpenOnStartRow(OptionLabel.Text("Gamma")), shown.openOnStart)
         assertEquals("com.gamma", settings.pickedApp)
         assertEquals(listOf(""), settings.skippedAt)
-        assertFalse(settings.state.followsTheme)
     }
 
     @Test
@@ -328,10 +328,186 @@ class SettingsPresenterTest {
         assertEquals("", settings.pickedApp)
     }
 
+    private fun SettingsHarness.openWallpaperPicker(): WallpaperPicker {
+        viewModel.actions.onOpenWallpaperPicker()
+        return awaitState { it.wallpaperPicker != null }.wallpaperPicker!!
+    }
+
+    @Test
+    fun the_wallpaper_row_is_offered_for_a_theme_with_pictures_and_reads_theme_default_until_a_choice_is_stored() {
+        val settings = settings(wallpapers = pictures)
+
+        assertEquals(
+            WallpaperRow(OptionLabel.Res(R.string.wallpaper_theme_default)),
+            settings.awaitState { it.wallpaper != null }.wallpaper,
+        )
+    }
+
+    @Test
+    fun the_wallpaper_row_is_not_offered_for_a_theme_without_pictures() {
+        assertNull(settings().state.wallpaper)
+    }
+
+    @Test
+    fun the_wallpaper_picker_does_not_open_for_a_theme_without_pictures() {
+        val settings = settings()
+        settings.pick(SettingsRowId.Columns, 0)
+        settings.viewModel.actions.onOpenWallpaperPicker()
+        settings.awaitState { it.row(SettingsRowId.Columns).selected == 0 }
+
+        assertNull(settings.state.wallpaperPicker)
+    }
+
+    @Test
+    fun the_wallpaper_row_names_the_picture_without_its_extension_none_or_theme_default() {
+        val settings = settings(wallpapers = pictures)
+        settings.awaitState { it.wallpaper != null }
+
+        settings.storeWallpaper("dusk.jpg")
+        settings.awaitState { it.wallpaper?.value == OptionLabel.Text("dusk") }
+
+        settings.storeWallpaper("none")
+        settings.awaitState { it.wallpaper?.value == OptionLabel.Res(R.string.wallpaper_none) }
+
+        settings.storeWallpaper("gone.jpg")
+        settings.awaitState { it.wallpaper?.value == OptionLabel.Res(R.string.wallpaper_theme_default) }
+    }
+
+    @Test
+    fun the_wallpaper_picker_lists_theme_default_the_pictures_and_none_with_the_current_choice_selected() {
+        val settings = settings(wallpapers = pictures)
+        settings.awaitState { it.wallpaper != null }
+        val entries =
+            listOf(
+                OptionLabel.Res(R.string.wallpaper_theme_default),
+                OptionLabel.Text("wallpaper"),
+                OptionLabel.Text("dusk"),
+                OptionLabel.Text("dawn"),
+                OptionLabel.Res(R.string.wallpaper_none),
+            )
+
+        assertEquals(WallpaperPicker(entries, 0), settings.openWallpaperPicker())
+
+        settings.viewModel.actions.onClosePicker()
+        settings.awaitState { it.wallpaperPicker == null }
+        settings.storeWallpaper("dusk.jpg")
+        settings.awaitState { it.wallpaper?.value == OptionLabel.Text("dusk") }
+        assertEquals(WallpaperPicker(entries, 2), settings.openWallpaperPicker())
+
+        settings.viewModel.actions.onClosePicker()
+        settings.awaitState { it.wallpaperPicker == null }
+        settings.storeWallpaper("none")
+        settings.awaitState { it.wallpaper?.value == OptionLabel.Res(R.string.wallpaper_none) }
+        assertEquals(WallpaperPicker(entries, 4), settings.openWallpaperPicker())
+
+        settings.viewModel.actions.onClosePicker()
+        settings.awaitState { it.wallpaperPicker == null }
+        settings.storeWallpaper("gone.jpg")
+        settings.awaitState { it.wallpaper?.value == OptionLabel.Res(R.string.wallpaper_theme_default) }
+        assertEquals(WallpaperPicker(entries, 0), settings.openWallpaperPicker())
+    }
+
+    @Test
+    fun a_wallpaper_pick_stores_the_file_name_or_none_closes_the_picker_and_reports_it_applied() {
+        val settings = settings(wallpapers = pictures)
+        settings.awaitState { it.wallpaper != null }
+        settings.openWallpaperPicker()
+
+        settings.viewModel.actions.onPickWallpaper(3)
+        settings.awaitState { it.wallpaperPicker == null && !it.followsTheme && it.wallpaper?.value == OptionLabel.Text("dawn") }
+        assertEquals("dawn.jpg", settings.wallpaperChoice)
+        settings.awaitApplied()
+
+        settings.openWallpaperPicker()
+        settings.viewModel.actions.onPickWallpaper(4)
+        settings.awaitState { it.wallpaperPicker == null && it.wallpaper?.value == OptionLabel.Res(R.string.wallpaper_none) }
+        assertEquals("none", settings.wallpaperChoice)
+        settings.awaitApplied()
+        assertTrue(settings.noMoreApplied())
+    }
+
+    @Test
+    fun theme_default_removes_the_choice_and_reports_nothing() {
+        val settings = settings(wallpapers = pictures)
+        settings.storeWallpaper("dusk.jpg")
+        settings.awaitState { it.wallpaper?.value == OptionLabel.Text("dusk") }
+        settings.openWallpaperPicker()
+
+        settings.viewModel.actions.onPickWallpaper(0)
+        settings.awaitState { it.wallpaperPicker == null && it.followsTheme }
+
+        assertNull(settings.wallpaperChoice)
+        assertTrue(settings.noMoreApplied())
+    }
+
+    @Test
+    fun closing_the_wallpaper_picker_and_a_pick_with_no_picker_open_change_nothing() {
+        val settings = settings(wallpapers = pictures)
+        settings.storeWallpaper("dusk.jpg")
+        settings.awaitState { it.wallpaper?.value == OptionLabel.Text("dusk") }
+        settings.openWallpaperPicker()
+
+        settings.viewModel.actions.onClosePicker()
+        settings.awaitState { it.wallpaperPicker == null }
+        settings.viewModel.actions.onPickWallpaper(4)
+        settings.pick(SettingsRowId.Columns, 0)
+        settings.awaitState { it.row(SettingsRowId.Columns).selected == 0 }
+
+        assertEquals("dusk.jpg", settings.wallpaperChoice)
+        assertTrue(settings.noMoreApplied())
+    }
+
+    @Test
+    fun follow_theme_clears_the_wallpaper_choice() {
+        val settings = settings(wallpapers = pictures)
+        settings.storeWallpaper("none")
+        settings.awaitState { it.wallpaper?.value == OptionLabel.Res(R.string.wallpaper_none) }
+
+        settings.followTheme()
+        settings.awaitState { it.followsTheme && it.wallpaper?.value == OptionLabel.Res(R.string.wallpaper_theme_default) }
+
+        assertNull(settings.wallpaperChoice)
+    }
+
+    @Test
+    fun a_refused_wallpaper_write_is_reported_as_a_failed_save_and_not_as_applied() {
+        val settings = settings(wallpapers = pictures)
+        settings.pick(SettingsRowId.Columns, 1)
+        settings.awaitState { it.row(SettingsRowId.Columns).selected == 1 }
+        settings.openWallpaperPicker()
+        val folder = File(app.filesDir, "datastore")
+        folder.setWritable(false)
+        try {
+            assumeFalse("a root user writes anyway", folder.canWrite())
+
+            settings.viewModel.actions.onPickWallpaper(2)
+            runBlocking { withTimeout(10_000) { settings.viewModel.saveFailed.first() } }
+
+            assertNull(settings.wallpaperChoice)
+            assertTrue(settings.noMoreApplied())
+        } finally {
+            folder.setWritable(true)
+        }
+    }
+
+    @Test
+    fun picture_names_lose_their_extension_only_when_every_name_has_one_and_the_rest_stay_distinct() {
+        assertEquals(listOf("a", "b"), wallpaperLabels(listOf("a.jpg", "b.png")))
+        assertEquals(listOf("a.jpg", "a.png"), wallpaperLabels(listOf("a.jpg", "a.png")))
+        assertEquals(listOf("a.jpg", "b"), wallpaperLabels(listOf("a.jpg", "b")))
+        assertEquals(listOf("a.jpg", ".png"), wallpaperLabels(listOf("a.jpg", ".png")))
+        assertEquals(listOf("my.dusk"), wallpaperLabels(listOf("my.dusk.jpg")))
+    }
+
+    private fun SettingsHarness.storeWallpaper(value: String) = runBlocking { repository.set(Choices.WallpaperChoice, value) }
+
     private fun SettingsHarness.selections() = state.sections.flatMap { it.rows }.associate { it.id to it.selected }
 
     private companion object {
         val onOff = listOf(true, false)
+
+        /** What the theme's source lists: its single wallpaper, then its folder. */
+        val pictures = listOf("wallpaper.jpg", "dusk.jpg", "dawn.jpg")
 
         /** Every key at the last option of its row, so the first pick of each row differs from what the theme holds. */
         const val LAST_OPTIONS =

@@ -19,9 +19,11 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import dev.niltsiar.tvhome.core.config.Choices
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -53,8 +55,17 @@ class SettingsScreenTest {
     private fun show(
         theme: String = "{}",
         apps: List<OpenOnStartApp> = installed,
+        wallpapers: List<String> = emptyList(),
     ) {
-        settings = SettingsHarness(app, theme, uiThread = true, apps = apps, labels = installed.associate { it.packageName to it.label })
+        settings =
+            SettingsHarness(
+                app,
+                theme,
+                uiThread = true,
+                apps = apps,
+                labels = installed.associate { it.packageName to it.label },
+                wallpapers = wallpapers,
+            )
         compose.setContent {
             TvTheme(motion = Motion(animations = false)) {
                 val state = settings.viewModel.uiState.collectAsState()
@@ -104,6 +115,32 @@ class SettingsScreenTest {
         startRow().assertIsFocused()
         press(Key.DirectionCenter)
         waitUntilIdle { settings.state.picker != null }
+        compose.waitForIdle()
+    }
+
+    private fun wallpaperRow() = compose.onNodeWithTag("settings:wallpaper")
+
+    /** The page for a theme with [pictures], its Wallpaper row focused. */
+    private fun showWallpaperRow(
+        theme: String = "{}",
+        pick: String? = null,
+    ) {
+        show(theme, wallpapers = pictures)
+        waitUntilIdle { settings.state.wallpaper != null }
+        pick?.let {
+            settings.storeWallpaper(it)
+            waitUntilIdle { settings.state.wallpaper?.value != OptionLabel.Res(R.string.wallpaper_theme_default) }
+        }
+        compose.waitForIdle()
+        repeat(4) { press(Key.DirectionDown) }
+        wallpaperRow().assertIsFocused()
+    }
+
+    /** The page with the Wallpaper row, its picker open. */
+    private fun showWallpaperPicker(pick: String? = null) {
+        showWallpaperRow(pick = pick)
+        press(Key.DirectionCenter)
+        waitUntilIdle { settings.state.wallpaperPicker != null }
         compose.waitForIdle()
     }
 
@@ -447,7 +484,135 @@ class SettingsScreenTest {
         assertEquals(emptyList<String>(), settings.skippedAt)
     }
 
+    @Test
+    fun the_wallpaper_row_sits_between_clock_and_animations() {
+        showWallpaperRow()
+
+        wallpaperRow().assertTextEquals("Wallpaper: Theme default")
+        press(Key.DirectionDown)
+        option(SettingsRowId.Animations, 0).assertIsFocused()
+        press(Key.DirectionUp)
+        wallpaperRow().assertIsFocused()
+        press(Key.DirectionUp)
+        option(SettingsRowId.ClockFormat, settings.row(SettingsRowId.ClockFormat).selected).assertIsFocused()
+    }
+
+    @Test
+    fun without_pictures_there_is_no_wallpaper_row() {
+        show()
+
+        assertEquals(0, compose.onAllNodesWithTag("settings:wallpaper").fetchSemanticsNodes().size)
+        repeat(4) { press(Key.DirectionDown) }
+        option(SettingsRowId.Animations, 0).assertIsFocused()
+    }
+
+    @Test
+    fun the_wallpaper_picker_opens_on_the_current_choice_with_theme_default_first_and_none_last() {
+        showWallpaperPicker(pick = "dusk.jpg")
+
+        compose.onNodeWithTag("settings:picker").assertIsDisplayed()
+        compose.onNodeWithTag("settings:picker:title").assertTextEquals("Wallpaper")
+        listOf("Theme default", "wallpaper", "dusk", "dawn", "None").forEachIndexed { index, text -> entry(index).assertTextEquals(text) }
+        entry(2).assertIsFocused()
+        entry(2).assertIsSelected()
+        entry(0).assertIsNotSelected()
+        entry(4).assertIsNotSelected()
+    }
+
+    @Test
+    fun keys_from_every_edge_of_the_wallpaper_picker_stay_inside_it() {
+        showWallpaperPicker()
+
+        press(Key.DirectionUp)
+        entry(0).assertIsFocused()
+        press(Key.DirectionLeft)
+        press(Key.DirectionRight)
+        entry(0).assertIsFocused()
+        repeat(5) { press(Key.DirectionDown) }
+        entry(4).assertIsFocused()
+        press(Key.DirectionLeft)
+        press(Key.DirectionRight)
+        entry(4).assertIsFocused()
+        wallpaperRow().assertIsNotFocused()
+    }
+
+    @Test
+    fun back_closes_the_wallpaper_picker_changes_nothing_and_returns_focus_to_the_row() {
+        showWallpaperPicker(pick = "dusk.jpg")
+        press(Key.DirectionDown)
+
+        back()
+
+        assertEquals(0, compose.onAllNodesWithTag("settings:picker").fetchSemanticsNodes().size)
+        assertEquals("dusk.jpg", settings.wallpaperChoice)
+        assertTrue(settings.noMoreApplied())
+        wallpaperRow().assertIsFocused()
+    }
+
+    @Test
+    fun ok_on_a_picture_stores_it_closes_the_picker_and_the_row_names_it() {
+        showWallpaperPicker()
+        repeat(3) { press(Key.DirectionDown) }
+
+        press(Key.DirectionCenter)
+        waitUntilIdle { settings.wallpaperChoice == "dawn.jpg" && settings.state.wallpaperPicker == null }
+        compose.waitForIdle()
+
+        assertEquals(0, compose.onAllNodesWithTag("settings:picker").fetchSemanticsNodes().size)
+        wallpaperRow().assertTextEquals("Wallpaper: dawn")
+        wallpaperRow().assertIsFocused()
+        settings.awaitApplied()
+    }
+
+    @Test
+    fun ok_on_none_stores_none_and_ok_on_theme_default_removes_the_choice() {
+        showWallpaperPicker()
+        repeat(4) { press(Key.DirectionDown) }
+        press(Key.DirectionCenter)
+        waitUntilIdle { settings.wallpaperChoice == "none" && settings.state.wallpaperPicker == null }
+        compose.waitForIdle()
+        wallpaperRow().assertTextEquals("Wallpaper: None")
+
+        press(Key.DirectionCenter)
+        waitUntilIdle { settings.state.wallpaperPicker != null }
+        compose.waitForIdle()
+        entry(4).assertIsFocused()
+        repeat(4) { press(Key.DirectionUp) }
+        press(Key.DirectionCenter)
+        waitUntilIdle { settings.wallpaperChoice == null && settings.state.wallpaperPicker == null }
+        compose.waitForIdle()
+
+        wallpaperRow().assertTextEquals("Wallpaper: Theme default")
+        wallpaperRow().assertIsFocused()
+    }
+
+    @Test
+    fun with_both_rows_each_picker_returns_focus_to_its_own_row() {
+        show(WITH_CHOICE, wallpapers = pictures)
+        waitUntilIdle { settings.state.wallpaper != null }
+        compose.waitForIdle()
+        repeat(4) { press(Key.DirectionDown) }
+        press(Key.DirectionCenter)
+        waitUntilIdle { settings.state.wallpaperPicker != null }
+        compose.waitForIdle()
+        back()
+        wallpaperRow().assertIsFocused()
+
+        press(Key.DirectionDown)
+        option(SettingsRowId.Animations, 0).assertIsFocused()
+        press(Key.DirectionDown)
+        startRow().assertIsFocused()
+        press(Key.DirectionCenter)
+        waitUntilIdle { settings.state.picker != null }
+        compose.waitForIdle()
+        back()
+        startRow().assertIsFocused()
+    }
+
+    private fun SettingsHarness.storeWallpaper(value: String) = runBlocking { repository.set(Choices.WallpaperChoice, value) }
+
     private companion object {
         const val WITH_CHOICE = """{"open_on_start_choice": true}"""
+        val pictures = listOf("wallpaper.jpg", "dusk.jpg", "dawn.jpg")
     }
 }

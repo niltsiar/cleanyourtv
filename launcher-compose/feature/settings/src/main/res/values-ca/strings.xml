@@ -35,4 +35,9 @@
   <string name="settings_reorder">Reordena les aplicacions</string>
   <string name="open_on_start_label">Obre en iniciar</string>
   <string name="open_on_start_state">Obre en iniciar: %1$s</string>
+  <string name="wallpaper_label">Fons de pantalla</string>
+  <string name="wallpaper_state">Fons de pantalla: %1$s</string>
+  <string name="wallpaper_none">Cap</string>
+  <string name="wallpaper_applied">Fons de pantalla canviat</string>
+  <string name="wallpaper_theme_default">El del tema</string>
 </resources>

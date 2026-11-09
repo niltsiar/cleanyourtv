@@ -9,6 +9,7 @@ import dev.niltsiar.tvhome.core.config.WallpaperMood
 import dev.niltsiar.tvhome.core.config.WallpaperOrder
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -49,18 +50,21 @@ class WallpaperProviderTest {
 
     private fun add(name: String) = File(collection, name).also { it.writeBytes(ByteArray(8) { _ -> 1 }) }
 
-    private fun provider(config: TvConfig) =
-        WallpaperProvider(
-            config = MutableStateFlow(config),
-            single = File(themeDir.root, "wallpaper.jpg"),
-            folder = collection,
-            preferences = preferences,
-            decode = { file ->
-                decoded += file.name
-                if (file.name in unreadable) null else DecodedPicture(pictures.getOrPut(file.name) { ImageBitmap(1, 1) }, null)
-            },
-            zone = { ZoneOffset.UTC },
-        )
+    private fun provider(
+        config: TvConfig,
+        choice: StateFlow<String?> = MutableStateFlow(null),
+    ) = WallpaperProvider(
+        config = MutableStateFlow(config),
+        wallpaperChoice = choice,
+        single = File(themeDir.root, "wallpaper.jpg"),
+        folder = collection,
+        preferences = preferences,
+        decode = { file ->
+            decoded += file.name
+            if (file.name in unreadable) null else DecodedPicture(pictures.getOrPut(file.name) { ImageBitmap(1, 1) }, null)
+        },
+        zone = { ZoneOffset.UTC },
+    )
 
     private fun WallpaperProvider.shows(
         name: String,
@@ -186,4 +190,81 @@ class WallpaperProviderTest {
                 assertEquals(listOf("a.jpg", "a.jpg"), decoded)
             }
         }
+
+    @Test
+    fun a_choice_shows_one_picture_with_no_extra_decode_and_theme_default_restores_the_rotation() {
+        val choice = MutableStateFlow<String?>(null)
+        val provider = provider(rotating, choice)
+        provider.shows("a.jpg", noon)
+
+        choice.value = "c.jpg"
+        provider.shows("c.jpg", noon.plusMinutes(1))
+        provider.shows("c.jpg", noon.plusMinutes(30))
+        assertEquals(listOf("a.jpg", "c.jpg"), decoded)
+
+        choice.value = null
+        provider.shows("a.jpg", noon.plusMinutes(31))
+        provider.shows("a.jpg", noon.plusMinutes(32))
+        assertEquals(listOf("a.jpg", "c.jpg", "a.jpg"), decoded)
+    }
+
+    @Test
+    fun none_shows_no_picture_and_decodes_nothing_until_the_choice_is_removed() {
+        val choice = MutableStateFlow<String?>("none")
+        val provider = provider(rotating, choice)
+        assertNull(provider.advance(noon).picture)
+        assertEquals(emptyList<String>(), decoded)
+
+        choice.value = "b.jpg"
+        provider.shows("b.jpg", noon.plusMinutes(1))
+        choice.value = "none"
+        assertNull(provider.advance(noon.plusMinutes(2)).picture)
+        choice.value = null
+        provider.shows("a.jpg", noon.plusMinutes(3))
+    }
+
+    @Test
+    fun a_choice_of_a_picture_that_is_gone_leaves_the_theme_deciding() {
+        provider(rotating, MutableStateFlow("gone.jpg")).shows("a.jpg", noon)
+    }
+
+    @Test
+    fun a_choice_wins_over_a_theme_with_no_wallpaper_and_can_name_the_single_wallpaper() {
+        val single = File(themeDir.root, "wallpaper.jpg").also { it.writeBytes(ByteArray(8) { _ -> 1 }) }
+
+        provider(TvConfig(wallpaper = false), MutableStateFlow("b.jpg")).shows("b.jpg", noon)
+        provider(rotating, MutableStateFlow(single.name)).shows(single.name, noon)
+        assertNull(provider(TvConfig(wallpaper = false), MutableStateFlow(null)).advance(noon).picture)
+    }
+
+    @Test
+    fun a_choice_made_while_started_reaches_the_flow_without_a_tick() =
+        runBlocking {
+            val clock = MutableSharedFlow<LocalDateTime?>()
+            val choice = MutableStateFlow<String?>(null)
+            val provider = provider(rotating, choice)
+            provider.wallpaper(clock).test {
+                provider.onStart()
+                withTimeout(5_000) { clock.subscriptionCount.first { it > 0 } }
+                clock.emit(noon)
+                val first = awaitItem().picture
+                assertSame(pictures.getValue("a.jpg"), first)
+
+                choice.value = "c.jpg"
+                val chosen = awaitItem().picture
+                assertSame(pictures.getValue("c.jpg"), chosen)
+
+                choice.value = "none"
+                assertNull(awaitItem().picture)
+            }
+        }
+
+    @Test
+    fun captions_follow_a_chosen_picture_of_the_folder() {
+        File(collection, "captions.txt").writeText("c.jpg\tGamma\n")
+        val theme = rotating.copy(wallpaperCaptions = true)
+
+        assertEquals("Gamma", provider(theme, MutableStateFlow("c.jpg")).advance(noon).caption)
+        assertNull(provider(theme, MutableStateFlow("none")).advance(noon).caption)
+    }
 }

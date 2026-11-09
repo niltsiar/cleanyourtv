@@ -42,6 +42,7 @@ private fun storedString(key: Preferences.Key<String>): Choice<String> =
 private const val DOCK_OPACITY_AUTO = 0
 
 internal val OpenOnStartKey = stringPreferencesKey("open_on_start")
+internal val WallpaperChoiceKey = stringPreferencesKey("wallpaper_choice")
 
 /** Every [Choice]. */
 public object Choices {
@@ -69,8 +70,14 @@ public object Choices {
         }
     public val Animations: Choice<Boolean> = boolChoice("animations") { copy(animations = it) }
 
-    /** Kept for the wallpaper picker, which no [TvConfig] field carries yet. */
-    public val WallpaperChoice: Choice<String> = storedString(stringPreferencesKey("wallpaper_choice"))
+    /**
+     * A file name of the theme's wallpapers folder, its single wallpaper.jpg, or [WALLPAPER_NONE].
+     * [ConfigRepository.wallpaperChoice] reads it; no [TvConfig] field carries it.
+     */
+    public val WallpaperChoice: Choice<String> = storedString(WallpaperChoiceKey)
+
+    /** The [WallpaperChoice] that shows no wallpaper. */
+    public const val WALLPAPER_NONE: String = "none"
 
     /** The picked package, absent or empty for Off. [ConfigRepository.openOnStartApp] reads it; no [TvConfig] field carries it. */
     public val OpenOnStart: Choice<String> = storedString(OpenOnStartKey)

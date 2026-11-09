@@ -35,4 +35,9 @@
   <string name="settings_reorder">Ändra ordning på appar</string>
   <string name="open_on_start_label">Öppna vid start</string>
   <string name="open_on_start_state">Öppna vid start: %1$s</string>
+  <string name="wallpaper_label">Bakgrundsbild</string>
+  <string name="wallpaper_state">Bakgrundsbild: %1$s</string>
+  <string name="wallpaper_none">Ingen</string>
+  <string name="wallpaper_applied">Bakgrundsbilden har ändrats</string>
+  <string name="wallpaper_theme_default">Temats standard</string>
 </resources>

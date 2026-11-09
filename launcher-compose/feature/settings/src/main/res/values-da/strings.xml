@@ -35,4 +35,9 @@
   <string name="settings_reorder">Flyt apps</string>
   <string name="open_on_start_label">Åbn ved start</string>
   <string name="open_on_start_state">Åbn ved start: %1$s</string>
+  <string name="wallpaper_label">Baggrund</string>
+  <string name="wallpaper_state">Baggrund: %1$s</string>
+  <string name="wallpaper_none">Ingen</string>
+  <string name="wallpaper_applied">Baggrund ændret</string>
+  <string name="wallpaper_theme_default">Temaets standard</string>
 </resources>

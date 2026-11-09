@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
@@ -34,12 +35,14 @@ private const val KEY_CHANGED = "changed"
 
 /**
  * The picture behind Home, read the way the reference launcher plays it: the theme's `wallpapers/` collection when
- * wallpaper_rotation_minutes is over 0, else `wallpaper.jpg`, else none (the theme's background colour shows).
+ * wallpaper_rotation_minutes is over 0, else `wallpaper.jpg`, else none (the theme's background colour shows). The
+ * on-TV [wallpaperChoice] replaces that rotation with one picture, or with none, and is read at each advance.
  * The picture on screen, and when it came up, survive a restart in the app's preferences; a different collection
  * starts again from its first picture. [wallpaper] follows the minute clock only between [onStart] and [onStop].
  */
 public class WallpaperProvider internal constructor(
     private val config: StateFlow<TvConfig>,
+    private val wallpaperChoice: StateFlow<String?>,
     private val single: File?,
     private val folder: File?,
     private val preferences: SharedPreferences,
@@ -54,11 +57,13 @@ public class WallpaperProvider internal constructor(
     public constructor(
         context: Context,
         config: StateFlow<TvConfig>,
+        wallpaperChoice: StateFlow<String?>,
         theme: ThemeDirectory,
         dim: (TvConfig) -> Int = TvConfig::wallpaperDim,
         thumbnails: Boolean = true,
     ) : this(
         config = config,
+        wallpaperChoice = wallpaperChoice,
         single = theme.wallpaperFile,
         folder = theme.wallpapersFolder,
         preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE),
@@ -71,12 +76,13 @@ public class WallpaperProvider internal constructor(
     )
 
     private class Pictures(
+        val choice: String?,
         val files: MutableList<File>,
         val captions: Map<String, String>,
     )
 
     private val started = MutableStateFlow(false)
-    private val pictures by lazy(::loadPictures)
+    private var loaded: Pictures? = null
     private val releases = MutableSharedFlow<Wallpaper>(extraBufferCapacity = 1)
 
     @Volatile
@@ -106,14 +112,14 @@ public class WallpaperProvider internal constructor(
     }
 
     /**
-     * The wallpaper at each tick of [clock] while started; a tick with no valid time is skipped. The listing, decoding
-     * and preferences run on the IO dispatcher, one tick at a time.
+     * The wallpaper at each tick of [clock] while started, and again when the on-TV choice changes; a tick with no valid
+     * time is skipped. The listing, decoding and preferences run on the IO dispatcher, one tick at a time.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     public fun wallpaper(clock: Flow<LocalDateTime?>): Flow<Wallpaper> =
         merge(
             started
-                .flatMapLatest { if (it) clock.filterNotNull() else emptyFlow() }
+                .flatMapLatest { if (it) combine(clock.filterNotNull(), wallpaperChoice) { now, _ -> now } else emptyFlow() }
                 .map(::advance)
                 .flowOn(Dispatchers.IO),
             releases,
@@ -123,7 +129,8 @@ public class WallpaperProvider internal constructor(
     internal fun advance(now: LocalDateTime): Wallpaper {
         val zone = zone()
         val current = config.value
-        selectPicture(now, zone, current)
+        val pictures = pictures()
+        selectPicture(pictures, now, zone, current)
         val minute = Sky.minuteOfDay(now.hour, now.minute)
         val shown = picture
         return Wallpaper(
@@ -135,6 +142,7 @@ public class WallpaperProvider internal constructor(
     }
 
     private fun selectPicture(
+        pictures: Pictures,
         now: LocalDateTime,
         zone: ZoneId,
         current: TvConfig,
@@ -169,6 +177,8 @@ public class WallpaperProvider internal constructor(
             }
             return
         }
+        picture = null
+        displayed = ""
     }
 
     /** The pictures the rotation picks from now: wallpaper_moods' group for the time of day, or the whole collection. */
@@ -193,16 +203,30 @@ public class WallpaperProvider internal constructor(
         return if (sun == null) Sky.at(minute) else Sky.at(minute, sun.sunrise, sun.sunset)
     }
 
-    private fun loadPictures(): Pictures {
+    /** The listing for the choice stored now. The theme's files are read once; a changed choice lists them again. */
+    @Synchronized
+    private fun pictures(): Pictures {
+        val choice = wallpaperChoice.value
+        return loaded?.takeIf { it.choice == choice } ?: loadPictures(choice).also { loaded = it }
+    }
+
+    private fun loadPictures(choice: String?): Pictures {
         val current = config.value
+        val collection = WallpaperRotation.images(folder)
         val files = mutableListOf<File>()
         var fromFolder = false
         if (current.wallpaper) {
             if (current.wallpaperRotationMinutes > 0) {
-                files += WallpaperRotation.images(folder)
+                files += collection
                 fromFolder = files.isNotEmpty()
             }
-            if (files.isEmpty()) single?.takeIf { it.isFile && it.length() > 0 }?.let(files::add)
+            if (files.isEmpty()) WallpaperRotation.usable(single)?.let(files::add)
+        }
+        // The on-TV pick wins over the theme's rotation and over wallpaper false, as in the reference launcher.
+        WallpaperRotation.chosen(collection, WallpaperRotation.usable(single), choice)?.let { picked ->
+            files.clear()
+            files += picked
+            fromFolder = picked.isNotEmpty() && picked.first() in collection
         }
         // Playback state belongs to one collection. A different collection starts from its first picture instead of
         // resuming a file name that belonged to the previous one. Names and sizes notice a change without hashing.
@@ -216,6 +240,6 @@ public class WallpaperProvider internal constructor(
                 .apply()
         }
         val captions = if (current.wallpaperCaptions && fromFolder) WallpaperCaptions.read(folder) else emptyMap()
-        return Pictures(files, captions)
+        return Pictures(choice, files, captions)
     }
 }

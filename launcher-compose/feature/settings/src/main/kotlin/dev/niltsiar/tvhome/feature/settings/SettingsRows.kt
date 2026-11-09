@@ -151,3 +151,57 @@ internal fun startPicker(
     apps: List<OpenOnStartApp>,
     pick: String,
 ) = OpenOnStartPicker(apps, apps.indexOfFirst { it.packageName == pick } + 1)
+
+/** The names as the page shows them: without their extension when every name has one and that leaves them distinct. */
+internal fun wallpaperLabels(names: List<String>): List<String> {
+    val bare = names.map { it.substringBeforeLast('.', "") }
+    return if (bare.none { it.isEmpty() } && bare.distinct().size == bare.size) bare else names
+}
+
+/** The stored choice when the theme can honour it; a picture that is gone leaves the theme deciding. */
+private fun honoured(
+    choice: String?,
+    names: List<String>,
+): String? = choice?.takeIf { it == Choices.WALLPAPER_NONE || it in names }
+
+/** The Wallpaper row for a theme with [names] as pictures, or null for a theme with none. */
+internal fun wallpaperRow(
+    names: List<String>,
+    choice: String?,
+): WallpaperRow? {
+    if (names.isEmpty()) return null
+    val value =
+        when (val held = honoured(choice, names)) {
+            null -> res(R.string.wallpaper_theme_default)
+            Choices.WALLPAPER_NONE -> res(R.string.wallpaper_none)
+            else -> OptionLabel.Text(wallpaperLabels(names)[names.indexOf(held)])
+        }
+    return WallpaperRow(value)
+}
+
+/** The picker over [names]: Theme default first, None last, with the entry of the honoured [choice] selected. */
+internal fun wallpaperPicker(
+    names: List<String>,
+    choice: String?,
+): WallpaperPicker {
+    val entries =
+        listOf(res(R.string.wallpaper_theme_default)) + wallpaperLabels(names).map(OptionLabel::Text) + res(R.string.wallpaper_none)
+    val selected =
+        when (val held = honoured(choice, names)) {
+            null -> 0
+            Choices.WALLPAPER_NONE -> entries.lastIndex
+            else -> names.indexOf(held) + 1
+        }
+    return WallpaperPicker(entries, selected)
+}
+
+/** What the picker's entry at [index] stores: null for Theme default, which removes the choice. */
+internal fun wallpaperValue(
+    names: List<String>,
+    index: Int,
+): String? =
+    when (index) {
+        0 -> null
+        names.size + 1 -> Choices.WALLPAPER_NONE
+        else -> names[index - 1]
+    }

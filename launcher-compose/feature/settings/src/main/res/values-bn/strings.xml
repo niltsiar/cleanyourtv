@@ -35,4 +35,9 @@
   <string name="settings_reorder">অ্যাপ সাজান</string>
   <string name="open_on_start_label">চালু হলে খুলুন</string>
   <string name="open_on_start_state">চালু হলে খুলুন: %1$s</string>
+  <string name="wallpaper_label">ওয়ালপেপার</string>
+  <string name="wallpaper_state">ওয়ালপেপার: %1$s</string>
+  <string name="wallpaper_none">কোনোটি নয়</string>
+  <string name="wallpaper_applied">ওয়ালপেপার বদলানো হয়েছে</string>
+  <string name="wallpaper_theme_default">থিমের ডিফল্ট</string>
 </resources>
