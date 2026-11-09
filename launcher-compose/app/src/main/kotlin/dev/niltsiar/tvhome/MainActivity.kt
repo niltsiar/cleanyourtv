@@ -19,6 +19,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
@@ -37,6 +38,9 @@ import dev.niltsiar.tvhome.feature.home.R as FeatureR
 
 class MainActivity : ComponentActivity() {
     private val graph get() = (application as TvHomeApplication).graph
+
+    /** The stored choices over the theme: composition follows the flow, a key handler reads the value when the key arrives. */
+    private val config get() = graph.configRepository.config
     private var homePresses by mutableIntStateOf(0)
     private var inputsRequests by mutableIntStateOf(0)
     private var bootOpening: Job? = null
@@ -47,16 +51,16 @@ class MainActivity : ComponentActivity() {
      * when that key opened another app.
      */
     private var resumed = false
-    private val vendorKeys by lazy { VendorKeys(this, graph.config, graph.systemSettings, ::openSettingsFromKey) }
+    private val vendorKeys by lazy { VendorKeys(this, config, graph.systemSettings, ::openSettingsFromKey) }
     private val idleClock by lazy {
-        IdleClock(TimeUnit.MINUTES.toMillis(graph.config.homeIdleClockMinutes.toLong()), { resumed }, ::showClock)
+        IdleClock({ TimeUnit.MINUTES.toMillis(config.value.homeIdleClockMinutes.toLong()) }, { resumed }, ::showClock)
     }
     private val library: MoleculeLibraryViewModel by viewModels {
         viewModelFactory {
             initializer {
                 MoleculeLibraryViewModel(
                     graph.librarySources,
-                    graph.config,
+                    config,
                     resources.configuration.locales[0],
                 )
             }
@@ -66,15 +70,20 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // This is Home: Back has nowhere to go, unless back_opens_clock.
-        onBackPressedDispatcher.addCallback(this) { if (graph.config.backOpensClock) showClock() }
+        onBackPressedDispatcher.addCallback(this) { if (config.value.backOpensClock) showClock() }
         // Not after a recreate: the launch intent survives it and would open the library or the list again.
         if (savedInstanceState == null) homeRequestOf(intent).takeIf { it != HomeRequest.HomeKey }?.let(::handle)
-        applyViewInputsHandler(graph.config.handleViewInputs)
-        if (graph.config.restoreKeyServices) ServiceRepair.restore(this)
+        // handle_view_inputs and restore_key_services are theme-only: read once, here.
+        applyViewInputsHandler(config.value.handleViewInputs)
+        if (config.value.restoreKeyServices) ServiceRepair.restore(this)
         setContent {
-            TvTheme(motion = graph.config.motion(), focusStyle = graph.config.focusStyle()) {
+            val current = config.collectAsStateWithLifecycle()
+            val motion by current.derived(TvConfig::motion)
+            val focusStyle by current.derived(TvConfig::focusStyle)
+            val appLibrary by current.derived(TvConfig::appLibrary)
+            TvTheme(motion = motion, focusStyle = focusStyle) {
                 val glass = rememberGlassState()
-                val libraryOpen = if (graph.config.appLibrary) library.uiState.collectAsStateWithLifecycle() else null
+                val libraryOpen = if (appLibrary) library.uiState.collectAsStateWithLifecycle() else null
                 HomeHost(
                     graph = graph,
                     onLaunchApp = ::launchApp,
@@ -94,7 +103,7 @@ class MainActivity : ComponentActivity() {
                     homePresses = { homePresses },
                     inputsRequests = { inputsRequests },
                     overlays = {
-                        if (graph.config.appLibrary) {
+                        if (appLibrary) {
                             LibraryHost(
                                 graph = graph,
                                 viewModel = library,
@@ -156,7 +165,7 @@ class MainActivity : ComponentActivity() {
      */
     @SuppressLint("RestrictedApi") // androidx marks the override restricted, but it is the only hook that sees every key first
     override fun dispatchKeyEvent(event: KeyEvent): Boolean =
-        isIgnoredChannelKey(graph.config.homeIgnoreChannelKeys, event.keyCode) ||
+        isIgnoredChannelKey(config.value.homeIgnoreChannelKeys, event.keyCode) ||
             (resumed && vendorKeys.handle(event)) ||
             super.dispatchKeyEvent(event)
 
@@ -182,17 +191,17 @@ class MainActivity : ComponentActivity() {
         when (request) {
             HomeRequest.OpenLibrary -> {
                 setIntent(Intent(Intent.ACTION_MAIN))
-                if (graph.config.appLibrary) library.onOpen()
+                if (config.value.appLibrary) library.onOpen()
             }
 
             HomeRequest.ShowInputs -> {
                 setIntent(Intent(Intent.ACTION_MAIN))
-                if (graph.config.appLibrary) library.onClose()
+                if (config.value.appLibrary) library.onClose()
                 inputsRequests++
             }
 
             HomeRequest.HomeKey -> {
-                if (graph.config.appLibrary) library.onClose()
+                if (config.value.appLibrary) library.onClose()
                 homePresses++
             }
 
@@ -257,7 +266,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openSettingsFromKey() {
-        if (!graph.systemSettings.openSettings(graph.config.settingsKeyClearTask)) cantOpen(getString(FeatureR.string.settings))
+        if (!graph.systemSettings.openSettings(config.value.settingsKeyClearTask)) cantOpen(getString(FeatureR.string.settings))
     }
 
     private fun openNetwork() {

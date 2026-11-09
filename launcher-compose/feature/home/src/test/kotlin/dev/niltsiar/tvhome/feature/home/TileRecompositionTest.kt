@@ -8,6 +8,9 @@ import androidx.compose.runtime.InternalComposeTracingApi
 import androidx.compose.runtime.RecomposeScope
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.currentComposer
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.tooling.CompositionObserver
 import androidx.compose.runtime.tooling.ObservableComposition
 import androidx.compose.runtime.tooling.setObserver
@@ -19,6 +22,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import dev.niltsiar.tvhome.core.config.ClockFormat
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
@@ -99,6 +103,7 @@ open class TileRecompositionTest {
     protected open val alwaysShowNames = false
 
     private val inputs = MutableStateFlow(FourPorts)
+    private val config = MutableStateFlow(TvConfig())
     private var habitApp = "pkg.3"
     private var habitLooks = 0
     private lateinit var viewModel: MoleculeHomeViewModel
@@ -107,7 +112,7 @@ open class TileRecompositionTest {
     fun showHome() {
         Composer.setTracer(tiles)
         val apps = (1..12).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") }
-        val config =
+        config.value =
             TvConfig(
                 columns = 6,
                 cinematicHome = true,
@@ -138,13 +143,18 @@ open class TileRecompositionTest {
                         mutableListOf(),
                     )
                 val state = viewModel.uiState.collectAsState()
+                // As the host reads it: each layout is derived from the config and changes only when its own fields do.
+                val current = config.collectAsState()
+                val layout by remember { derivedStateOf { current.value.homeLayout() } }
+                val topBar by remember { derivedStateOf { current.value.topBarLayout() } }
+                val shelfLayout by remember { derivedStateOf { current.value.shelfLayout().copy(scrimAlpha = 0f) } }
                 HomeScreen(
                     state = { state.value },
-                    layout = config.homeLayout(),
+                    layout = layout,
                     onFocus = viewModel::onFocus,
                     onClick = {},
-                    topBar = config.topBarLayout(),
-                    shelfLayout = config.shelfLayout().copy(scrimAlpha = 0f),
+                    topBar = topBar,
+                    shelfLayout = shelfLayout,
                     actions = viewModel.actions,
                 )
             }
@@ -186,6 +196,23 @@ open class TileRecompositionTest {
         compose.waitForIdle()
 
         assertEquals(2, habitLooks)
+        assertEquals(0, tiles.count)
+        assertEquals(0, items.count)
+    }
+
+    @Test
+    fun a_stored_choice_that_no_tile_reads_composes_no_tile_and_the_focus_moves_after_it_cost_no_more() {
+        config.value = config.value.copy(clockFormat = ClockFormat.Hour12)
+        compose.waitForIdle()
+
+        assertEquals("8:15", viewModel.uiState.value.clock)
+        assertEquals(0, tiles.count)
+        assertEquals(0, items.count)
+
+        press(Key.DirectionRight)
+        press(Key.DirectionRight)
+
+        compose.onNodeWithTag("tile:pkg.3").assertIsFocused()
         assertEquals(0, tiles.count)
         assertEquals(0, items.count)
     }

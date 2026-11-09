@@ -1,5 +1,6 @@
 package dev.niltsiar.tvhome.feature.home
 
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -19,6 +20,13 @@ internal class SavedOrder(
     val change: OrderChange,
 )
 
+/** What a session's tile places are counted in: a change of any of them ends the session and the menu. */
+internal data class DockCounts(
+    val columns: Int,
+    val singleRow: Boolean,
+    val fillDock: Boolean,
+)
+
 /**
  * Home's state owner: the app list as loaded, what the TV lists as inputs, the focused tile, the tile menu, the Settings
  * menu, reorder mode and edit-dock mode, and what each event does to them. [shown] is the dock and grid on screen. A
@@ -26,10 +34,14 @@ internal class SavedOrder(
  */
 internal class HomeInteraction(
     private val sources: HomeSources,
-    private val config: TvConfig,
+    private val config: State<TvConfig>,
     private val effect: (HomeEffect) -> Unit,
 ) {
-    private val layout = config.homeLayout()
+    private val layout by derivedStateOf { config.value.homeLayout() }
+
+    /** The counts the dock and the grid are laid out in. */
+    val dockCounts: DockCounts get() = layout.run { DockCounts(columns, singleRow, fillDock) }
+    private var counts = dockCounts
 
     /** The app list as loaded. */
     var list by mutableStateOf(AppList())
@@ -219,6 +231,19 @@ internal class HomeInteraction(
         end()
     }
 
+    /**
+     * The dock and grid are laid out in other counts: the menu and a session count their tiles' places in the old ones,
+     * so they end (a session keeps its order), and focus lands again on the tile that had it, which a new row or the
+     * dock may now hold.
+     */
+    suspend fun dockCountsChanged(now: DockCounts) {
+        if (now == counts) return
+        counts = now
+        menu = null
+        end()
+        focusedKey?.takeIf { key -> shown.all.any { it.key == key } }?.let(::focus)
+    }
+
     private suspend fun closeAll() {
         menu = null
         inputsOpen = false
@@ -287,8 +312,9 @@ internal class HomeInteraction(
         val apps = shown
         val app = apps.all.firstOrNull { it.key == event.key } ?: return
         when {
-            config.tileMenu -> {
-                val rows = tileMenuRows(config.dockRow, inDock(apps, app.key), sources.hasAppInfo(app.packageName), config.appLibrary)
+            config.value.tileMenu -> {
+                val current = config.value
+                val rows = tileMenuRows(current.dockRow, inDock(apps, app.key), sources.hasAppInfo(app.packageName), current.appLibrary)
                 menu = HomeMenu(app.key, rows)
             }
 
@@ -300,14 +326,17 @@ internal class HomeInteraction(
 
     private fun openSettingsMenu() {
         if (session != null || menu != null) return
-        menu = HomeMenu(null, settingsMenuRows(config.dockRow, sources.hasNativeSettings(), sources.powerMenuAvailable()))
+        menu = HomeMenu(null, settingsMenuRows(config.value.dockRow, sources.hasNativeSettings(), sources.powerMenuAvailable()))
     }
 
     /** The dock row's tiles: the first [TvConfig.columns] with a single row, else the tiles the dock shows. */
     private fun inDock(
         apps: HomeApps,
         key: String,
-    ): Boolean = if (config.singleRow) apps.all.indexOfFirst { it.key == key } < config.columns else apps.dock.any { it.key == key }
+    ): Boolean =
+        config.value.let {
+            if (it.singleRow) apps.all.indexOfFirst { tile -> tile.key == key } < it.columns else apps.dock.any { tile -> tile.key == key }
+        }
 
     private suspend fun pick(row: MenuRow) {
         val open = menu ?: return
@@ -399,7 +428,8 @@ internal class HomeInteraction(
                 ?.change
                 ?.docked
                 ?.coerceAtLeast(0) ?: loaded.docked
-        return ReorderState.start(shown.all.map { it.key }, docked, config.columns, config.singleRow, config.fillDock)
+        val current = config.value
+        return ReorderState.start(shown.all.map { it.key }, docked, current.columns, current.singleRow, current.fillDock)
     }
 
     /** False when fewer than two tiles can move. */
@@ -427,7 +457,7 @@ internal class HomeInteraction(
         if (key == null || place < 0) return false
         if (inDock) {
             session = started.copy(dockEdit = DockEdit(slot = place))
-            focus(started.keys[minOf(config.columns, started.keys.size - 1)])
+            focus(started.keys[minOf(config.value.columns, started.keys.size - 1)])
         } else {
             session = started.copy(dockEdit = DockEdit(appKey = key))
             focus(started.keys.first())
@@ -452,7 +482,7 @@ internal class HomeInteraction(
         }
         val pos = current.keys.indexOf(focusedKey)
         if (pos < 0) return
-        val docks = minOf(config.columns, current.keys.size)
+        val docks = minOf(config.value.columns, current.keys.size)
         when {
             edit == null -> {
                 session = current.pickUp(current.keys[pos])
@@ -465,7 +495,7 @@ internal class HomeInteraction(
             edit.slot < 0 -> {
                 if (pos < docks) {
                     session = current.copy(dockEdit = DockEdit(slot = pos))
-                    focus(current.keys[minOf(config.columns, current.keys.size - 1)])
+                    focus(current.keys[minOf(config.value.columns, current.keys.size - 1)])
                 }
             }
 

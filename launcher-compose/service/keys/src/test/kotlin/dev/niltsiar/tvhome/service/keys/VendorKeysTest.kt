@@ -8,6 +8,7 @@ import android.os.Looper
 import android.view.KeyEvent
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.data.system.SystemSettings
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -26,14 +27,13 @@ import java.time.Duration
 class VendorKeysTest {
     private val app: Application = RuntimeEnvironment.getApplication()
     private var settingsOpened = 0
+    private var config = MutableStateFlow(TvConfig(settingsKeyKeycodes = listOf(83)))
     private var vendorKeys = keys()
 
-    private fun keys(vararg entries: String) =
-        VendorKeys(
-            app,
-            TvConfig(appKeys = entries.asList(), settingsKeyKeycodes = listOf(83)),
-            SystemSettings(app),
-        ) { settingsOpened++ }
+    private fun keys(vararg entries: String): VendorKeys {
+        config = MutableStateFlow(TvConfig(appKeys = entries.asList(), settingsKeyKeycodes = listOf(83)))
+        return VendorKeys(app, config, SystemSettings(app)) { settingsOpened++ }
+    }
 
     @Before
     fun installApps() {
@@ -101,5 +101,21 @@ class VendorKeysTest {
         assertTrue(vendorKeys.handle(key(KeyEvent.ACTION_UP, 83, device = 505, at = 1_100)))
         assertEquals(1, settingsOpened)
         assertFalse(vendorKeys.handle(key(KeyEvent.ACTION_UP, 84, device = 505, at = 1_200)))
+    }
+
+    @Test
+    fun a_changed_app_key_map_and_settings_keycode_apply_to_the_next_key() {
+        vendorKeys = keys("4062:com.netflix.ninja")
+        assertTrue(vendorKeys.handle(key(KeyEvent.ACTION_DOWN, 4062, device = 506)))
+        vendorKeys.handle(key(KeyEvent.ACTION_UP, 4062, device = 506, at = 1_100))
+        assertEquals("com.netflix.ninja", shadowOf(app).nextStartedActivity?.component?.packageName)
+
+        config.value = config.value.copy(appKeys = listOf("4062:org.xbmc.kodi"), settingsKeyKeycodes = listOf(84))
+        vendorKeys.handle(key(KeyEvent.ACTION_DOWN, 4062, device = 506, at = 2_000))
+        vendorKeys.handle(key(KeyEvent.ACTION_UP, 4062, device = 506, at = 2_100))
+
+        assertEquals("org.xbmc.kodi", shadowOf(app).nextStartedActivity?.component?.packageName)
+        assertFalse(vendorKeys.handle(key(KeyEvent.ACTION_UP, 83, device = 506, at = 2_200)))
+        assertTrue(vendorKeys.handle(key(KeyEvent.ACTION_UP, 84, device = 506, at = 2_300)))
     }
 }

@@ -3,6 +3,7 @@ package dev.niltsiar.tvhome.feature.home
 import app.cash.molecule.RecompositionMode
 import app.cash.turbine.test
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -14,7 +15,7 @@ class MoleculeHomeViewModelTest {
     private fun CoroutineScope.viewModel() =
         MoleculeHomeViewModel(
             sources(),
-            SixColumns,
+            MutableStateFlow(SixColumns),
             Locale.ENGLISH,
             "EEEE d MMMM",
             this,

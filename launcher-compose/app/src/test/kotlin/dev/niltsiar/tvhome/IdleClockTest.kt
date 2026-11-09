@@ -16,7 +16,12 @@ class IdleClockTest {
     private var shown = 0
     private val minute = 60_000L
 
-    private fun idleClock(idleMs: Long) = IdleClock(idleMs, { resumed }, { shown++ })
+    private var idleMs = 0L
+
+    private fun idleClock(idleMs: Long): IdleClock {
+        this.idleMs = idleMs
+        return IdleClock({ this.idleMs }, { resumed }, { shown++ })
+    }
 
     private fun pass(ms: Long) = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ms))
 
@@ -62,5 +67,17 @@ class IdleClockTest {
         pass(60 * minute)
 
         assertEquals(0, shown)
+    }
+
+    @Test
+    fun a_changed_idle_time_applies_from_the_next_restart() {
+        val idle = idleClock(5 * minute)
+        idle.restart()
+        idleMs = minute
+        idle.restart()
+
+        pass(minute)
+
+        assertEquals(1, shown)
     }
 }

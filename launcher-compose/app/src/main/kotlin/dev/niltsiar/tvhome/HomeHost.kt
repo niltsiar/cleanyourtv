@@ -3,6 +3,8 @@ package dev.niltsiar.tvhome
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
@@ -10,6 +12,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.InputTarget
@@ -46,7 +49,8 @@ internal fun HomeHost(
     overlays: @Composable () -> Unit,
     locale: Locale = LocalConfiguration.current.locales[0],
     datePattern: String = stringResource(R.string.date_format),
-    viewModel: MoleculeHomeViewModel = viewModel { MoleculeHomeViewModel(graph.homeSources, graph.config, locale, datePattern) },
+    viewModel: MoleculeHomeViewModel =
+        viewModel { MoleculeHomeViewModel(graph.homeSources, graph.configRepository.config, locale, datePattern) },
 ) {
     SideEffect { viewModel.onLocaleChanged(locale, datePattern) }
     LaunchedEffect(viewModel) {
@@ -69,11 +73,12 @@ internal fun HomeHost(
     LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onStarted() }
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.onStopped() }
     val state = viewModel.uiState.collectAsStateWithLifecycle()
-    val layout = remember(graph) { graph.config.homeLayout() }
-    val topBar = remember(graph) { graph.config.topBarLayout() }
-    val wallpaperLayout = remember(graph) { graph.config.wallpaperLayout() }
-    val shelfLayout = remember(graph) { graph.config.shelfLayout() }
-    val dockLook = remember(graph) { graph.config.dockLook() }
+    val config = remember(state) { derivedStateOf { state.value.config } }
+    val layout by config.derived(TvConfig::homeLayout)
+    val topBar by config.derived(TvConfig::topBarLayout)
+    val wallpaperLayout by config.derived(TvConfig::wallpaperLayout)
+    val shelfLayout by config.derived(TvConfig::shelfLayout)
+    val dockLook by config.derived(TvConfig::dockLook)
     HomeScreen(
         state = { state.value },
         layout = layout,

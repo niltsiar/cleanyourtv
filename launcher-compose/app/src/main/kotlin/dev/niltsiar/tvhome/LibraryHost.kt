@@ -3,11 +3,12 @@ package dev.niltsiar.tvhome
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.feature.library.LibraryEffect
 import dev.niltsiar.tvhome.feature.library.LibraryOverlay
@@ -36,9 +37,11 @@ internal fun LibraryHost(
     }
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.onClose() }
     val state = viewModel.uiState.collectAsStateWithLifecycle()
+    val config = graph.configRepository.config.collectAsStateWithLifecycle()
+    val layout by config.derived(TvConfig::libraryLayout)
     LibraryOverlay(
         state = { state.value },
-        layout = remember(graph) { graph.config.libraryLayout() },
+        layout = layout,
         actions = viewModel.actions,
         art = graph.librarySources.art,
     )

@@ -28,7 +28,7 @@ private data class HeaderFormat(
 /** Hosts [homePresenter] with Molecule: an event Flow in, a StateFlow out. */
 public class MoleculeHomeViewModel(
     sources: HomeSources,
-    config: TvConfig,
+    config: StateFlow<TvConfig>,
     locale: Locale,
     datePattern: String,
     coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),

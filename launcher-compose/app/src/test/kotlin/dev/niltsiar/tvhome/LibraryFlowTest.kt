@@ -32,6 +32,7 @@ import dev.niltsiar.tvhome.feature.library.LibraryOverlay
 import dev.niltsiar.tvhome.feature.library.LibrarySources
 import dev.niltsiar.tvhome.feature.library.MoleculeLibraryViewModel
 import dev.niltsiar.tvhome.feature.library.libraryLayout
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Rule
@@ -72,7 +73,7 @@ class LibraryFlowTest {
                             )
                         MoleculeHomeViewModel(
                             sources,
-                            config,
+                            MutableStateFlow(config),
                             Locale.ENGLISH,
                             "EEEE d MMMM",
                             scope,
@@ -83,7 +84,14 @@ class LibraryFlowTest {
                 val library =
                     remember {
                         val sources = LibrarySources(load = { apps.map { LibraryApp(it, onHome = true) } }, changes = emptyFlow())
-                        MoleculeLibraryViewModel(sources, config, Locale.ENGLISH, scope, RecompositionMode.Immediate, EmptyCoroutineContext)
+                        MoleculeLibraryViewModel(
+                            sources,
+                            MutableStateFlow(config),
+                            Locale.ENGLISH,
+                            scope,
+                            RecompositionMode.Immediate,
+                            EmptyCoroutineContext,
+                        )
                     }
                 val homeState by home.uiState.collectAsState()
                 val libraryState by library.uiState.collectAsState()

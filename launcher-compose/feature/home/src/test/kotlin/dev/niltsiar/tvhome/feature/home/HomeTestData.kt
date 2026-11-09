@@ -21,6 +21,8 @@ import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import java.time.LocalDateTime
@@ -100,11 +102,30 @@ internal val FourPorts =
             ),
     )
 
-/** The real view model on the composition's scope, its effects collected into [effects]. */
+/** [homePresenter] over a config that never changes. */
+@Composable
+internal fun homePresenter(
+    events: Flow<HomeEvent>,
+    sources: HomeSources,
+    config: TvConfig,
+    onEffect: (HomeEffect) -> Unit,
+    locale: Locale,
+    datePattern: String,
+): HomeUiState = homePresenter(events, sources, remember(config) { MutableStateFlow(config) }, onEffect, locale, datePattern)
+
+/** The real view model on the composition's scope over a config that never changes, its effects collected into [effects]. */
 @Composable
 internal fun rememberHomeViewModel(
     sources: HomeSources,
     config: TvConfig,
+    effects: MutableList<HomeEffect>,
+): MoleculeHomeViewModel = rememberHomeViewModel(sources, remember(config) { MutableStateFlow(config) }, effects)
+
+/** The real view model on the composition's scope, its effects collected into [effects]. */
+@Composable
+internal fun rememberHomeViewModel(
+    sources: HomeSources,
+    config: StateFlow<TvConfig>,
     effects: MutableList<HomeEffect>,
 ): MoleculeHomeViewModel {
     val scope = rememberCoroutineScope()

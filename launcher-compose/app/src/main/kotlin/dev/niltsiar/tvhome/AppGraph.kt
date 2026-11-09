@@ -4,7 +4,6 @@ import android.app.Application
 import android.text.format.DateFormat
 import dev.niltsiar.tvhome.core.config.ConfigRepository
 import dev.niltsiar.tvhome.core.config.ThemeDirectory
-import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.data.apps.AppLauncher
 import dev.niltsiar.tvhome.data.apps.LastOpened
 import dev.niltsiar.tvhome.data.apps.LaunchLog
@@ -36,7 +35,6 @@ import java.io.File
 
 @DependencyGraph(AppScope::class)
 interface AppGraph {
-    val config: TvConfig
     val configRepository: ConfigRepository
     val appsProvider: PackageManagerAppsProvider
     val appLauncher: AppLauncher
@@ -56,11 +54,6 @@ interface AppGraph {
     @SingleIn(AppScope::class)
     fun provideConfigRepository(application: Application): ConfigRepository =
         ConfigRepository(application, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-
-    /** The repository's value when the graph is made, for the UI until it follows the flow. */
-    @Provides
-    @SingleIn(AppScope::class)
-    fun provideConfig(repository: ConfigRepository): TvConfig = repository.config.value
 
     @Provides
     @SingleIn(AppScope::class)

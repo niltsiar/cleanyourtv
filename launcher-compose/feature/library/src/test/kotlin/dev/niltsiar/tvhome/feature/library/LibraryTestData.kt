@@ -1,16 +1,32 @@
 package dev.niltsiar.tvhome.feature.library
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsNodeInteractionsProvider
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import app.cash.turbine.ReceiveTurbine
+import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.LibraryApp
 import dev.niltsiar.tvhome.core.model.OpenedRecord
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import java.util.Locale
+
+/** [libraryPresenter] over a config that never changes. */
+@Composable
+internal fun libraryPresenter(
+    events: Flow<LibraryEvent>,
+    sources: LibrarySources,
+    config: TvConfig,
+    onEffect: (LibraryEffect) -> Unit,
+    locale: Locale,
+): LibraryUiState = libraryPresenter(events, sources, remember(config) { MutableStateFlow(config) }, onEffect, locale)
 
 internal const val DAY = 24L * 60 * 60 * 1000
 internal const val NOW = 100 * DAY

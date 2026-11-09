@@ -1,5 +1,6 @@
 package dev.niltsiar.tvhome.feature.library
 
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -24,11 +25,13 @@ import java.text.Collator
  */
 internal class LibraryInteraction(
     private val sources: LibrarySources,
-    private val layout: LibraryLayout,
+    private val layoutState: State<LibraryLayout>,
     private val collator: Collator,
     private val scope: CoroutineScope,
     private val effect: (LibraryEffect) -> Unit,
 ) {
+    private val layout get() = layoutState.value
+
     var open by mutableStateOf(false)
         private set
     var shown by mutableStateOf(false)

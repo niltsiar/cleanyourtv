@@ -18,6 +18,7 @@ import dev.niltsiar.tvhome.core.model.millisUntilNextDay
 import dev.niltsiar.tvhome.core.model.unusedKeys
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -39,18 +40,28 @@ internal const val HABIT_REFRESH_MS = 15 * 60 * 1_000L
 /** The Inputs button before the TV has said what it lists: hidden, as the reference hides it until it finds something to list. */
 private val UnknownInputs = InputsMenu(available = false)
 
-/** Home's state logic for any host that runs a composable: Molecule today. It uses the Compose runtime only. */
+/**
+ * Home's state logic for any host that runs a composable: Molecule today. It uses the Compose runtime only. It follows
+ * [config] only while Home shows: a choice made on another screen reaches Home when it comes back, not under the
+ * person's feet, and all at once.
+ */
 @Composable
 internal fun homePresenter(
     events: Flow<HomeEvent>,
     sources: HomeSources,
-    config: TvConfig,
+    config: StateFlow<TvConfig>,
     onEffect: (HomeEffect) -> Unit,
     locale: Locale,
     datePattern: String,
 ): HomeUiState {
     val currentOnEffect by rememberUpdatedState(onEffect)
-    val interaction = remember(sources, config) { HomeInteraction(sources, config) { currentOnEffect(it) } }
+    val applied = remember(config) { mutableStateOf(config.value) }
+    val interaction = remember(sources, config) { HomeInteraction(sources, applied) { currentOnEffect(it) } }
+    val showing = interaction.showing
+    LaunchedEffect(config, showing) { if (showing) config.collect { applied.value = it } }
+    val counts = interaction.dockCounts
+    LaunchedEffect(interaction, counts) { interaction.dockCountsChanged(counts) }
+    val current = applied.value
     LaunchedEffect(interaction) { sources.apps.collect { interaction.listLoaded(it) } }
     LaunchedEffect(interaction) { sources.topBarApps.collect(interaction::topBarAppsLoaded) }
     LaunchedEffect(interaction) { sources.inputs.collect(interaction::inputsLoaded) }
@@ -69,9 +80,8 @@ internal fun homePresenter(
             interaction.offerEnded(offered)
         }
     }
-    val showing = interaction.showing
-    LaunchedEffect(interaction, showing) {
-        if (config.habitHint && showing) {
+    LaunchedEffect(interaction, showing, current.habitHint) {
+        if (current.habitHint && showing) {
             while (true) {
                 interaction.habitFound(sources.habit())
                 delay(HABIT_REFRESH_MS)
@@ -79,8 +89,8 @@ internal fun homePresenter(
         }
     }
     var today by remember { mutableStateOf<LocalDate?>(null) }
-    LaunchedEffect(interaction, showing) {
-        if (config.unusedFadeDays > 0 && showing) {
+    LaunchedEffect(interaction, showing, current.unusedFadeDays > 0) {
+        if (current.unusedFadeDays > 0 && showing) {
             while (true) {
                 val at = sources.timeMillis()
                 today = Instant.ofEpochMilli(at).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -95,16 +105,16 @@ internal fun homePresenter(
     val libraryCount by sources.libraryCount.collectAsState(null)
     val openedSince by sources.openedSince.collectAsState(null)
     // Read again with each new time, which also follows the TV's 12/24-hour setting after a stop and start of Home.
-    val hour24 = remember(now, config.clockFormat) { config.clockFormat.is24Hour(sources.systemHour24) }
+    val hour24 = remember(now, current.clockFormat) { current.clockFormat.is24Hour(sources.systemHour24) }
     val header =
-        remember(hour24, config, datePattern) {
-            HeaderStyle(hour24, datePattern, config.showGreeting, config.greetingName)
+        remember(hour24, datePattern, current.showGreeting, current.greetingName) {
+            HeaderStyle(hour24, datePattern, current.showGreeting, current.greetingName)
         }
     val session = interaction.session
     val shown = interaction.shown
     val faded =
-        remember(shown, lastOpened, openedSince, today) {
-            today?.let { OpenedRecord(lastOpened, openedSince).unusedKeys(shown.grid.map { it.key }, config.unusedFadeDays, it) }.orEmpty()
+        remember(shown, lastOpened, openedSince, today, current.unusedFadeDays) {
+            today?.let { OpenedRecord(lastOpened, openedSince).unusedKeys(shown.grid.map { it.key }, current.unusedFadeDays, it) }.orEmpty()
         }
     return homeUiState(
         shown,
@@ -115,7 +125,7 @@ internal fun homePresenter(
         network,
         interaction.topBarApps,
         wallpaper,
-        cinematic = config.cinematicHome,
+        cinematic = current.cinematicHome,
         lastOpened = lastOpened,
         menu = interaction.menu,
         reorder = remember(session) { session?.view() },
@@ -123,9 +133,10 @@ internal fun homePresenter(
         inputs = interaction.inputs ?: UnknownInputs,
         inputsOpen = interaction.inputsOpen,
         inputOffer = interaction.offer,
-        libraryCount = libraryCount,
+        libraryCount = libraryCount.takeIf { current.appLibrary },
         habit = interaction.habit,
         faded = faded,
         awaitingApps = interaction.awaitingApps,
+        config = current,
     )
 }

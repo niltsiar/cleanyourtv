@@ -34,7 +34,7 @@ public class LibraryActions(
 /** Hosts [libraryPresenter] with Molecule: an event Flow in, a StateFlow out. */
 public class MoleculeLibraryViewModel(
     sources: LibrarySources,
-    config: TvConfig,
+    config: StateFlow<TvConfig>,
     locale: Locale,
     coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
     recompositionMode: RecompositionMode = RecompositionMode.ContextClock,

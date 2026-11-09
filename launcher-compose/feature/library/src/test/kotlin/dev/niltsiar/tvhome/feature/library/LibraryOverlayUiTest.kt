@@ -27,6 +27,7 @@ import app.cash.molecule.RecompositionMode
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.OpenedRecord
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -64,7 +65,7 @@ class LibraryOverlayUiTest {
                     remember {
                         MoleculeLibraryViewModel(
                             library.sources,
-                            config,
+                            MutableStateFlow(config),
                             Locale.ENGLISH,
                             scope,
                             RecompositionMode.Immediate,

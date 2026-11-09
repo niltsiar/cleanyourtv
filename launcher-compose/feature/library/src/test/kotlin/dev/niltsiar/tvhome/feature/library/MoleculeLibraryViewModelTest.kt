@@ -3,6 +3,7 @@ package dev.niltsiar.tvhome.feature.library
 import app.cash.molecule.RecompositionMode
 import app.cash.turbine.test
 import dev.niltsiar.tvhome.core.config.TvConfig
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -17,7 +18,7 @@ class MoleculeLibraryViewModelTest {
             val viewModel =
                 MoleculeLibraryViewModel(
                     library.sources,
-                    TvConfig(appLibrary = true),
+                    MutableStateFlow(TvConfig(appLibrary = true)),
                     Locale.ENGLISH,
                     backgroundScope,
                     RecompositionMode.Immediate,

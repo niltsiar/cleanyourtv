@@ -3,6 +3,7 @@ package dev.niltsiar.tvhome.feature.home
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
 import dev.niltsiar.tvhome.core.model.InputArrival
@@ -33,6 +34,8 @@ import java.util.Locale
  * [habit] is the package of the app the household usually opens at this time of day (habit_hint), null when none is, and
  * [focusedUsual] whether the focused app is it. [faded] holds the keys of the grid tiles drawn faded (unused_fade_days).
  * [awaitingApps] is true until the first app list arrives: the dock is empty then, and focus waits for it.
+ * [config] is the config this state was made with. The layouts are read from it, so they always match the split of [dock] and
+ * [grid].
  */
 @Immutable
 public data class HomeUiState(
@@ -61,6 +64,7 @@ public data class HomeUiState(
     val focusedUsual: Boolean = false,
     val faded: Set<String> = emptySet(),
     val awaitingApps: Boolean = false,
+    val config: TvConfig = TvConfig(),
 )
 
 /** Focus goes to the tile with this key, or to the Settings button for [SETTINGS_FOCUS]. A new [token] asks again. */
@@ -312,6 +316,7 @@ internal fun homeUiState(
     habit: String? = null,
     faded: Set<String> = emptySet(),
     awaitingApps: Boolean = false,
+    config: TvConfig = TvConfig(),
 ): HomeUiState {
     val focused = apps.all.firstOrNull { it.key == focusedKey } ?: apps.all.firstOrNull()
     return HomeUiState(
@@ -340,6 +345,7 @@ internal fun homeUiState(
         focusedUsual = habit != null && focused?.packageName == habit,
         faded = faded,
         awaitingApps = awaitingApps,
+        config = config,
     )
 }
 

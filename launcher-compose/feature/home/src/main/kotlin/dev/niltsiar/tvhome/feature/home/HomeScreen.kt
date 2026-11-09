@@ -668,9 +668,10 @@ private fun HomeContent(
     val dock = remember(state) { derivedStateOf(structuralEqualityPolicy()) { state().dock } }.value
     val grid = remember(state) { derivedStateOf(structuralEqualityPolicy()) { state().grid } }.value
     val reordering = input.reordering.value
+    val currentLayout = rememberUpdatedState(layout)
     LaunchedEffect(gridState) {
         snapshotFlow { state().focusRequest }.filterNotNull().collect { request ->
-            focusOn(request.target, gridState, dockRow, layout.singleRow, state, input)
+            focusOn(request.target, gridState, dockRow, currentLayout.value.singleRow, state, input)
         }
     }
     LaunchedEffect(gridState) {
@@ -679,7 +680,7 @@ private fun HomeContent(
             withFrameNanos { }
             val shown = state()
             val target = shown.focusedKey?.takeIf { key -> (shown.dock + shown.grid).any { it.key == key } } ?: shown.dock.first().key
-            focusOn(target, gridState, dockRow, layout.singleRow, state, input)
+            focusOn(target, gridState, dockRow, currentLayout.value.singleRow, state, input)
         }
     }
     LaunchedEffect(gridState) {
@@ -698,7 +699,7 @@ private fun HomeContent(
             if (wasOpen && !open) {
                 val target = if (input.fromTopBar) LIBRARY_BUTTON_FOCUS else LIBRARY_FOCUS
                 input.fromTopBar = false
-                focusOn(target, gridState, dockRow, layout.singleRow, state, input)
+                focusOn(target, gridState, dockRow, currentLayout.value.singleRow, state, input)
             }
             wasOpen = open
         }

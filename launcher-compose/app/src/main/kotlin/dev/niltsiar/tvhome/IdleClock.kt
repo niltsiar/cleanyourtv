@@ -4,12 +4,12 @@ import android.os.Handler
 import android.os.Looper
 
 /**
- * home_idle_clock_minutes: runs [show] once Home has gone [idleMs] without input. Input restarts the count; it runs only
- * while [isResumed], since a key's UP can still reach Home after it paused, when that key opened another app, and must not
- * start the clock over the app. [idleMs] of 0 is off.
+ * home_idle_clock_minutes: runs [show] once Home has gone [idleMs] without input. Input restarts the count with the
+ * [idleMs] of that moment; it runs only while [isResumed], since a key's UP can still reach Home after it paused, when
+ * that key opened another app, and must not start the clock over the app. [idleMs] of 0 is off.
  */
 internal class IdleClock(
-    private val idleMs: Long,
+    private val idleMs: () -> Long,
     private val isResumed: () -> Boolean,
     show: () -> Unit,
 ) {
@@ -18,7 +18,8 @@ internal class IdleClock(
 
     fun restart() {
         handler.removeCallbacks(task)
-        if (idleMs > 0 && isResumed()) handler.postDelayed(task, idleMs)
+        val delay = idleMs()
+        if (delay > 0 && isResumed()) handler.postDelayed(task, delay)
     }
 
     fun cancel() {
