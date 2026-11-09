@@ -36,9 +36,7 @@
   <string name="settings_save_failed">تعذّر حفظ الإعداد</string>
   <string name="settings_reorder">إعادة ترتيب التطبيقات</string>
   <string name="open_on_start_label">الفتح عند التشغيل</string>
-  <string name="open_on_start_state">الفتح عند التشغيل: %1$s</string>
   <string name="wallpaper_label">خلفية الشاشة</string>
-  <string name="wallpaper_state">خلفية الشاشة: %1$s</string>
   <string name="wallpaper_none">بدون</string>
   <string name="wallpaper_applied">تم تغيير الخلفية</string>
   <string name="wallpaper_theme_default">افتراضي السمة</string>

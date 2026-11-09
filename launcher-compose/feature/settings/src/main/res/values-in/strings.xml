@@ -36,9 +36,7 @@
   <string name="settings_save_failed">Setelan tidak dapat disimpan</string>
   <string name="settings_reorder">Tata Ulang App</string>
   <string name="open_on_start_label">Buka saat mulai</string>
-  <string name="open_on_start_state">Buka saat mulai: %1$s</string>
   <string name="wallpaper_label">Wallpaper</string>
-  <string name="wallpaper_state">Wallpaper: %1$s</string>
   <string name="wallpaper_none">Tidak ada</string>
   <string name="wallpaper_applied">Wallpaper diubah</string>
   <string name="wallpaper_theme_default">Bawaan tema</string>

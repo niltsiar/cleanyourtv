@@ -36,9 +36,7 @@
   <string name="settings_save_failed">บันทึกการตั้งค่าไม่ได้</string>
   <string name="settings_reorder">จัดเรียงแอป</string>
   <string name="open_on_start_label">เปิดเมื่อเริ่มเครื่อง</string>
-  <string name="open_on_start_state">เปิดเมื่อเริ่มเครื่อง: %1$s</string>
   <string name="wallpaper_label">วอลเปเปอร์</string>
-  <string name="wallpaper_state">วอลเปเปอร์: %1$s</string>
   <string name="wallpaper_none">ไม่มี</string>
   <string name="wallpaper_applied">เปลี่ยนวอลเปเปอร์แล้ว</string>
   <string name="wallpaper_theme_default">ค่าเริ่มต้นของธีม</string>

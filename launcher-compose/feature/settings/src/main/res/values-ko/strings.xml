@@ -36,9 +36,7 @@
   <string name="settings_save_failed">설정을 저장하지 못했습니다</string>
   <string name="settings_reorder">앱 순서 바꾸기</string>
   <string name="open_on_start_label">시작 시 열기</string>
-  <string name="open_on_start_state">시작 시 열기: %1$s</string>
   <string name="wallpaper_label">배경화면</string>
-  <string name="wallpaper_state">배경화면: %1$s</string>
   <string name="wallpaper_none">없음</string>
   <string name="wallpaper_applied">배경화면 변경됨</string>
   <string name="wallpaper_theme_default">테마 기본값</string>

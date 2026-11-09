@@ -36,9 +36,7 @@
   <string name="settings_save_failed">Ayar kaydedilemedi</string>
   <string name="settings_reorder">Uygulamaları sırala</string>
   <string name="open_on_start_label">Açılışta aç</string>
-  <string name="open_on_start_state">Açılışta aç: %1$s</string>
   <string name="wallpaper_label">Duvar kağıdı</string>
-  <string name="wallpaper_state">Duvar kağıdı: %1$s</string>
   <string name="wallpaper_none">Yok</string>
   <string name="wallpaper_applied">Duvar kağıdı değiştirildi</string>
   <string name="wallpaper_theme_default">Tema varsayılanı</string>

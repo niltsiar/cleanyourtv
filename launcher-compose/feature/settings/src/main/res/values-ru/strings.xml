@@ -36,9 +36,7 @@
   <string name="settings_save_failed">Не удалось сохранить настройку</string>
   <string name="settings_reorder">Изменить порядок приложений</string>
   <string name="open_on_start_label">Открывать при запуске</string>
-  <string name="open_on_start_state">Открывать при запуске: %1$s</string>
   <string name="wallpaper_label">Обои</string>
-  <string name="wallpaper_state">Обои: %1$s</string>
   <string name="wallpaper_none">Нет</string>
   <string name="wallpaper_applied">Обои изменены</string>
   <string name="wallpaper_theme_default">Как в теме</string>

@@ -36,9 +36,7 @@
   <string name="settings_save_failed">Không lưu được cài đặt</string>
   <string name="settings_reorder">Sắp xếp ứng dụng</string>
   <string name="open_on_start_label">Mở khi khởi động</string>
-  <string name="open_on_start_state">Mở khi khởi động: %1$s</string>
   <string name="wallpaper_label">Hình nền</string>
-  <string name="wallpaper_state">Hình nền: %1$s</string>
   <string name="wallpaper_none">Không có</string>
   <string name="wallpaper_applied">Đã đổi hình nền</string>
   <string name="wallpaper_theme_default">Theo theme</string>

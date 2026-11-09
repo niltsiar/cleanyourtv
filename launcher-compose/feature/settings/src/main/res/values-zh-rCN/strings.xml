@@ -36,9 +36,7 @@
   <string name="settings_save_failed">无法保存设置</string>
   <string name="settings_reorder">调整应用顺序</string>
   <string name="open_on_start_label">开机时打开</string>
-  <string name="open_on_start_state">开机时打开：%1$s</string>
   <string name="wallpaper_label">壁纸</string>
-  <string name="wallpaper_state">壁纸：%1$s</string>
   <string name="wallpaper_none">无</string>
   <string name="wallpaper_applied">壁纸已更改</string>
   <string name="wallpaper_theme_default">主题默认</string>

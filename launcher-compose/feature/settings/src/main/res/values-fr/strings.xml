@@ -36,9 +36,7 @@
   <string name="settings_save_failed">Impossible d\'enregistrer le réglage</string>
   <string name="settings_reorder">Réorganiser les applis</string>
   <string name="open_on_start_label">Ouvrir au démarrage</string>
-  <string name="open_on_start_state">Ouvrir au démarrage: %1$s</string>
   <string name="wallpaper_label">Fond d\'écran</string>
-  <string name="wallpaper_state">Fond d\'écran: %1$s</string>
   <string name="wallpaper_none">Aucun</string>
   <string name="wallpaper_applied">Fond d\'écran modifié</string>
   <string name="wallpaper_theme_default">Par défaut du thème</string>

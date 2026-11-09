@@ -36,9 +36,7 @@
   <string name="settings_save_failed">Asetusta ei voitu tallentaa</string>
   <string name="settings_reorder">Järjestä sovellukset</string>
   <string name="open_on_start_label">Avaa käynnistettäessä</string>
-  <string name="open_on_start_state">Avaa käynnistettäessä: %1$s</string>
   <string name="wallpaper_label">Taustakuva</string>
-  <string name="wallpaper_state">Taustakuva: %1$s</string>
   <string name="wallpaper_none">Ei taustakuvaa</string>
   <string name="wallpaper_applied">Taustakuva vaihdettu</string>
   <string name="wallpaper_theme_default">Teeman oletus</string>

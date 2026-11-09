@@ -15,7 +15,6 @@ import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
@@ -392,7 +391,7 @@ class SettingsScreenTest {
         option(SettingsRowId.Animations, 0).assertIsFocused()
         press(Key.DirectionDown)
         startRow().assertIsFocused()
-        compose.onNodeWithText("Open on start: Off").assertIsDisplayed()
+        startRow().assertTextEquals("Open on start", "Off")
         press(Key.DirectionDown)
         option(SettingsRowId.AlwaysShowNames, settings.row(SettingsRowId.AlwaysShowNames).selected).assertIsFocused()
         press(Key.DirectionUp)
@@ -413,11 +412,11 @@ class SettingsScreenTest {
         showPicker(pick = "com.app5")
 
         compose.onNodeWithTag("settings:picker").assertIsDisplayed()
-        compose.onNodeWithText("Open on start").assertIsDisplayed()
+        compose.onNodeWithTag("settings:picker:title").assertTextEquals("Open on start")
         entry(5).assertIsFocused()
         entry(5).assertIsSelected()
         entry(5).assertIsDisplayed()
-        compose.onNodeWithText("App 05").assertIsDisplayed()
+        entry(5).assertTextEquals("App 05")
         repeat(5) { press(Key.DirectionUp) }
         entry(0).assertIsFocused()
         entry(0).assertIsNotSelected()
@@ -494,7 +493,7 @@ class SettingsScreenTest {
         compose.waitForIdle()
 
         assertEquals(0, compose.onAllNodesWithTag("settings:picker").fetchSemanticsNodes().size)
-        compose.onNodeWithText("Open on start: App 03").assertIsDisplayed()
+        startRow().assertTextEquals("Open on start", "App 03")
         assertEquals(listOf(""), settings.skippedAt)
         startRow().assertIsFocused()
     }
@@ -509,7 +508,7 @@ class SettingsScreenTest {
         waitUntilIdle { settings.pickedApp.isEmpty() && settings.state.picker == null }
         compose.waitForIdle()
 
-        compose.onNodeWithText("Open on start: Off").assertIsDisplayed()
+        startRow().assertTextEquals("Open on start", "Off")
         assertEquals(emptyList<String>(), settings.skippedAt)
     }
 
@@ -517,7 +516,7 @@ class SettingsScreenTest {
     fun the_wallpaper_row_sits_between_clock_and_animations() {
         showWallpaperRow()
 
-        wallpaperRow().assertTextEquals("Wallpaper: Theme default")
+        wallpaperRow().assertTextEquals("Wallpaper", "Theme default")
         press(Key.DirectionDown)
         option(SettingsRowId.Animations, 0).assertIsFocused()
         press(Key.DirectionUp)
@@ -588,7 +587,7 @@ class SettingsScreenTest {
         compose.waitForIdle()
 
         assertEquals(0, compose.onAllNodesWithTag("settings:picker").fetchSemanticsNodes().size)
-        wallpaperRow().assertTextEquals("Wallpaper: dawn")
+        wallpaperRow().assertTextEquals("Wallpaper", "dawn")
         wallpaperRow().assertIsFocused()
         settings.awaitApplied()
     }
@@ -600,7 +599,7 @@ class SettingsScreenTest {
         press(Key.DirectionCenter)
         waitUntilIdle { settings.wallpaperChoice == "none" && settings.state.wallpaperPicker == null }
         compose.waitForIdle()
-        wallpaperRow().assertTextEquals("Wallpaper: None")
+        wallpaperRow().assertTextEquals("Wallpaper", "None")
 
         press(Key.DirectionCenter)
         waitUntilIdle { settings.state.wallpaperPicker != null }
@@ -611,7 +610,7 @@ class SettingsScreenTest {
         waitUntilIdle { settings.wallpaperChoice == null && settings.state.wallpaperPicker == null }
         compose.waitForIdle()
 
-        wallpaperRow().assertTextEquals("Wallpaper: Theme default")
+        wallpaperRow().assertTextEquals("Wallpaper", "Theme default")
         wallpaperRow().assertIsFocused()
     }
 

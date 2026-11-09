@@ -36,9 +36,7 @@
   <string name="settings_save_failed">Impossibile salvare l\'impostazione</string>
   <string name="settings_reorder">Riordina le app</string>
   <string name="open_on_start_label">Apri all\'avvio</string>
-  <string name="open_on_start_state">Apri all\'avvio: %1$s</string>
   <string name="wallpaper_label">Sfondo</string>
-  <string name="wallpaper_state">Sfondo: %1$s</string>
   <string name="wallpaper_none">Nessuno</string>
   <string name="wallpaper_applied">Sfondo cambiato</string>
   <string name="wallpaper_theme_default">Predefinito del tema</string>

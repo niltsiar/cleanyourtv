@@ -3,12 +3,8 @@ package dev.niltsiar.tvhome.core.designsystem
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.gestures.BringIntoViewSpec
-import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,7 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -36,23 +31,17 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -83,9 +72,6 @@ private val RowHeight = 46.dp
 private const val TITLE_ALPHA = 0.65f
 private val TitleTop = 6.dp
 private val TitleRuleGap = 8.dp
-
-/** How far a scrolling panel fades its content out at an edge with more content past it. */
-private val EdgeFade = 24.dp
 
 /**
  * A panel beside its anchor rather than under it: [gap] right of the anchor, else [gap] left of it, centred on it
@@ -172,7 +158,7 @@ public fun <T> GlassMenu(
  * right side when it would pass that; [beside] it, [BesideAnchor.gap] should be [columnGap] so that the
  * panel starts on the next column and ends on the one before.
  */
-@OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 public fun GlassDropdown(
     anchor: State<Rect>,
@@ -194,8 +180,6 @@ public fun GlassDropdown(
 ) {
     val motion = TvTheme.motion
     val scroll = rememberScrollState()
-    val density = LocalDensity.current
-    val clearOfFade = remember(density) { ClearOfFade(with(density) { EdgeFade.toPx() }) }
     val columnWidth by remember(anchor) { derivedStateOf { anchor.value.width } }
     val reveal = remember { Animatable(if (motion.animations) 0f else 1f) }
     LaunchedEffect(Unit) {
@@ -216,7 +200,7 @@ public fun GlassDropdown(
                         scaleY = scale
                     },
             ) {
-                CompositionLocalProvider(LocalBringIntoViewSpec provides clearOfFade) {
+                ScrollsClearOfEdge {
                     Column(
                         modifier =
                             Modifier
@@ -301,56 +285,6 @@ internal fun wholeChildrenHeight(
         end += spacing
     }
     return height
-}
-
-/** Fades the content over [EdgeFade] at the top and at the bottom as far as [scroll] has content hidden past that edge. */
-private fun Modifier.fadeScrolledEdges(scroll: ScrollState): Modifier =
-    graphicsLayer {
-        val hidden = scroll.value > 0 || scroll.value < scroll.maxValue
-        compositingStrategy = if (hidden) CompositingStrategy.Offscreen else CompositingStrategy.Auto
-    }.drawWithContent {
-        drawContent()
-        val fade = EdgeFade.toPx()
-        val above = (scroll.value / fade).coerceIn(0f, 1f)
-        val below = ((scroll.maxValue - scroll.value) / fade).coerceIn(0f, 1f)
-        val mask = Size(size.width, fade)
-        if (above > 0f) {
-            drawRect(
-                Brush.verticalGradient(listOf(Color.Black.copy(alpha = 1f - above), Color.Black), 0f, fade),
-                size = mask,
-                blendMode = BlendMode.DstIn,
-            )
-        }
-        if (below > 0f) {
-            translate(top = size.height - fade) {
-                drawRect(
-                    Brush.verticalGradient(listOf(Color.Black, Color.Black.copy(alpha = 1f - below)), 0f, fade),
-                    size = mask,
-                    blendMode = BlendMode.DstIn,
-                )
-            }
-        }
-    }
-
-/** Scrolls a focused child at least [fade] clear of the edge it moves towards; a scroll that cannot go further leaves it nearer. */
-@OptIn(ExperimentalFoundationApi::class)
-private class ClearOfFade(
-    private val fade: Float,
-) : BringIntoViewSpec {
-    override fun calculateScrollDistance(
-        offset: Float,
-        size: Float,
-        containerSize: Float,
-    ): Float {
-        val clear = minOf(fade, (containerSize - size).coerceAtLeast(0f) / 2f)
-        val before = offset - clear
-        val after = offset + size + clear - containerSize
-        return when {
-            before < 0f -> before
-            after > 0f -> after
-            else -> 0f
-        }
-    }
 }
 
 /**

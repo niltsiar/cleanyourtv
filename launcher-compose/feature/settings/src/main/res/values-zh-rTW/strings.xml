@@ -36,9 +36,7 @@
   <string name="settings_save_failed">無法儲存設定</string>
   <string name="settings_reorder">調整應用程式順序</string>
   <string name="open_on_start_label">開機時開啟</string>
-  <string name="open_on_start_state">開機時開啟：%1$s</string>
   <string name="wallpaper_label">桌布</string>
-  <string name="wallpaper_state">桌布：%1$s</string>
   <string name="wallpaper_none">無</string>
   <string name="wallpaper_applied">桌布已變更</string>
   <string name="wallpaper_theme_default">主題預設</string>

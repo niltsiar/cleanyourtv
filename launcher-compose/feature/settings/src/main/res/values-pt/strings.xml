@@ -36,9 +36,7 @@
   <string name="settings_save_failed">Não foi possível salvar a configuração</string>
   <string name="settings_reorder">Reordenar apps</string>
   <string name="open_on_start_label">Abrir ao iniciar</string>
-  <string name="open_on_start_state">Abrir ao iniciar: %1$s</string>
   <string name="wallpaper_label">Papel de parede</string>
-  <string name="wallpaper_state">Papel de parede: %1$s</string>
   <string name="wallpaper_none">Nenhum</string>
   <string name="wallpaper_applied">Papel de parede alterado</string>
   <string name="wallpaper_theme_default">Padrão do tema</string>

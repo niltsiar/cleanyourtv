@@ -5,12 +5,9 @@ import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.Spring
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.gestures.BringIntoViewSpec
-import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -60,10 +57,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -74,7 +71,9 @@ import dev.niltsiar.tvhome.core.designsystem.FocusPill
 import dev.niltsiar.tvhome.core.designsystem.MenuDivider
 import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.OverlaySurface
+import dev.niltsiar.tvhome.core.designsystem.ScrollsClearOfEdge
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.designsystem.fadeScrolledEdges
 import dev.niltsiar.tvhome.core.designsystem.menuRowShape
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
@@ -95,8 +94,11 @@ private val ChipPadding = 18.dp
 private val ChipGap = 8.dp
 private val HeadingTop = 22.dp
 private val HeadingRuleGap = 6.dp
+private val ValueMaxWidth = 320.dp
+private val ChevronWidth = 10.dp
+private val ChevronHeight = 16.dp
 
-/** A focused row keeps this much of the list clear past it: the next row, or its group's heading. */
+/** A focused row keeps this much of the list clear past it: the next row, or its group's heading. It is more than the edge fade. */
 private val ScrollClear = 64.dp
 private const val ROW_FOCUS_MS = 120
 
@@ -115,7 +117,7 @@ private const val SELECTED_RIM_ALPHA = 0.42f
  * [onOpenTvSettings] the TV's own settings. With
  * [SettingsUiState.reorder] the first row is Reorder apps, which has focus when the screen opens, and [onReorder] runs when it is picked.
  */
-@OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 public fun SettingsScreen(
     state: () -> SettingsUiState,
@@ -166,8 +168,6 @@ public fun SettingsScreen(
         }
     }
     val scroll = rememberScrollState()
-    val clear = with(LocalDensity.current) { ScrollClear.toPx() }
-    val scrollSpec = remember(clear) { ClearOfEdge(clear) }
     // The launcher does not opt into right-to-left layouts, so a language written right to left sets the direction here.
     val rtl = LocalConfiguration.current.layoutDirection == View.LAYOUT_DIRECTION_RTL
     CompositionLocalProvider(LocalLayoutDirection provides if (rtl) LayoutDirection.Rtl else LocalLayoutDirection.current) {
@@ -192,12 +192,13 @@ public fun SettingsScreen(
             ) {
                 Column(Modifier.fillMaxSize()) {
                     PanelTitle(stringResource(R.string.settings_title), "settings:title")
-                    CompositionLocalProvider(LocalBringIntoViewSpec provides scrollSpec) {
+                    ScrollsClearOfEdge(ScrollClear) {
                         Column(
                             Modifier
                                 .weight(1f)
                                 .fillMaxWidth()
                                 .testTag("settings:list")
+                                .fadeScrolledEdges(scroll)
                                 .verticalScroll(scroll)
                                 .padding(start = PanelSide, end = PanelSide, bottom = PanelSide),
                         ) {
@@ -223,7 +224,8 @@ public fun SettingsScreen(
                                         ui.wallpaper?.let { wallpaper ->
                                             val wallpaperIndex = index++
                                             ActionRow(
-                                                label = stringResource(R.string.wallpaper_state, wallpaper.value.text()),
+                                                label = stringResource(R.string.wallpaper_label),
+                                                value = wallpaper.value.text(),
                                                 selected = false,
                                                 onClick = actions.onOpenWallpaperPicker,
                                                 tag = "settings:wallpaper",
@@ -238,7 +240,8 @@ public fun SettingsScreen(
                                     ui.openOnStart?.let { start ->
                                         val at = index++
                                         ActionRow(
-                                            label = stringResource(R.string.open_on_start_state, start.value.text()),
+                                            label = stringResource(R.string.open_on_start_label),
+                                            value = start.value.text(),
                                             selected = false,
                                             onClick = actions.onOpenPicker,
                                             tag = "settings:open_on_start",
@@ -469,8 +472,10 @@ private fun OptionChip(
 }
 
 /**
- * A full-width button of the panel; a [selected] one is marked with a check. [entry] is where focus arrives, [upEntry]
- * and [downEntry] the entries of the rows around it, which a list that moves focus itself leaves at their defaults.
+ * A full-width button of the panel; a [selected] one is marked with a check. With a [value] the row reads like the others: the
+ * label on the start side, the value and a chevron towards the end side, and one description of both for a screen reader.
+ * [entry] is where focus arrives, [upEntry] and [downEntry] the entries of the rows around it, which a list that moves focus
+ * itself leaves at their defaults.
  */
 @Composable
 internal fun ActionRow(
@@ -479,6 +484,7 @@ internal fun ActionRow(
     onClick: () -> Unit,
     tag: String,
     modifier: Modifier = Modifier,
+    value: String? = null,
     entry: FocusRequester? = null,
     upEntry: FocusRequester = FocusRequester.Default,
     downEntry: FocusRequester = FocusRequester.Default,
@@ -486,6 +492,8 @@ internal fun ActionRow(
     val typography = TvTheme.typography
     val style = remember(typography) { typography.pillLabel.copy(fontSize = 18.sp) }
     val rest = TvTheme.colors.onSurface
+    val focusedInk = TvTheme.surfaces.pillContent
+    val idle = remember(rest) { rest.copy(alpha = LABEL_IDLE_ALPHA) }
     val shape = remember { menuRowShape() }
     FocusPill(
         onClick = onClick,
@@ -495,8 +503,10 @@ internal fun ActionRow(
                 .fillMaxWidth()
                 .height(RowMinHeight)
                 .testTag(tag)
-                .semantics { this.selected = selected }
-                .then(if (entry != null) Modifier.focusRequester(entry) else Modifier)
+                .semantics {
+                    this.selected = selected
+                    if (value != null) contentDescription = "$label, $value"
+                }.then(if (entry != null) Modifier.focusRequester(entry) else Modifier)
                 .focusProperties {
                     up = upEntry
                     down = downEntry
@@ -505,14 +515,36 @@ internal fun ActionRow(
                 },
         background = { if (selected) SelectedLook(rest, shape) },
     ) { ink ->
-        BasicText(
-            label,
-            style = style,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            color = ink.content,
-            modifier = Modifier.align(Alignment.CenterStart).fillMaxWidth().padding(horizontal = RowSide),
-        )
+        Row(
+            Modifier.align(Alignment.CenterStart).fillMaxWidth().padding(horizontal = RowSide),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BasicText(
+                label,
+                style = style,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = if (value == null) ink.content else ColorProducer { lerp(idle, focusedInk, ink.progress()) },
+                modifier = Modifier.weight(1f),
+            )
+            if (value != null) {
+                BasicText(
+                    value,
+                    style = style,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = ink.secondary,
+                    modifier = Modifier.widthIn(max = ValueMaxWidth).padding(start = RowSide),
+                )
+                Box(
+                    Modifier
+                        .padding(start = ChipGap)
+                        .testTag("$tag:chevron")
+                        .size(ChevronWidth, ChevronHeight)
+                        .drawBehind { drawChevron(ink.secondary()) },
+                )
+            }
+        }
         if (selected) {
             Box(
                 Modifier
@@ -551,23 +583,16 @@ private fun DrawScope.drawCheck(color: Color) {
     drawPath(check, color, style = Stroke(CheckStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
 }
 
-/** Scrolls a focused child at least [clear] clear of the edge it moves towards; a scroll that cannot go further leaves it nearer. */
-@OptIn(ExperimentalFoundationApi::class)
-private class ClearOfEdge(
-    private val clear: Float,
-) : BringIntoViewSpec {
-    override fun calculateScrollDistance(
-        offset: Float,
-        size: Float,
-        containerSize: Float,
-    ): Float {
-        val margin = minOf(clear, (containerSize - size).coerceAtLeast(0f) / 2f)
-        val before = offset - margin
-        val after = offset + size + margin - containerSize
-        return when {
-            before < 0f -> before
-            after > 0f -> after
-            else -> 0f
+/** A chevron that points to the end side, so it turns round in a right-to-left layout. */
+private fun DrawScope.drawChevron(color: Color) {
+    val flip = layoutDirection == LayoutDirection.Rtl
+
+    fun x(fraction: Float) = size.width * if (flip) 1f - fraction else fraction
+    val chevron =
+        Path().apply {
+            moveTo(x(0.15f), size.height * 0.1f)
+            lineTo(x(0.85f), size.height * 0.5f)
+            lineTo(x(0.15f), size.height * 0.9f)
         }
-    }
+    drawPath(chevron, color, style = Stroke(CheckStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
 }
