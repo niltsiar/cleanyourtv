@@ -328,6 +328,21 @@ class ConfigRepositoryTest {
         }
     }
 
+    @Test
+    fun a_choice_written_between_the_first_read_and_the_collection_reaches_the_config() {
+        pushTheme("""{"columns": 5}""")
+        val collecting = Gate()
+        try {
+            val repo = repository(CoroutineScope(SupervisorJob() + collecting))
+            repo.choose(Choices.Columns, 7)
+            collecting.open()
+
+            awaitConfig(repo) { it.columns == 7 }
+        } finally {
+            collecting.open()
+        }
+    }
+
     /** A start on unmounted storage saves no signature; then the theme is read again on mounted storage. */
     private fun columnsAfterAnUnsignedChoiceAnd(revision: String?): Int {
         pushTheme("""{"columns": 5}""")
