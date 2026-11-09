@@ -1,10 +1,12 @@
 package dev.niltsiar.tvhome.data.apps
 
 import android.util.Log
+import dev.niltsiar.tvhome.core.config.TvConfig
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -19,11 +21,12 @@ internal const val LAUNCH_LOG_MAX = 800
 /**
  * The launches Home makes, for the habit_hint mark: one line per launch, the time and the package, in a file only Home
  * reads. A launch older than eight weeks is dropped when the next one is written, and with more than [LAUNCH_LOG_MAX]
- * the oldest go. With [enabled] false nothing is written or read. The file is read on [io], on first use.
+ * the oldest go. While habit_hint is off nothing is written or read; turning it on starts the record from then. The file
+ * is read on [io], on first use.
  */
 public class LaunchLog(
     private val file: File,
-    private val enabled: Boolean,
+    private val config: StateFlow<TvConfig>,
     private val io: CoroutineDispatcher = Dispatchers.IO,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + io)
@@ -35,7 +38,7 @@ public class LaunchLog(
         packageName: String,
         now: Long = System.currentTimeMillis(),
     ) {
-        if (!enabled) return
+        if (!config.value.habitHint) return
         scope.launch {
             synchronized(lock) {
                 val kept = (loaded() + LaunchRecord(packageName, now)).kept(now).takeLast(LAUNCH_LOG_MAX)
@@ -54,7 +57,7 @@ public class LaunchLog(
         now: Long,
         zone: ZoneId = ZoneId.systemDefault(),
     ): String? {
-        if (!enabled) return null
+        if (!config.value.habitHint) return null
         return withContext(io) { habitApp(synchronized(lock) { loaded() }, now, zone) }
     }
 

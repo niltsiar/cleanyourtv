@@ -83,7 +83,7 @@ class OpenOnStartTest {
         validated: MutableStateFlow<Boolean> = MutableStateFlow(true),
     ) = OpenOnStart(
         context,
-        TvConfig(bootToLiveTv = true, liveTvPackage = "com.tv.live", openOnStartNetworkWait = wait),
+        MutableStateFlow(TvConfig(bootToLiveTv = true, liveTvPackage = "com.tv.live", openOnStartNetworkWait = wait)),
         validated,
         StandardTestDispatcher(testScheduler),
     )
@@ -126,9 +126,26 @@ class OpenOnStartTest {
             assertEquals(emptyList<Intent>(), opened)
 
             bootCount(7)
-            val withoutApp = OpenOnStart(context, TvConfig(bootToLiveTv = true, liveTvPackage = "com.missing"), MutableStateFlow(true))
+            val withoutApp =
+                OpenOnStart(context, MutableStateFlow(TvConfig(bootToLiveTv = true, liveTvPackage = "com.missing")), MutableStateFlow(true))
             withoutApp.openAfterBoot { opened += it }
             assertEquals(emptyList<Intent>(), opened)
+        }
+
+    @Test
+    fun boot_to_live_tv_turned_on_later_applies_to_the_same_opener() =
+        runTest {
+            liveTvApp()
+            bootCount(7)
+            val config = MutableStateFlow(TvConfig(bootToLiveTv = false, liveTvPackage = "com.tv.live"))
+            val opener = OpenOnStart(context, config, MutableStateFlow(true), StandardTestDispatcher(testScheduler))
+
+            opener.openAfterBoot { opened += it }
+            assertEquals(emptyList<Intent>(), opened)
+
+            config.value = config.value.copy(bootToLiveTv = true)
+            opener.openAfterBoot { opened += it }
+            assertEquals(listOf("com.tv.live"), opened.map { it.component?.packageName })
         }
 
     @Test
@@ -137,7 +154,7 @@ class OpenOnStartTest {
             liveTvApp()
             bootCount(7)
 
-            OpenOnStart(context, TvConfig(bootToLiveTv = false, liveTvPackage = "com.tv.live"), MutableStateFlow(true))
+            OpenOnStart(context, MutableStateFlow(TvConfig(bootToLiveTv = false, liveTvPackage = "com.tv.live")), MutableStateFlow(true))
                 .openAfterBoot { opened += it }
 
             assertEquals(emptyList<Intent>(), opened)

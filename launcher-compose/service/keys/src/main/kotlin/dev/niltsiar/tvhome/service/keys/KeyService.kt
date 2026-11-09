@@ -19,11 +19,23 @@ import android.view.KeyEvent
 import android.view.ViewConfiguration
 import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
-import dev.niltsiar.tvhome.core.config.ThemeDirectory
+import dev.niltsiar.tvhome.core.config.ConfigRepositoryOwner
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.LauncherIntents
 import dev.niltsiar.tvhome.core.model.startActivitySafely
 import dev.niltsiar.tvhome.data.system.SystemSettings
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val TAG = "TvHome.Keys"
 private const val BOOT_PREFS = "boot"
@@ -38,11 +50,16 @@ private const val PROBE_BOOT_KEY = "probe_boot"
  * back on the enabled list after a force stop. With the opt-in broadcast of [GuardConfig], the service leaves the list while
  * the screen is off and [GuardKeep] lists it again at screen-on.
  *
+ * The config comes from the app's [ConfigRepositoryOwner] and is followed: the maps are read in again when a value the
+ * service uses changes (see [KeyServiceConfig]).
+ *
  * Enable over adb with scripts/switch-home.sh, or in the TV's accessibility settings.
  */
 public class KeyService : AccessibilityService() {
     private val timer = HandlerTimer()
-    private var config = TvConfig()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var following: Job? = null
+    private var config = TvConfig().forKeyService()
     private var keys = AppKeys(emptyList())
     private var settings: SystemSettings? = null
     private var launcher: TargetLauncher? = null
@@ -95,22 +112,33 @@ public class KeyService : AccessibilityService() {
         }
     }
 
-    private fun connect() = start(ThemeDirectory(this).loadConfig().config)
+    private fun connect() {
+        following?.cancel()
+        val owner = application as ConfigRepositoryOwner
+        // The first access builds the repository, which reads the store: off the main thread.
+        following = follow(flow { emitAll(withContext(Dispatchers.IO) { owner.configRepository }.config) })
+    }
+
+    /** Starts the service on each value of [configs] that differs in what it reads. */
+    internal fun follow(configs: Flow<TvConfig>): Job =
+        scope.launch { configs.map { it.forKeyService() }.distinctUntilChanged().collect { start(it) } }
 
     private fun stopWaitingForUnlock() {
         unlockReceiver?.let(::unregisterReceiver)
         unlockReceiver = null
     }
 
+    internal fun start(config: TvConfig) = start(config.forKeyService())
+
     /** Reads [config] in: the maps, the redirects and the window events they need. */
-    internal fun start(config: TvConfig) {
+    private fun start(config: KeyServiceConfig) {
         tearDown()
         this.config = config
         // The record is in credential-protected storage, so it is written here, after the unlock, not at bind.
         recorded = config.restoreKeyServices
         if (recorded) ServiceRepair.connected(this, javaClass)
         keys = AppKeys(config.appKeys)
-        val settings = SystemSettings(this, null).also { settings = it }
+        val settings = SystemSettings(this).also { settings = it }
         launcher = TargetLauncher(this, settings, ::performGlobalAction, config.liveTvPackage)
         if (config.consumeVolumeKeys) {
             val audio = getSystemService(AudioManager::class.java)
@@ -118,7 +146,7 @@ public class KeyService : AccessibilityService() {
         }
         stockHome = stockHomeActivities(this, config.stockHomeRedirect)
         homeOpener = HomeOpener(this, config.stockHomeRedirect, stockHome)
-        val plan = powerOnPlan(config)
+        val plan = config.powerOn
         if (plan.enabled) armPowerOnHome(plan)
         // The service XML subscribes to no events, so the redirects ask for window changes only when one is on.
         val windowEvents = stockHome.isNotEmpty() || plan.liveTv.isNotEmpty() || keys.watchesFront
@@ -319,6 +347,7 @@ public class KeyService : AccessibilityService() {
 
     override fun onDestroy() {
         PowerMenu.unbind(this)
+        scope.cancel()
         stopWaitingForUnlock()
         tearDown()
         super.onDestroy()

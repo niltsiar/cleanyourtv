@@ -2,6 +2,7 @@ package dev.niltsiar.tvhome.data.inputs
 
 import android.content.Intent
 import dev.niltsiar.tvhome.core.config.TvConfig
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -23,7 +24,7 @@ class InputOpenerTest {
         id: String = PORT,
         parent: String? = null,
     ): Boolean =
-        InputOpener(config) { intent ->
+        InputOpener(MutableStateFlow(config)) { intent ->
             started += intent
             !refuse(intent)
         }.open(id, parent)

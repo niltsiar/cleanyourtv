@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.config.WallpaperOrder
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -38,7 +39,7 @@ class ScreensaverWallpaperTest {
 
     private fun provider(config: TvConfig) =
         WallpaperProvider(
-            config = config,
+            config = MutableStateFlow(config),
             single = File(themeDir.root, "wallpaper.jpg"),
             folder = collection,
             preferences = preferences,

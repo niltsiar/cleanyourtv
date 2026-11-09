@@ -8,9 +8,15 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.LibraryApp
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -54,7 +60,10 @@ class LibraryCatalogTest {
         packageManager.addIntentFilterForActivity(component, IntentFilter(Intent.ACTION_MAIN).apply { addCategory(category) })
     }
 
-    private fun catalog(config: TvConfig): LibraryCatalog = LibraryCatalog(context, config, PackageManagerAppsProvider(context, config))
+    private fun catalog(config: TvConfig): LibraryCatalog = catalog(MutableStateFlow(config))
+
+    private fun catalog(config: MutableStateFlow<TvConfig>): LibraryCatalog =
+        LibraryCatalog(context, config, PackageManagerAppsProvider(context, config))
 
     private fun load(config: TvConfig): List<LibraryApp> = runBlocking { catalog(config).load() }
 
@@ -114,9 +123,38 @@ class LibraryCatalogTest {
     }
 
     @Test
+    fun the_count_starts_and_stops_with_app_library_on_the_same_catalogue() {
+        install("tv.app", "TV App", Intent.CATEGORY_LEANBACK_LAUNCHER)
+        install("phone.app", "Phone App", Intent.CATEGORY_LAUNCHER)
+        val config = MutableStateFlow(TvConfig(appLibrary = false))
+        val catalog = catalog(config)
+
+        runBlocking {
+            val counts = Channel<Int>(Channel.UNLIMITED)
+            val collecting = launch { catalog.counts.collect { counts.send(it) } }
+            assertNull(withTimeoutOrNull(QUIET_MS) { counts.receive() })
+
+            config.value = TvConfig(appLibrary = true)
+            assertEquals(2, withTimeout(LOAD_TIMEOUT_MS) { counts.receive() })
+
+            config.value = TvConfig(appLibrary = false)
+            install("new.app", "New", Intent.CATEGORY_LEANBACK_LAUNCHER)
+            catalog.setOnHome("new.app", true)
+            assertNull(withTimeoutOrNull(QUIET_MS) { counts.receive() })
+
+            config.value = TvConfig(appLibrary = true)
+            assertEquals(3, withTimeout(LOAD_TIMEOUT_MS) { counts.receive() })
+            collecting.cancel()
+        }
+    }
+
+    @Test
     fun the_install_time_comes_from_the_package() {
         install("new.app", "New", Intent.CATEGORY_LEANBACK_LAUNCHER, installedAt = 1234)
 
         assertEquals(1234L, load(config).single { it.app.packageName == "new.app" }.installedAt)
     }
 }
+
+private const val LOAD_TIMEOUT_MS = 10_000L
+private const val QUIET_MS = 300L

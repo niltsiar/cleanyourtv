@@ -32,7 +32,7 @@ class VendorKeysTest {
         VendorKeys(
             app,
             TvConfig(appKeys = entries.asList(), settingsKeyKeycodes = listOf(83)),
-            SystemSettings(app, null),
+            SystemSettings(app),
         ) { settingsOpened++ }
 
     @Before

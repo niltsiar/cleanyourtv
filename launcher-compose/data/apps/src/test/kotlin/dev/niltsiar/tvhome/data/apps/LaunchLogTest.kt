@@ -1,6 +1,8 @@
 package dev.niltsiar.tvhome.data.apps
 
+import dev.niltsiar.tvhome.core.config.TvConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -33,7 +35,7 @@ class LaunchLogTest {
     private fun log(
         file: File = File(folder.root, "launch_log.txt"),
         enabled: Boolean = true,
-    ) = LaunchLog(file, enabled, Dispatchers.Unconfined)
+    ) = LaunchLog(file, MutableStateFlow(TvConfig(habitHint = enabled)), Dispatchers.Unconfined)
 
     private fun lines(file: File) = file.readLines()
 
@@ -87,6 +89,27 @@ class LaunchLogTest {
 
         assertNull(runBlocking { off.habit(now, Zone) })
         assertEquals(4, lines(file).size)
+    }
+
+    @Test
+    fun the_same_log_starts_and_stops_recording_with_the_key_and_keeps_nothing_from_the_time_it_was_off() {
+        val file = File(folder.root, "launch_log.txt")
+        val config = MutableStateFlow(TvConfig(habitHint = false))
+        val log = LaunchLog(file, config, Dispatchers.Unconfined)
+
+        log.record("tv.show", now - 2 * DAY)
+        assertFalse(file.exists())
+        assertNull(runBlocking { log.habit(now, Zone) })
+
+        config.value = TvConfig(habitHint = true)
+        listOf(5, 2, 1, 0).forEach { log.record("tv.show", now - it * DAY) }
+        assertEquals(4, lines(file).size)
+        assertEquals("tv.show", runBlocking { log.habit(now, Zone) })
+
+        config.value = TvConfig(habitHint = false)
+        log.record("tv.show", now)
+        assertEquals(4, lines(file).size)
+        assertNull(runBlocking { log.habit(now, Zone) })
     }
 
     @Test

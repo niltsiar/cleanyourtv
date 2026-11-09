@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Intent
 import android.media.tv.TvContract
 import dev.niltsiar.tvhome.core.config.TvConfig
+import kotlinx.coroutines.flow.StateFlow
 
 private const val CHANNEL_TYPE = "vnd.android.cursor.item/channel"
 
@@ -20,7 +21,7 @@ private const val CHANNEL_TYPE = "vnd.android.cursor.item/channel"
  * this build does not declare refuses with SecurityException, which must not take Home down with it.
  */
 internal class InputOpener(
-    private val config: TvConfig,
+    private val config: StateFlow<TvConfig>,
     private val start: (Intent) -> Boolean,
 ) {
     /** True when an activity started. [parentId] is the HDMI port of a CEC device: the vendor source number belongs to the port (MiTV-MFFU0). */
@@ -28,8 +29,9 @@ internal class InputOpener(
         inputId: String,
         parentId: String?,
     ): Boolean {
-        val action = config.inputAction
-        val source = mappedSource(config.inputSources, parentId ?: inputId)
+        val current = config.value
+        val action = current.inputAction
+        val source = mappedSource(current.inputSources, parentId ?: inputId)
         if (source != null && source >= 0 && action != null) {
             if (start(actionIntent(action).putExtra("input", source).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))) return true
         } else if (source == null && action != null && isComponent(action)) {
@@ -37,7 +39,7 @@ internal class InputOpener(
             if (start(actionIntent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))) return true
         }
         val uri = TvContract.buildChannelUriForPassthroughInput(inputId)
-        val scheme = config.inputUriScheme
+        val scheme = current.inputUriScheme
         val view =
             (
                 if (scheme == null) {
@@ -48,7 +50,7 @@ internal class InputOpener(
             ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         // Aim it at the TV app first: apps installed later can claim the same channel URI, and with two or more
         // handlers Android shows a chooser instead of the input (WhaleOS).
-        config.liveTvPackage?.let { if (start(Intent(view).setPackage(it))) return true }
+        current.liveTvPackage?.let { if (start(Intent(view).setPackage(it))) return true }
         if (start(view)) return true
         if (action == null) return false
         return start(actionIntent(action).setDataAndType(uri, CHANNEL_TYPE).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))

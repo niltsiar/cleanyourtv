@@ -17,6 +17,7 @@ dependencies {
     implementation(project(":data:inputs"))
     implementation(project(":data:system"))
     implementation(libs.androidx.core.ktx)
+    implementation(libs.kotlinx.coroutines.android)
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

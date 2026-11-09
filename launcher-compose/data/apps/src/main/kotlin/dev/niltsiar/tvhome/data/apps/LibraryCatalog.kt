@@ -12,8 +12,15 @@ import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.LibraryApp
 import dev.niltsiar.tvhome.core.model.LibraryArt
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.roundToInt
@@ -34,7 +41,7 @@ private class KnownLabel(
  */
 public class LibraryCatalog(
     private val context: Context,
-    private val config: TvConfig,
+    private val config: StateFlow<TvConfig>,
     private val apps: PackageManagerAppsProvider,
 ) {
     private val labels = ConcurrentHashMap<String, KnownLabel>()
@@ -50,6 +57,26 @@ public class LibraryCatalog(
 
     /** Emits each time the installed apps or the Home choices change after the collection starts. */
     public val changes: Flow<Int> get() = apps.changes.drop(1)
+
+    /**
+     * How many apps the library lists: once, then each time the installed apps or the Home choices change. Nothing while
+     * app_library is off, and it starts and stops with that choice.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    public val counts: Flow<Int> =
+        config
+            .map { it.appLibrary }
+            .distinctUntilChanged()
+            .flatMapLatest { on ->
+                if (on) {
+                    flow {
+                        emit(count())
+                        changes.collect { emit(count()) }
+                    }
+                } else {
+                    emptyFlow()
+                }
+            }
 
     public suspend fun load(): List<LibraryApp> = withContext(Dispatchers.IO) { read() }
 
@@ -102,7 +129,7 @@ public class LibraryCatalog(
 
     private fun launchable(): Launchable {
         val pm = context.packageManager
-        val excluded = config.libraryExcludedApps.toSet()
+        val excluded = config.value.libraryExcludedApps.toSet()
         val tvPackages = HashSet<String>()
         val unique = LinkedHashMap<String, ResolveInfo>()
         for (category in listOf(Intent.CATEGORY_LEANBACK_LAUNCHER, Intent.CATEGORY_LAUNCHER)) {
@@ -119,7 +146,7 @@ public class LibraryCatalog(
 
     private fun read(): List<LibraryApp> {
         val pm = context.packageManager
-        val hidden = config.hiddenApps.toSet()
+        val hidden = config.value.hiddenApps.toSet()
         val choices = apps.libraryChoices()
         val (unique, tvPackages) = launchable()
         arts.clear()

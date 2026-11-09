@@ -15,9 +15,11 @@ import android.os.PowerManager
 import android.provider.Settings
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
+import dev.niltsiar.tvhome.core.config.ClockFormat
 import dev.niltsiar.tvhome.core.config.ThemeDirectory
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.LauncherIntents
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -36,7 +38,7 @@ import java.io.File
 import java.time.Duration
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [31])
+@Config(sdk = [31], application = ConfigApplication::class)
 class KeyServiceTest {
     private val app: Application = RuntimeEnvironment.getApplication()
     private val packages = shadowOf(app.packageManager)
@@ -385,6 +387,19 @@ class KeyServiceTest {
         File(ThemeDirectory(app).dir!!, "config.json").writeText(json)
     }
 
+    /** The service reads its config off the main thread, then starts on it: wait until [code] is mapped. */
+    private fun awaitMapped(code: Int) {
+        val deadline = System.currentTimeMillis() + 10_000
+        while (System.currentTimeMillis() < deadline) {
+            device += 1
+            if (tap(code)) break
+            shadowOf(Looper.getMainLooper()).idle()
+            Thread.sleep(10)
+        }
+        shadowOf(app).clearNextStartedActivities()
+        device += 1
+    }
+
     private fun screenOn() = app.sendBroadcast(Intent(Intent.ACTION_SCREEN_ON))
 
     private fun idleFor(ms: Long) = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ms))
@@ -429,8 +444,7 @@ class KeyServiceTest {
 
         shadowOf(app.getSystemService(android.os.UserManager::class.java)).setUserUnlocked(true)
         app.sendBroadcast(Intent(Intent.ACTION_USER_UNLOCKED))
-        shadowOf(Looper.getMainLooper()).idle()
-        device += 1
+        awaitMapped(190)
         assertTrue(tap(190))
         assertEquals("com.netflix.ninja", started()?.component?.packageName)
     }
@@ -442,6 +456,7 @@ class KeyServiceTest {
 
         service.connected()
 
+        awaitMapped(190)
         assertTrue(tap(190))
         assertEquals("com.netflix.ninja", started()?.component?.packageName)
     }
@@ -473,6 +488,40 @@ class KeyServiceTest {
         PowerMenu.open()
         assertEquals(listOf(AccessibilityService.GLOBAL_ACTION_POWER_DIALOG), shadowOf(replacement).globalActionsPerformed)
         replacement.onDestroy()
+    }
+
+    private fun holdKeys() = TvConfig(appKeys = listOf("190:com.netflix.ninja", "hold:190:org.xbmc.kodi"))
+
+    @Test
+    fun a_choice_the_service_does_not_read_leaves_it_running_and_a_pressed_hold_stands() {
+        installLeanbackApp("org.xbmc.kodi")
+        val configs = MutableStateFlow(holdKeys())
+        service.follow(configs)
+        service.handleKey(key(KeyEvent.ACTION_DOWN, 190))
+
+        configs.value = configs.value.copy(columns = 4, rowsBelowDock = 2, appLibrary = true, clockFormat = ClockFormat.Hour12)
+        idleFor(HOLD_MS)
+        service.handleKey(key(KeyEvent.ACTION_UP, 190, at = 1_000 + HOLD_MS + 50))
+
+        assertEquals("org.xbmc.kodi", started()?.component?.packageName)
+    }
+
+    @Test
+    fun a_value_the_service_reads_starts_it_again_with_the_new_maps() {
+        installLeanbackApp("org.xbmc.kodi")
+        installLeanbackApp("com.plex.tv")
+        val configs = MutableStateFlow(holdKeys())
+        service.follow(configs)
+        service.handleKey(key(KeyEvent.ACTION_DOWN, 190))
+
+        configs.value = configs.value.copy(appKeys = listOf("190:com.plex.tv"))
+        idleFor(HOLD_MS)
+        service.handleKey(key(KeyEvent.ACTION_UP, 190, at = 1_000 + HOLD_MS + 50))
+        assertNull(started())
+
+        device += 1
+        assertTrue(tap(190))
+        assertEquals("com.plex.tv", started()?.component?.packageName)
     }
 
     private fun recordedServices(): Set<String> = ServiceRepair.recorded(app)

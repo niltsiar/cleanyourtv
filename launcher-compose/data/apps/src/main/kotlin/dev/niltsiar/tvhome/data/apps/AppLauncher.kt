@@ -5,10 +5,12 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.core.net.toUri
+import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.INPUT_PREFIX
 import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.core.model.inputIdOf
+import kotlinx.coroutines.flow.StateFlow
 
 private const val TAG = "TvHome.Launch"
 private const val VIEW_PREFIX = "view:"
@@ -26,27 +28,25 @@ public sealed interface LaunchResult {
 }
 
 /**
- * Opens an app's tile the way the reference launcher does, honouring launch_actions. With [recordOpened] (the cinematic
- * Home, library_least_used or unused_fade_days) a tile that opened is noted in [lastOpened], and with [recordLibraryOpened]
- * (the last two) so is an app opened from the library. Every tile that opened is noted in [launchLog], which keeps nothing
- * unless habit_hint is on.
+ * Opens an app's tile the way the reference launcher does, honouring launch_actions. With the cinematic Home, or with
+ * library_least_used or unused_fade_days ([recordsUsage]), a tile that opened is noted in [lastOpened], and with the last
+ * two so is an app opened from the library. Every tile that opened is noted in [launchLog], which keeps nothing unless
+ * habit_hint is on. The choices are read at each launch, so turning one on or off takes effect at the next.
  */
 public class AppLauncher(
     private val context: Context,
-    private val launchActions: Map<String, String>,
+    private val config: StateFlow<TvConfig>,
     private val lastOpened: LastOpened,
-    private val recordOpened: Boolean,
     private val launchLog: LaunchLog,
-    private val recordLibraryOpened: Boolean = false,
 ) {
     /** The TV input a tile's launch_actions "input:<id>" switches to instead of opening the app; null for any other tile. */
-    internal fun inputId(app: AppEntry): String? = inputIdOf(launchActions[app.packageName])
+    internal fun inputId(app: AppEntry): String? = inputIdOf(config.value.launchActions[app.packageName])
 
     /** Opens a tile that Home itself shows: an "input:<id>" tile switches input, any other starts the app. */
     public fun open(app: AppEntry): LaunchResult {
         inputId(app)?.let { return LaunchResult.SwitchInput(InputTarget.TvInput(it)) }
         if (!launch(app)) return LaunchResult.CantOpen
-        if (recordOpened) lastOpened.record(app.key)
+        config.value.let { if (it.cinematicHome || it.recordsUsage) lastOpened.record(app.key) }
         launchLog.record(app.packageName)
         return LaunchResult.Opened
     }
@@ -54,7 +54,7 @@ public class AppLauncher(
     /** Opens an app from the App library, which ignores launch_actions. True when the system accepted the launch. */
     public fun openFromLibrary(app: AppEntry): Boolean {
         if (!launch(app, useLaunchAction = false)) return false
-        if (recordLibraryOpened) lastOpened.record(app.key)
+        if (config.value.recordsUsage) lastOpened.record(app.key)
         return true
     }
 
@@ -64,7 +64,7 @@ public class AppLauncher(
         useLaunchAction: Boolean = true,
     ): Boolean {
         val intent =
-            launchIntent(app, if (useLaunchAction) launchActions[app.packageName] else null) {
+            launchIntent(app, if (useLaunchAction) config.value.launchActions[app.packageName] else null) {
                 context.packageManager.resolveActivity(it, 0) !=
                     null
             }

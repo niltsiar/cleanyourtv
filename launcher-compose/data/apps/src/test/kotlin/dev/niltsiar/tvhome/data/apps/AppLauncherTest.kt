@@ -1,9 +1,11 @@
 package dev.niltsiar.tvhome.data.apps
 
 import android.content.Intent
+import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.InputTarget
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -20,15 +22,20 @@ class AppLauncherTest {
     private val tile = AppEntry(key = "com.shop/.Main", packageName = "com.shop", label = "Shop", leanback = true)
 
     private val context = RuntimeEnvironment.getApplication()
-    private val lastOpened = LastOpened(context, Dispatchers.Unconfined)
+    private val config = MutableStateFlow(TvConfig(habitHint = true))
+    private val lastOpened = LastOpened(context, config, Dispatchers.Unconfined)
     private val logFile = File(context.filesDir, "launch_log.txt")
-    private val launchLog = LaunchLog(logFile, enabled = true, io = Dispatchers.Unconfined)
+    private val launchLog = LaunchLog(logFile, config, Dispatchers.Unconfined)
 
     private fun launcher(
         launchActions: Map<String, String> = emptyMap(),
         recordOpened: Boolean = true,
         recordLibraryOpened: Boolean = false,
-    ) = AppLauncher(context, launchActions, lastOpened, recordOpened, launchLog, recordLibraryOpened)
+    ): AppLauncher {
+        config.value =
+            TvConfig(habitHint = true, launchActions = launchActions, cinematicHome = recordOpened, libraryLeastUsed = recordLibraryOpened)
+        return AppLauncher(context, config, lastOpened, launchLog)
+    }
 
     private fun intent(
         app: AppEntry = tile,
@@ -120,6 +127,26 @@ class AppLauncherTest {
 
         assertTrue(launcher(recordOpened = true, recordLibraryOpened = true).openFromLibrary(tile))
         assertEquals(setOf(tile.key), lastOpened.times.value.keys)
+    }
+
+    @Test
+    fun the_same_launcher_follows_the_choices_as_they_change() {
+        val launcher = launcher(mapOf("com.shop" to "input:HW5"), recordOpened = false)
+        assertEquals(LaunchResult.SwitchInput(InputTarget.TvInput("HW5")), launcher.open(tile))
+
+        config.value = config.value.copy(launchActions = emptyMap(), cinematicHome = true)
+        assertEquals(LaunchResult.Opened, launcher.open(tile))
+        assertEquals(setOf(tile.key), lastOpened.times.value.keys)
+
+        val other = tile.copy(key = "com.other/.Main", packageName = "com.other")
+        config.value = config.value.copy(cinematicHome = false)
+        launcher.open(other)
+        launcher.openFromLibrary(other)
+        assertEquals(setOf(tile.key), lastOpened.times.value.keys)
+
+        config.value = config.value.copy(unusedFadeDays = 30)
+        launcher.openFromLibrary(other)
+        assertEquals(setOf(tile.key, other.key), lastOpened.times.value.keys)
     }
 
     @Test

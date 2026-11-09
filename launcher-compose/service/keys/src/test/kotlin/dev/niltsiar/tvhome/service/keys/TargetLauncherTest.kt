@@ -22,7 +22,7 @@ class TargetLauncherTest {
     private val hdmi = "com.tv.live/.HdmiInput/HW5"
 
     private fun launcher(liveTvPackage: String?) =
-        TargetLauncher(app, SystemSettings(app, null), performGlobal = null, liveTvPackage = liveTvPackage)
+        TargetLauncher(app, SystemSettings(app), performGlobal = null, liveTvPackage = liveTvPackage)
 
     private fun installChannelViewer(pkg: String) {
         val component = ComponentName(pkg, "$pkg.Channel")

@@ -7,6 +7,7 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -34,7 +35,7 @@ internal fun openOnStartDue(
  */
 public class OpenOnStart(
     context: Context,
-    private val config: TvConfig,
+    private val config: StateFlow<TvConfig>,
     private val validated: Flow<Boolean>,
     private val io: CoroutineDispatcher = Dispatchers.IO,
 ) {
@@ -43,12 +44,13 @@ public class OpenOnStart(
 
     /** The first Home of a boot: [open] gets the intent of the Live TV app, once per boot. */
     public suspend fun openAfterBoot(open: (Intent) -> Unit) {
-        if (!config.bootToLiveTv) return
+        val current = config.value
+        if (!current.bootToLiveTv) return
         val intent =
             withContext(io) {
                 val boot = Settings.Global.getInt(context.contentResolver, Settings.Global.BOOT_COUNT, -1)
                 val prefs = context.getSharedPreferences(BOOT_PREFS, Context.MODE_PRIVATE)
-                if (!openOnStartDue(boot, prefs.getInt(BOOT_KEY, -1), config.liveTvPackage, context.packageName)) return@withContext null
+                if (!openOnStartDue(boot, prefs.getInt(BOOT_KEY, -1), current.liveTvPackage, context.packageName)) return@withContext null
                 if (!prefs.edit().putInt(BOOT_KEY, boot).commit()) return@withContext null
                 liveTv.appIntent()
             } ?: return
@@ -60,7 +62,7 @@ public class OpenOnStart(
         intent: Intent,
         open: (Intent) -> Unit,
     ) {
-        val waitMs = config.openOnStartNetworkWait * 1000L
+        val waitMs = config.value.openOnStartNetworkWait * 1000L
         if (waitMs > 0) withTimeoutOrNull(waitMs) { validated.first { it } }
         open(intent)
     }

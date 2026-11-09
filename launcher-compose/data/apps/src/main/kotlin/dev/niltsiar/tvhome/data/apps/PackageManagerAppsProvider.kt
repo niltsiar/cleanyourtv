@@ -17,9 +17,12 @@ import dev.niltsiar.tvhome.core.model.AppList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -34,19 +37,23 @@ private const val TOP_BAR_ICON_DP = 22
  * launcher activities of packages added in the library or through library_apps, ordered by [arrange].
  *
  * [apps] emits the labels first, then the same list with banners or icons decoded to a tile 16:9 at the width
- * [tileWidthPx] gives for the theme's columns, and again, images included, each time the installed apps change. The change comes from package broadcasts while
+ * [tileWidthPx] gives for the columns, and again, images included, each time the installed apps or the columns change.
+ * The apps change comes from package broadcasts while
  * Home is started ([onStart], [onStop]), and from PackageManager's changed-packages log when Home starts again,
  * which catches what happened while it was stopped.
  */
 public class PackageManagerAppsProvider(
     private val context: Context,
-    private val config: TvConfig,
+    private val config: StateFlow<TvConfig>,
 ) {
-    private val images =
-        with(context.resources.displayMetrics) {
-            val width = tileWidthPx(widthPixels, config.columns, density)
-            TileImages(context, width, width * 9 / 16)
-        }
+    private class SizedImages(
+        val widthPx: Int,
+        val images: TileImages,
+    )
+
+    @Volatile
+    private var sized: SizedImages? = null
+    private val columns = config.map { it.columns }.distinctUntilChanged()
     private val orderFile = File(context.filesDir, ORDER_FILE_NAME)
     internal val library = LibraryStore(context.filesDir)
     private val refreshes = MutableStateFlow(0)
@@ -58,6 +65,7 @@ public class PackageManagerAppsProvider(
     @Volatile
     private var imagesDropped = false
     private val versions = refreshes.combine(trims, ::Pair)
+    private val appVersions = combine(refreshes, trims, columns, ::Triple)
     private val packageFilter =
         IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
@@ -91,18 +99,23 @@ public class PackageManagerAppsProvider(
         flow {
             var seen = refreshes.value
             var trimmed = trims.value
+            var seenColumns = config.value.columns
             var loaded = load()
             emit(loaded.toAppList(withImages = false))
             emit(loaded.toAppList(withImages = true))
             imagesDropped = false
             // A refresh shows no bare labels first: that would blank every banner for a frame.
-            versions.collect { (version, trim) ->
+            appVersions.collect { (version, trim, tileColumns) ->
                 if (version != seen) {
                     seen = version
                     trimmed = trim
+                    seenColumns = tileColumns
                     loaded = load()
                     emit(loaded.toAppList(withImages = true))
                     imagesDropped = false
+                } else if (tileColumns != seenColumns) {
+                    seenColumns = tileColumns
+                    emit(loaded.toAppList(withImages = !imagesDropped))
                 } else if (trim != trimmed) {
                     trimmed = trim
                     emit(loaded.toAppList(withImages = false))
@@ -141,7 +154,7 @@ public class PackageManagerAppsProvider(
                 val info = loaded[key] ?: return@run null
                 val art =
                     try {
-                        images.artwork(info.activityInfo) { info.loadIcon(context.packageManager) }?.let(::heroArtFrom)
+                        tileImages().artwork(info.activityInfo) { info.loadIcon(context.packageManager) }?.let(::heroArtFrom)
                     } catch (e: RuntimeException) {
                         Log.w(TAG, "no hero art for $key: $e")
                         null
@@ -160,7 +173,7 @@ public class PackageManagerAppsProvider(
         docked: Int,
     ): Boolean =
         withContext(Dispatchers.IO) {
-            writeOrder(orderFile, Order(Order.dockKey(config.dockApps), keys, docked)).also { if (it) requestRefresh() }
+            writeOrder(orderFile, Order(Order.dockKey(config.value.dockApps), keys, docked)).also { if (it) requestRefresh() }
         }
 
     /** Counts the loads asked for: package changes and [libraryChanged]. A collector starts at the current count. */
@@ -170,7 +183,7 @@ public class PackageManagerAppsProvider(
     internal fun libraryChanged() = requestRefresh()
 
     /** The library choices with the config's library_apps added. */
-    internal fun libraryChoices(): LibraryChoices = library.load().let { it.copy(added = it.added + config.libraryApps) }
+    internal fun libraryChoices(): LibraryChoices = library.load().let { it.copy(added = it.added + config.value.libraryApps) }
 
     /**
      * Memory is short while Home is stopped: let go of the hero arts, and send the tiles and top-bar apps on again without
@@ -204,9 +217,16 @@ public class PackageManagerAppsProvider(
     }
 
     private fun loadTopBarApps() =
-        loadTopBarApps(context, config.topBarApps, (TOP_BAR_ICON_DP * context.resources.displayMetrics.density).roundToInt())
+        loadTopBarApps(context, config.value.topBarApps, (TOP_BAR_ICON_DP * context.resources.displayMetrics.density).roundToInt())
 
     private fun requestRefresh() = refreshes.update { it + 1 }
+
+    /** The tile art maker for the columns now; made again when they change the tile width. */
+    private fun tileImages(): TileImages {
+        val width = with(context.resources.displayMetrics) { tileWidthPx(widthPixels, config.value.columns, density) }
+        sized?.takeIf { it.widthPx == width }?.let { return it.images }
+        return TileImages(context, width, width * 9 / 16).also { sized = SizedImages(width, it) }
+    }
 
     private class Loaded(
         val arrangement: Arrangement,
@@ -240,7 +260,7 @@ public class PackageManagerAppsProvider(
                 infos[key] = info
                 Candidate(key, activity.packageName, info.loadLabel(pm).toString(), activity.exported)
             }
-        val arrangement = arrange(candidates, tvPackages, config, readOrder(orderFile), context.packageName, choices)
+        val arrangement = arrange(candidates, tvPackages, config.value, readOrder(orderFile), context.packageName, choices)
         this.infos = infos
         heroArts.clear()
         return Loaded(arrangement, infos, tvPackages, homePackages)
@@ -273,7 +293,7 @@ public class PackageManagerAppsProvider(
         info: ResolveInfo,
         pm: PackageManager,
     ) = try {
-        images.load(info.activityInfo) { info.loadIcon(pm) }
+        tileImages().load(info.activityInfo) { info.loadIcon(pm) }
     } catch (e: RuntimeException) {
         Log.w(TAG, "no artwork for ${info.activityInfo.packageName}: $e")
         TileArt(null, NO_ART_ACCENT)

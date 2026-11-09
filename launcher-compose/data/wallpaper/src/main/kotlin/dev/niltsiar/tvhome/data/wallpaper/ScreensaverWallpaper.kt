@@ -6,6 +6,7 @@ import dev.niltsiar.tvhome.core.config.ThemeDirectory
 import dev.niltsiar.tvhome.core.config.TvConfig
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 
@@ -20,9 +21,9 @@ public class ScreensaverWallpaper internal constructor(
 ) {
     public constructor(
         context: Context,
-        config: TvConfig,
+        config: StateFlow<TvConfig>,
         theme: ThemeDirectory,
-    ) : this(WallpaperProvider(context, config, theme, dim = config.clockWallpaperDim, thumbnails = false))
+    ) : this(WallpaperProvider(context, config, theme, dim = TvConfig::clockWallpaperDim, thumbnails = false))
 
     /**
      * The picture for now, decoded for the screen, or null when the theme has none or it cannot be read. It moves to the

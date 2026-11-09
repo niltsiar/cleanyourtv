@@ -2,6 +2,7 @@ package dev.niltsiar.tvhome.data.apps
 
 import dev.niltsiar.tvhome.core.config.TvConfig
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -17,7 +18,7 @@ import java.io.File
 @RunWith(RobolectricTestRunner::class)
 class OrderSaveTest {
     private val context = RuntimeEnvironment.getApplication()
-    private val config = TvConfig(dockApps = listOf("a.dock", "b.dock"))
+    private val config = MutableStateFlow(TvConfig(dockApps = listOf("a.dock", "b.dock")))
     private val file = File(context.filesDir, ORDER_FILE_NAME)
 
     @Test

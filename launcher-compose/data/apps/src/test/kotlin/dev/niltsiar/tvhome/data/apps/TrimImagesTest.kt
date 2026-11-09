@@ -7,6 +7,7 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -45,7 +46,7 @@ class TrimImagesTest {
     fun trimmed_tiles_keep_their_keys_and_order_lose_their_images_and_get_them_back_on_the_next_start() {
         for (pkg in listOf("a.tv", "b.tv", "c.tv")) installTvApp(context, pkg)
         val keys = listOf("c.tv/.Main", "a.tv/.Main", "b.tv/.Main")
-        val provider = PackageManagerAppsProvider(context, TvConfig())
+        val provider = PackageManagerAppsProvider(context, MutableStateFlow(TvConfig()))
         runBlocking { provider.saveOrder(keys, docked = -1) }
         val written = orderFile.readText()
 
@@ -75,7 +76,7 @@ class TrimImagesTest {
             component,
             IntentFilter(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_LAUNCHER) },
         )
-        val provider = PackageManagerAppsProvider(context, TvConfig(topBarApps = listOf("com.bar")))
+        val provider = PackageManagerAppsProvider(context, MutableStateFlow(TvConfig(topBarApps = listOf("com.bar"))))
 
         collecting(provider.topBarApps) { next ->
             assertNotNull(next().single().image)

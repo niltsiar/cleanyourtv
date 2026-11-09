@@ -31,14 +31,13 @@ import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import java.io.File
 
 @DependencyGraph(AppScope::class)
 interface AppGraph {
     val config: TvConfig
+    val configRepository: ConfigRepository
     val appsProvider: PackageManagerAppsProvider
     val appLauncher: AppLauncher
     val networkMonitor: NetworkMonitor
@@ -58,7 +57,7 @@ interface AppGraph {
     fun provideConfigRepository(application: Application): ConfigRepository =
         ConfigRepository(application, CoroutineScope(SupervisorJob() + Dispatchers.IO))
 
-    /** The repository's value when the graph is made: no consumer follows the flow yet. */
+    /** The repository's value when the graph is made, for the UI until it follows the flow. */
     @Provides
     @SingleIn(AppScope::class)
     fun provideConfig(repository: ConfigRepository): TvConfig = repository.config.value
@@ -67,42 +66,39 @@ interface AppGraph {
     @SingleIn(AppScope::class)
     fun provideAppsProvider(
         application: Application,
-        config: TvConfig,
-    ): PackageManagerAppsProvider = PackageManagerAppsProvider(application, config)
+        repository: ConfigRepository,
+    ): PackageManagerAppsProvider = PackageManagerAppsProvider(application, repository.config)
 
     @Provides
     @SingleIn(AppScope::class)
     fun provideLibraryCatalog(
         application: Application,
-        config: TvConfig,
+        repository: ConfigRepository,
         appsProvider: PackageManagerAppsProvider,
-    ): LibraryCatalog = LibraryCatalog(application, config, appsProvider)
+    ): LibraryCatalog = LibraryCatalog(application, repository.config, appsProvider)
 
     @Provides
     @SingleIn(AppScope::class)
     fun provideAppLauncher(
         application: Application,
-        config: TvConfig,
+        repository: ConfigRepository,
         lastOpened: LastOpened,
         launchLog: LaunchLog,
-    ): AppLauncher {
-        val usage = config.libraryLeastUsed || config.unusedFadeDays > 0
-        return AppLauncher(application, config.launchActions, lastOpened, config.cinematicHome || usage, launchLog, usage)
-    }
+    ): AppLauncher = AppLauncher(application, repository.config, lastOpened, launchLog)
 
     @Provides
     @SingleIn(AppScope::class)
     fun provideLaunchLog(
         application: Application,
-        config: TvConfig,
-    ): LaunchLog = LaunchLog(File(application.filesDir, "launch_log.txt"), config.habitHint)
+        repository: ConfigRepository,
+    ): LaunchLog = LaunchLog(File(application.filesDir, "launch_log.txt"), repository.config)
 
     @Provides
     @SingleIn(AppScope::class)
     fun provideLastOpened(
         application: Application,
-        config: TvConfig,
-    ): LastOpened = LastOpened(application, startRecord = config.libraryLeastUsed || config.unusedFadeDays > 0)
+        repository: ConfigRepository,
+    ): LastOpened = LastOpened(application, repository.config)
 
     @Provides
     @SingleIn(AppScope::class)
@@ -123,44 +119,44 @@ interface AppGraph {
     @SingleIn(AppScope::class)
     fun provideInputsProvider(
         application: Application,
-        config: TvConfig,
-    ): InputsProvider = InputsProvider(application, config)
+        repository: ConfigRepository,
+    ): InputsProvider = InputsProvider(application, repository.config)
 
     @Provides
     @SingleIn(AppScope::class)
     fun provideInputLauncher(
         application: Application,
-        config: TvConfig,
-    ): InputLauncher = InputLauncher(application, config)
+        repository: ConfigRepository,
+    ): InputLauncher = InputLauncher(application, repository.config)
 
     @Provides
     @SingleIn(AppScope::class)
     fun provideOpenOnStart(
         application: Application,
-        config: TvConfig,
+        repository: ConfigRepository,
         networkMonitor: NetworkMonitor,
-    ): OpenOnStart = OpenOnStart(application, config, networkMonitor.state.map { it.validated })
+    ): OpenOnStart = OpenOnStart(application, repository.config, networkMonitor.state.map { it.validated })
 
     @Provides
     @SingleIn(AppScope::class)
     fun provideSystemSettings(
         application: Application,
-        config: TvConfig,
-    ): SystemSettings = SystemSettings(application, config.vpnApp)
+        repository: ConfigRepository,
+    ): SystemSettings = SystemSettings(application) { repository.config.value.vpnApp }
 
     @Provides
     @SingleIn(AppScope::class)
     fun provideWallpaperProvider(
         application: Application,
-        config: TvConfig,
-    ): WallpaperProvider = WallpaperProvider(application, config, ThemeDirectory(application))
+        repository: ConfigRepository,
+    ): WallpaperProvider = WallpaperProvider(application, repository.config, ThemeDirectory(application))
 
     @Provides
     @SingleIn(AppScope::class)
     fun provideScreensaverWallpaper(
         application: Application,
-        config: TvConfig,
-    ): ScreensaverWallpaper = ScreensaverWallpaper(application, config, ThemeDirectory(application))
+        repository: ConfigRepository,
+    ): ScreensaverWallpaper = ScreensaverWallpaper(application, repository.config, ThemeDirectory(application))
 
     /** Lives as long as the process, so an activity created again returns to the tile it left. */
     @Provides
@@ -171,7 +167,6 @@ interface AppGraph {
     @SingleIn(AppScope::class)
     fun provideHomeSources(
         application: Application,
-        config: TvConfig,
         appsProvider: PackageManagerAppsProvider,
         lastOpened: LastOpened,
         launchLog: LaunchLog,
@@ -201,15 +196,7 @@ interface AppGraph {
             removeFromHome = { libraryCatalog.setOnHome(it, false) },
             inputs = inputsProvider.menu,
             focusMemory = focusMemory,
-            libraryCount =
-                if (config.appLibrary) {
-                    flow {
-                        emit(libraryCatalog.count())
-                        libraryCatalog.changes.collect { emit(libraryCatalog.count()) }
-                    }
-                } else {
-                    emptyFlow()
-                },
+            libraryCount = libraryCatalog.counts,
         )
 
     @Provides

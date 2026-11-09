@@ -8,6 +8,7 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.core.model.startActivitySafely
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 
 private const val TAG = "TvHome.Inputs"
@@ -36,7 +37,7 @@ internal fun sourcePanelIntent(config: TvConfig): Intent? {
 /** Opens what an Inputs menu row, or a tile with a launch_actions "input:<id>", stands for. */
 public class InputLauncher(
     context: Context,
-    private val config: TvConfig,
+    private val config: StateFlow<TvConfig>,
 ) {
     private val appContext = context.applicationContext
     private val source = TvInputSource(appContext)
@@ -65,7 +66,7 @@ public class InputLauncher(
     }
 
     private fun openSourcePanel(): Boolean {
-        val intent = sourcePanelIntent(config) ?: return false
+        val intent = sourcePanelIntent(config.value) ?: return false
         return try {
             if (appContext.packageManager.resolveActivity(intent, 0) != null) {
                 appContext.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))

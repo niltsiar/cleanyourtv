@@ -8,6 +8,7 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.config.WallpaperMood
 import dev.niltsiar.tvhome.core.config.WallpaperOrder
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -50,7 +51,7 @@ class WallpaperProviderTest {
 
     private fun provider(config: TvConfig) =
         WallpaperProvider(
-            config = config,
+            config = MutableStateFlow(config),
             single = File(themeDir.root, "wallpaper.jpg"),
             folder = collection,
             preferences = preferences,

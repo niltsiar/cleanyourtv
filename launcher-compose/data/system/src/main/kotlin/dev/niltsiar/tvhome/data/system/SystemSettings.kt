@@ -16,16 +16,16 @@ internal fun newTaskFlags(clearTask: Boolean): Int =
 
 /**
  * Opens the TV's system settings the way the reference launcher does. [fallbackComponents] are vendor settings
- * activities ("package/class") tried in order when no standard handler is usable. [vpnApp] is the package the
- * network button opens instead of Wi-Fi settings, when it is installed.
+ * activities ("package/class") tried in order when no standard handler is usable. [vpnApp] gives the package the
+ * network button opens instead of Wi-Fi settings, when it is installed; it is asked at each press.
  */
 public class SystemSettings internal constructor(
     private val context: Context,
     private val fallbackComponents: List<String>,
-    private val vpnApp: String?,
+    private val vpnApp: () -> String?,
 ) {
     /** With the vendor settings activities this module ships. */
-    public constructor(context: Context, vpnApp: String?) :
+    public constructor(context: Context, vpnApp: () -> String? = { null }) :
         this(context, context.resources.getStringArray(R.array.settings_fallback_components).toList(), vpnApp)
 
     /** True when the system accepted the intent. [clearTask] starts Settings in a fresh task, so Back from it goes Home. */
@@ -73,7 +73,7 @@ public class SystemSettings internal constructor(
 
     private fun appInfoIntent(packageName: String) = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:$packageName".toUri())
 
-    private fun vpnAppIntent(): Intent? = vpnApp?.let(context.packageManager::tvLaunchIntent)
+    private fun vpnAppIntent(): Intent? = vpnApp()?.let(context.packageManager::tvLaunchIntent)
 
     private fun isInstalled(packageName: String): Boolean =
         try {

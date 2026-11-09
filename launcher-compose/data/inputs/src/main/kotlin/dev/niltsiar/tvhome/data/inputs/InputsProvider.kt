@@ -7,9 +7,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transformLatest
@@ -27,13 +28,12 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 public class InputsProvider(
     context: Context,
-    private val config: TvConfig,
+    private val config: StateFlow<TvConfig>,
 ) {
     private val appContext = context.applicationContext
     private val source = TvInputSource(appContext)
     private val coocaa = CoocaaSources(appContext)
     private val liveTv = LiveTv(appContext, config)
-    private val settings = InputsSettings(config.inputSources, config.inputsConnectedOnly, config.inputsCecStateOnly)
     private val started = MutableStateFlow(false)
     private val arrivals = AtomicInteger()
 
@@ -53,18 +53,24 @@ public class InputsProvider(
         started.value = false
     }
 
-    /** Each look at the TV's inputs while Home is started; a new start begins a new [ArrivalWatch]. */
+    /**
+     * Each look at the TV's inputs while Home is started; a new start, or input_arrival turning on or off, begins a new
+     * [ArrivalWatch].
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun readings(): Flow<InputsMenu> =
-        flow {
-            val watch = if (config.inputArrival) ArrivalWatch(arrivals::incrementAndGet) else null
-            emitAll(source.changes().map { read(watch) }.flowOn(Dispatchers.IO))
+        config.map { it.inputArrival }.distinctUntilChanged().flatMapLatest { arrival ->
+            val watch = if (arrival) ArrivalWatch(arrivals::incrementAndGet) else null
+            source.changes().map { read(watch) }.flowOn(Dispatchers.IO)
         }
 
     private fun read(watch: ArrivalWatch?): InputsMenu {
+        val current = config.value
         val inputs = source.inputs()
-        val sources = if (config.coocaaSources) coocaa.list() else emptyList()
+        val sources = if (current.coocaaSources) coocaa.list() else emptyList()
         val app = liveTv.appIntent() != null
-        val panel = config.sourcePanelService != null
+        val panel = current.sourcePanelService != null
+        val settings = InputsSettings(current.inputSources, current.inputsConnectedOnly, current.inputsCecStateOnly)
         val ports = portEntries(inputs, settings)
         return InputsMenu(
             available = app || panel || sources.isNotEmpty() || inputs.any { it.passthrough && !it.hidden },

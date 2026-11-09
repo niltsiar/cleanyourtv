@@ -24,7 +24,7 @@ class SystemSettingsTest {
     private val packages = shadowOf(app.packageManager)
     private val vendor = "com.vendor.settings/com.vendor.settings.Main"
 
-    private fun settings(vpnApp: String? = null) = SystemSettings(app, listOf("broken", vendor), vpnApp)
+    private fun settings(vpnApp: String? = null) = SystemSettings(app, listOf("broken", vendor)) { vpnApp }
 
     private fun answerStandardAction(activity: String) {
         val info =
@@ -146,7 +146,7 @@ class SystemSettingsTest {
     fun the_default_constructor_knows_the_vendor_settings_activities() {
         packages.installPackage(PackageInfo().apply { packageName = "com.tcl.settings" })
 
-        assertEquals("com.tcl.settings.ui.MainActivity", SystemSettings(app, null).intent(Settings.ACTION_SETTINGS).component?.className)
+        assertEquals("com.tcl.settings.ui.MainActivity", SystemSettings(app).intent(Settings.ACTION_SETTINGS).component?.className)
     }
 
     @Test

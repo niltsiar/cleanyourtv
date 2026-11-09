@@ -12,6 +12,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
@@ -38,7 +39,7 @@ private const val KEY_CHANGED = "changed"
  * starts again from its first picture. [wallpaper] follows the minute clock only between [onStart] and [onStop].
  */
 public class WallpaperProvider internal constructor(
-    private val config: TvConfig,
+    private val config: StateFlow<TvConfig>,
     private val single: File?,
     private val folder: File?,
     private val preferences: SharedPreferences,
@@ -47,24 +48,26 @@ public class WallpaperProvider internal constructor(
     private val random: Random = Random.Default,
 ) {
     /**
-     * [dim] is the percent painted into each picture: wallpaper_dim for Home, clock_wallpaper_dim for the screensaver.
+     * [dim] picks the percent painted into each picture: wallpaper_dim for Home, clock_wallpaper_dim for the screensaver.
      * [thumbnails] gives each [Wallpaper] its [Wallpaper.thumbnail].
      */
     public constructor(
         context: Context,
-        config: TvConfig,
+        config: StateFlow<TvConfig>,
         theme: ThemeDirectory,
-        dim: Int = config.wallpaperDim,
+        dim: (TvConfig) -> Int = TvConfig::wallpaperDim,
         thumbnails: Boolean = true,
     ) : this(
         config = config,
         single = theme.wallpaperFile,
         folder = theme.wallpapersFolder,
         preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE),
-        decode =
+        decode = { file ->
+            val current = config.value
             with(context.resources.displayMetrics) {
-                WallpaperDecoder(widthPixels, heightPixels, config.wallpaperTrueColor, dim, thumbnails)::decode
-            },
+                WallpaperDecoder(widthPixels, heightPixels, current.wallpaperTrueColor, dim(current), thumbnails).decode(file)
+            }
+        },
     )
 
     private class Pictures(
@@ -119,13 +122,14 @@ public class WallpaperProvider internal constructor(
     /** Shows what [now] calls for: the next picture when it is due, one of the time of day's group, or the same one. */
     internal fun advance(now: LocalDateTime): Wallpaper {
         val zone = zone()
-        selectPicture(now, zone)
+        val current = config.value
+        selectPicture(now, zone, current)
         val minute = Sky.minuteOfDay(now.hour, now.minute)
         val shown = picture
         return Wallpaper(
             picture = shown?.picture,
             caption = if (shown == null) null else pictures.captions[displayed],
-            sky = if (config.skyIntensity > 0) sky(now, minute, zone) else null,
+            sky = if (current.skyIntensity > 0) sky(current, now, minute, zone) else null,
             thumbnail = shown?.thumbnail,
         )
     }
@@ -133,18 +137,19 @@ public class WallpaperProvider internal constructor(
     private fun selectPicture(
         now: LocalDateTime,
         zone: ZoneId,
+        current: TvConfig,
     ) {
         val files = pictures.files
         val millis = now.atZone(zone).toInstant().toEpochMilli()
-        val interval = TimeUnit.MINUTES.toMillis(config.wallpaperRotationMinutes.toLong())
+        val interval = TimeUnit.MINUTES.toMillis(current.wallpaperRotationMinutes.toLong())
         while (files.isNotEmpty()) {
             val previous = preferences.getString(KEY_IMAGE, "").orEmpty()
             val changed = preferences.getLong(KEY_CHANGED, 0)
             // A picture outside the time of day's group (the group changed) is replaced at once, not after the interval.
-            val playable = playable(files, now, zone)
+            val playable = playable(current, files, now, zone)
             var selected = WallpaperRotation.find(playable, previous)
             if (selected == null || WallpaperRotation.due(changed, millis, interval)) {
-                selected = WallpaperRotation.pick(playable, previous, config.wallpaperOrder, random)
+                selected = WallpaperRotation.pick(playable, previous, current.wallpaperOrder, random)
             }
             if (selected == null || selected.name == displayed) return
             val decoded = decode(selected)
@@ -168,29 +173,32 @@ public class WallpaperProvider internal constructor(
 
     /** The pictures the rotation picks from now: wallpaper_moods' group for the time of day, or the whole collection. */
     private fun playable(
+        current: TvConfig,
         files: List<File>,
         now: LocalDateTime,
         zone: ZoneId,
     ): List<File> {
-        if (config.wallpaperMoods.isEmpty()) return files
-        val sun = WallpaperMoods.sun(now.toLocalDate(), config.place, zone)
-        return WallpaperMoods.select(files, config.wallpaperMoods, WallpaperMoods.timeOfDay(now.hour * 60 + now.minute, sun))
+        if (current.wallpaperMoods.isEmpty()) return files
+        val sun = WallpaperMoods.sun(now.toLocalDate(), current.place, zone)
+        return WallpaperMoods.select(files, current.wallpaperMoods, WallpaperMoods.timeOfDay(now.hour * 60 + now.minute, sun))
     }
 
     private fun sky(
+        current: TvConfig,
         now: LocalDateTime,
         minute: Int,
         zone: ZoneId,
     ): SkyPalette {
-        val sun = config.place?.let { Sun.riseAndSet(now.toLocalDate(), it.latitude, it.longitude, zone) }
+        val sun = current.place?.let { Sun.riseAndSet(now.toLocalDate(), it.latitude, it.longitude, zone) }
         return if (sun == null) Sky.at(minute) else Sky.at(minute, sun.sunrise, sun.sunset)
     }
 
     private fun loadPictures(): Pictures {
+        val current = config.value
         val files = mutableListOf<File>()
         var fromFolder = false
-        if (config.wallpaper) {
-            if (config.wallpaperRotationMinutes > 0) {
+        if (current.wallpaper) {
+            if (current.wallpaperRotationMinutes > 0) {
                 files += WallpaperRotation.images(folder)
                 fromFolder = files.isNotEmpty()
             }
@@ -207,7 +215,7 @@ public class WallpaperProvider internal constructor(
                 .remove(KEY_CHANGED)
                 .apply()
         }
-        val captions = if (config.wallpaperCaptions && fromFolder) WallpaperCaptions.read(folder) else emptyMap()
+        val captions = if (current.wallpaperCaptions && fromFolder) WallpaperCaptions.read(folder) else emptyMap()
         return Pictures(files, captions)
     }
 }
