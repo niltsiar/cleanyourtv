@@ -6,6 +6,8 @@ import android.util.Log
 import java.io.File
 
 private const val TAG = "TvHome.Config"
+private const val ABSENT = "absent"
+private const val MAX_REVISION_BYTES = 64
 
 /**
  * The folder tools/theme.sh pushes a theme into (the app's external files directory), and the files in it:
@@ -20,13 +22,26 @@ public class ThemeDirectory(
     public val wallpaperFile: File? get() = dir?.resolve(ThemeFiles.WALLPAPER_JPG)
     public val wallpapersFolder: File? get() = dir?.resolve(ThemeFiles.WALLPAPERS)
 
+    /** False while external storage is unmounted, when the theme files cannot be told from a reset. */
+    internal val mounted: Boolean get() = Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED
+
+    /**
+     * What changes when a theme is pushed or reset: config.json's size and time, and the text of theme_revision, which
+     * tools/theme.sh writes on each push or reset.
+     */
+    internal fun signature(): ThemeSignature {
+        val config = dir?.resolve(ThemeFiles.CONFIG_JSON)
+        val stamp = if (config != null && config.isFile) "${config.length()}@${config.lastModified()}" else ABSENT
+        val revision = revisionToken(dir?.resolve(ThemeFiles.THEME_REVISION))
+        return ThemeSignature("$stamp:${revision ?: ABSENT}", pushed = revision != null)
+    }
+
     /**
      * config.json parsed over the defaults. Home can start before external storage is mounted, so then the
      * copy kept in filesDir at the last read stands in; on mounted storage a file that is missing, too large or
      * not a JSON object deletes the copy, as the reference launcher does.
      */
     public fun loadConfig(): ParsedConfig {
-        val mounted = Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED
         val copy = context.filesDir.resolve(ThemeFiles.CONFIG_JSON)
         val parsed = readConfig(dir?.resolve(ThemeFiles.CONFIG_JSON), copy, mounted)
         if (parsed.unknownKeys.isNotEmpty()) Log.w(TAG, "unknown keys in config.json, ignored: ${parsed.unknownKeys.joinToString()}")
@@ -34,6 +49,18 @@ public class ThemeDirectory(
         if (parsed.rejectedKeys.isNotEmpty()) Log.w(TAG, "bad values in config.json, defaults kept: ${parsed.rejectedKeys.joinToString()}")
         return parsed
     }
+}
+
+/** [value] identifies the theme on disk; [pushed] is true when tools/theme.sh left a revision. */
+internal class ThemeSignature(
+    val value: String,
+    val pushed: Boolean,
+)
+
+/** The revision file's text, or null when it is missing, empty, over 64 bytes or unreadable. */
+private fun revisionToken(file: File?): String? {
+    if (file == null || !file.isFile || file.length() > MAX_REVISION_BYTES) return null
+    return runCatching { file.readBytes().toString(Charsets.US_ASCII) }.getOrNull()?.ifEmpty { null }
 }
 
 internal fun readConfig(

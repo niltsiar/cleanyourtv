@@ -2,6 +2,7 @@ package dev.niltsiar.tvhome
 
 import android.app.Application
 import android.text.format.DateFormat
+import dev.niltsiar.tvhome.core.config.ConfigRepository
 import dev.niltsiar.tvhome.core.config.ThemeDirectory
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.data.apps.AppLauncher
@@ -52,10 +53,15 @@ interface AppGraph {
     val inputLauncher: InputLauncher
     val openOnStart: OpenOnStart
 
-    /** Read once per process: a pushed theme restarts Home, as in the reference launcher. */
     @Provides
     @SingleIn(AppScope::class)
-    fun provideConfig(application: Application): TvConfig = ThemeDirectory(application).loadConfig().config
+    fun provideConfigRepository(application: Application): ConfigRepository =
+        ConfigRepository(application, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+
+    /** The repository's value when the graph is made: no consumer follows the flow yet. */
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideConfig(repository: ConfigRepository): TvConfig = repository.config.value
 
     @Provides
     @SingleIn(AppScope::class)

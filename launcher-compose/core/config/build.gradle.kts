@@ -21,7 +21,10 @@ android {
 }
 
 dependencies {
+    api(libs.kotlinx.coroutines.core)
+    implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
 }
