@@ -55,4 +55,6 @@
   </plurals>
   <string name="habit_usual">אתם פותחים אותה בדרך כלל בשעה הזו</string>
   <string name="never_opened">מעולם לא נפתחה</string>
+  <string name="launcher_settings">הגדרות מסך הבית</string>
+  <string name="launcher_settings_summary">פריסה, שעון ותנועה</string>
 </resources>

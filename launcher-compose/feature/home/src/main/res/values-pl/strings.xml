@@ -55,4 +55,6 @@
   </plurals>
   <string name="habit_usual">Zwykle otwierasz ją o tej porze</string>
   <string name="never_opened">Nigdy nieotwierana</string>
+  <string name="launcher_settings">Ustawienia ekranu głównego</string>
+  <string name="launcher_settings_summary">Układ, zegar i ruch</string>
 </resources>

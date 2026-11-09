@@ -53,11 +53,12 @@ public data class SettingsSection(
     val rows: List<SettingsRow>,
 )
 
-/** What the screen shows. [followsTheme] is true while no choice is stored. */
+/** What the screen shows. [followsTheme] is true while no choice is stored. [reorder] adds a Reorder row first (launcher_settings_button). */
 @Immutable
 public data class SettingsUiState(
     val sections: List<SettingsSection>,
     val followsTheme: Boolean,
+    val reorder: Boolean = false,
 )
 
 internal sealed interface SettingsEvent {

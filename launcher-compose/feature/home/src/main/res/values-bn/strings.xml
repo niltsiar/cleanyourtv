@@ -51,4 +51,6 @@
   </plurals>
   <string name="habit_usual">আপনি সাধারণত এই সময়ে এটি খোলেন</string>
   <string name="never_opened">কখনও খোলা হয়নি</string>
+  <string name="launcher_settings">লঞ্চার সেটিংস</string>
+  <string name="launcher_settings_summary">লেআউট, ঘড়ি ও গতি</string>
 </resources>

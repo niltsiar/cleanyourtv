@@ -98,6 +98,11 @@ public class MoleculeHomeViewModel(
         events.trySend(HomeEvent.Started)
     }
 
+    /** The Launcher settings page closed: Home applies the config it changed and returns focus. */
+    public fun onSettingsClosed(reorder: Boolean) {
+        events.trySend(HomeEvent.SettingsClosed(reorder))
+    }
+
     /** Home left the screen: a reorder ends and saves, a menu closes. */
     public fun onStopped() {
         events.trySend(HomeEvent.Stopped)

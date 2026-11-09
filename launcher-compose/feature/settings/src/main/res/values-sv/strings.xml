@@ -32,4 +32,5 @@
   <string name="settings_follow_theme">Följ temat (återställ val på TV:n)</string>
   <string name="settings_tv_settings">TV:ns systeminställningar</string>
   <string name="settings_save_failed">Inställningen kunde inte sparas</string>
+  <string name="settings_reorder">Ändra ordning på appar</string>
 </resources>

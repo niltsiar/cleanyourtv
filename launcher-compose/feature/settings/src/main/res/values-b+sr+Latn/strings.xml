@@ -32,4 +32,5 @@
   <string name="settings_follow_theme">Prati temu (resetuj izbore)</string>
   <string name="settings_tv_settings">Sistemska podešavanja TV-a</string>
   <string name="settings_save_failed">Podešavanje nije sačuvano</string>
+  <string name="settings_reorder">Promeni redosled aplikacija</string>
 </resources>

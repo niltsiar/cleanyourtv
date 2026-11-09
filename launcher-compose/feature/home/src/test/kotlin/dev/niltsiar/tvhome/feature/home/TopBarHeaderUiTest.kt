@@ -20,6 +20,7 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
+import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.InputConnection
 import dev.niltsiar.tvhome.core.model.InputsMenu
@@ -47,19 +48,20 @@ class TopBarHeaderUiTest {
     private fun showHome(
         inputs: InputsMenu = FourPorts,
         network: NetworkState = NetworkState(NetworkLink.Wifi, ssid = "Living room", validated = true),
+        config: TvConfig = cinematic,
     ) {
         val sources = sources(inputs = flowOf(inputs), network = flowOf(network), libraryCount = flowOf(23))
         compose.setContent {
             TvTheme {
-                val viewModel = rememberHomeViewModel(sources, cinematic, mutableListOf())
+                val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(
                     state = { state.value },
-                    layout = cinematic.homeLayout(),
+                    layout = config.homeLayout(),
                     onFocus = viewModel::onFocus,
                     onClick = {},
-                    topBar = cinematic.topBarLayout(),
-                    shelfLayout = cinematic.shelfLayout().copy(scrimAlpha = 0f),
+                    topBar = config.topBarLayout(),
+                    shelfLayout = config.shelfLayout().copy(scrimAlpha = 0f),
                     actions = viewModel.actions,
                     inputsRequests = { inputsRequests },
                 )
@@ -159,6 +161,34 @@ class TopBarHeaderUiTest {
         compose.onNodeWithContentDescription("Settings").assertIsFocused()
         assertEquals("Settings", textOf("shelf:title"))
         assertEquals("Home and system", textOf("shelf:title-meta"))
+    }
+
+    @Test
+    fun with_launcher_settings_button_the_band_on_the_settings_button_names_launcher_settings() {
+        showHome(config = cinematic.copy(launcherSettingsButton = true))
+
+        press(Key.DirectionUp)
+        repeat(3) { press(Key.DirectionRight) }
+
+        compose.onNodeWithContentDescription("Launcher settings").assertIsFocused()
+        assertEquals("Launcher settings", textOf("shelf:title"))
+        assertEquals("Layout, clock and motion", textOf("shelf:title-meta"))
+    }
+
+    @Test
+    fun with_launcher_settings_button_the_band_keeps_naming_launcher_settings_while_the_settings_menu_is_open() {
+        showHome(config = cinematic.copy(launcherSettingsButton = true))
+        press(Key.DirectionUp)
+        repeat(3) { press(Key.DirectionRight) }
+
+        compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
+        compose.mainClock.advanceTimeBy(600)
+        compose.onRoot().performKeyInput { keyUp(Key.DirectionCenter) }
+        compose.waitForIdle()
+
+        compose.onNodeWithTag("menu").assertExists()
+        assertEquals("Launcher settings", textOf("shelf:title"))
+        assertEquals("Layout, clock and motion", textOf("shelf:title-meta"))
     }
 
     @Test

@@ -50,4 +50,6 @@
   </plurals>
   <string name="habit_usual">Biasanya Anda membukanya pada jam ini</string>
   <string name="never_opened">Belum pernah dibuka</string>
+  <string name="launcher_settings">Setelan antarmuka</string>
+  <string name="launcher_settings_summary">Tata letak, jam, dan gerakan</string>
 </resources>

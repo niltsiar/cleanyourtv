@@ -56,4 +56,6 @@
   </plurals>
   <string name="habit_usual">Обычно вы открываете её в это время</string>
   <string name="never_opened">Ни разу не открывалось</string>
+  <string name="launcher_settings">Настройки главного экрана</string>
+  <string name="launcher_settings_summary">Макет, часы и движение</string>
 </resources>

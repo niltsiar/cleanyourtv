@@ -32,4 +32,5 @@
   <string name="settings_follow_theme">לפי ערכת הנושא (איפוס הבחירות בטלוויזיה)</string>
   <string name="settings_tv_settings">הגדרות מערכת הטלוויזיה</string>
   <string name="settings_save_failed">לא ניתן היה לשמור את ההגדרה</string>
+  <string name="settings_reorder">סידור אפליקציות</string>
 </resources>

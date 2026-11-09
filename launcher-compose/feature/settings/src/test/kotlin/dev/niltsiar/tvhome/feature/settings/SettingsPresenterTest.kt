@@ -191,6 +191,16 @@ class SettingsPresenterTest {
         }
     }
 
+    @Test
+    fun the_reorder_row_is_offered_with_launcher_settings_button() {
+        assertEquals(true, settings("""{"launcher_settings_button": true}""").state.reorder)
+    }
+
+    @Test
+    fun the_reorder_row_is_not_offered_without_it() {
+        assertEquals(false, settings().state.reorder)
+    }
+
     private fun SettingsHarness.selections() = state.sections.flatMap { it.rows }.associate { it.id to it.selected }
 
     private companion object {

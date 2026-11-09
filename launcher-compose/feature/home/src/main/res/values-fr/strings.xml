@@ -54,4 +54,6 @@
   </plurals>
   <string name="habit_usual">Vous l\'ouvrez d\'habitude à cette heure</string>
   <string name="never_opened">Jamais ouverte</string>
+  <string name="launcher_settings">Paramètres du lanceur</string>
+  <string name="launcher_settings_summary">Disposition, horloge et animations</string>
 </resources>

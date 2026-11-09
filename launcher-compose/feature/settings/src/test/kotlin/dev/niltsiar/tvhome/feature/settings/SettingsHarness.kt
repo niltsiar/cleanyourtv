@@ -9,21 +9,27 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.robolectric.shadows.ShadowEnvironment
 import java.io.File
 import kotlin.coroutines.EmptyCoroutineContext
 
-/** The real repository over a theme file in the app's folder, and the real view model on it. */
+/**
+ * The real repository over a theme file in the app's folder, and the real view model on it. The view model's presenter runs
+ * on a background thread, so a test can block the test thread on [awaitState]. A test that draws the screen sets [uiThread]:
+ * Molecule's immediate recompositions then run on the UI thread, as in the app, and not beside the UI frame, which made the
+ * list's scroll land in the wrong place from time to time.
+ */
 internal class SettingsHarness(
     private val app: Application,
     theme: String = "{}",
+    uiThread: Boolean = false,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val presenterScope = if (uiThread) CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) else scope
     val repository: ConfigRepository
     val viewModel: MoleculeSettingsViewModel
 
@@ -31,7 +37,7 @@ internal class SettingsHarness(
         ShadowEnvironment.setExternalStorageState(Environment.MEDIA_MOUNTED)
         File(ThemeDirectory(app).dir!!, "config.json").writeText(theme)
         repository = ConfigRepository(app, scope)
-        viewModel = MoleculeSettingsViewModel(repository, scope, RecompositionMode.Immediate, EmptyCoroutineContext)
+        viewModel = MoleculeSettingsViewModel(repository, presenterScope, RecompositionMode.Immediate, EmptyCoroutineContext)
     }
 
     val config: TvConfig get() = repository.config.value
@@ -50,10 +56,10 @@ internal class SettingsHarness(
     fun awaitState(until: (SettingsUiState) -> Boolean): SettingsUiState =
         runBlocking { withTimeout(10_000) { viewModel.uiState.first(until) } }
 
-    fun stop() =
-        runBlocking {
-            scope.coroutineContext.job.cancelAndJoin()
-        }
+    fun stop() {
+        presenterScope.cancel()
+        scope.cancel()
+    }
 }
 
 internal fun SettingsUiState.row(id: SettingsRowId): SettingsRow = sections.flatMap { it.rows }.first { it.id == id }

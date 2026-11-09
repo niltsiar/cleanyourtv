@@ -53,4 +53,6 @@
   </plurals>
   <string name="habit_usual">Du brukar öppna den vid den här tiden</string>
   <string name="never_opened">Aldrig öppnad</string>
+  <string name="launcher_settings">Startskärmsinställningar</string>
+  <string name="launcher_settings_summary">Layout, klocka och rörelse</string>
 </resources>

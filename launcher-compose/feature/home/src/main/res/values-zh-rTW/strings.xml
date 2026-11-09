@@ -50,4 +50,6 @@
   </plurals>
   <string name="habit_usual">你通常在這個時間開啟它</string>
   <string name="never_opened">從未開啟</string>
+  <string name="launcher_settings">桌面設定</string>
+  <string name="launcher_settings_summary">版面、時鐘與動態</string>
 </resources>

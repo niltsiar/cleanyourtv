@@ -53,4 +53,6 @@
   </plurals>
   <string name="habit_usual">You usually open it now</string>
   <string name="never_opened">Never opened</string>
+  <string name="launcher_settings">Launcher settings</string>
+  <string name="launcher_settings_summary">Layout, clock and motion</string>
 </resources>

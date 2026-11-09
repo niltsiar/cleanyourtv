@@ -10,6 +10,7 @@ public enum class MenuRow {
     Move,
     RemoveFromHome,
     AppInfo,
+    LauncherSettings,
     NativeSettings,
     EditDock,
     Reorder,
@@ -65,8 +66,8 @@ internal fun tileMenuRows(
     }
 
 /**
- * The Settings button's long-press menu: "Native settings" while a vendor settings app is installed, "Edit dock" with
- * dock_row, "Reorder", and "Restart" while the key service is bound and can open the power menu.
+ * The Settings button's long-press menu: "Launcher settings", "Native settings" while a vendor settings app is installed,
+ * "Edit dock" with dock_row, "Reorder", and "Restart" while the key service is bound and can open the power menu.
  */
 internal fun settingsMenuRows(
     dockRow: Boolean,
@@ -74,6 +75,7 @@ internal fun settingsMenuRows(
     powerMenu: Boolean = false,
 ): List<MenuRow> =
     buildList {
+        add(MenuRow.LauncherSettings)
         if (nativeSettings) add(MenuRow.NativeSettings)
         if (dockRow) add(MenuRow.EditDock)
         add(MenuRow.Reorder)

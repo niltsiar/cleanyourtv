@@ -47,4 +47,6 @@
   </plurals>
   <string name="habit_usual">คุณมักเปิดแอปนี้ในเวลานี้</string>
   <string name="never_opened">ไม่เคยเปิด</string>
+  <string name="launcher_settings">การตั้งค่าหน้าหลัก</string>
+  <string name="launcher_settings_summary">เลย์เอาต์ นาฬิกา และการเคลื่อนไหว</string>
 </resources>

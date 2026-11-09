@@ -52,4 +52,6 @@
   </plurals>
   <string name="habit_usual">Odatda buni shu vaqtda ochasiz</string>
   <string name="never_opened">Hech ochilmagan</string>
+  <string name="launcher_settings">Launcher sozlamalari</string>
+  <string name="launcher_settings_summary">Joylashuv, soat va harakat</string>
 </resources>

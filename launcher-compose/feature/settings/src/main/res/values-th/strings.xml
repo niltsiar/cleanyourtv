@@ -32,4 +32,5 @@
   <string name="settings_follow_theme">ใช้ตามธีม (รีเซ็ตการตั้งค่า)</string>
   <string name="settings_tv_settings">การตั้งค่าระบบทีวี</string>
   <string name="settings_save_failed">บันทึกการตั้งค่าไม่ได้</string>
+  <string name="settings_reorder">จัดเรียงแอป</string>
 </resources>

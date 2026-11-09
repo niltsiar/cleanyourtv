@@ -27,6 +27,11 @@ internal data class DockCounts(
     val fillDock: Boolean,
 )
 
+/** The Launcher settings page closed and Home has yet to apply what it changed; [reorder] asks for reorder mode next. */
+internal data class SettingsReturn(
+    val reorder: Boolean,
+)
+
 /**
  * Home's state owner: the app list as loaded, what the TV lists as inputs, the focused tile, the tile menu, the Settings
  * menu, reorder mode and edit-dock mode, and what each event does to them. [shown] is the dock and grid on screen. A
@@ -94,6 +99,10 @@ internal class HomeInteraction(
     fun habitFound(packageName: String?) {
         habit = packageName
     }
+
+    /** Set when the Launcher settings page closes, cleared once the presenter has applied the config and [settingsReturned] ran. */
+    var settingsReturn by mutableStateOf<SettingsReturn?>(null)
+        private set
 
     private val memory = sources.focusMemory
 
@@ -191,6 +200,10 @@ internal class HomeInteraction(
                 showing = true
             }
 
+            is HomeEvent.SettingsClosed -> {
+                settingsReturn = SettingsReturn(event.reorder)
+            }
+
             HomeEvent.HomePressed -> {
                 closeAll()
                 shown.all.firstOrNull()?.let { rememberFocus(it.key, slot = 0) }
@@ -202,7 +215,7 @@ internal class HomeInteraction(
             }
 
             HomeEvent.OpenSettings -> {
-                effect(HomeEffect.OpenSettings)
+                effect(if (config.value.launcherSettingsButton) HomeEffect.OpenLauncherSettings else HomeEffect.OpenSettings)
             }
 
             HomeEvent.OpenNetwork -> {
@@ -236,12 +249,26 @@ internal class HomeInteraction(
      * so they end (a session keeps its order), and focus lands again on the tile that had it, which a new row or the
      * dock may now hold.
      */
-    suspend fun dockCountsChanged(now: DockCounts) {
+    suspend fun dockCountsChanged(
+        now: DockCounts,
+        refocus: Boolean = true,
+    ) {
         if (now == counts) return
         counts = now
         menu = null
         end()
-        focusedKey?.takeIf { key -> shown.all.any { it.key == key } }?.let(::focus)
+        if (refocus) focusedKey?.takeIf { key -> shown.all.any { it.key == key } }?.let(::focus)
+    }
+
+    /**
+     * The config the Launcher settings page changed is applied: the tiles take their new counts, then reorder mode starts
+     * if the page asked for it, else focus goes to the Settings button, which the Settings menu hangs from. A tile focus
+     * could be lost to a change of names, columns or rows, and the button is not rebuilt by any of them.
+     */
+    suspend fun settingsReturned(reorder: Boolean) {
+        dockCountsChanged(dockCounts, refocus = false)
+        if (!reorder || !startReorder(carry = null)) focus(SETTINGS_FOCUS)
+        settingsReturn = null
     }
 
     private suspend fun closeAll() {
@@ -364,6 +391,11 @@ internal class HomeInteraction(
             MenuRow.AppInfo -> {
                 shown.all.firstOrNull { it.key == key }?.let { effect(HomeEffect.OpenAppInfo(it.packageName)) }
                 focus(key)
+            }
+
+            MenuRow.LauncherSettings -> {
+                effect(HomeEffect.OpenLauncherSettings)
+                focus(SETTINGS_FOCUS)
             }
 
             MenuRow.NativeSettings -> {

@@ -48,4 +48,6 @@
   </plurals>
   <string name="habit_usual">Du åbner den normalt på dette tidspunkt</string>
   <string name="never_opened">Aldrig åbnet</string>
+  <string name="launcher_settings">Launcher-indstillinger</string>
+  <string name="launcher_settings_summary">Layout, ur og bevægelse</string>
 </resources>

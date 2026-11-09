@@ -122,6 +122,19 @@ class HomePresenterTest {
         }
 
     @Test
+    fun with_launcher_settings_button_the_settings_button_opens_the_page_and_not_the_tv_settings() =
+        runTest {
+            presenter(config = SixColumns.copy(launcherSettingsButton = true)).test {
+                awaitMatching { it.dock.isNotEmpty() }
+                events.send(HomeEvent.OpenSettings)
+
+                assertEquals(HomeEffect.OpenLauncherSettings, effects.receive())
+                assertEquals(true, effects.tryReceive().isFailure)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
     fun the_network_flow_reaches_the_state() =
         runTest {
             val online = NetworkState(NetworkLink.Ethernet, validated = true)

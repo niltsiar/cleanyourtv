@@ -32,4 +32,5 @@
   <string name="settings_follow_theme">থিম অনুসরণ করুন (টিভিতে করা পছন্দ মুছে দিন)</string>
   <string name="settings_tv_settings">টিভির সিস্টেম সেটিংস</string>
   <string name="settings_save_failed">সেটিং সংরক্ষণ করা যায়নি</string>
+  <string name="settings_reorder">অ্যাপ সাজান</string>
 </resources>

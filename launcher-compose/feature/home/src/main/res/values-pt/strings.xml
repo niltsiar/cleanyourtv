@@ -54,4 +54,6 @@
   </plurals>
   <string name="habit_usual">Você costuma abrir este app neste horário</string>
   <string name="never_opened">Nunca aberto</string>
+  <string name="launcher_settings">Configurações do launcher</string>
+  <string name="launcher_settings_summary">Layout, relógio e movimento</string>
 </resources>

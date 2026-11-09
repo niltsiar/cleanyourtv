@@ -49,4 +49,6 @@
   </plurals>
   <string name="habit_usual">Du öffnest sie meistens um diese Zeit</string>
   <string name="never_opened">Nie geöffnet</string>
+  <string name="launcher_settings">Launcher-Einstellungen</string>
+  <string name="launcher_settings_summary">Layout, Uhr und Bewegung</string>
 </resources>

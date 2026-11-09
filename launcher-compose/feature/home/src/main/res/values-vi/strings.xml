@@ -50,4 +50,6 @@
   </plurals>
   <string name="habit_usual">Bạn thường mở ứng dụng này vào giờ này</string>
   <string name="never_opened">Chưa từng mở</string>
+  <string name="launcher_settings">Cài đặt launcher</string>
+  <string name="launcher_settings_summary">Bố cục, đồng hồ và chuyển động</string>
 </resources>

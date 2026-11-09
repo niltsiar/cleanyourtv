@@ -52,4 +52,6 @@
   </plurals>
   <string name="habit_usual">Je opent deze meestal rond deze tijd</string>
   <string name="never_opened">Nooit geopend</string>
+  <string name="launcher_settings">Launcher-instellingen</string>
+  <string name="launcher_settings_summary">Indeling, klok en beweging</string>
 </resources>

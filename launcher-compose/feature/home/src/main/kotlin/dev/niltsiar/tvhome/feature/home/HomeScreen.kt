@@ -1492,6 +1492,7 @@ private fun HeroTitle(
         }
     }
     val link by remember(state) { derivedStateOf { state().network.link } }
+    val launcherSettings by remember(state) { derivedStateOf { state().config.launcherSettingsButton } }
     val focusedLabel by remember(state) { derivedStateOf { state().focusedLabel } }
     val tile by remember(state) {
         derivedStateOf {
@@ -1516,7 +1517,7 @@ private fun HeroTitle(
             }
 
             is HeroSource.Bar -> {
-                barLine(chosen.control, inputs, link).copy(chrome = true)
+                barLine(chosen.control, inputs, link, launcherSettings).copy(chrome = true)
             }
 
             HeroSource.Tile -> {
@@ -1602,6 +1603,7 @@ private fun barLine(
     control: BarControl,
     inputs: InputsSummary,
     link: NetworkLink,
+    launcherSettings: Boolean,
 ): HeroLine =
     when (control) {
         BarControl.Inputs -> {
@@ -1623,7 +1625,11 @@ private fun barLine(
         }
 
         BarControl.Settings -> {
-            HeroLine(stringResource(R.string.settings), stringResource(R.string.settings_summary), quick = true)
+            if (launcherSettings) {
+                HeroLine(stringResource(R.string.launcher_settings), stringResource(R.string.launcher_settings_summary), quick = true)
+            } else {
+                HeroLine(stringResource(R.string.settings), stringResource(R.string.settings_summary), quick = true)
+            }
         }
 
         is BarControl.Named -> {

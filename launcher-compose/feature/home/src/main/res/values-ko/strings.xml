@@ -50,4 +50,6 @@
   </plurals>
   <string name="habit_usual">보통 이 시간에 이 앱을 엽니다</string>
   <string name="never_opened">열어 본 적 없음</string>
+  <string name="launcher_settings">런처 설정</string>
+  <string name="launcher_settings_summary">레이아웃, 시계, 모션</string>
 </resources>

@@ -59,4 +59,6 @@
   </plurals>
   <string name="habit_usual">عادةً ما تفتحه الآن</string>
   <string name="never_opened">لم يُفتح أبدًا</string>
+  <string name="launcher_settings">إعدادات المشغّل</string>
+  <string name="launcher_settings_summary">التخطيط والساعة والحركة</string>
 </resources>

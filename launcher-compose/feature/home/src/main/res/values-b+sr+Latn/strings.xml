@@ -53,4 +53,6 @@
   </plurals>
   <string name="habit_usual">Obično je otvarate u ovo vreme</string>
   <string name="never_opened">Nikad otvorena</string>
+  <string name="launcher_settings">Podešavanja početnog ekrana</string>
+  <string name="launcher_settings_summary">Raspored, sat i kretanje</string>
 </resources>

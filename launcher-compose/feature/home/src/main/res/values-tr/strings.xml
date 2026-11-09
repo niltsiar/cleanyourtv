@@ -51,4 +51,6 @@
   </plurals>
   <string name="habit_usual">Bunu genellikle bu saatte açarsınız</string>
   <string name="never_opened">Hiç açılmadı</string>
+  <string name="launcher_settings">Başlatıcı ayarları</string>
+  <string name="launcher_settings_summary">Düzen, saat ve hareket</string>
 </resources>

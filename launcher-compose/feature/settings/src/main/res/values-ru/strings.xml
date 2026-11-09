@@ -32,4 +32,5 @@
   <string name="settings_follow_theme">Следовать теме (сбросить выбор)</string>
   <string name="settings_tv_settings">Системные настройки ТВ</string>
   <string name="settings_save_failed">Не удалось сохранить настройку</string>
+  <string name="settings_reorder">Изменить порядок приложений</string>
 </resources>

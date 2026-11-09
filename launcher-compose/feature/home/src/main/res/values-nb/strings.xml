@@ -52,4 +52,6 @@
   </plurals>
   <string name="habit_usual">Du åpner den vanligvis på dette tidspunktet</string>
   <string name="never_opened">Aldri åpnet</string>
+  <string name="launcher_settings">Innstillinger for startskjermen</string>
+  <string name="launcher_settings_summary">Oppsett, klokke og bevegelse</string>
 </resources>

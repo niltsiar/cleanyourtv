@@ -52,4 +52,6 @@
   </plurals>
   <string name="habit_usual">Avaat sen yleensä tähän aikaan</string>
   <string name="never_opened">Ei koskaan avattu</string>
+  <string name="launcher_settings">Käynnistimen asetukset</string>
+  <string name="launcher_settings_summary">Asettelu, kello ja liike</string>
 </resources>

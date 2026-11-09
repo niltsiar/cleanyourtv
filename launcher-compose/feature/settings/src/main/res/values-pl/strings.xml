@@ -32,4 +32,5 @@
   <string name="settings_follow_theme">Użyj motywu (zresetuj wybór)</string>
   <string name="settings_tv_settings">Ustawienia systemowe TV</string>
   <string name="settings_save_failed">Nie udało się zapisać ustawienia</string>
+  <string name="settings_reorder">Zmień kolejność aplikacji</string>
 </resources>

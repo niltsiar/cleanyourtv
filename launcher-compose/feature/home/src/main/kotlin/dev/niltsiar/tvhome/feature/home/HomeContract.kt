@@ -112,6 +112,9 @@ public sealed interface HomeEffect {
     /** The Settings button was pressed: open the TV's system settings. */
     public data object OpenSettings : HomeEffect
 
+    /** Open the Launcher settings page: from the Settings menu, or from the Settings button with launcher_settings_button. */
+    public data object OpenLauncherSettings : HomeEffect
+
     /** The network button was pressed: open the VPN app or Wi-Fi settings. */
     public data object OpenNetwork : HomeEffect
 
@@ -243,6 +246,11 @@ internal sealed interface HomeEvent {
 
     /** Home came to the front. */
     data object Started : HomeEvent
+
+    /** The Launcher settings page closed; [reorder] is true when its Reorder row ended it. */
+    data class SettingsClosed(
+        val reorder: Boolean,
+    ) : HomeEvent
 
     /** The Home key was pressed while Home shows. */
     data object HomePressed : HomeEvent

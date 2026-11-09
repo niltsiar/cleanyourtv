@@ -18,6 +18,7 @@ private fun MenuRow.label(): Int =
         MenuRow.Move -> R.string.tile_move
         MenuRow.RemoveFromHome -> R.string.tile_remove_from_home
         MenuRow.AppInfo -> R.string.app_info
+        MenuRow.LauncherSettings -> R.string.launcher_settings
         MenuRow.NativeSettings -> R.string.native_settings
         MenuRow.EditDock -> R.string.dock_edit
         MenuRow.Reorder -> R.string.reorder

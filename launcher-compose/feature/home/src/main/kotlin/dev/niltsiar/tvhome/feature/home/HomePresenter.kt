@@ -59,6 +59,13 @@ internal fun homePresenter(
     val interaction = remember(sources, config) { HomeInteraction(sources, applied) { currentOnEffect(it) } }
     val showing = interaction.showing
     LaunchedEffect(config, showing) { if (showing) config.collect { applied.value = it } }
+    val returning = interaction.settingsReturn
+    LaunchedEffect(interaction, showing, returning) {
+        if (showing && returning != null) {
+            applied.value = config.value
+            interaction.settingsReturned(returning.reorder)
+        }
+    }
     val counts = interaction.dockCounts
     LaunchedEffect(interaction, counts) { interaction.dockCountsChanged(counts) }
     val current = applied.value

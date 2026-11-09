@@ -98,6 +98,7 @@ class HomeHostConfigTest {
                     onOpenWifiSettings = {},
                     onOpenAppInfo = {},
                     onOpenNativeSettings = {},
+                    onOpenLauncherSettings = {},
                     onOpenPowerMenu = {},
                     onOrderNotSaved = {},
                     onLibrarySaveFailed = {},
@@ -108,6 +109,7 @@ class HomeHostConfigTest {
                     onOpenLibrary = {},
                     homePresses = { 0 },
                     inputsRequests = { 0 },
+                    settingsClosing = { null },
                     overlays = {},
                     viewModel = viewModel,
                 )

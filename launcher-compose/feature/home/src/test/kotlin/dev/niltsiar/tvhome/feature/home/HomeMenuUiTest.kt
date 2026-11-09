@@ -14,10 +14,12 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
@@ -248,6 +250,7 @@ class HomeMenuUiTest {
         repeat(2) { press(Key.DirectionRight) }
         holdOk()
         releaseOk()
+        press(Key.DirectionDown)
         press(Key.DirectionCenter)
 
         compose.onNodeWithTag("reorder:hint").assertExists()
@@ -446,6 +449,33 @@ class HomeMenuUiTest {
         holdOk()
         releaseOk()
         compose.onNodeWithTag("menu").assertExists()
+    }
+
+    private fun launcherSettingsRowIsFirstAndOpensThePage(config: TvConfig) {
+        showHome(config)
+        openSettingsMenu()
+
+        val first = compose.onNodeWithTag("menu:LauncherSettings")
+        first.assertTextEquals("Launcher settings")
+        assertTrue(first.getBoundsInRoot().top < compose.onNodeWithTag("menu:Reorder").getBoundsInRoot().top)
+        first.assertIsFocused()
+        press(Key.DirectionCenter)
+
+        assertEquals(listOf<HomeEffect>(HomeEffect.OpenLauncherSettings), effects)
+        compose.onNodeWithTag("menu").assertDoesNotExist()
+        compose.onNodeWithContentDescription(config.settingsButtonLabel()).assertIsFocused()
+    }
+
+    private fun TvConfig.settingsButtonLabel() = if (launcherSettingsButton) "Launcher settings" else "Settings"
+
+    @Test
+    fun the_settings_menu_lists_launcher_settings_first_and_opens_the_page_with_the_key_off() {
+        launcherSettingsRowIsFirstAndOpensThePage(SixColumns)
+    }
+
+    @Test
+    fun the_settings_menu_lists_launcher_settings_first_and_opens_the_page_with_the_key_on() {
+        launcherSettingsRowIsFirstAndOpensThePage(SixColumns.copy(launcherSettingsButton = true))
     }
 
     @Test

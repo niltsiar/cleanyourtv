@@ -15,6 +15,7 @@ internal fun SettingsHost(
     graph: AppGraph,
     viewModel: MoleculeSettingsViewModel,
     onOpenTvSettings: () -> Unit,
+    onReorder: () -> Unit,
     onSaveFailed: () -> Unit,
 ) {
     LaunchedEffect(viewModel) { viewModel.saveFailed.collect { onSaveFailed() } }
@@ -23,6 +24,11 @@ internal fun SettingsHost(
     val focusStyle by config.derived(TvConfig::focusStyle)
     val state = viewModel.uiState.collectAsStateWithLifecycle()
     TvTheme(motion = motion, focusStyle = focusStyle) {
-        SettingsScreen(state = { state.value }, actions = viewModel.actions, onOpenTvSettings = onOpenTvSettings)
+        SettingsScreen(
+            state = { state.value },
+            actions = viewModel.actions,
+            onOpenTvSettings = onOpenTvSettings,
+            onReorder = onReorder,
+        )
     }
 }

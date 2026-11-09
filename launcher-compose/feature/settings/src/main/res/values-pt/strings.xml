@@ -32,4 +32,5 @@
   <string name="settings_follow_theme">Seguir o tema (desfaz as escolhas feitas na TV)</string>
   <string name="settings_tv_settings">Configurações do sistema da TV</string>
   <string name="settings_save_failed">Não foi possível salvar a configuração</string>
+  <string name="settings_reorder">Reordenar apps</string>
 </resources>

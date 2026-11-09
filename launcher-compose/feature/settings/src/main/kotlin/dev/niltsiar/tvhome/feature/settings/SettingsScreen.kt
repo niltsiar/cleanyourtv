@@ -105,7 +105,8 @@ private const val SELECTED_RIM_ALPHA = 0.42f
 /**
  * Launcher settings as one panel: every row lists its options side by side and OK stores the focused one at once.
  * Up and Down move between rows, onto the selected option of the next one; Left and Right move between a row's options
- * and stop at its ends. Focus cannot leave the screen. [onOpenTvSettings] opens the TV's own settings.
+ * and stop at its ends. Focus cannot leave the screen. [onOpenTvSettings] opens the TV's own settings. With
+ * [SettingsUiState.reorder] the first row is Reorder apps, which has focus when the screen opens, and [onReorder] runs when it is picked.
  */
 @OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -114,14 +115,18 @@ public fun SettingsScreen(
     actions: SettingsActions,
     onOpenTvSettings: () -> Unit,
     modifier: Modifier = Modifier,
+    onReorder: () -> Unit = {},
 ) {
     val motion = TvTheme.motion
     val reveal = remember { Animatable(if (motion.animations) 0f else 1f) }
     LaunchedEffect(Unit) { reveal.animateTo(1f, motion.springSpec(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)) }
     val ui = state()
     val rowCount = ui.sections.sumOf { it.rows.size }
-    // One requester per row, then the two buttons: each sits on the option a row gets focus on, and links the rows.
-    val entries = remember(rowCount) { List(rowCount + BUTTON_COUNT) { FocusRequester() } }
+    val lead = if (ui.reorder) 1 else 0
+    // The Reorder row if there is one, then one requester per row, then the two buttons: each sits on the option a row
+    // gets focus on, and links the rows.
+    val firstButton = lead + rowCount
+    val entries = remember(firstButton) { List(firstButton + BUTTON_COUNT) { FocusRequester() } }
     LaunchedEffect(entries) {
         withFrameNanos { }
         entries.first().requestFocus()
@@ -169,7 +174,19 @@ public fun SettingsScreen(
                                 .verticalScroll(scroll)
                                 .padding(start = PanelSide, end = PanelSide, bottom = PanelSide),
                         ) {
-                            var index = 0
+                            if (ui.reorder) {
+                                ActionRow(
+                                    label = R.string.settings_reorder,
+                                    selected = false,
+                                    onClick = onReorder,
+                                    tag = "settings:reorder",
+                                    entry = entries[0],
+                                    upEntry = entries.above(0),
+                                    downEntry = entries.below(0),
+                                )
+                                Spacer(Modifier.height(ChipGap))
+                            }
+                            var index = lead
                             for (section in ui.sections) {
                                 section.heading?.let { Heading(it) }
                                 for (row in section.rows) {
@@ -183,9 +200,9 @@ public fun SettingsScreen(
                                 selected = ui.followsTheme,
                                 onClick = actions.onFollowTheme,
                                 tag = "settings:follow_theme",
-                                entry = entries[rowCount],
-                                upEntry = entries.above(rowCount),
-                                downEntry = entries.below(rowCount),
+                                entry = entries[firstButton],
+                                upEntry = entries.above(firstButton),
+                                downEntry = entries.below(firstButton),
                             )
                             Spacer(Modifier.height(ChipGap))
                             ActionRow(
@@ -193,9 +210,9 @@ public fun SettingsScreen(
                                 selected = false,
                                 onClick = onOpenTvSettings,
                                 tag = "settings:tv_settings",
-                                entry = entries[rowCount + 1],
-                                upEntry = entries.above(rowCount + 1),
-                                downEntry = entries.below(rowCount + 1),
+                                entry = entries[firstButton + 1],
+                                upEntry = entries.above(firstButton + 1),
+                                downEntry = entries.below(firstButton + 1),
                             )
                         }
                     }

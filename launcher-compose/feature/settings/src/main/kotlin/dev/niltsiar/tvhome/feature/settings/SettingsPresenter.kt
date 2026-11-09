@@ -36,5 +36,5 @@ internal fun settingsPresenter(
     }
     val config by repository.config.collectAsState()
     val followsTheme by repository.followsTheme.collectAsState()
-    return remember(config, followsTheme) { SettingsUiState(settingsSections(config), followsTheme) }
+    return remember(config, followsTheme) { SettingsUiState(settingsSections(config), followsTheme, config.launcherSettingsButton) }
 }

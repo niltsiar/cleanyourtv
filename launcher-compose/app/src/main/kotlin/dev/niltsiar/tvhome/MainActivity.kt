@@ -13,6 +13,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -45,6 +46,19 @@ class MainActivity : ComponentActivity() {
     private var inputsRequests by mutableIntStateOf(0)
     private var bootOpening: Job? = null
 
+    /** The Launcher settings page was launched and onResume has not yet handed its result to Home. */
+    private var settingsOpen = false
+
+    /** The page's result, until onResume hands it to Home. */
+    private var settingsResult: Boolean? = null
+
+    /** A Home key press ended the page: Home's own Home-key focus then wins over the return to the Settings button. */
+    private var homeKeyOverSettings = false
+    private var settingsCloses = 0
+    private var settingsClosing by mutableStateOf<SettingsClosing?>(null)
+    private val settingsPage =
+        registerForActivityResult(LauncherSettingsPage) { reorder -> settingsResult = reorder }
+
     /**
      * Between onResume and onPause: Home is in front. The lifecycle state is not enough, it only reaches RESUMED after
      * onResume returns. The idle clock and the vendor keys run only then: a key's UP can still reach Home after onPause,
@@ -72,7 +86,7 @@ class MainActivity : ComponentActivity() {
         // This is Home: Back has nowhere to go, unless back_opens_clock.
         onBackPressedDispatcher.addCallback(this) { if (config.value.backOpensClock) showClock() }
         // Not after a recreate: the launch intent survives it and would open the library or the list again.
-        if (savedInstanceState == null) homeRequestOf(intent).takeIf { it != HomeRequest.HomeKey }?.let(::handle)
+        if (savedInstanceState == null) homeRequestOf(intent, packageName).takeIf { it != HomeRequest.HomeKey }?.let(::handle)
         // handle_view_inputs and restore_key_services are theme-only: read once, here.
         applyViewInputsHandler(config.value.handleViewInputs)
         if (config.value.restoreKeyServices) ServiceRepair.restore(this)
@@ -92,6 +106,7 @@ class MainActivity : ComponentActivity() {
                     onOpenWifiSettings = ::openWifiSettings,
                     onOpenAppInfo = ::openAppInfo,
                     onOpenNativeSettings = ::openNativeSettings,
+                    onOpenLauncherSettings = ::openLauncherSettings,
                     onOpenPowerMenu = PowerMenu::open,
                     onOrderNotSaved = ::orderNotSaved,
                     onLibrarySaveFailed = ::librarySaveFailed,
@@ -102,6 +117,7 @@ class MainActivity : ComponentActivity() {
                     onOpenLibrary = { library.onOpen() },
                     homePresses = { homePresses },
                     inputsRequests = { inputsRequests },
+                    settingsClosing = { settingsClosing },
                     overlays = {
                         if (appLibrary) {
                             LibraryHost(
@@ -147,6 +163,13 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         resumed = true
+        // The result and a Home key press that ended the page both arrive before onResume, in either order.
+        settingsResult?.let { reorder ->
+            if (!homeKeyOverSettings) settingsClosing = SettingsClosing(reorder, ++settingsCloses)
+            settingsResult = null
+            settingsOpen = false
+            homeKeyOverSettings = false
+        }
         bootOpening = lifecycleScope.launch { graph.openOnStart.openAfterBoot(::openIntent) }
         idleClock.restart()
     }
@@ -180,7 +203,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        handle(homeRequestOf(intent))
+        handle(homeRequestOf(intent, packageName))
     }
 
     /**
@@ -200,7 +223,13 @@ class MainActivity : ComponentActivity() {
                 inputsRequests++
             }
 
+            HomeRequest.OpenLauncherSettings -> {
+                setIntent(Intent(Intent.ACTION_MAIN))
+                openLauncherSettings()
+            }
+
             HomeRequest.HomeKey -> {
+                if (settingsOpen) homeKeyOverSettings = true
                 if (config.value.appLibrary) library.onClose()
                 homePresses++
             }
@@ -267,6 +296,12 @@ class MainActivity : ComponentActivity() {
 
     private fun openSettingsFromKey() {
         if (!graph.systemSettings.openSettings(config.value.settingsKeyClearTask)) cantOpen(getString(FeatureR.string.settings))
+    }
+
+    private fun openLauncherSettings() {
+        settingsOpen = true
+        homeKeyOverSettings = false
+        settingsPage.launch(Unit)
     }
 
     private fun openNetwork() {

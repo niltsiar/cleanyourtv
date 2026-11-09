@@ -50,4 +50,6 @@
   </plurals>
   <string name="habit_usual">Sueles abrila a esta hora</string>
   <string name="never_opened">Nunca abierta</string>
+  <string name="launcher_settings">Axustes del llanzador</string>
+  <string name="launcher_settings_summary">Distribución, reló y movimientu</string>
 </resources>

@@ -192,6 +192,27 @@ class TopBarTest {
     }
 
     @Test
+    fun the_top_bar_layout_turns_the_settings_button_into_the_launcher_settings_button_only_with_the_key() {
+        assertTrue(TvConfig(launcherSettingsButton = true).topBarLayout().launcherSettings)
+        assertEquals(false, TvConfig().topBarLayout().launcherSettings)
+    }
+
+    @Test
+    fun launcher_settings_button_names_the_settings_button_launcher_settings_and_its_tap_is_reported() {
+        show(TvConfig(columns = 6, launcherSettingsButton = true))
+        compose.onNodeWithContentDescription("Settings").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Launcher settings").performClick()
+        assertEquals(1, settingsOpened)
+    }
+
+    @Test
+    fun launcher_settings_button_with_icon_only_buttons_false_shows_the_launcher_settings_label_at_rest() {
+        show(TvConfig(columns = 6, iconOnlyButtons = false, launcherSettingsButton = true))
+        compose.onNodeWithText("Launcher settings").assertIsDisplayed()
+        compose.onNodeWithText("Settings").assertDoesNotExist()
+    }
+
+    @Test
     fun the_settings_button_is_a_round_icon_at_rest_with_no_theme() {
         show(TvConfig(columns = 6))
         compose.onNodeWithText("Settings").assertDoesNotExist()

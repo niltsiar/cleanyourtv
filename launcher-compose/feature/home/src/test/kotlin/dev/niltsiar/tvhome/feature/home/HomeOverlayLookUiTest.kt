@@ -377,9 +377,9 @@ class HomeOverlayLookUiTest {
     fun settings_menu_rows_have_corners_concentric_with_the_panel() {
         showHome()
         openSettingsMenu()
-        compose.onNodeWithTag("menu:EditDock").assertIsFocused()
+        compose.onNodeWithTag("menu:LauncherSettings").assertIsFocused()
 
-        val row = bounds("menu:EditDock")
+        val row = bounds("menu:LauncherSettings")
         assertNear(0xF2, redAt(Offset(row.right.value - 12f, (row.top.value + row.bottom.value) / 2)), 3)
         // 5 dp in from the corner lies inside a 14 dp corner and outside a 20 dp one.
         assertTrue(redAt(Offset(row.left.value + 5f, row.top.value + 5f)) < 0x80)
@@ -475,8 +475,7 @@ class HomeOverlayLookUiTest {
 
         assertTrue("coral pixels at rest: ${pixelsOf(row, 0xFF8A80)}", pixelsOf(row, 0xFF8A80) >= 8)
         assertEquals("another row has no coral", 0, pixelsOf(bounds("menu:Reorder"), 0xFF8A80))
-        press(Key.DirectionDown)
-        press(Key.DirectionDown)
+        repeat(3) { press(Key.DirectionDown) }
         compose.onNodeWithTag("menu:PowerMenu").assertIsFocused()
         assertEquals("coral pixels under focus", 0, pixelsOf(row, 0xFF8A80))
     }

@@ -6,6 +6,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
@@ -24,7 +25,14 @@ import dev.niltsiar.tvhome.feature.home.homeLayout
 import dev.niltsiar.tvhome.feature.home.shelfLayout
 import dev.niltsiar.tvhome.feature.home.topBarLayout
 import dev.niltsiar.tvhome.feature.home.wallpaperLayout
+import kotlinx.coroutines.flow.filterNotNull
 import java.util.Locale
+
+/** The Launcher settings page closed. Each close is its own [token], so the second of two equal results still reaches Home. */
+internal data class SettingsClosing(
+    val reorder: Boolean,
+    val token: Int,
+)
 
 /** Home state comes from the Molecule-hosted presenter. [overlays] go in Home's overlay host. */
 @Composable
@@ -36,6 +44,7 @@ internal fun HomeHost(
     onOpenWifiSettings: () -> Unit,
     onOpenAppInfo: (String) -> Unit,
     onOpenNativeSettings: () -> Unit,
+    onOpenLauncherSettings: () -> Unit,
     onOpenPowerMenu: () -> Unit,
     onOrderNotSaved: () -> Unit,
     onLibrarySaveFailed: () -> Unit,
@@ -46,6 +55,7 @@ internal fun HomeHost(
     onOpenLibrary: () -> Unit,
     homePresses: () -> Int,
     inputsRequests: () -> Int,
+    settingsClosing: () -> SettingsClosing?,
     overlays: @Composable () -> Unit,
     locale: Locale = LocalConfiguration.current.locales[0],
     datePattern: String = stringResource(R.string.date_format),
@@ -62,6 +72,7 @@ internal fun HomeHost(
                 HomeEffect.OpenWifiSettings -> onOpenWifiSettings()
                 is HomeEffect.OpenAppInfo -> onOpenAppInfo(effect.packageName)
                 HomeEffect.OpenNativeSettings -> onOpenNativeSettings()
+                HomeEffect.OpenLauncherSettings -> onOpenLauncherSettings()
                 HomeEffect.OpenPowerMenu -> onOpenPowerMenu()
                 HomeEffect.OrderNotSaved -> onOrderNotSaved()
                 HomeEffect.LibrarySaveFailed -> onLibrarySaveFailed()
@@ -69,6 +80,9 @@ internal fun HomeHost(
                 HomeEffect.NoInputs -> onNoInputs()
             }
         }
+    }
+    LaunchedEffect(viewModel) {
+        snapshotFlow(settingsClosing).filterNotNull().collect { viewModel.onSettingsClosed(it.reorder) }
     }
     LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onStarted() }
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.onStopped() }

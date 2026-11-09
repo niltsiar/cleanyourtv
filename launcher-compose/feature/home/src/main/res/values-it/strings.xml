@@ -55,4 +55,6 @@
   </plurals>
   <string name="habit_usual">Di solito la apri a quest\'ora</string>
   <string name="never_opened">Mai aperta</string>
+  <string name="launcher_settings">Impostazioni del launcher</string>
+  <string name="launcher_settings_summary">Layout, orologio e movimento</string>
 </resources>

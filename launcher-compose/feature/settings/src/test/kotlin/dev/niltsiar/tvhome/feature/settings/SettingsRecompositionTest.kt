@@ -1,6 +1,7 @@
 package dev.niltsiar.tvhome.feature.settings
 
 import android.app.Application
+import android.os.Looper
 import androidx.compose.runtime.Composer
 import androidx.compose.runtime.CompositionTracer
 import androidx.compose.runtime.ExperimentalComposeRuntimeApi
@@ -23,6 +24,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
@@ -61,7 +63,7 @@ class SettingsRecompositionTest {
     @Before
     fun showSettings() {
         Composer.setTracer(rows)
-        settings = SettingsHarness(app, """{"columns": 6}""")
+        settings = SettingsHarness(app, """{"columns": 6}""", uiThread = true)
         compose.setContent {
             TvTheme {
                 val state = settings.viewModel.uiState.collectAsState()
@@ -101,7 +103,10 @@ class SettingsRecompositionTest {
     fun a_pick_recomposes_the_row_it_changes_alone() {
         press(Key.DirectionRight)
         press(Key.DirectionCenter)
-        compose.waitUntil(10_000) { settings.row(SettingsRowId.Columns).selected == 3 }
+        compose.waitUntil(10_000) {
+            shadowOf(Looper.getMainLooper()).idle()
+            settings.row(SettingsRowId.Columns).selected == 3
+        }
         compose.waitForIdle()
 
         assertEquals(1, rows.count)

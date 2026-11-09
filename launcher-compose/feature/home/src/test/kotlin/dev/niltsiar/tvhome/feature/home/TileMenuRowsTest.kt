@@ -43,23 +43,26 @@ class TileMenuRowsTest {
     }
 
     @Test
-    fun the_settings_menu_offers_native_settings_edit_dock_and_reorder_in_that_order() {
+    fun the_settings_menu_offers_launcher_settings_first_then_native_settings_edit_dock_and_reorder() {
         assertEquals(
-            listOf(MenuRow.NativeSettings, MenuRow.EditDock, MenuRow.Reorder),
+            listOf(MenuRow.LauncherSettings, MenuRow.NativeSettings, MenuRow.EditDock, MenuRow.Reorder),
             settingsMenuRows(dockRow = true, nativeSettings = true),
         )
-        assertEquals(listOf(MenuRow.EditDock, MenuRow.Reorder), settingsMenuRows(dockRow = true, nativeSettings = false))
-        assertEquals(listOf(MenuRow.Reorder), settingsMenuRows(dockRow = false, nativeSettings = false))
+        assertEquals(
+            listOf(MenuRow.LauncherSettings, MenuRow.EditDock, MenuRow.Reorder),
+            settingsMenuRows(dockRow = true, nativeSettings = false),
+        )
+        assertEquals(listOf(MenuRow.LauncherSettings, MenuRow.Reorder), settingsMenuRows(dockRow = false, nativeSettings = false))
     }
 
     @Test
     fun restart_comes_last_and_only_while_the_key_service_is_bound() {
         assertEquals(
-            listOf(MenuRow.EditDock, MenuRow.Reorder, MenuRow.PowerMenu),
+            listOf(MenuRow.LauncherSettings, MenuRow.EditDock, MenuRow.Reorder, MenuRow.PowerMenu),
             settingsMenuRows(dockRow = true, nativeSettings = false, powerMenu = true),
         )
         assertEquals(
-            listOf(MenuRow.Reorder),
+            listOf(MenuRow.LauncherSettings, MenuRow.Reorder),
             settingsMenuRows(dockRow = false, nativeSettings = false, powerMenu = false),
         )
     }

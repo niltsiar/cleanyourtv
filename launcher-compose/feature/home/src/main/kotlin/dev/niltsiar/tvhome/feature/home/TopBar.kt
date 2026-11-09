@@ -110,6 +110,7 @@ private val OfflineRed = Color(0xFFFF453A)
  * [inputsLabelAtRest] (the theme's icon_only_inputs false) does the same for the Inputs button.
  * [wifiStatusColor] tints the icon by the connection ([wifiStatusWarnings] adds orange and red). [vpnApp] says a VPN app is set, so a VPN that is down is worth a badge. [dateBelowClock] stacks the date under the clock.
  * [reorderButton] adds a button that turns reorder mode on and off, [libraryButton] one that opens the App library.
+ * [launcherSettings] (the theme's launcher_settings_button) turns the Settings button into the Launcher settings button.
  * [animated] is false with animations off or reduced_motion.
  */
 @Immutable
@@ -125,6 +126,7 @@ public data class TopBarLayout(
     val dateBelowClock: Boolean = false,
     val reorderButton: Boolean = false,
     val libraryButton: Boolean = false,
+    val launcherSettings: Boolean = false,
     /** The Inputs list's moving parts run; off with animations off or reduced_motion. */
     val animated: Boolean = true,
 )
@@ -142,6 +144,7 @@ public fun TvConfig.topBarLayout(): TopBarLayout =
         dateBelowClock = dateBelowClock,
         reorderButton = reorderButton,
         libraryButton = appLibrary && libraryButton,
+        launcherSettings = launcherSettingsButton,
         animated = animations && !reducedMotion,
     )
 
@@ -273,7 +276,7 @@ internal fun TopBar(
                 focusLabel = library,
             ) { focus, ink -> AppsIcon(ink, focus) }
         }
-        val settings = stringResource(R.string.settings)
+        val settings = stringResource(if (layout.launcherSettings) R.string.launcher_settings else R.string.settings)
         GlassIconButton(
             glass,
             settings,
@@ -292,7 +295,11 @@ internal fun TopBar(
             focusLabel = settings.takeUnless { layout.labelsAtRest },
             active = settingsOpen,
         ) { focus, ink ->
-            IconPart(R.drawable.ic_settings, ink) { rotationZ = SETTINGS_TURN * focus() }
+            if (layout.launcherSettings) {
+                IconPart(R.drawable.ic_home_settings_pill, ink)
+            } else {
+                IconPart(R.drawable.ic_settings, ink) { rotationZ = SETTINGS_TURN * focus() }
+            }
         }
     }
 }

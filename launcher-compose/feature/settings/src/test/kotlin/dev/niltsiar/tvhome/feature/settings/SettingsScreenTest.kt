@@ -1,6 +1,7 @@
 package dev.niltsiar.tvhome.feature.settings
 
 import android.app.Application
+import android.os.Looper
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsDisplayed
@@ -9,6 +10,7 @@ import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
@@ -23,6 +25,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /** The screen over the real view model and repository: keys go in at the root, the choices come out of the store. */
@@ -35,16 +38,22 @@ class SettingsScreenTest {
     private val app: Application = RuntimeEnvironment.getApplication()
     private lateinit var settings: SettingsHarness
     private var tvSettingsOpened = 0
+    private var reordered = 0
 
     @After
     fun stop() = settings.stop()
 
     private fun show(theme: String = "{}") {
-        settings = SettingsHarness(app, theme)
+        settings = SettingsHarness(app, theme, uiThread = true)
         compose.setContent {
             TvTheme(motion = Motion(animations = false)) {
                 val state = settings.viewModel.uiState.collectAsState()
-                SettingsScreen({ state.value }, settings.viewModel.actions, onOpenTvSettings = { tvSettingsOpened++ })
+                SettingsScreen(
+                    { state.value },
+                    settings.viewModel.actions,
+                    onOpenTvSettings = { tvSettingsOpened++ },
+                    onReorder = { reordered++ },
+                )
             }
         }
         compose.waitForIdle()
@@ -54,6 +63,13 @@ class SettingsScreenTest {
         compose.onRoot().performKeyInput { pressKey(key) }
         compose.waitForIdle()
     }
+
+    /** A store write comes back from another thread to the UI thread's queue, so each check first runs what the queue holds. */
+    private fun waitUntilIdle(condition: () -> Boolean) =
+        compose.waitUntil(10_000) {
+            shadowOf(Looper.getMainLooper()).idle()
+            condition()
+        }
 
     private fun option(
         row: SettingsRowId,
@@ -194,7 +210,7 @@ class SettingsScreenTest {
 
         press(Key.DirectionRight)
         press(Key.DirectionCenter)
-        compose.waitUntil(10_000) { settings.row(SettingsRowId.Columns).selected == 1 }
+        waitUntilIdle { settings.row(SettingsRowId.Columns).selected == 1 }
         compose.waitForIdle()
 
         option(SettingsRowId.Columns, 1).assertIsSelected()
@@ -208,14 +224,14 @@ class SettingsScreenTest {
         compose.onNodeWithTag("settings:follow_theme").assertIsSelected()
         press(Key.DirectionRight)
         press(Key.DirectionCenter)
-        compose.waitUntil(10_000) { !settings.state.followsTheme }
+        waitUntilIdle { !settings.state.followsTheme }
         compose.waitForIdle()
         compose.onNodeWithTag("settings:follow_theme").assertIsNotSelected()
 
         goTo(SettingsRowId.InputArrival)
         press(Key.DirectionDown)
         press(Key.DirectionCenter)
-        compose.waitUntil(10_000) { settings.state.followsTheme }
+        waitUntilIdle { settings.state.followsTheme }
         compose.waitForIdle()
 
         assertEquals(5, settings.config.columns)
@@ -230,5 +246,39 @@ class SettingsScreenTest {
         press(Key.DirectionCenter)
 
         assertEquals(1, tvSettingsOpened)
+    }
+
+    @Test
+    fun with_launcher_settings_button_the_reorder_row_comes_first_has_focus_at_open_and_ok_on_it_reports() {
+        show("""{"launcher_settings_button": true}""")
+
+        compose.onNodeWithTag("settings:reorder").assertIsFocused()
+        press(Key.DirectionUp)
+        compose.onNodeWithTag("settings:reorder").assertIsFocused()
+        press(Key.DirectionDown)
+        option(SettingsRowId.Columns, 0).assertIsFocused()
+        press(Key.DirectionUp)
+        compose.onNodeWithTag("settings:reorder").assertIsFocused()
+        press(Key.DirectionCenter)
+
+        assertEquals(1, reordered)
+    }
+
+    @Test
+    fun the_last_rows_stay_reachable_with_the_reorder_row() {
+        show("""{"launcher_settings_button": true}""")
+
+        repeat(rowCount() + 3) { press(Key.DirectionDown) }
+        compose.onNodeWithTag("settings:tv_settings").assertIsFocused()
+        press(Key.DirectionUp)
+        compose.onNodeWithTag("settings:follow_theme").assertIsFocused()
+    }
+
+    @Test
+    fun without_launcher_settings_button_there_is_no_reorder_row_and_focus_starts_on_the_first_option() {
+        show()
+
+        assertEquals(0, compose.onAllNodesWithTag("settings:reorder").fetchSemanticsNodes().size)
+        option(SettingsRowId.Columns, 0).assertIsFocused()
     }
 }

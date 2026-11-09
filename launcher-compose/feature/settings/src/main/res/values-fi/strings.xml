@@ -32,4 +32,5 @@
   <string name="settings_follow_theme">Noudata teemaa (nollaa televisiossa tehdyt valinnat)</string>
   <string name="settings_tv_settings">Television järjestelmäasetukset</string>
   <string name="settings_save_failed">Asetusta ei voitu tallentaa</string>
+  <string name="settings_reorder">Järjestä sovellukset</string>
 </resources>

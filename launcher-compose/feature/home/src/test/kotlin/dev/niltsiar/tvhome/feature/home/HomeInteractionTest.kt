@@ -155,14 +155,36 @@ class HomeInteractionTest {
         }
 
     @Test
-    fun the_settings_menu_lists_the_dock_and_reorder_rows_and_native_settings_when_installed() =
+    fun the_settings_menu_lists_launcher_settings_first_then_the_dock_and_reorder_rows_and_native_settings_when_installed() =
         runTest {
             presenter(nativeSettings = true).test {
                 awaitMatching { it.dock.isNotEmpty() }
                 events.send(HomeEvent.SettingsMenu)
                 val menu = awaitMatching { it.menu != null }.menu
-                assertEquals(HomeMenu(null, listOf(MenuRow.NativeSettings, MenuRow.EditDock, MenuRow.Reorder)), menu)
+                assertEquals(
+                    HomeMenu(null, listOf(MenuRow.LauncherSettings, MenuRow.NativeSettings, MenuRow.EditDock, MenuRow.Reorder)),
+                    menu,
+                )
                 cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun picking_launcher_settings_opens_the_page_and_hands_focus_back_to_settings_with_the_key_off_and_on() =
+        runTest {
+            for (key in listOf(false, true)) {
+                presenter(SixColumns.copy(launcherSettingsButton = key)).test {
+                    awaitMatching { it.dock.isNotEmpty() }
+                    events.send(HomeEvent.SettingsMenu)
+                    assertEquals(MenuRow.LauncherSettings, awaitMatching { it.menu != null }.menu?.rows?.first())
+                    events.send(HomeEvent.MenuPick(MenuRow.LauncherSettings))
+
+                    val state = awaitMatching { it.menu == null && it.focusRequest != null }
+
+                    assertEquals(HomeEffect.OpenLauncherSettings, effects.receive())
+                    assertEquals(SETTINGS_FOCUS, state.focusRequest?.target)
+                    cancelAndIgnoreRemainingEvents()
+                }
             }
         }
 
@@ -173,7 +195,7 @@ class HomeInteractionTest {
                 awaitMatching { it.dock.isNotEmpty() }
                 events.send(HomeEvent.SettingsMenu)
                 val menu = awaitMatching { it.menu != null }.menu
-                assertEquals(HomeMenu(null, listOf(MenuRow.EditDock, MenuRow.Reorder, MenuRow.PowerMenu)), menu)
+                assertEquals(HomeMenu(null, listOf(MenuRow.LauncherSettings, MenuRow.EditDock, MenuRow.Reorder, MenuRow.PowerMenu)), menu)
                 cancelAndIgnoreRemainingEvents()
             }
         }

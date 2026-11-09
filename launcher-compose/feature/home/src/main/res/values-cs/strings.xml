@@ -56,4 +56,6 @@
   </plurals>
   <string name="habit_usual">Obvykle ji otevíráte v tuto dobu</string>
   <string name="never_opened">Nikdy neotevřeno</string>
+  <string name="launcher_settings">Nastavení domovské obrazovky</string>
+  <string name="launcher_settings_summary">Rozložení, hodiny a pohyb</string>
 </resources>

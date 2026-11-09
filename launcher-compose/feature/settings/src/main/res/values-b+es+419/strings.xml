@@ -32,4 +32,5 @@
   <string name="settings_follow_theme">Usar el tema (restablecer configuración)</string>
   <string name="settings_tv_settings">Configuración del televisor</string>
   <string name="settings_save_failed">No se pudo guardar el ajuste</string>
+  <string name="settings_reorder">Reordenar aplicaciones</string>
 </resources>

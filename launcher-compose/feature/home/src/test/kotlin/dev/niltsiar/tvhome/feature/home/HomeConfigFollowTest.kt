@@ -225,4 +225,88 @@ class HomeConfigFollowTest {
                 cancelAndIgnoreRemainingEvents()
             }
         }
+
+    @Test
+    fun closing_launcher_settings_with_other_columns_focuses_the_settings_button_in_the_new_layout() =
+        runTest {
+            presenter().test {
+                awaitMatching { it.dock.isNotEmpty() }
+                events.send(HomeEvent.Focus("pkg.7"))
+                awaitMatching { it.focusedKey == "pkg.7" }
+                events.send(HomeEvent.Stopped)
+                config.value = config.value.copy(columns = 4)
+                events.send(HomeEvent.Started)
+                events.send(HomeEvent.SettingsClosed(reorder = false))
+
+                val state = awaitMatching { it.focusRequest?.target == SETTINGS_FOCUS }
+
+                assertEquals(4, state.dock.size)
+                assertEquals(4, state.config.columns)
+                assertNull(state.reorder)
+                events.send(HomeEvent.Focus("pkg.2"))
+                assertEquals(SETTINGS_FOCUS, awaitMatching { it.focusedKey == "pkg.2" }.focusRequest?.target)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun closing_launcher_settings_with_names_toggled_focuses_the_settings_button() =
+        runTest {
+            presenter().test {
+                awaitMatching { it.dock.isNotEmpty() }
+                events.send(HomeEvent.Focus("pkg.3"))
+                awaitMatching { it.focusedKey == "pkg.3" }
+                events.send(HomeEvent.Stopped)
+                config.value = config.value.copy(alwaysShowNames = true)
+                events.send(HomeEvent.Started)
+                events.send(HomeEvent.SettingsClosed(reorder = false))
+
+                val state = awaitMatching { it.focusRequest?.target == SETTINGS_FOCUS }
+
+                assertTrue(state.config.alwaysShowNames)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun the_return_from_launcher_settings_waits_for_home_to_start() =
+        runTest {
+            presenter().test {
+                awaitMatching { it.dock.isNotEmpty() }
+                events.send(HomeEvent.Stopped)
+                config.value = config.value.copy(columns = 4)
+                events.send(HomeEvent.SettingsClosed(reorder = false))
+                events.send(HomeEvent.Focus("pkg.2"))
+
+                val waiting = awaitMatching { it.focusedKey == "pkg.2" }
+                assertNull(waiting.focusRequest)
+                assertEquals(7, waiting.dock.size)
+
+                events.send(HomeEvent.Started)
+
+                val state = awaitMatching { it.focusRequest?.target == SETTINGS_FOCUS }
+                assertEquals(4, state.dock.size)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun the_reorder_row_of_launcher_settings_starts_reorder_mode_in_the_new_layout_with_the_usual_reorder_focus() =
+        runTest {
+            presenter().test {
+                awaitMatching { it.dock.isNotEmpty() }
+                events.send(HomeEvent.Focus("pkg.7"))
+                awaitMatching { it.focusedKey == "pkg.7" }
+                events.send(HomeEvent.Stopped)
+                config.value = config.value.copy(columns = 4)
+                events.send(HomeEvent.Started)
+                events.send(HomeEvent.SettingsClosed(reorder = true))
+
+                val state = awaitMatching { it.reorder != null }
+
+                assertEquals(4, state.dock.size)
+                assertEquals("pkg.7", state.focusRequest?.target)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
 }
