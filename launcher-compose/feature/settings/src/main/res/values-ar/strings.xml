@@ -31,6 +31,8 @@
   <string name="settings_input_arrival">تنبيه بمدخل جديد</string>
   <string name="settings_follow_theme">اتّباع السمة (إعادة ضبط الخيارات)</string>
   <string name="settings_tv_settings">إعدادات نظام التلفاز</string>
+  <string name="home_settings">الشاشة الرئيسية الافتراضية</string>
+  <string name="home_settings_help">اختر الشاشة الرئيسية الأصلية لإيقاف استخدام %1$s افتراضيًا، أو اختر %1$s للعودة. يجب أن يكون المشغّل الأصلي مفعّلًا وأن يدعم التلفاز اختيار الشاشة الرئيسية. إذا عُطّل، استخدم برنامج الاستعادة أولًا.</string>
   <string name="settings_save_failed">تعذّر حفظ الإعداد</string>
   <string name="settings_reorder">إعادة ترتيب التطبيقات</string>
   <string name="open_on_start_label">الفتح عند التشغيل</string>

@@ -45,6 +45,7 @@ class SettingsScreenTest {
     private val app: Application = RuntimeEnvironment.getApplication()
     private lateinit var settings: SettingsHarness
     private var tvSettingsOpened = 0
+    private var defaultHomeOpened = 0
     private var reordered = 0
 
     @After
@@ -72,6 +73,7 @@ class SettingsScreenTest {
                 SettingsScreen(
                     { state.value },
                     settings.viewModel.actions,
+                    onChooseDefaultHome = { defaultHomeOpened++ },
                     onOpenTvSettings = { tvSettingsOpened++ },
                     onReorder = { reordered++ },
                 )
@@ -193,6 +195,8 @@ class SettingsScreenTest {
         press(Key.DirectionDown)
         compose.onNodeWithTag("settings:follow_theme").assertIsFocused()
         press(Key.DirectionDown)
+        compose.onNodeWithTag("settings:default_home").assertIsFocused()
+        press(Key.DirectionDown)
         compose.onNodeWithTag("settings:tv_settings").assertIsFocused()
         compose.onNodeWithTag("settings:tv_settings").assertIsDisplayed()
     }
@@ -200,14 +204,14 @@ class SettingsScreenTest {
     @Test
     fun down_on_the_last_row_and_up_on_the_first_stay_on_the_screen() {
         show()
-        repeat(rowCount() + 1) { press(Key.DirectionDown) }
+        repeat(rowCount() + 2) { press(Key.DirectionDown) }
         compose.onNodeWithTag("settings:tv_settings").assertIsFocused()
 
         repeat(3) { press(Key.DirectionDown) }
         compose.onNodeWithTag("settings:tv_settings").assertIsFocused()
         compose.onNodeWithTag("settings:tv_settings").assertIsDisplayed()
 
-        repeat(rowCount() + 3) { press(Key.DirectionUp) }
+        repeat(rowCount() + 4) { press(Key.DirectionUp) }
         option(SettingsRowId.Columns, 0).assertIsFocused()
     }
 
@@ -314,11 +318,34 @@ class SettingsScreenTest {
     @Test
     fun ok_on_tv_system_settings_opens_them() {
         show()
-        repeat(rowCount() + 1) { press(Key.DirectionDown) }
+        repeat(rowCount() + 2) { press(Key.DirectionDown) }
 
         press(Key.DirectionCenter)
 
         assertEquals(1, tvSettingsOpened)
+        assertEquals(0, defaultHomeOpened)
+    }
+
+    @Test
+    fun choose_default_home_sits_between_follow_theme_and_tv_settings_and_ok_on_it_fires_its_action() {
+        show()
+        repeat(rowCount()) { press(Key.DirectionDown) }
+        compose.onNodeWithTag("settings:follow_theme").assertIsFocused()
+
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("settings:default_home").assertIsFocused()
+        compose.onNodeWithTag("settings:default_home").assertTextEquals("Choose default home")
+        press(Key.DirectionCenter)
+        assertEquals(1, defaultHomeOpened)
+        assertEquals(0, tvSettingsOpened)
+
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("settings:tv_settings").assertIsFocused()
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("settings:tv_settings").assertIsFocused()
+        press(Key.DirectionUp)
+        press(Key.DirectionUp)
+        compose.onNodeWithTag("settings:follow_theme").assertIsFocused()
     }
 
     @Test
@@ -341,8 +368,10 @@ class SettingsScreenTest {
     fun the_last_rows_stay_reachable_with_the_reorder_row() {
         show("""{"launcher_settings_button": true}""")
 
-        repeat(rowCount() + 3) { press(Key.DirectionDown) }
+        repeat(rowCount() + 4) { press(Key.DirectionDown) }
         compose.onNodeWithTag("settings:tv_settings").assertIsFocused()
+        press(Key.DirectionUp)
+        compose.onNodeWithTag("settings:default_home").assertIsFocused()
         press(Key.DirectionUp)
         compose.onNodeWithTag("settings:follow_theme").assertIsFocused()
     }

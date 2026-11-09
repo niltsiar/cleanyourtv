@@ -31,6 +31,8 @@
   <string name="settings_input_arrival">Besked om ny indgang</string>
   <string name="settings_follow_theme">Følg tema (nulstil valg på TV)</string>
   <string name="settings_tv_settings">TV-systemindstillinger</string>
+  <string name="home_settings">Vælg standard-startskærm</string>
+  <string name="home_settings_help">Vælg den oprindelige startskærm for at stoppe med at bruge %1$s som startskærm, eller vælg %1$s for at skifte tilbage. Den oprindelige launcher skal være aktiveret, og tv\'et skal have en startskærmsvælger; hvis den blev deaktiveret, så kør gendannelsesscriptet først.</string>
   <string name="settings_save_failed">Indstillingen kunne ikke gemmes</string>
   <string name="settings_reorder">Flyt apps</string>
   <string name="open_on_start_label">Åbn ved start</string>

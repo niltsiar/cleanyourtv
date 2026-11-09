@@ -31,6 +31,8 @@
   <string name="settings_input_arrival">Hinweis auf neue Quelle</string>
   <string name="settings_follow_theme">Design übernehmen (TV-Auswahl zurücksetzen)</string>
   <string name="settings_tv_settings">TV-Systemeinstellungen</string>
+  <string name="home_settings">Standard-Startbildschirm wählen</string>
+  <string name="home_settings_help">Wähle den ursprünglichen Startbildschirm, um %1$s nicht mehr als Home zu nutzen, oder %1$s, um zurückzuwechseln. Der ursprüngliche Launcher muss aktiviert sein und der Fernseher muss eine Startbildschirm-Auswahl bieten; war er deaktiviert, führe zuerst das Wiederherstellungsskript aus.</string>
   <string name="settings_save_failed">Einstellung konnte nicht gespeichert werden</string>
   <string name="settings_reorder">Apps anordnen</string>
   <string name="open_on_start_label">Beim Start öffnen</string>

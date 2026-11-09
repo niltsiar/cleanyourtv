@@ -31,6 +31,8 @@
   <string name="settings_input_arrival">Input arrival</string>
   <string name="settings_follow_theme">Follow theme (reset on-TV choices)</string>
   <string name="settings_tv_settings">TV system settings</string>
+  <string name="home_settings">Choose default home</string>
+  <string name="home_settings_help">Select your original home to stop using %1$s as Home, or %1$s to switch back. The original launcher must be enabled and your TV must provide a home picker; use the restore script first if it was disabled.</string>
   <string name="settings_save_failed">Could not save the setting</string>
   <string name="settings_reorder">Reorder apps</string>
   <string name="open_on_start_label">Open on start</string>

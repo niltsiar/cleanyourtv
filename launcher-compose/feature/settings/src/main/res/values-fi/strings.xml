@@ -31,6 +31,8 @@
   <string name="settings_input_arrival">Ilmoitus uudesta lähteestä</string>
   <string name="settings_follow_theme">Noudata teemaa (nollaa televisiossa tehdyt valinnat)</string>
   <string name="settings_tv_settings">Television järjestelmäasetukset</string>
+  <string name="home_settings">Valitse oletuskotinäkymä</string>
+  <string name="home_settings_help">Valitse alkuperäinen kotinäkymä, jos haluat lopettaa %1$s:n käytön kotinäkymänä, tai %1$s palataksesi siihen. Alkuperäisen käynnistimen on oltava käytössä ja television on tarjottava kotinäkymän valinta. Jos käynnistin on poistettu käytöstä, aja ensin palautusskripti.</string>
   <string name="settings_save_failed">Asetusta ei voitu tallentaa</string>
   <string name="settings_reorder">Järjestä sovellukset</string>
   <string name="open_on_start_label">Avaa käynnistettäessä</string>

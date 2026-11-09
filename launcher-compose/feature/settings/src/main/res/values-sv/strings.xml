@@ -31,6 +31,8 @@
   <string name="settings_input_arrival">Avisering om ny ingång</string>
   <string name="settings_follow_theme">Följ temat (återställ val på TV:n)</string>
   <string name="settings_tv_settings">TV:ns systeminställningar</string>
+  <string name="home_settings">Välj standardstartskärm</string>
+  <string name="home_settings_help">Välj den ursprungliga startskärmen för att sluta använda %1$s, eller %1$s för att byta tillbaka. Den ursprungliga startskärmen måste vara aktiverad och TV:n måste kunna välja startskärm. Kör återställningsskriptet först om den har inaktiverats.</string>
   <string name="settings_save_failed">Inställningen kunde inte sparas</string>
   <string name="settings_reorder">Ändra ordning på appar</string>
   <string name="open_on_start_label">Öppna vid start</string>

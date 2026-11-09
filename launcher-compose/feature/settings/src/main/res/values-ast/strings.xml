@@ -31,6 +31,8 @@
   <string name="settings_input_arrival">Avisu d\'entrada nueva</string>
   <string name="settings_follow_theme">Siguir el tema (reestablecer axustes)</string>
   <string name="settings_tv_settings">Axustes del televisor</string>
+  <string name="home_settings">Escoyer pantalla d\'aniciu predeterminá</string>
+  <string name="home_settings_help">Escueyi la to pantalla d\'aniciu orixinal pa dexar d\'usar %1$s como pantalla d\'aniciu, o %1$s pa volver a él. El llanzador orixinal tien que tar activáu y el televisor tien qu\'ufiertar un seleutor de pantalles d\'aniciu; si taba desactiváu, usa enantes el script de restauración.</string>
   <string name="settings_save_failed">Nun se pudo guardar l\'axuste</string>
   <string name="settings_reorder">Reordenar aplicaciones</string>
   <string name="open_on_start_label">Abrir al aniciar</string>

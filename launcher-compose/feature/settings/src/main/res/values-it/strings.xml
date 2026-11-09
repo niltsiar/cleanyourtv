@@ -31,6 +31,8 @@
   <string name="settings_input_arrival">Avviso nuovo ingresso</string>
   <string name="settings_follow_theme">Segui il tema (azzera le scelte fatte sulla TV)</string>
   <string name="settings_tv_settings">Impostazioni di sistema della TV</string>
+  <string name="home_settings">Scegli la home predefinita</string>
+  <string name="home_settings_help">Seleziona la home originale per smettere di usare %1$s come Home, oppure %1$s per tornare indietro. Il launcher originale deve essere attivo e la TV deve offrire la scelta della home; se era disattivato, usa prima lo script di ripristino.</string>
   <string name="settings_save_failed">Impossibile salvare l\'impostazione</string>
   <string name="settings_reorder">Riordina le app</string>
   <string name="open_on_start_label">Apri all\'avvio</string>

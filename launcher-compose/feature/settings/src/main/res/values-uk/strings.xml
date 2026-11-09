@@ -31,6 +31,8 @@
   <string name="settings_input_arrival">Сповіщення про нове джерело</string>
   <string name="settings_follow_theme">Скинути мої зміни (повернути налаштування теми)</string>
   <string name="settings_tv_settings">Системні налаштування ТБ</string>
+  <string name="home_settings">Головний екран за замовчуванням</string>
+  <string name="home_settings_help">Виберіть оригінальний головний екран, щоб більше не використовувати %1$s як головний екран, або %1$s, щоб повернутися. Оригінальний головний екран має бути увімкнений, а телевізор має показувати вибір головного екрана; якщо його було вимкнено, спершу скористайтеся скриптом відновлення.</string>
   <string name="settings_save_failed">Не вдалося зберегти налаштування</string>
   <string name="settings_reorder">Упорядкувати застосунки</string>
   <string name="open_on_start_label">Відкривати під час запуску</string>

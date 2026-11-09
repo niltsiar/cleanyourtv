@@ -31,6 +31,8 @@
   <string name="settings_input_arrival">새 입력 알림</string>
   <string name="settings_follow_theme">테마에 맞추기 (TV에서 바꾼 설정 초기화)</string>
   <string name="settings_tv_settings">TV 시스템 설정</string>
+  <string name="home_settings">기본 홈 선택</string>
+  <string name="home_settings_help">기존 홈을 선택하면 %1$s를 홈으로 쓰지 않고, %1$s를 선택하면 다시 돌아옵니다. 기존 런처가 활성화되어 있고 TV에 홈 선택 기능이 있어야 합니다. 기존 런처를 비활성화했다면 먼저 복원 스크립트를 실행하세요.</string>
   <string name="settings_save_failed">설정을 저장하지 못했습니다</string>
   <string name="settings_reorder">앱 순서 바꾸기</string>
   <string name="open_on_start_label">시작 시 열기</string>

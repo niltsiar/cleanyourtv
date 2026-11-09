@@ -31,6 +31,8 @@
   <string name="settings_input_arrival">Powiadomienie o nowym wejściu</string>
   <string name="settings_follow_theme">Użyj motywu (zresetuj wybór)</string>
   <string name="settings_tv_settings">Ustawienia systemowe TV</string>
+  <string name="home_settings">Domyślny ekran główny</string>
+  <string name="home_settings_help">Wybierz oryginalny ekran główny, aby przestać używać %1$s jako domyślnego, albo wybierz %1$s, aby wrócić. Oryginalny launcher musi być włączony, a telewizor musi udostępniać wybór ekranu głównego. Jeśli został wyłączony, najpierw użyj skryptu przywracania.</string>
   <string name="settings_save_failed">Nie udało się zapisać ustawienia</string>
   <string name="settings_reorder">Zmień kolejność aplikacji</string>
   <string name="open_on_start_label">Otwórz przy starcie</string>

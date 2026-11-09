@@ -31,6 +31,8 @@
   <string name="settings_input_arrival">Avís d\'entrada nova</string>
   <string name="settings_follow_theme">Segueix el tema (restableix els ajustos)</string>
   <string name="settings_tv_settings">Configuració del televisor</string>
+  <string name="home_settings">Tria la pantalla d\'inici</string>
+  <string name="home_settings_help">Tria la teva pantalla d\'inici original per deixar d\'utilitzar %1$s com a inici, o %1$s per tornar-hi. El llançador original ha d\'estar activat i el televisor ha de tenir un selector de pantalla d\'inici; si l\'havies desactivat, fes servir abans l\'script de restauració.</string>
   <string name="settings_save_failed">No s\'ha pogut desar l\'ajust</string>
   <string name="settings_reorder">Reordena les aplicacions</string>
   <string name="open_on_start_label">Obre en iniciar</string>

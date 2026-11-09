@@ -45,6 +45,7 @@ class SettingsActivity : ComponentActivity() {
             SettingsHost(
                 graph = graph,
                 viewModel = viewModel,
+                onChooseDefaultHome = ::chooseDefaultHome,
                 onOpenTvSettings = ::openTvSettings,
                 onReorder = ::reorder,
                 onSaveFailed = { Toast.makeText(this, SettingsR.string.settings_save_failed, Toast.LENGTH_LONG).show() },
@@ -57,6 +58,8 @@ class SettingsActivity : ComponentActivity() {
         setResult(RESULT_OK, LauncherSettingsPage.reorderResult())
         finish()
     }
+
+    private fun chooseDefaultHome() = startActivity(Intent(this, HomeSettingsActivity::class.java))
 
     private fun openTvSettings() {
         if (!graph.systemSettings.openSettings()) Toast.makeText(this, R.string.not_available, Toast.LENGTH_LONG).show()

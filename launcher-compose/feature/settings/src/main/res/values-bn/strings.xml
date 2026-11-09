@@ -31,6 +31,8 @@
   <string name="settings_input_arrival">নতুন ইনপুটের বিজ্ঞপ্তি</string>
   <string name="settings_follow_theme">থিম অনুসরণ করুন (টিভিতে করা পছন্দ মুছে দিন)</string>
   <string name="settings_tv_settings">টিভির সিস্টেম সেটিংস</string>
+  <string name="home_settings">ডিফল্ট হোম বেছে নিন</string>
+  <string name="home_settings_help">%1$s-কে আর হোম হিসেবে ব্যবহার না করতে আপনার আগের হোম বেছে নিন, আবার ফিরতে %1$s বেছে নিন। আগের লঞ্চারটি চালু থাকতে হবে এবং আপনার টিভিতে হোম বেছে নেওয়ার ব্যবস্থা থাকতে হবে; সেটি বন্ধ করা থাকলে আগে রিস্টোর স্ক্রিপ্ট চালান।</string>
   <string name="settings_save_failed">সেটিং সংরক্ষণ করা যায়নি</string>
   <string name="settings_reorder">অ্যাপ সাজান</string>
   <string name="open_on_start_label">চালু হলে খুলুন</string>

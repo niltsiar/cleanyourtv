@@ -31,6 +31,8 @@
   <string name="settings_input_arrival">แจ้งเตือนแหล่งสัญญาณใหม่</string>
   <string name="settings_follow_theme">ใช้ตามธีม (รีเซ็ตการตั้งค่า)</string>
   <string name="settings_tv_settings">การตั้งค่าระบบทีวี</string>
+  <string name="home_settings">เลือกหน้าจอหลักเริ่มต้น</string>
+  <string name="home_settings_help">เลือกหน้าจอหลักเดิมเพื่อเลิกใช้ %1$s เป็นหน้าจอหลัก หรือเลือก %1$s เพื่อสลับกลับ ตัวเปิดแอปเดิมต้องเปิดใช้งานอยู่ และทีวีต้องมีตัวเลือกหน้าจอหลัก หากถูกปิดใช้งาน ให้รันสคริปต์กู้คืนก่อน</string>
   <string name="settings_save_failed">บันทึกการตั้งค่าไม่ได้</string>
   <string name="settings_reorder">จัดเรียงแอป</string>
   <string name="open_on_start_label">เปิดเมื่อเริ่มเครื่อง</string>

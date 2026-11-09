@@ -20,6 +20,7 @@ private fun SettingsPreview() {
             SettingsScreen(
                 state = { SettingsUiState(settingsSections(config), followsTheme = false) },
                 actions = SettingsActions(),
+                onChooseDefaultHome = {},
                 onOpenTvSettings = {},
             )
         }

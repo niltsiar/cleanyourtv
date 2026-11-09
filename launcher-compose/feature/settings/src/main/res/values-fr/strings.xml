@@ -31,6 +31,8 @@
   <string name="settings_input_arrival">Alerte nouvelle source</string>
   <string name="settings_follow_theme">Suivre le thème (réinitialiser les choix)</string>
   <string name="settings_tv_settings">Paramètres du téléviseur</string>
+  <string name="home_settings">Accueil par défaut</string>
+  <string name="home_settings_help">Choisissez l\'écran d\'accueil d\'origine pour arrêter d\'utiliser %1$s comme accueil, ou choisissez %1$s pour y revenir. Le lanceur d\'origine doit être activé et le téléviseur doit proposer un sélecteur d\'accueil ; s\'il a été désactivé, utilisez d\'abord le script de restauration.</string>
   <string name="settings_save_failed">Impossible d\'enregistrer le réglage</string>
   <string name="settings_reorder">Réorganiser les applis</string>
   <string name="open_on_start_label">Ouvrir au démarrage</string>

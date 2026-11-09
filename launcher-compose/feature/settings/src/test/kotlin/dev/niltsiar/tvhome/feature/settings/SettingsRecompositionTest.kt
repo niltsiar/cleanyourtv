@@ -67,7 +67,7 @@ class SettingsRecompositionTest {
         compose.setContent {
             TvTheme {
                 val state = settings.viewModel.uiState.collectAsState()
-                SettingsScreen({ state.value }, settings.viewModel.actions, onOpenTvSettings = {})
+                SettingsScreen({ state.value }, settings.viewModel.actions, onChooseDefaultHome = {}, onOpenTvSettings = {})
             }
         }
         compose.waitForIdle()

@@ -31,6 +31,8 @@
   <string name="settings_input_arrival">Yangi manba haqida xabar</string>
   <string name="settings_follow_theme">Mavzuga qaytish (TVdagi tanlovlarni bekor qilish)</string>
   <string name="settings_tv_settings">TV tizim sozlamalari</string>
+  <string name="home_settings">Asosiy bosh ekranni tanlash</string>
+  <string name="home_settings_help">%1$s oʻrniga eski bosh ekranga qaytish uchun uni tanlang, %1$s ga qaytish uchun esa %1$s ni. Eski launcher yoqilgan boʻlishi va televizorda bosh ekran tanlash oynasi boʻlishi kerak; agar u oʻchirilgan boʻlsa, avval tiklash skriptini ishga tushiring.</string>
   <string name="settings_save_failed">Sozlamani saqlab boʻlmadi</string>
   <string name="settings_reorder">Ilovalar tartibini oʻzgartirish</string>
   <string name="open_on_start_label">Ishga tushganda ochish</string>

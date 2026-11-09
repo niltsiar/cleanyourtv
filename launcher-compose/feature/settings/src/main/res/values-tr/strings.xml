@@ -31,6 +31,8 @@
   <string name="settings_input_arrival">Yeni giriş bildirimi</string>
   <string name="settings_follow_theme">Temayı izle (TV seçimlerini sıfırla)</string>
   <string name="settings_tv_settings">TV sistem ayarları</string>
+  <string name="home_settings">Varsayılan ana ekran</string>
+  <string name="home_settings_help">%1$s yerine özgün ana ekranı seçin; geri dönmek için %1$s seçin. Özgün başlatıcı etkin olmalı ve TV ana ekran seçicisini desteklemelidir. Devre dışıysa önce geri yükleme betiğini kullanın.</string>
   <string name="settings_save_failed">Ayar kaydedilemedi</string>
   <string name="settings_reorder">Uygulamaları sırala</string>
   <string name="open_on_start_label">Açılışta aç</string>

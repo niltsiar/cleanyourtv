@@ -31,6 +31,8 @@
   <string name="settings_input_arrival">Varsel om ny inngang</string>
   <string name="settings_follow_theme">Følg temaet (tilbakestill lokale valg)</string>
   <string name="settings_tv_settings">TV-innstillinger</string>
+  <string name="home_settings">Velg standard startskjerm</string>
+  <string name="home_settings_help">Velg den opprinnelige startskjermen for å slutte å bruke %1$s, eller velg %1$s for å bytte tilbake. Den opprinnelige startskjermen må være aktivert, og TV-en må støtte valg av startskjerm. Kjør tilbakeføringsskriptet først hvis den ble deaktivert.</string>
   <string name="settings_save_failed">Innstillingen kunne ikke lagres</string>
   <string name="settings_reorder">Endre apprekkefølge</string>
   <string name="open_on_start_label">Åpne ved oppstart</string>

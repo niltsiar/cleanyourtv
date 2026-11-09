@@ -31,6 +31,8 @@
   <string name="settings_input_arrival">Báo nguồn vào mới</string>
   <string name="settings_follow_theme">Theo theme (xóa lựa chọn trên TV)</string>
   <string name="settings_tv_settings">Cài đặt hệ thống TV</string>
+  <string name="home_settings">Chọn màn hình chính mặc định</string>
+  <string name="home_settings_help">Chọn màn hình chính gốc để thôi dùng %1$s, hoặc chọn %1$s để dùng lại. Launcher gốc phải đang bật và TV phải có mục chọn màn hình chính; nếu launcher gốc đã bị tắt, hãy chạy script khôi phục trước.</string>
   <string name="settings_save_failed">Không lưu được cài đặt</string>
   <string name="settings_reorder">Sắp xếp ứng dụng</string>
   <string name="open_on_start_label">Mở khi khởi động</string>

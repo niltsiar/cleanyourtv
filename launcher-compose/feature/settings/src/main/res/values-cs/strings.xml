@@ -31,6 +31,8 @@
   <string name="settings_input_arrival">Upozornění na nový vstup</string>
   <string name="settings_follow_theme">Podle motivu (zrušit volby na TV)</string>
   <string name="settings_tv_settings">Systémová nastavení TV</string>
+  <string name="home_settings">Výchozí domovská obrazovka</string>
+  <string name="home_settings_help">Vyberte původní domovskou obrazovku, pokud už nechcete %1$s používat jako domovskou, nebo %1$s, pokud se k ní chcete vrátit. Původní launcher musí být zapnutý a televize musí nabízet výběr domovské obrazovky. Pokud byl vypnutý, spusťte nejdřív skript pro obnovení.</string>
   <string name="settings_save_failed">Nastavení se nepodařilo uložit</string>
   <string name="settings_reorder">Seřadit aplikace</string>
   <string name="open_on_start_label">Otevřít po spuštění</string>

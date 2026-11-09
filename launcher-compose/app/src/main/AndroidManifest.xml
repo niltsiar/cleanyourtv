@@ -160,6 +160,14 @@
             android:exported="false"
             android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
 
+        <!-- Stays behind the system's home picker, which is translucent on Android 14. -->
+        <activity
+            android:name=".HomeSettingsActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
+
         <!-- Screensaver: pick it in Settings, or `settings put secure screensaver_components
              dev.niltsiar.tvhome/.ClockDream` over adb (scripts/switch-home.sh does). -->
         <service

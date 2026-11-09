@@ -100,8 +100,8 @@ private val HeadingRuleGap = 6.dp
 private val ScrollClear = 64.dp
 private const val ROW_FOCUS_MS = 120
 
-/** Follow theme and TV system settings, after the rows. */
-private const val BUTTON_COUNT = 2
+/** Follow theme, Choose default home and TV system settings, after the rows. */
+private const val BUTTON_COUNT = 3
 private const val LABEL_IDLE_ALPHA = 0.78f
 private const val HEADING_ALPHA = 0.65f
 private const val RULE_ALPHA = 0.12f
@@ -111,7 +111,8 @@ private const val SELECTED_RIM_ALPHA = 0.42f
 /**
  * Launcher settings as one panel: every row lists its options side by side and OK stores the focused one at once.
  * Up and Down move between rows, onto the selected option of the next one; Left and Right move between a row's options
- * and stop at its ends. Focus cannot leave the screen. [onOpenTvSettings] opens the TV's own settings. With
+ * and stop at its ends. Focus cannot leave the screen. [onChooseDefaultHome] opens the system's home picker and
+ * [onOpenTvSettings] the TV's own settings. With
  * [SettingsUiState.reorder] the first row is Reorder apps, which has focus when the screen opens, and [onReorder] runs when it is picked.
  */
 @OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
@@ -119,6 +120,7 @@ private const val SELECTED_RIM_ALPHA = 0.42f
 public fun SettingsScreen(
     state: () -> SettingsUiState,
     actions: SettingsActions,
+    onChooseDefaultHome: () -> Unit,
     onOpenTvSettings: () -> Unit,
     modifier: Modifier = Modifier,
     onReorder: () -> Unit = {},
@@ -137,7 +139,7 @@ public fun SettingsScreen(
     // Java's order: the Wallpaper row follows the Clock row, the Open on start row follows the first section's rows.
     val wallpaperAt = lead + firstRows.indexOfFirst { it.id == SettingsRowId.ClockFormat } + 1
     val startAt = lead + firstRows.size + wallpaperRows
-    // The Reorder row if there is one, then one requester per row, the Wallpaper row and the Open on start row, then the two
+    // The Reorder row if there is one, then one requester per row, the Wallpaper row and the Open on start row, then the three
     // buttons: each sits on the option a row gets focus on, and links the rows.
     val firstButton = lead + rowCount + startRows + wallpaperRows
     val entries = remember(firstButton) { List(firstButton + BUTTON_COUNT) { FocusRequester() } }
@@ -259,13 +261,23 @@ public fun SettingsScreen(
                             )
                             Spacer(Modifier.height(ChipGap))
                             ActionRow(
+                                label = stringResource(R.string.home_settings),
+                                selected = false,
+                                onClick = onChooseDefaultHome,
+                                tag = "settings:default_home",
+                                entry = entries[firstButton + 1],
+                                upEntry = entries.above(firstButton + 1),
+                                downEntry = entries.below(firstButton + 1),
+                            )
+                            Spacer(Modifier.height(ChipGap))
+                            ActionRow(
                                 label = stringResource(R.string.settings_tv_settings),
                                 selected = false,
                                 onClick = onOpenTvSettings,
                                 tag = "settings:tv_settings",
-                                entry = entries[firstButton + 1],
-                                upEntry = entries.above(firstButton + 1),
-                                downEntry = entries.below(firstButton + 1),
+                                entry = entries[firstButton + 2],
+                                upEntry = entries.above(firstButton + 2),
+                                downEntry = entries.below(firstButton + 2),
                             )
                         }
                     }

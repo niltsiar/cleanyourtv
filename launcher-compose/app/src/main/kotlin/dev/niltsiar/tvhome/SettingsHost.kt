@@ -14,6 +14,7 @@ import dev.niltsiar.tvhome.feature.settings.SettingsScreen
 internal fun SettingsHost(
     graph: AppGraph,
     viewModel: MoleculeSettingsViewModel,
+    onChooseDefaultHome: () -> Unit,
     onOpenTvSettings: () -> Unit,
     onReorder: () -> Unit,
     onSaveFailed: () -> Unit,
@@ -29,6 +30,7 @@ internal fun SettingsHost(
         SettingsScreen(
             state = { state.value },
             actions = viewModel.actions,
+            onChooseDefaultHome = onChooseDefaultHome,
             onOpenTvSettings = onOpenTvSettings,
             onReorder = onReorder,
         )

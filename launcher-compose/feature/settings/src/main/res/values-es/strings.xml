@@ -31,6 +31,8 @@
   <string name="settings_input_arrival">Aviso de entrada nueva</string>
   <string name="settings_follow_theme">Seguir el tema (restablecer ajustes)</string>
   <string name="settings_tv_settings">Ajustes del televisor</string>
+  <string name="home_settings">Elegir inicio predeterminado</string>
+  <string name="home_settings_help">Elige tu inicio original para dejar de usar %1$s como inicio, o %1$s para volver a él. El lanzador original tiene que estar activado y el televisor debe ofrecer un selector de inicio; si estaba desactivado, usa antes el script de restauración.</string>
   <string name="settings_save_failed">No se pudo guardar el ajuste</string>
   <string name="settings_reorder">Reordenar apps</string>
   <string name="open_on_start_label">Abrir al iniciar</string>
