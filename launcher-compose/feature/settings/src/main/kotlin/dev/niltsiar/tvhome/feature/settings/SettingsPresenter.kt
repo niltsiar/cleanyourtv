@@ -112,6 +112,6 @@ internal fun settingsPresenter(
 }
 
 private fun startValue(
-    pick: String,
+    pick: String?,
     sources: SettingsSources,
-): OptionLabel = if (pick.isEmpty()) OptionLabel.Res(R.string.settings_off) else OptionLabel.Text(sources.appLabel(pick) ?: pick)
+): OptionLabel = if (pick == null) OptionLabel.Res(R.string.settings_off) else OptionLabel.Text(sources.appLabel(pick) ?: pick)

@@ -149,7 +149,7 @@ internal fun settingsSections(config: TvConfig): List<SettingsSection> =
 /** The picker over [apps], with the entry of the [pick]ed package selected, or Off when it is not among them. */
 internal fun startPicker(
     apps: List<OpenOnStartApp>,
-    pick: String,
+    pick: String?,
 ) = OpenOnStartPicker(apps, apps.indexOfFirst { it.packageName == pick } + 1)
 
 /** The names as the page shows them: without their extension when every name has one and that leaves them distinct. */

@@ -11,6 +11,7 @@ import android.provider.Settings
 import dev.niltsiar.tvhome.core.config.TvConfig
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -101,14 +102,14 @@ class OpenOnStartTest {
     ) = OpenOnStart(
         context,
         MutableStateFlow(TvConfig(bootToLiveTv = true, liveTvPackage = "com.tv.live", openOnStartNetworkWait = wait)),
-        MutableStateFlow(""),
+        MutableStateFlow(null),
         validated,
         StandardTestDispatcher(testScheduler),
     )
 
     private fun TestScope.pickOpener(
         config: MutableStateFlow<TvConfig>,
-        pick: MutableStateFlow<String> = MutableStateFlow(""),
+        pick: StateFlow<String?> = MutableStateFlow(null),
         validated: MutableStateFlow<Boolean> = MutableStateFlow(true),
     ) = OpenOnStart(context, config, pick, validated, StandardTestDispatcher(testScheduler))
 
@@ -156,7 +157,7 @@ class OpenOnStartTest {
                 OpenOnStart(
                     context,
                     MutableStateFlow(TvConfig(bootToLiveTv = true, liveTvPackage = "com.missing")),
-                    MutableStateFlow(""),
+                    MutableStateFlow(null),
                     MutableStateFlow(true),
                 )
             withoutApp.openAfterBoot { opened += it }
@@ -426,7 +427,7 @@ class OpenOnStartTest {
     @Test
     fun a_wake_without_a_pick_or_with_a_gone_app_or_the_launcher_opens_nothing() =
         runTest {
-            val pick = MutableStateFlow("")
+            val pick = MutableStateFlow<String?>(null)
             listenForWakes(pickOpener(MutableStateFlow(chosen.copy(openOnStartOnWake = true)), pick))
 
             wake()

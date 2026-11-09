@@ -58,10 +58,10 @@ class PowerOnHomeTest {
     @Test
     fun boot_to_live_tv_switches_the_power_on_keys_off() {
         val both = TvConfig(powerOnHome = true, powerOnHomeAlways = true)
-        assertEquals(PowerOnPlan(tv, always = true), powerOnPlan(both, ""))
-        assertEquals(PowerOnPlan("", always = false), powerOnPlan(both.copy(bootToLiveTv = true), ""))
-        assertFalse(powerOnPlan(TvConfig(), "").enabled)
-        assertFalse(powerOnPlan(both.copy(liveTvPackage = null, powerOnHomeAlways = false), "").enabled)
+        assertEquals(PowerOnPlan(tv, always = true), powerOnPlan(both, null))
+        assertEquals(PowerOnPlan("", always = false), powerOnPlan(both.copy(bootToLiveTv = true), null))
+        assertFalse(powerOnPlan(TvConfig(), null).enabled)
+        assertFalse(powerOnPlan(both.copy(liveTvPackage = null, powerOnHomeAlways = false), null).enabled)
     }
 
     private val picking = TvConfig(openOnStartChoice = true)
@@ -83,7 +83,7 @@ class PowerOnHomeTest {
         val config = picking.copy(powerOnHomeAlways = true)
         assertEquals(PowerOnPlan("", always = false), powerOnPlan(config, "com.netflix.ninja"))
         assertEquals(PowerOnPlan("", always = false), powerOnPlan(config, tv))
-        assertEquals(PowerOnPlan("", always = true), powerOnPlan(config, ""))
+        assertEquals(PowerOnPlan("", always = true), powerOnPlan(config, null))
     }
 
     @Test

@@ -51,16 +51,16 @@ internal data class PowerOnPlan(
     val enabled: Boolean get() = liveTv.isNotEmpty() || always
 }
 
-/** [pick] is the Open on start app, empty for none; it counts only with open_on_start_choice. */
+/** [pick] is the Open on start app, null for none; it counts only with open_on_start_choice. */
 internal fun powerOnPlan(
     config: TvConfig,
-    pick: String,
+    pick: String?,
 ): PowerOnPlan {
-    val openOnStart = if (config.openOnStartChoice) pick else ""
+    val openOnStart = if (config.openOnStartChoice) pick else null
     val liveTv = config.liveTvPackage.orEmpty()
     return PowerOnPlan(
         liveTv = if (config.powerOnHome && !config.bootToLiveTv && liveTv != openOnStart) liveTv else "",
-        always = config.powerOnHomeAlways && !config.bootToLiveTv && openOnStart.isEmpty(),
+        always = config.powerOnHomeAlways && !config.bootToLiveTv && openOnStart == null,
     )
 }
 

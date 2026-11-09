@@ -479,7 +479,7 @@ class SettingsScreenTest {
 
         assertEquals(0, compose.onAllNodesWithTag("settings:picker").fetchSemanticsNodes().size)
         assertEquals("com.app5", settings.pickedApp)
-        assertEquals(emptyList<String>(), settings.skippedAt)
+        assertEquals(emptyList<String?>(), settings.skippedAt)
         startRow().assertIsFocused()
     }
 
@@ -494,7 +494,7 @@ class SettingsScreenTest {
 
         assertEquals(0, compose.onAllNodesWithTag("settings:picker").fetchSemanticsNodes().size)
         startRow().assertTextEquals("Open on start", "App 03")
-        assertEquals(listOf(""), settings.skippedAt)
+        assertEquals(listOf<String?>(null), settings.skippedAt)
         startRow().assertIsFocused()
     }
 
@@ -505,11 +505,11 @@ class SettingsScreenTest {
         entry(0).assertIsFocused()
 
         press(Key.DirectionCenter)
-        waitUntilIdle { settings.pickedApp.isEmpty() && settings.state.picker == null }
+        waitUntilIdle { settings.pickedApp == null && settings.state.picker == null }
         compose.waitForIdle()
 
         startRow().assertTextEquals("Open on start", "Off")
-        assertEquals(emptyList<String>(), settings.skippedAt)
+        assertEquals(emptyList<String?>(), settings.skippedAt)
     }
 
     @Test

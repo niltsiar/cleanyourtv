@@ -405,8 +405,8 @@ class KeyServiceTest {
     private fun idleFor(ms: Long) = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ms))
 
     private fun pick(
-        picks: MutableStateFlow<String>,
-        app: String,
+        picks: MutableStateFlow<String?>,
+        app: String?,
     ) {
         picks.value = app
         shadowOf(Looper.getMainLooper()).idle()
@@ -448,7 +448,7 @@ class KeyServiceTest {
     @Test
     fun a_pick_written_after_the_bind_stops_power_on_home_always_and_clearing_it_brings_it_back() {
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMinutes(10))
-        val picks = MutableStateFlow("")
+        val picks = MutableStateFlow<String?>(null)
         service.follow(MutableStateFlow(alwaysOnWithChoice), picks)
 
         pick(picks, "com.netflix.ninja")
@@ -456,7 +456,7 @@ class KeyServiceTest {
         idleFor(POWER_ON_ALWAYS_DELAY_MS * 2)
         assertFalse(homeStarted())
 
-        pick(picks, "")
+        pick(picks, null)
         screenOn()
         idleFor(POWER_ON_ALWAYS_DELAY_MS)
         assertTrue(homeStarted())
@@ -464,7 +464,7 @@ class KeyServiceTest {
 
     @Test
     fun a_pick_written_after_the_bind_stops_the_live_tv_redirect_when_it_is_live_tv() {
-        val picks = MutableStateFlow("com.netflix.ninja")
+        val picks = MutableStateFlow<String?>("com.netflix.ninja")
         service.follow(MutableStateFlow(TvConfig(powerOnHome = true, openOnStartChoice = true)), picks)
         screenOn()
         service.handleWindow(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED, "com.mediatek.wwtv.tvcenter", null)
@@ -478,11 +478,11 @@ class KeyServiceTest {
 
     @Test
     fun clearing_the_pick_inside_the_boot_window_does_not_send_home_over_the_screen_in_front() {
-        val picks = MutableStateFlow("com.netflix.ninja")
+        val picks = MutableStateFlow<String?>("com.netflix.ninja")
         service.follow(MutableStateFlow(alwaysOnWithChoice), picks)
         idleFor(2_000)
 
-        pick(picks, "")
+        pick(picks, null)
         idleFor(2_000)
 
         assertFalse(homeStarted())
@@ -491,7 +491,7 @@ class KeyServiceTest {
     @Test
     fun a_pick_that_leaves_the_plan_as_it_was_does_not_start_the_service_again() {
         installLeanbackApp("org.xbmc.kodi")
-        val picks = MutableStateFlow("com.netflix.ninja")
+        val picks = MutableStateFlow<String?>("com.netflix.ninja")
         service.follow(MutableStateFlow(holdKeys()), picks)
         service.handleKey(key(KeyEvent.ACTION_DOWN, 190))
 

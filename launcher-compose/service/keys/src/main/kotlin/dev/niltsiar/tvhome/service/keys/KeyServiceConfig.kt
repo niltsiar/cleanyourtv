@@ -25,7 +25,7 @@ internal data class KeyServiceConfig(
 )
 
 /** [pick] is the Open on start app ([dev.niltsiar.tvhome.core.config.ConfigRepository.openOnStartApp]), which only the power-on plan reads. */
-internal fun TvConfig.forKeyService(pick: String): KeyServiceConfig =
+internal fun TvConfig.forKeyService(pick: String?): KeyServiceConfig =
     KeyServiceConfig(
         appKeys = appKeys,
         restoreKeyServices = restoreKeyServices,

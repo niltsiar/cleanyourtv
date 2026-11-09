@@ -44,13 +44,13 @@ internal fun openOnStartDue(
  * open_on_start_choice, which also opens on each wake with open_on_start_on_wake. boot_to_live_tv wins at boot.
  * Once per boot, keyed on Settings.Global.BOOT_COUNT and committed to disk before the app starts: on a low-memory TV
  * the app can push the launcher out of memory, and a write still in flight is lost then, so every Home press would
- * open the app again. [pick] is the picked package, empty for Off. [validated] says whether the TV reaches the internet,
+ * open the app again. [pick] is the picked package, null for Off. [validated] says whether the TV reaches the internet,
  * for open_on_start_network_wait. Everything reads [config] and [pick] when it is used.
  */
 public class OpenOnStart(
     context: Context,
     private val config: StateFlow<TvConfig>,
-    private val pick: StateFlow<String>,
+    private val pick: StateFlow<String?>,
     private val validated: Flow<Boolean>,
     private val io: CoroutineDispatcher = Dispatchers.IO,
 ) {
@@ -94,7 +94,7 @@ public class OpenOnStart(
     public suspend fun openOnWake(open: (Intent) -> Unit) {
         val current = config.value
         val app = pick.value
-        if (!current.openOnStartChoice || !current.openOnStartOnWake || app.isEmpty() || app == context.packageName) return
+        if (!current.openOnStartChoice || !current.openOnStartOnWake || app == null || app == context.packageName) return
         val intent = withContext(io) { pickIntent(app) } ?: return
         openWhenReady(intent, open)
     }

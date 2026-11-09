@@ -28,7 +28,9 @@ import kotlin.coroutines.EmptyCoroutineContext
  * The real repository over a theme file in the app's folder, and the real view model on it. The view model's presenter runs
  * on a background thread, so a test can block the test thread on [awaitState]. A test that draws the screen sets [uiThread]:
  * Molecule's immediate recompositions then run on the UI thread, as in the app, and not beside the UI frame, which made the
- * list's scroll land in the wrong place from time to time. The picker offers [apps]; [labels] names the installed ones
+ * list's scroll land in the wrong place from time to time. That scope uses Dispatchers.Main and not Main.immediate: with
+ * Immediate recomposition, the immediate dispatcher left the recomposer without a wake-up now and then, and the state
+ * stayed old for good. The picker offers [apps]; [labels] names the installed ones
  * and [skippedAt] records the pick stored at each skipThisBoot call. The theme's pictures are [wallpapers], listed off the
  * calling thread as the app does: a list that came back at once would be stored while the first composition applies, and
  * Molecule's immediate recompositions on the UI thread would stall. [awaitApplied] waits for a wallpaper pick that was stored.
@@ -42,10 +44,10 @@ internal class SettingsHarness(
     wallpapers: List<String> = emptyList(),
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val presenterScope = if (uiThread) CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) else scope
+    private val presenterScope = if (uiThread) CoroutineScope(SupervisorJob() + Dispatchers.Main) else scope
     val repository: ConfigRepository
     val viewModel: MoleculeSettingsViewModel
-    val skippedAt = CopyOnWriteArrayList<String>()
+    val skippedAt = CopyOnWriteArrayList<String?>()
     private val applied = Channel<Unit>(Channel.UNLIMITED)
 
     init {
@@ -72,7 +74,7 @@ internal class SettingsHarness(
 
     fun followTheme() = viewModel.actions.onFollowTheme()
 
-    val pickedApp: String get() = repository.openOnStartApp.value
+    val pickedApp: String? get() = repository.openOnStartApp.value
     val wallpaperChoice: String? get() = repository.wallpaperChoice.value
 
     /** Waits for the next wallpaper pick that was reported as stored. */

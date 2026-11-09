@@ -16,12 +16,15 @@ public class Choice<T> internal constructor(
     internal val overlay: (TvConfig, Preferences) -> TvConfig,
 )
 
+/** The stored value of [key]; null when none is stored or it has another type, as an older build may have used the name. */
+internal inline fun <reified T : Any> Preferences.stored(key: Preferences.Key<T>): T? = asMap()[key] as? T
+
 private fun boolChoice(
     name: String,
     apply: TvConfig.(Boolean) -> TvConfig,
 ): Choice<Boolean> {
     val key = booleanPreferencesKey(name)
-    return Choice(key, { prefs, value -> prefs[key] = value }) { config, prefs -> prefs[key]?.let { config.apply(it) } ?: config }
+    return Choice(key, { prefs, value -> prefs[key] = value }) { config, prefs -> prefs.stored(key)?.let { config.apply(it) } ?: config }
 }
 
 /** A stored int outside [range] is ignored, as the reference launcher ignores it. */
@@ -32,7 +35,7 @@ private fun intChoice(
 ): Choice<Int> {
     val key = intPreferencesKey(name)
     return Choice(key, { prefs, value -> prefs[key] = value }) { config, prefs ->
-        prefs[key]?.takeIf { it in range }?.let { config.apply(it) } ?: config
+        prefs.stored(key)?.takeIf { it in range }?.let { config.apply(it) } ?: config
     }
 }
 
@@ -54,7 +57,7 @@ public object Choices {
     public val DockOpacity: Choice<Int?> =
         intPreferencesKey("dock_opacity").let { key ->
             Choice(key, { prefs, value -> prefs[key] = value ?: DOCK_OPACITY_AUTO }) { config, prefs ->
-                when (val stored = prefs[key]) {
+                when (val stored = prefs.stored(key)) {
                     DOCK_OPACITY_AUTO -> config.copy(dockOpacity = null)
                     in 30..100 -> config.copy(dockOpacity = stored)
                     else -> config
@@ -65,7 +68,7 @@ public object Choices {
     public val TimeFormat: Choice<ClockFormat> =
         stringPreferencesKey("clock_format").let { key ->
             Choice(key, { prefs, value -> prefs[key] = value.jsonValue }) { config, prefs ->
-                ClockFormat.entries.firstOrNull { it.jsonValue == prefs[key] }?.let { config.copy(clockFormat = it) } ?: config
+                ClockFormat.entries.firstOrNull { it.jsonValue == prefs.stored(key) }?.let { config.copy(clockFormat = it) } ?: config
             }
         }
     public val Animations: Choice<Boolean> = boolChoice("animations") { copy(animations = it) }

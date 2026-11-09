@@ -58,7 +58,7 @@ public class KeyService : AccessibilityService() {
     private val timer = HandlerTimer()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var following: Job? = null
-    private var config = TvConfig().forKeyService("")
+    private var config = TvConfig().forKeyService(null)
     private var keys = AppKeys(emptyList())
     private var settings: SystemSettings? = null
     private var launcher: TargetLauncher? = null
@@ -88,8 +88,9 @@ public class KeyService : AccessibilityService() {
     internal fun connected() {
         PowerMenu.bind(this)
         // The service is directBootAware: Android 11 skips a service that is not while the user is still locked at boot,
-        // writes accessibility_enabled=0 and, on TCL G03 firmware, never binds it after the unlock. The theme lives in
-        // credential-protected storage, so wait for the unlock before reading it.
+        // writes accessibility_enabled=0 and, on TCL G03 firmware, never binds it after the unlock. The theme and the stored
+        // choices live in credential-protected storage. The repository would serve the theme alone until the unlock, so the
+        // service waits for the unlock itself and its first start() already carries the choices.
         val users = getSystemService(UserManager::class.java)
         if (users.isUserUnlocked) {
             connect()
@@ -129,12 +130,12 @@ public class KeyService : AccessibilityService() {
     /** Starts the service on each value of [configs] and [picks] (the Open on start app) that differs in what it reads. */
     internal fun follow(
         configs: Flow<TvConfig>,
-        picks: Flow<String> = flowOf(""),
+        picks: Flow<String?> = flowOf(null),
     ): Job = scope.launch { collectChanges(configs, picks) }
 
     private suspend fun collectChanges(
         configs: Flow<TvConfig>,
-        picks: Flow<String>,
+        picks: Flow<String?>,
     ) {
         combine(configs, picks) { config, pick -> config.forKeyService(pick) }.distinctUntilChanged().collect { start(it) }
     }
@@ -144,7 +145,7 @@ public class KeyService : AccessibilityService() {
         unlockReceiver = null
     }
 
-    internal fun start(config: TvConfig) = start(config.forKeyService(""))
+    internal fun start(config: TvConfig) = start(config.forKeyService(null))
 
     /** Reads [config] in: the maps, the redirects and the window events they need. */
     private fun start(config: KeyServiceConfig) {

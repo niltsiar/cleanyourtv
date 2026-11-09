@@ -269,7 +269,7 @@ class SettingsPresenterTest {
         settings.awaitState { it.picker == null }
 
         assertEquals("com.alpha", settings.pickedApp)
-        assertEquals(emptyList<String>(), settings.skippedAt)
+        assertEquals(emptyList<String?>(), settings.skippedAt)
     }
 
     @Test
@@ -284,7 +284,7 @@ class SettingsPresenterTest {
 
         assertEquals(OpenOnStartRow(OptionLabel.Text("Gamma")), shown.openOnStart)
         assertEquals("com.gamma", settings.pickedApp)
-        assertEquals(listOf(""), settings.skippedAt)
+        assertEquals(listOf<String?>(null), settings.skippedAt)
     }
 
     @Test
@@ -298,9 +298,9 @@ class SettingsPresenterTest {
         settings.viewModel.actions.onPickStartApp(0)
         settings.awaitState { it.picker == null && it.followsTheme }
 
-        assertEquals("", settings.pickedApp)
+        assertNull(settings.pickedApp)
         assertEquals(OpenOnStartRow(OptionLabel.Res(R.string.settings_off)), settings.state.openOnStart)
-        assertEquals(emptyList<String>(), settings.skippedAt)
+        assertEquals(emptyList<String?>(), settings.skippedAt)
     }
 
     @Test
@@ -325,7 +325,7 @@ class SettingsPresenterTest {
         settings.followTheme()
         settings.awaitState { it.followsTheme && it.openOnStart?.value == OptionLabel.Res(R.string.settings_off) }
 
-        assertEquals("", settings.pickedApp)
+        assertNull(settings.pickedApp)
     }
 
     private fun SettingsHarness.openWallpaperPicker(): WallpaperPicker {
