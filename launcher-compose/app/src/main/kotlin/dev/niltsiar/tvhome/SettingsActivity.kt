@@ -35,7 +35,7 @@ internal object LauncherSettingsPage : ActivityResultContract<Unit, Boolean>() {
 class SettingsActivity : ComponentActivity() {
     private val graph get() = (application as TvHomeApplication).graph
     private val viewModel: MoleculeSettingsViewModel by viewModels {
-        viewModelFactory { initializer { MoleculeSettingsViewModel(graph.configRepository) } }
+        viewModelFactory { initializer { MoleculeSettingsViewModel(graph.configRepository, graph.settingsSources) } }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

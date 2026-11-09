@@ -33,4 +33,6 @@
   <string name="settings_tv_settings">Systémová nastavení TV</string>
   <string name="settings_save_failed">Nastavení se nepodařilo uložit</string>
   <string name="settings_reorder">Seřadit aplikace</string>
+  <string name="open_on_start_label">Otevřít po spuštění</string>
+  <string name="open_on_start_state">Otevřít po spuštění: %1$s</string>
 </resources>

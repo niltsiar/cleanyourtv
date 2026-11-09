@@ -5,7 +5,6 @@ import android.content.Intent
 import android.os.Environment
 import android.os.Looper
 import android.os.UserManager
-import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,7 +17,6 @@ import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -136,11 +134,27 @@ class ConfigRepositoryTest {
         repo.choose(Choices.AlwaysShowNames, true)
         repo.choose(Choices.OpenOnStart, "com.netflix.ninja")
         awaitConfig(repo) { it.columns == 7 }
+        awaitOpenOnStart(repo, "com.netflix.ninja")
 
         runBlocking { repo.followTheme() }
 
         awaitConfig(repo) { it == theme }
-        assertNull(openOnStart(repo))
+        awaitOpenOnStart(repo, "")
+    }
+
+    @Test
+    fun the_open_on_start_app_follows_the_store_and_clearing_it_is_off() {
+        pushTheme("""{"columns": 5}""")
+        val repo = repository()
+        assertEquals("", repo.openOnStartApp.value)
+
+        repo.choose(Choices.OpenOnStart, "com.netflix.ninja")
+        awaitOpenOnStart(repo, "com.netflix.ninja")
+        awaitFollowsTheme(repo, false)
+
+        runBlocking { repo.clear(Choices.OpenOnStart) }
+        awaitOpenOnStart(repo, "")
+        awaitFollowsTheme(repo, true)
     }
 
     @Test
@@ -181,7 +195,7 @@ class ConfigRepositoryTest {
         val repo = repository()
 
         assertEquals(theme, repo.config.value)
-        assertEquals("com.netflix.ninja", openOnStart(repo))
+        assertEquals("com.netflix.ninja", repo.openOnStartApp.value)
     }
 
     @Test
@@ -316,7 +330,10 @@ class ConfigRepositoryTest {
         expected: Boolean,
     ) = runBlocking { withTimeout(10_000) { repo.followsTheme.first { it == expected } } }
 
-    private fun openOnStart(repo: ConfigRepository): String? = runBlocking { repo.stored.first()[stringPreferencesKey("open_on_start")] }
+    private fun awaitOpenOnStart(
+        repo: ConfigRepository,
+        expected: String,
+    ) = runBlocking { withTimeout(10_000) { repo.openOnStartApp.first { it == expected } } }
 
     private fun themeFile(name: String): File = File(ThemeDirectory(app).dir!!, name)
 

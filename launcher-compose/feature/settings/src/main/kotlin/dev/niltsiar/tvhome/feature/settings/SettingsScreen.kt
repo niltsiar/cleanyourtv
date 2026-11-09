@@ -3,6 +3,7 @@ package dev.niltsiar.tvhome.feature.settings
 import android.view.View
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -31,9 +32,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -67,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.designsystem.FocusPill
 import dev.niltsiar.tvhome.core.designsystem.MenuDivider
+import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.OverlaySurface
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.menuRowShape
@@ -117,19 +122,36 @@ public fun SettingsScreen(
     modifier: Modifier = Modifier,
     onReorder: () -> Unit = {},
 ) {
-    val motion = TvTheme.motion
-    val reveal = remember { Animatable(if (motion.animations) 0f else 1f) }
-    LaunchedEffect(Unit) { reveal.animateTo(1f, motion.springSpec(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)) }
+    val reveal = rememberReveal()
     val ui = state()
     val rowCount = ui.sections.sumOf { it.rows.size }
     val lead = if (ui.reorder) 1 else 0
-    // The Reorder row if there is one, then one requester per row, then the two buttons: each sits on the option a row
-    // gets focus on, and links the rows.
-    val firstButton = lead + rowCount
+    val startRows = if (ui.openOnStart != null) 1 else 0
+    // Where the Open on start row goes: after the first section's rows, which are Java's.
+    val startAt =
+        lead + (
+            ui.sections
+                .firstOrNull()
+                ?.rows
+                ?.size ?: 0
+        )
+    // The Reorder row if there is one, then one requester per row and the Open on start row, then the two buttons: each
+    // sits on the option a row gets focus on, and links the rows.
+    val firstButton = lead + rowCount + startRows
     val entries = remember(firstButton) { List(firstButton + BUTTON_COUNT) { FocusRequester() } }
     LaunchedEffect(entries) {
         withFrameNanos { }
         entries.first().requestFocus()
+    }
+    val pickerOpen = ui.picker != null
+    var pickerShown by remember { mutableStateOf(false) }
+    LaunchedEffect(pickerOpen) {
+        if (pickerOpen) {
+            pickerShown = true
+        } else if (pickerShown) {
+            withFrameNanos { }
+            entries[startAt].requestFocus()
+        }
     }
     val scroll = rememberScrollState()
     val clear = with(LocalDensity.current) { ScrollClear.toPx() }
@@ -154,17 +176,10 @@ public fun SettingsScreen(
                         .widthIn(max = PanelMaxWidth)
                         .fillMaxWidth()
                         .fillMaxHeight()
-                        .graphicsLayer {
-                            compositingStrategy = CompositingStrategy.ModulateAlpha
-                            alpha = reveal.value.coerceIn(0f, 1f)
-                            translationY = (1f - reveal.value) * PanelRise.toPx()
-                            val scale = PANEL_START_SCALE + (1f - PANEL_START_SCALE) * reveal.value
-                            scaleX = scale
-                            scaleY = scale
-                        },
+                        .revealed(reveal),
             ) {
                 Column(Modifier.fillMaxSize()) {
-                    Title()
+                    PanelTitle(stringResource(R.string.settings_title), "settings:title")
                     CompositionLocalProvider(LocalBringIntoViewSpec provides scrollSpec) {
                         Column(
                             Modifier
@@ -176,7 +191,7 @@ public fun SettingsScreen(
                         ) {
                             if (ui.reorder) {
                                 ActionRow(
-                                    label = R.string.settings_reorder,
+                                    label = stringResource(R.string.settings_reorder),
                                     selected = false,
                                     onClick = onReorder,
                                     tag = "settings:reorder",
@@ -187,16 +202,30 @@ public fun SettingsScreen(
                                 Spacer(Modifier.height(ChipGap))
                             }
                             var index = lead
-                            for (section in ui.sections) {
+                            for ((position, section) in ui.sections.withIndex()) {
                                 section.heading?.let { Heading(it) }
                                 for (row in section.rows) {
                                     val at = index++
                                     key(row.id) { SettingRow(row, actions.onPick, entries[at], entries.above(at), entries.below(at)) }
                                 }
+                                if (position == 0) {
+                                    ui.openOnStart?.let { start ->
+                                        val at = index++
+                                        ActionRow(
+                                            label = stringResource(R.string.open_on_start_state, start.value.text()),
+                                            selected = false,
+                                            onClick = actions.onOpenPicker,
+                                            tag = "settings:open_on_start",
+                                            entry = entries[at],
+                                            upEntry = entries.above(at),
+                                            downEntry = entries.below(at),
+                                        )
+                                    }
+                                }
                             }
                             MenuDivider(Modifier.padding(vertical = 10.dp))
                             ActionRow(
-                                label = R.string.settings_follow_theme,
+                                label = stringResource(R.string.settings_follow_theme),
                                 selected = ui.followsTheme,
                                 onClick = actions.onFollowTheme,
                                 tag = "settings:follow_theme",
@@ -206,7 +235,7 @@ public fun SettingsScreen(
                             )
                             Spacer(Modifier.height(ChipGap))
                             ActionRow(
-                                label = R.string.settings_tv_settings,
+                                label = stringResource(R.string.settings_tv_settings),
                                 selected = false,
                                 onClick = onOpenTvSettings,
                                 tag = "settings:tv_settings",
@@ -218,20 +247,45 @@ public fun SettingsScreen(
                     }
                 }
             }
+            OverlayHost(open = { pickerOpen }) {
+                ui.picker?.let { StartPickerPanel(it, actions.onPickStartApp, actions.onClosePicker) }
+            }
         }
     }
 }
+
+/** The settings panel's entrance: it rises, grows and fades in with a spring, at once with animations off. */
+@Composable
+internal fun rememberReveal(): Animatable<Float, AnimationVector1D> {
+    val motion = TvTheme.motion
+    val reveal = remember { Animatable(if (motion.animations) 0f else 1f) }
+    LaunchedEffect(Unit) { reveal.animateTo(1f, motion.springSpec(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)) }
+    return reveal
+}
+
+internal fun Modifier.revealed(reveal: Animatable<Float, AnimationVector1D>): Modifier =
+    graphicsLayer {
+        compositingStrategy = CompositingStrategy.ModulateAlpha
+        alpha = reveal.value.coerceIn(0f, 1f)
+        translationY = (1f - reveal.value) * PanelRise.toPx()
+        val scale = PANEL_START_SCALE + (1f - PANEL_START_SCALE) * reveal.value
+        scaleX = scale
+        scaleY = scale
+    }
 
 private fun List<FocusRequester>.above(index: Int) = getOrNull(index - 1) ?: FocusRequester.Cancel
 
 private fun List<FocusRequester>.below(index: Int) = getOrNull(index + 1) ?: FocusRequester.Cancel
 
 @Composable
-private fun Title() {
+internal fun PanelTitle(
+    text: String,
+    tag: String,
+) {
     val typography = TvTheme.typography
     val style = remember(typography) { typography.shelfTitle.copy(fontSize = 30.sp) }
     BasicText(
-        stringResource(R.string.settings_title),
+        text,
         style = style,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
@@ -239,7 +293,7 @@ private fun Title() {
             Modifier
                 .fillMaxWidth()
                 .padding(start = PanelSide + RowSide, end = PanelSide, top = TitleTop, bottom = TitleBottom)
-                .testTag("settings:title"),
+                .testTag(tag),
     )
 }
 
@@ -336,7 +390,7 @@ private fun SettingRow(
 }
 
 @Composable
-private fun OptionLabel.text(): String =
+internal fun OptionLabel.text(): String =
     when (this) {
         is OptionLabel.Text -> text
         is OptionLabel.Res -> stringResource(id)
@@ -368,16 +422,20 @@ private fun OptionChip(
     }
 }
 
-/** A full-width button of the panel; a [selected] one is marked with a check. */
+/**
+ * A full-width button of the panel; a [selected] one is marked with a check. [entry] is where focus arrives, [upEntry]
+ * and [downEntry] the entries of the rows around it, which a list that moves focus itself leaves at their defaults.
+ */
 @Composable
-private fun ActionRow(
-    @StringRes label: Int,
+internal fun ActionRow(
+    label: String,
     selected: Boolean,
     onClick: () -> Unit,
     tag: String,
-    entry: FocusRequester,
-    upEntry: FocusRequester,
-    downEntry: FocusRequester,
+    modifier: Modifier = Modifier,
+    entry: FocusRequester? = null,
+    upEntry: FocusRequester = FocusRequester.Default,
+    downEntry: FocusRequester = FocusRequester.Default,
 ) {
     val typography = TvTheme.typography
     val style = remember(typography) { typography.pillLabel.copy(fontSize = 18.sp) }
@@ -387,12 +445,12 @@ private fun ActionRow(
         onClick = onClick,
         shape = shape,
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
                 .height(RowMinHeight)
                 .testTag(tag)
                 .semantics { this.selected = selected }
-                .focusRequester(entry)
+                .then(if (entry != null) Modifier.focusRequester(entry) else Modifier)
                 .focusProperties {
                     up = upEntry
                     down = downEntry
@@ -402,7 +460,7 @@ private fun ActionRow(
         background = { if (selected) SelectedLook(rest, shape) },
     ) { ink ->
         BasicText(
-            stringResource(label),
+            label,
             style = style,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

@@ -33,4 +33,6 @@
   <string name="settings_tv_settings">TV tizim sozlamalari</string>
   <string name="settings_save_failed">Sozlamani saqlab boʻlmadi</string>
   <string name="settings_reorder">Ilovalar tartibini oʻzgartirish</string>
+  <string name="open_on_start_label">Ishga tushganda ochish</string>
+  <string name="open_on_start_state">Ishga tushganda ochish: %1$s</string>
 </resources>

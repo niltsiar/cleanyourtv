@@ -33,4 +33,6 @@
   <string name="settings_tv_settings">การตั้งค่าระบบทีวี</string>
   <string name="settings_save_failed">บันทึกการตั้งค่าไม่ได้</string>
   <string name="settings_reorder">จัดเรียงแอป</string>
+  <string name="open_on_start_label">เปิดเมื่อเริ่มเครื่อง</string>
+  <string name="open_on_start_state">เปิดเมื่อเริ่มเครื่อง: %1$s</string>
 </resources>

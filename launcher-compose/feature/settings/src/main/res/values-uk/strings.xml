@@ -33,4 +33,6 @@
   <string name="settings_tv_settings">Системні налаштування ТБ</string>
   <string name="settings_save_failed">Не вдалося зберегти налаштування</string>
   <string name="settings_reorder">Упорядкувати застосунки</string>
+  <string name="open_on_start_label">Відкривати під час запуску</string>
+  <string name="open_on_start_state">Відкривати під час запуску: %1$s</string>
 </resources>

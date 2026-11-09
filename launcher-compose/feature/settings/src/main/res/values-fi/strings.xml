@@ -33,4 +33,6 @@
   <string name="settings_tv_settings">Television järjestelmäasetukset</string>
   <string name="settings_save_failed">Asetusta ei voitu tallentaa</string>
   <string name="settings_reorder">Järjestä sovellukset</string>
+  <string name="open_on_start_label">Avaa käynnistettäessä</string>
+  <string name="open_on_start_state">Avaa käynnistettäessä: %1$s</string>
 </resources>

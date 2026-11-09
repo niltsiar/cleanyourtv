@@ -33,4 +33,6 @@
   <string name="settings_tv_settings">TV 시스템 설정</string>
   <string name="settings_save_failed">설정을 저장하지 못했습니다</string>
   <string name="settings_reorder">앱 순서 바꾸기</string>
+  <string name="open_on_start_label">시작 시 열기</string>
+  <string name="open_on_start_state">시작 시 열기: %1$s</string>
 </resources>

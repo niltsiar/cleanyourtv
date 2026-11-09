@@ -1,14 +1,18 @@
 package dev.niltsiar.tvhome.feature.settings
 
 import android.app.Application
+import dev.niltsiar.tvhome.core.config.Choices
 import dev.niltsiar.tvhome.core.config.ClockFormat
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.config.parseTvConfig
+import dev.niltsiar.tvhome.core.model.OpenOnStartApp
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeFalse
 import org.junit.Test
@@ -30,7 +34,15 @@ class SettingsPresenterTest {
         harness?.stop()
     }
 
-    private fun settings(theme: String = "{}") = SettingsHarness(app, theme).also { harness = it }
+    private fun settings(
+        theme: String = "{}",
+        apps: List<OpenOnStartApp> = emptyList(),
+        labels: Map<String, String> = emptyMap(),
+    ) = SettingsHarness(app, theme, apps = apps, labels = labels).also { harness = it }
+
+    private val withChoice = """{"open_on_start_choice": true}"""
+    private val apps =
+        listOf(OpenOnStartApp("Alpha", "com.alpha"), OpenOnStartApp("Beta", "com.beta"), OpenOnStartApp("Gamma", "com.gamma"))
 
     private class RowSpec(
         val id: SettingsRowId,
@@ -199,6 +211,121 @@ class SettingsPresenterTest {
     @Test
     fun the_reorder_row_is_not_offered_without_it() {
         assertEquals(false, settings().state.reorder)
+    }
+
+    @Test
+    fun the_open_on_start_row_is_not_offered_without_its_choice_key() {
+        assertNull(settings().state.openOnStart)
+    }
+
+    @Test
+    fun the_open_on_start_row_reads_off_while_nothing_is_picked() {
+        assertEquals(OpenOnStartRow(OptionLabel.Res(R.string.settings_off)), settings(withChoice).state.openOnStart)
+    }
+
+    @Test
+    fun the_open_on_start_row_shows_the_label_of_the_picked_app_its_package_when_it_is_gone_and_off_once_cleared() {
+        val settings = settings(withChoice, labels = mapOf("com.beta" to "Beta"))
+
+        settings.storePick("com.beta")
+        settings.awaitState { it.openOnStart?.value == OptionLabel.Text("Beta") }
+
+        settings.storePick("com.gone")
+        settings.awaitState { it.openOnStart?.value == OptionLabel.Text("com.gone") }
+
+        runBlocking { settings.repository.clear(Choices.OpenOnStart) }
+        settings.awaitState { it.openOnStart?.value == OptionLabel.Res(R.string.settings_off) }
+    }
+
+    @Test
+    fun the_picker_opens_on_the_apps_with_the_current_pick_selected_and_off_when_the_pick_is_not_among_them() {
+        val settings = settings(withChoice, apps)
+        assertNull(settings.state.picker)
+
+        settings.viewModel.actions.onOpenPicker()
+        assertEquals(OpenOnStartPicker(apps, 0), settings.awaitState { it.picker != null }.picker)
+
+        settings.viewModel.actions.onClosePicker()
+        settings.awaitState { it.picker == null }
+        settings.storePick("com.beta")
+        settings.viewModel.actions.onOpenPicker()
+        assertEquals(OpenOnStartPicker(apps, 2), settings.awaitState { it.picker != null }.picker)
+
+        settings.viewModel.actions.onClosePicker()
+        settings.awaitState { it.picker == null }
+        settings.storePick("com.gone")
+        settings.viewModel.actions.onOpenPicker()
+        assertEquals(OpenOnStartPicker(apps, 0), settings.awaitState { it.picker != null }.picker)
+    }
+
+    @Test
+    fun closing_the_picker_changes_nothing() {
+        val settings = settings(withChoice, apps)
+        settings.storePick("com.alpha")
+        settings.viewModel.actions.onOpenPicker()
+        settings.awaitState { it.picker != null }
+
+        settings.viewModel.actions.onClosePicker()
+        settings.awaitState { it.picker == null }
+
+        assertEquals("com.alpha", settings.pickedApp)
+        assertEquals(emptyList<String>(), settings.skippedAt)
+    }
+
+    @Test
+    fun picking_an_app_skips_this_boot_before_it_stores_the_pick_and_closes_the_picker() {
+        val settings = settings(withChoice, apps, mapOf("com.gamma" to "Gamma"))
+        settings.viewModel.actions.onOpenPicker()
+        settings.awaitState { it.picker != null }
+
+        settings.viewModel.actions.onPickStartApp(3)
+        val shown = settings.awaitState { it.picker == null && it.openOnStart?.value == OptionLabel.Text("Gamma") }
+
+        assertEquals(OpenOnStartRow(OptionLabel.Text("Gamma")), shown.openOnStart)
+        assertEquals("com.gamma", settings.pickedApp)
+        assertEquals(listOf(""), settings.skippedAt)
+        assertFalse(settings.state.followsTheme)
+    }
+
+    @Test
+    fun picking_off_removes_the_pick_and_skips_nothing() {
+        val settings = settings(withChoice, apps)
+        settings.storePick("com.beta")
+        settings.awaitState { !it.followsTheme }
+        settings.viewModel.actions.onOpenPicker()
+        settings.awaitState { it.picker != null }
+
+        settings.viewModel.actions.onPickStartApp(0)
+        settings.awaitState { it.picker == null && it.followsTheme }
+
+        assertEquals("", settings.pickedApp)
+        assertEquals(OpenOnStartRow(OptionLabel.Res(R.string.settings_off)), settings.state.openOnStart)
+        assertEquals(emptyList<String>(), settings.skippedAt)
+    }
+
+    @Test
+    fun a_pick_with_no_picker_open_changes_nothing() {
+        val settings = settings(withChoice, apps)
+        settings.storePick("com.beta")
+        settings.awaitState { !it.followsTheme }
+
+        settings.viewModel.actions.onPickStartApp(0)
+        settings.pick(SettingsRowId.Columns, 0)
+        settings.awaitState { it.row(SettingsRowId.Columns).selected == 0 }
+
+        assertEquals("com.beta", settings.pickedApp)
+    }
+
+    @Test
+    fun follow_theme_clears_the_open_on_start_pick() {
+        val settings = settings(withChoice, apps, mapOf("com.beta" to "Beta"))
+        settings.storePick("com.beta")
+        settings.awaitState { it.openOnStart?.value == OptionLabel.Text("Beta") }
+
+        settings.followTheme()
+        settings.awaitState { it.followsTheme && it.openOnStart?.value == OptionLabel.Res(R.string.settings_off) }
+
+        assertEquals("", settings.pickedApp)
     }
 
     private fun SettingsHarness.selections() = state.sections.flatMap { it.rows }.associate { it.id to it.selected }

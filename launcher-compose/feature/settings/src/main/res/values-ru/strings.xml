@@ -33,4 +33,6 @@
   <string name="settings_tv_settings">Системные настройки ТВ</string>
   <string name="settings_save_failed">Не удалось сохранить настройку</string>
   <string name="settings_reorder">Изменить порядок приложений</string>
+  <string name="open_on_start_label">Открывать при запуске</string>
+  <string name="open_on_start_state">Открывать при запуске: %1$s</string>
 </resources>

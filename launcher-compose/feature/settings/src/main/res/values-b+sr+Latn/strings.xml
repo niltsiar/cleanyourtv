@@ -33,4 +33,6 @@
   <string name="settings_tv_settings">Sistemska podešavanja TV-a</string>
   <string name="settings_save_failed">Podešavanje nije sačuvano</string>
   <string name="settings_reorder">Promeni redosled aplikacija</string>
+  <string name="open_on_start_label">Otvori pri pokretanju</string>
+  <string name="open_on_start_state">Otvori pri pokretanju: %1$s</string>
 </resources>

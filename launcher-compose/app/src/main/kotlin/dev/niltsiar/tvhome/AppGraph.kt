@@ -22,6 +22,7 @@ import dev.niltsiar.tvhome.data.wallpaper.WallpaperProvider
 import dev.niltsiar.tvhome.feature.home.FocusMemory
 import dev.niltsiar.tvhome.feature.home.HomeSources
 import dev.niltsiar.tvhome.feature.library.LibrarySources
+import dev.niltsiar.tvhome.feature.settings.SettingsSources
 import dev.niltsiar.tvhome.service.keys.PowerMenu
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
@@ -49,6 +50,7 @@ interface AppGraph {
     val inputsProvider: InputsProvider
     val inputLauncher: InputLauncher
     val openOnStart: OpenOnStart
+    val settingsSources: SettingsSources
 
     @Provides
     @SingleIn(AppScope::class)
@@ -128,7 +130,12 @@ interface AppGraph {
         application: Application,
         repository: ConfigRepository,
         networkMonitor: NetworkMonitor,
-    ): OpenOnStart = OpenOnStart(application, repository.config, networkMonitor.state.map { it.validated })
+    ): OpenOnStart = OpenOnStart(application, repository.config, repository.openOnStartApp, networkMonitor.state.map { it.validated })
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideSettingsSources(openOnStart: OpenOnStart): SettingsSources =
+        SettingsSources(openOnStart::apps, openOnStart::label, openOnStart::skipThisBoot)
 
     @Provides
     @SingleIn(AppScope::class)

@@ -6,6 +6,7 @@ import dev.niltsiar.tvhome.core.config.Choices
 import dev.niltsiar.tvhome.core.config.ClockFormat
 import dev.niltsiar.tvhome.core.config.ConfigRepository
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.model.OpenOnStartApp
 
 internal class Option<T>(
     val label: OptionLabel,
@@ -144,3 +145,9 @@ internal fun settingsSections(config: TvConfig): List<SettingsSection> =
             },
         )
     }
+
+/** The picker over [apps], with the entry of the [pick]ed package selected, or Off when it is not among them. */
+internal fun startPicker(
+    apps: List<OpenOnStartApp>,
+    pick: String,
+) = OpenOnStartPicker(apps, apps.indexOfFirst { it.packageName == pick } + 1)

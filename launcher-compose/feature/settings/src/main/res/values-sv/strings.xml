@@ -33,4 +33,6 @@
   <string name="settings_tv_settings">TV:ns systeminställningar</string>
   <string name="settings_save_failed">Inställningen kunde inte sparas</string>
   <string name="settings_reorder">Ändra ordning på appar</string>
+  <string name="open_on_start_label">Öppna vid start</string>
+  <string name="open_on_start_state">Öppna vid start: %1$s</string>
 </resources>

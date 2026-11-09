@@ -33,4 +33,6 @@
   <string name="settings_tv_settings">Systeeminstellingen van de tv</string>
   <string name="settings_save_failed">De instelling kon niet worden opgeslagen</string>
   <string name="settings_reorder">Apps ordenen</string>
+  <string name="open_on_start_label">Openen bij opstarten</string>
+  <string name="open_on_start_state">Openen bij opstarten: %1$s</string>
 </resources>

@@ -33,4 +33,6 @@
   <string name="settings_tv_settings">Ustawienia systemowe TV</string>
   <string name="settings_save_failed">Nie udało się zapisać ustawienia</string>
   <string name="settings_reorder">Zmień kolejność aplikacji</string>
+  <string name="open_on_start_label">Otwórz przy starcie</string>
+  <string name="open_on_start_state">Otwórz przy starcie: %1$s</string>
 </resources>

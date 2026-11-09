@@ -20,11 +20,16 @@ public class SettingsActions(
     /** The option at an index of a row was picked. */
     public val onPick: (SettingsRowId, Int) -> Unit = { _, _ -> },
     public val onFollowTheme: () -> Unit = {},
+    public val onOpenPicker: () -> Unit = {},
+    public val onClosePicker: () -> Unit = {},
+    /** The entry at an index of the picker was picked; 0 is Off. */
+    public val onPickStartApp: (Int) -> Unit = {},
 )
 
 /** Hosts [settingsPresenter] with Molecule: an event Flow in, a StateFlow out. */
 public class MoleculeSettingsViewModel(
     repository: ConfigRepository,
+    sources: SettingsSources,
     coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
     recompositionMode: RecompositionMode = RecompositionMode.ContextClock,
     context: CoroutineContext = AndroidUiDispatcher.Main,
@@ -38,12 +43,15 @@ public class MoleculeSettingsViewModel(
 
     public val uiState: StateFlow<SettingsUiState> =
         viewModelScope.launchMolecule(recompositionMode, context) {
-            settingsPresenter(eventFlow, repository) { saveFailures.trySend(Unit) }
+            settingsPresenter(eventFlow, repository, sources) { saveFailures.trySend(Unit) }
         }
 
     public val actions: SettingsActions =
         SettingsActions(
             onPick = { row, option -> events.trySend(SettingsEvent.Pick(row, option)) },
             onFollowTheme = { events.trySend(SettingsEvent.FollowTheme) },
+            onOpenPicker = { events.trySend(SettingsEvent.OpenPicker) },
+            onClosePicker = { events.trySend(SettingsEvent.ClosePicker) },
+            onPickStartApp = { events.trySend(SettingsEvent.PickStartApp(it)) },
         )
 }

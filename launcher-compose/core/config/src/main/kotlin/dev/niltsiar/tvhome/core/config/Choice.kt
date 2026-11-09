@@ -36,12 +36,12 @@ private fun intChoice(
     }
 }
 
-private fun storedString(name: String): Choice<String> {
-    val key = stringPreferencesKey(name)
-    return Choice(key, { prefs, value -> prefs[key] = value }) { config, _ -> config }
-}
+private fun storedString(key: Preferences.Key<String>): Choice<String> =
+    Choice(key, { prefs, value -> prefs[key] = value }) { config, _ -> config }
 
 private const val DOCK_OPACITY_AUTO = 0
+
+internal val OpenOnStartKey = stringPreferencesKey("open_on_start")
 
 /** Every [Choice]. */
 public object Choices {
@@ -69,9 +69,11 @@ public object Choices {
         }
     public val Animations: Choice<Boolean> = boolChoice("animations") { copy(animations = it) }
 
-    /** Kept for the wallpaper picker and the open-on-start picker, which no [TvConfig] field carries yet. */
-    public val WallpaperChoice: Choice<String> = storedString("wallpaper_choice")
-    public val OpenOnStart: Choice<String> = storedString("open_on_start")
+    /** Kept for the wallpaper picker, which no [TvConfig] field carries yet. */
+    public val WallpaperChoice: Choice<String> = storedString(stringPreferencesKey("wallpaper_choice"))
+
+    /** The picked package, absent or empty for Off. [ConfigRepository.openOnStartApp] reads it; no [TvConfig] field carries it. */
+    public val OpenOnStart: Choice<String> = storedString(OpenOnStartKey)
 
     public val AlwaysShowNames: Choice<Boolean> = boolChoice("always_show_names") { copy(alwaysShowNames = it) }
     public val ShowGreeting: Choice<Boolean> = boolChoice("show_greeting") { copy(showGreeting = it) }

@@ -3,9 +3,11 @@ package dev.niltsiar.tvhome.feature.settings
 import android.app.Application
 import android.os.Environment
 import app.cash.molecule.RecompositionMode
+import dev.niltsiar.tvhome.core.config.Choices
 import dev.niltsiar.tvhome.core.config.ConfigRepository
 import dev.niltsiar.tvhome.core.config.ThemeDirectory
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.model.OpenOnStartApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -15,29 +17,35 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.robolectric.shadows.ShadowEnvironment
 import java.io.File
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.coroutines.EmptyCoroutineContext
 
 /**
  * The real repository over a theme file in the app's folder, and the real view model on it. The view model's presenter runs
  * on a background thread, so a test can block the test thread on [awaitState]. A test that draws the screen sets [uiThread]:
  * Molecule's immediate recompositions then run on the UI thread, as in the app, and not beside the UI frame, which made the
- * list's scroll land in the wrong place from time to time.
+ * list's scroll land in the wrong place from time to time. The picker offers [apps]; [labels] names the installed ones
+ * and [skippedAt] records the pick stored at each skipThisBoot call.
  */
 internal class SettingsHarness(
     private val app: Application,
     theme: String = "{}",
     uiThread: Boolean = false,
+    apps: List<OpenOnStartApp> = emptyList(),
+    labels: Map<String, String> = emptyMap(),
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val presenterScope = if (uiThread) CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) else scope
     val repository: ConfigRepository
     val viewModel: MoleculeSettingsViewModel
+    val skippedAt = CopyOnWriteArrayList<String>()
 
     init {
         ShadowEnvironment.setExternalStorageState(Environment.MEDIA_MOUNTED)
         File(ThemeDirectory(app).dir!!, "config.json").writeText(theme)
         repository = ConfigRepository(app, scope)
-        viewModel = MoleculeSettingsViewModel(repository, presenterScope, RecompositionMode.Immediate, EmptyCoroutineContext)
+        val sources = SettingsSources({ apps }, labels::get) { skippedAt += repository.openOnStartApp.value }
+        viewModel = MoleculeSettingsViewModel(repository, sources, presenterScope, RecompositionMode.Immediate, EmptyCoroutineContext)
     }
 
     val config: TvConfig get() = repository.config.value
@@ -51,6 +59,10 @@ internal class SettingsHarness(
     ) = viewModel.actions.onPick(id, option)
 
     fun followTheme() = viewModel.actions.onFollowTheme()
+
+    val pickedApp: String get() = repository.openOnStartApp.value
+
+    fun storePick(pkg: String) = runBlocking { repository.set(Choices.OpenOnStart, pkg) }
 
     /** Waits for a state that satisfies [until]: a pick reaches the store on another thread and comes back through its flow. */
     fun awaitState(until: (SettingsUiState) -> Boolean): SettingsUiState =

@@ -33,4 +33,6 @@
   <string name="settings_tv_settings">Axustes del televisor</string>
   <string name="settings_save_failed">Nun se pudo guardar l\'axuste</string>
   <string name="settings_reorder">Reordenar aplicaciones</string>
+  <string name="open_on_start_label">Abrir al aniciar</string>
+  <string name="open_on_start_state">Abrir al aniciar: %1$s</string>
 </resources>

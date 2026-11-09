@@ -55,8 +55,10 @@ public class ConfigRepository(
     /** True while no choice is stored, open on start included: the config is the theme's alone. It changes with [config]. */
     public val followsTheme: StateFlow<Boolean> = following.asStateFlow()
 
-    /** What is stored, for tests. */
-    internal val stored: Flow<Preferences> get() = openStore().choices()
+    private val picked = MutableStateFlow("")
+
+    /** The package stored by [Choices.OpenOnStart], empty for Off. It changes with [config]. */
+    public val openOnStartApp: StateFlow<String> = picked.asStateFlow()
 
     init {
         val theme = themes.loadConfig().config
@@ -76,6 +78,11 @@ public class ConfigRepository(
         value: T,
     ) {
         openStore().edit { choice.put(it, value) }
+    }
+
+    /** Removes the stored value of [choice], so the theme's stands again (Off, for open on start). */
+    public suspend fun <T> clear(choice: Choice<T>) {
+        openStore().edit { it.remove(choice.key) }
     }
 
     /** "Follow theme": removes every stored choice, open on start too. */
@@ -108,6 +115,7 @@ public class ConfigRepository(
     ) {
         state.value = overlay(theme, prefs)
         following.value = Choices.all.none { it.key in prefs }
+        picked.value = prefs[OpenOnStartKey].orEmpty()
     }
 
     private fun waitForUnlock(users: UserManager) {

@@ -33,4 +33,6 @@
   <string name="settings_tv_settings">টিভির সিস্টেম সেটিংস</string>
   <string name="settings_save_failed">সেটিং সংরক্ষণ করা যায়নি</string>
   <string name="settings_reorder">অ্যাপ সাজান</string>
+  <string name="open_on_start_label">চালু হলে খুলুন</string>
+  <string name="open_on_start_state">চালু হলে খুলুন: %1$s</string>
 </resources>

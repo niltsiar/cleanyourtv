@@ -33,4 +33,6 @@
   <string name="settings_tv_settings">Cài đặt hệ thống TV</string>
   <string name="settings_save_failed">Không lưu được cài đặt</string>
   <string name="settings_reorder">Sắp xếp ứng dụng</string>
+  <string name="open_on_start_label">Mở khi khởi động</string>
+  <string name="open_on_start_state">Mở khi khởi động: %1$s</string>
 </resources>

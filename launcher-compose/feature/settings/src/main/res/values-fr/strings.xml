@@ -33,4 +33,6 @@
   <string name="settings_tv_settings">Paramètres du téléviseur</string>
   <string name="settings_save_failed">Impossible d\'enregistrer le réglage</string>
   <string name="settings_reorder">Réorganiser les applis</string>
+  <string name="open_on_start_label">Ouvrir au démarrage</string>
+  <string name="open_on_start_state">Ouvrir au démarrage: %1$s</string>
 </resources>

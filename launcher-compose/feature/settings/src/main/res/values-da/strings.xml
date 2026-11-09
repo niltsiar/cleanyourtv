@@ -33,4 +33,6 @@
   <string name="settings_tv_settings">TV-systemindstillinger</string>
   <string name="settings_save_failed">Indstillingen kunne ikke gemmes</string>
   <string name="settings_reorder">Flyt apps</string>
+  <string name="open_on_start_label">Åbn ved start</string>
+  <string name="open_on_start_state">Åbn ved start: %1$s</string>
 </resources>

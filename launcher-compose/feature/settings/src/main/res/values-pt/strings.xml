@@ -33,4 +33,6 @@
   <string name="settings_tv_settings">Configurações do sistema da TV</string>
   <string name="settings_save_failed">Não foi possível salvar a configuração</string>
   <string name="settings_reorder">Reordenar apps</string>
+  <string name="open_on_start_label">Abrir ao iniciar</string>
+  <string name="open_on_start_state">Abrir ao iniciar: %1$s</string>
 </resources>

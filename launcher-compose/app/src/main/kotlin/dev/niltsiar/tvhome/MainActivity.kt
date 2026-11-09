@@ -45,6 +45,7 @@ class MainActivity : ComponentActivity() {
     private var homePresses by mutableIntStateOf(0)
     private var inputsRequests by mutableIntStateOf(0)
     private var bootOpening: Job? = null
+    private var wakeOpening: Job? = null
 
     /** The Launcher settings page was launched and onResume has not yet handed its result to Home. */
     private var settingsOpen = false
@@ -89,6 +90,12 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) homeRequestOf(intent, packageName).takeIf { it != HomeRequest.HomeKey }?.let(::handle)
         // handle_view_inputs and restore_key_services are theme-only: read once, here.
         applyViewInputsHandler(config.value.handleViewInputs)
+        lifecycleScope.launch {
+            graph.openOnStart.wakes.collect {
+                wakeOpening?.cancel()
+                wakeOpening = launch { graph.openOnStart.openOnWake(::openIntent) }
+            }
+        }
         if (config.value.restoreKeyServices) ServiceRepair.restore(this)
         setContent {
             val current = config.collectAsStateWithLifecycle()
@@ -192,11 +199,12 @@ class MainActivity : ComponentActivity() {
             (resumed && vendorKeys.handle(event)) ||
             super.dispatchKeyEvent(event)
 
-    /** Leaving Home before the network came back keeps the boot's app closed; its boot is already written. */
+    /** Leaving Home before the network came back keeps the boot's or the wake's app closed; the boot is already written. */
     override fun onPause() {
         super.onPause()
         resumed = false
         bootOpening?.cancel()
+        wakeOpening?.cancel()
         vendorKeys.release()
         idleClock.cancel()
     }
@@ -270,7 +278,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch { if (!graph.inputLauncher.open(target)) toast(R.string.not_available) }
     }
 
-    /** The Live TV app of boot_to_live_tv. */
+    /** The Live TV app of boot_to_live_tv, or the app picked for Open on start. */
     private fun openIntent(intent: Intent) {
         if (!startActivitySafely(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))) toast(R.string.not_available)
     }

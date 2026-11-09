@@ -33,4 +33,6 @@
   <string name="settings_tv_settings">電視系統設定</string>
   <string name="settings_save_failed">無法儲存設定</string>
   <string name="settings_reorder">調整應用程式順序</string>
+  <string name="open_on_start_label">開機時開啟</string>
+  <string name="open_on_start_state">開機時開啟：%1$s</string>
 </resources>

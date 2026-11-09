@@ -33,4 +33,6 @@
   <string name="settings_tv_settings">TV-Systemeinstellungen</string>
   <string name="settings_save_failed">Einstellung konnte nicht gespeichert werden</string>
   <string name="settings_reorder">Apps anordnen</string>
+  <string name="open_on_start_label">Beim Start öffnen</string>
+  <string name="open_on_start_state">Beim Start öffnen: %1$s</string>
 </resources>
