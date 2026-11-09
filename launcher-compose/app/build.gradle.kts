@@ -57,6 +57,7 @@ dependencies {
     implementation(project(":feature:clock"))
     implementation(project(":feature:home"))
     implementation(project(":feature:library"))
+    implementation(project(":feature:settings"))
     implementation(project(":service:keys"))
     implementation(project(":data:apps"))
     implementation(project(":data:inputs"))

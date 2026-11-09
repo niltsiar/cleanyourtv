@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="settings_title">Cài đặt launcher</string>
+  <string name="settings_columns">Số ứng dụng mỗi hàng</string>
+  <string name="settings_rows_below_dock">Số hàng dưới dock</string>
+  <string name="settings_dock_opacity">Độ đậm của thanh dock</string>
+  <string name="settings_clock">Đồng hồ</string>
+  <string name="settings_animations">Hiệu ứng</string>
+  <string name="settings_auto">Tự động</string>
+  <string name="settings_clock_system">Hệ thống</string>
+  <string name="settings_clock_12">12 giờ</string>
+  <string name="settings_clock_24">24 giờ</string>
+  <string name="settings_on">Bật</string>
+  <string name="settings_off">Tắt</string>
+  <string name="settings_group_home">Bố cục màn hình chính</string>
+  <string name="settings_group_library">Thư viện ứng dụng</string>
+  <string name="settings_group_clock">Màn hình đồng hồ</string>
+  <string name="settings_group_motion">Chuyển động và gợi ý</string>
+  <string name="settings_names">Tên dưới mỗi ứng dụng</string>
+  <string name="settings_greeting">Lời chào</string>
+  <string name="settings_date_below">Ngày dưới đồng hồ</string>
+  <string name="settings_app_library">Hiện thư viện ứng dụng</string>
+  <string name="settings_least_used">Dùng ít nhất lên trước</string>
+  <string name="settings_fade_unused">Làm mờ ứng dụng không dùng sau (ngày)</string>
+  <string name="settings_idle_clock">Đồng hồ sau khi không hoạt động (phút)</string>
+  <string name="settings_back_clock">Nút Quay lại mở đồng hồ</string>
+  <string name="settings_clock_wallpaper">Hình nền sau đồng hồ</string>
+  <string name="settings_reduced_motion">Giảm chuyển động</string>
+  <string name="settings_focus_overshoot">Tiêu điểm nảy</string>
+  <string name="settings_habit_hint">Gợi ý theo thói quen</string>
+  <string name="settings_input_arrival">Báo nguồn vào mới</string>
+  <string name="settings_follow_theme">Theo theme (xóa lựa chọn trên TV)</string>
+  <string name="settings_tv_settings">Cài đặt hệ thống TV</string>
+  <string name="settings_save_failed">Không lưu được cài đặt</string>
+</resources>

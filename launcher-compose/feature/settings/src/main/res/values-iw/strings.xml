@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="settings_title">הגדרות מסך הבית</string>
+  <string name="settings_columns">אפליקציות בשורה</string>
+  <string name="settings_rows_below_dock">שורות מתחת לשורת המועדפים</string>
+  <string name="settings_dock_opacity">עוצמת הרקע בשורת המועדפים</string>
+  <string name="settings_clock">שעון</string>
+  <string name="settings_animations">הנפשות</string>
+  <string name="settings_auto">אוטומטי</string>
+  <string name="settings_clock_system">מערכת</string>
+  <string name="settings_clock_12">12 שעות</string>
+  <string name="settings_clock_24">24 שעות</string>
+  <string name="settings_on">פעיל</string>
+  <string name="settings_off">כבוי</string>
+  <string name="settings_group_home">פריסת מסך הבית</string>
+  <string name="settings_group_library">ספריית אפליקציות</string>
+  <string name="settings_group_clock">מסך השעון</string>
+  <string name="settings_group_motion">תנועה ורמזים</string>
+  <string name="settings_names">שמות מתחת לכל אפליקציה</string>
+  <string name="settings_greeting">ברכה</string>
+  <string name="settings_date_below">תאריך מתחת לשעון</string>
+  <string name="settings_app_library">הצגת ספריית האפליקציות</string>
+  <string name="settings_least_used">הכי פחות בשימוש קודם</string>
+  <string name="settings_fade_unused">עמעום אפליקציות שלא בשימוש אחרי (ימים)</string>
+  <string name="settings_idle_clock">שעון אחרי חוסר פעילות (דקות)</string>
+  <string name="settings_back_clock">חזרה פותחת את השעון</string>
+  <string name="settings_clock_wallpaper">טפט מאחורי השעון</string>
+  <string name="settings_reduced_motion">תנועה מופחתת</string>
+  <string name="settings_focus_overshoot">מיקוד קפיצי</string>
+  <string name="settings_habit_hint">רמז לפי הרגל</string>
+  <string name="settings_input_arrival">התראה על כניסה חדשה</string>
+  <string name="settings_follow_theme">לפי ערכת הנושא (איפוס הבחירות בטלוויזיה)</string>
+  <string name="settings_tv_settings">הגדרות מערכת הטלוויזיה</string>
+  <string name="settings_save_failed">לא ניתן היה לשמור את ההגדרה</string>
+</resources>

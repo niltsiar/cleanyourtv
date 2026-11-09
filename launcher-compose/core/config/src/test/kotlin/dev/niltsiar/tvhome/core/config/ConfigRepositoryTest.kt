@@ -17,7 +17,9 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -139,6 +141,30 @@ class ConfigRepositoryTest {
 
         awaitConfig(repo) { it == theme }
         assertNull(openOnStart(repo))
+    }
+
+    @Test
+    fun the_config_follows_the_theme_until_a_choice_is_stored_open_on_start_included() {
+        pushTheme("""{"columns": 5}""")
+        val repo = repository()
+        assertTrue(repo.followsTheme.value)
+
+        repo.choose(Choices.OpenOnStart, "com.netflix.ninja")
+        awaitFollowsTheme(repo, false)
+
+        runBlocking { repo.followTheme() }
+        awaitFollowsTheme(repo, true)
+    }
+
+    @Test
+    fun the_first_value_of_a_repository_opened_on_stored_choices_does_not_follow_the_theme() {
+        pushTheme("""{"columns": 5}""")
+        chooseAndStop {
+            it.choose(Choices.Columns, 7)
+            awaitFollowsTheme(it, false)
+        }
+
+        assertFalse(repository().followsTheme.value)
     }
 
     @Test
@@ -284,6 +310,11 @@ class ConfigRepositoryTest {
         repo: ConfigRepository,
         until: (TvConfig) -> Boolean,
     ) = runBlocking { withTimeout(10_000) { repo.config.first(until) } }
+
+    private fun awaitFollowsTheme(
+        repo: ConfigRepository,
+        expected: Boolean,
+    ) = runBlocking { withTimeout(10_000) { repo.followsTheme.first { it == expected } } }
 
     private fun openOnStart(repo: ConfigRepository): String? = runBlocking { repo.stored.first()[stringPreferencesKey("open_on_start")] }
 

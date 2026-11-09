@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="settings_title">Başlatıcı ayarları</string>
+  <string name="settings_columns">Satır başına uygulama</string>
+  <string name="settings_rows_below_dock">Dock altındaki satırlar</string>
+  <string name="settings_dock_opacity">Dock bandı opaklığı</string>
+  <string name="settings_clock">Saat</string>
+  <string name="settings_animations">Animasyonlar</string>
+  <string name="settings_auto">Otomatik</string>
+  <string name="settings_clock_system">Sistem</string>
+  <string name="settings_clock_12">12 saat</string>
+  <string name="settings_clock_24">24 saat</string>
+  <string name="settings_on">Açık</string>
+  <string name="settings_off">Kapalı</string>
+  <string name="settings_group_home">Ana ekran düzeni</string>
+  <string name="settings_group_library">Uygulama kitaplığı</string>
+  <string name="settings_group_clock">Saat ekranı</string>
+  <string name="settings_group_motion">Hareket ve ipuçları</string>
+  <string name="settings_names">Her uygulamanın altında ad</string>
+  <string name="settings_greeting">Karşılama</string>
+  <string name="settings_date_below">Saatin altında tarih</string>
+  <string name="settings_app_library">Uygulama kitaplığını göster</string>
+  <string name="settings_least_used">En az kullanılanlar önce</string>
+  <string name="settings_fade_unused">Kullanılmayan uygulamaları soluklaştır (gün sonra)</string>
+  <string name="settings_idle_clock">Boşta kalınca saat (dakika)</string>
+  <string name="settings_back_clock">Geri tuşu saati açar</string>
+  <string name="settings_clock_wallpaper">Saatin arkasında duvar kağıdı</string>
+  <string name="settings_reduced_motion">Azaltılmış hareket</string>
+  <string name="settings_focus_overshoot">Esnek odak</string>
+  <string name="settings_habit_hint">Alışkanlık ipucu</string>
+  <string name="settings_input_arrival">Yeni giriş bildirimi</string>
+  <string name="settings_follow_theme">Temayı izle (TV seçimlerini sıfırla)</string>
+  <string name="settings_tv_settings">TV sistem ayarları</string>
+  <string name="settings_save_failed">Ayar kaydedilemedi</string>
+</resources>

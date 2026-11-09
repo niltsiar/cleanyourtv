@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="settings_title">Configuración del launcher</string>
+  <string name="settings_columns">Aplicaciones por fila</string>
+  <string name="settings_rows_below_dock">Filas debajo de la barra de favoritos</string>
+  <string name="settings_dock_opacity">Opacidad de la barra de favoritos</string>
+  <string name="settings_clock">Reloj</string>
+  <string name="settings_animations">Animaciones</string>
+  <string name="settings_auto">Automático</string>
+  <string name="settings_clock_system">Sistema</string>
+  <string name="settings_clock_12">12 horas</string>
+  <string name="settings_clock_24">24 horas</string>
+  <string name="settings_on">Activado</string>
+  <string name="settings_off">Desactivado</string>
+  <string name="settings_group_home">Diseño del inicio</string>
+  <string name="settings_group_library">Biblioteca de aplicaciones</string>
+  <string name="settings_group_clock">Pantalla del reloj</string>
+  <string name="settings_group_motion">Movimiento y sugerencias</string>
+  <string name="settings_names">Nombres debajo de cada app</string>
+  <string name="settings_greeting">Saludo</string>
+  <string name="settings_date_below">Fecha debajo del reloj</string>
+  <string name="settings_app_library">Mostrar la biblioteca de aplicaciones</string>
+  <string name="settings_least_used">Menos usadas primero</string>
+  <string name="settings_fade_unused">Atenuar apps sin uso después de (días)</string>
+  <string name="settings_idle_clock">Reloj tras inactividad (minutos)</string>
+  <string name="settings_back_clock">Atrás abre el reloj</string>
+  <string name="settings_clock_wallpaper">Fondo detrás del reloj</string>
+  <string name="settings_reduced_motion">Movimiento reducido</string>
+  <string name="settings_focus_overshoot">Enfoque con rebote</string>
+  <string name="settings_habit_hint">Sugerencia por hábito</string>
+  <string name="settings_input_arrival">Aviso de entrada nueva</string>
+  <string name="settings_follow_theme">Usar el tema (restablecer configuración)</string>
+  <string name="settings_tv_settings">Configuración del televisor</string>
+  <string name="settings_save_failed">No se pudo guardar el ajuste</string>
+</resources>

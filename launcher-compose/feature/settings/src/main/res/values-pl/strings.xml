@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="settings_title">Ustawienia ekranu głównego</string>
+  <string name="settings_columns">Aplikacji w rzędzie</string>
+  <string name="settings_rows_below_dock">Rzędów pod dockiem</string>
+  <string name="settings_dock_opacity">Krycie paska docka</string>
+  <string name="settings_clock">Zegar</string>
+  <string name="settings_animations">Animacje</string>
+  <string name="settings_auto">Automatycznie</string>
+  <string name="settings_clock_system">Systemowy</string>
+  <string name="settings_clock_12">12-godzinny</string>
+  <string name="settings_clock_24">24-godzinny</string>
+  <string name="settings_on">Wł.</string>
+  <string name="settings_off">Wył.</string>
+  <string name="settings_group_home">Układ ekranu głównego</string>
+  <string name="settings_group_library">Biblioteka aplikacji</string>
+  <string name="settings_group_clock">Ekran zegara</string>
+  <string name="settings_group_motion">Ruch i podpowiedzi</string>
+  <string name="settings_names">Nazwy pod każdą aplikacją</string>
+  <string name="settings_greeting">Powitanie</string>
+  <string name="settings_date_below">Data pod zegarem</string>
+  <string name="settings_app_library">Pokaż bibliotekę aplikacji</string>
+  <string name="settings_least_used">Najpierw najrzadziej używane</string>
+  <string name="settings_fade_unused">Wygaszaj nieużywane aplikacje po (dniach)</string>
+  <string name="settings_idle_clock">Zegar po bezczynności (minuty)</string>
+  <string name="settings_back_clock">Wstecz otwiera zegar</string>
+  <string name="settings_clock_wallpaper">Tapeta za zegarem</string>
+  <string name="settings_reduced_motion">Ograniczony ruch</string>
+  <string name="settings_focus_overshoot">Sprężysty fokus</string>
+  <string name="settings_habit_hint">Podpowiedź z nawyku</string>
+  <string name="settings_input_arrival">Powiadomienie o nowym wejściu</string>
+  <string name="settings_follow_theme">Użyj motywu (zresetuj wybór)</string>
+  <string name="settings_tv_settings">Ustawienia systemowe TV</string>
+  <string name="settings_save_failed">Nie udało się zapisać ustawienia</string>
+</resources>

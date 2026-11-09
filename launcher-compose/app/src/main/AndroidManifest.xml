@@ -153,6 +153,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
+
         <!-- Screensaver: pick it in Settings, or `settings put secure screensaver_components
              dev.niltsiar.tvhome/.ClockDream` over adb (scripts/switch-home.sh does). -->
         <service

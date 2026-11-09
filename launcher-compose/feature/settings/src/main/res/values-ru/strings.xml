@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="settings_title">Настройки главного экрана</string>
+  <string name="settings_columns">Приложений в ряду</string>
+  <string name="settings_rows_below_dock">Рядов под доком</string>
+  <string name="settings_dock_opacity">Непрозрачность панели дока</string>
+  <string name="settings_clock">Часы</string>
+  <string name="settings_animations">Анимация</string>
+  <string name="settings_auto">Авто</string>
+  <string name="settings_clock_system">Системные</string>
+  <string name="settings_clock_12">12-часовой</string>
+  <string name="settings_clock_24">24-часовой</string>
+  <string name="settings_on">Вкл.</string>
+  <string name="settings_off">Выкл.</string>
+  <string name="settings_group_home">Вид главного экрана</string>
+  <string name="settings_group_library">Библиотека приложений</string>
+  <string name="settings_group_clock">Экран часов</string>
+  <string name="settings_group_motion">Движение и подсказки</string>
+  <string name="settings_names">Названия под каждым приложением</string>
+  <string name="settings_greeting">Приветствие</string>
+  <string name="settings_date_below">Дата под часами</string>
+  <string name="settings_app_library">Показывать библиотеку приложений</string>
+  <string name="settings_least_used">Сначала редко используемые</string>
+  <string name="settings_fade_unused">Затемнять неиспользуемые приложения через (дней)</string>
+  <string name="settings_idle_clock">Часы после бездействия (минут)</string>
+  <string name="settings_back_clock">Назад открывает часы</string>
+  <string name="settings_clock_wallpaper">Обои за часами</string>
+  <string name="settings_reduced_motion">Меньше движения</string>
+  <string name="settings_focus_overshoot">Пружинящий фокус</string>
+  <string name="settings_habit_hint">Подсказка по привычке</string>
+  <string name="settings_input_arrival">Уведомление о новом источнике</string>
+  <string name="settings_follow_theme">Следовать теме (сбросить выбор)</string>
+  <string name="settings_tv_settings">Системные настройки ТВ</string>
+  <string name="settings_save_failed">Не удалось сохранить настройку</string>
+</resources>

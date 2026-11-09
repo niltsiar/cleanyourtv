@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="settings_title">إعدادات المشغّل</string>
+  <string name="settings_columns">تطبيقات في كل صف</string>
+  <string name="settings_rows_below_dock">الصفوف أسفل شريط التطبيقات</string>
+  <string name="settings_dock_opacity">عتامة شريط التطبيقات</string>
+  <string name="settings_clock">الساعة</string>
+  <string name="settings_animations">الرسوم المتحركة</string>
+  <string name="settings_auto">تلقائي</string>
+  <string name="settings_clock_system">النظام</string>
+  <string name="settings_clock_12">12 ساعة</string>
+  <string name="settings_clock_24">24 ساعة</string>
+  <string name="settings_on">تشغيل</string>
+  <string name="settings_off">إيقاف</string>
+  <string name="settings_group_home">تخطيط الشاشة الرئيسية</string>
+  <string name="settings_group_library">مكتبة التطبيقات</string>
+  <string name="settings_group_clock">شاشة الساعة</string>
+  <string name="settings_group_motion">الحركة والتلميحات</string>
+  <string name="settings_names">الأسماء تحت كل تطبيق</string>
+  <string name="settings_greeting">التحية</string>
+  <string name="settings_date_below">التاريخ تحت الساعة</string>
+  <string name="settings_app_library">عرض مكتبة التطبيقات</string>
+  <string name="settings_least_used">الأقل استخدامًا أولًا</string>
+  <string name="settings_fade_unused">تعتيم التطبيقات غير المستخدمة بعد (أيام)</string>
+  <string name="settings_idle_clock">الساعة بعد الخمول (دقائق)</string>
+  <string name="settings_back_clock">زر الرجوع يفتح الساعة</string>
+  <string name="settings_clock_wallpaper">خلفية الشاشة خلف الساعة</string>
+  <string name="settings_reduced_motion">تقليل الحركة</string>
+  <string name="settings_focus_overshoot">ارتداد التركيز</string>
+  <string name="settings_habit_hint">تلميح العادة</string>
+  <string name="settings_input_arrival">تنبيه بمدخل جديد</string>
+  <string name="settings_follow_theme">اتّباع السمة (إعادة ضبط الخيارات)</string>
+  <string name="settings_tv_settings">إعدادات نظام التلفاز</string>
+  <string name="settings_save_failed">تعذّر حفظ الإعداد</string>
+</resources>

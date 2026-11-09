@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="settings_title">桌面設定</string>
+  <string name="settings_columns">每列 app 數量</string>
+  <string name="settings_rows_below_dock">Dock 下方列數</string>
+  <string name="settings_dock_opacity">Dock 列不透明度</string>
+  <string name="settings_clock">時鐘</string>
+  <string name="settings_animations">動畫效果</string>
+  <string name="settings_auto">自動</string>
+  <string name="settings_clock_system">系統</string>
+  <string name="settings_clock_12">12 小時制</string>
+  <string name="settings_clock_24">24 小時制</string>
+  <string name="settings_on">開</string>
+  <string name="settings_off">關</string>
+  <string name="settings_group_home">主畫面版面</string>
+  <string name="settings_group_library">應用程式庫</string>
+  <string name="settings_group_clock">時鐘畫面</string>
+  <string name="settings_group_motion">動態與提示</string>
+  <string name="settings_names">每個 app 下方顯示名稱</string>
+  <string name="settings_greeting">問候語</string>
+  <string name="settings_date_below">時鐘下方顯示日期</string>
+  <string name="settings_app_library">顯示應用程式庫</string>
+  <string name="settings_least_used">最少使用的優先</string>
+  <string name="settings_fade_unused">未使用的 app 淡化（天後）</string>
+  <string name="settings_idle_clock">閒置後顯示時鐘（分鐘）</string>
+  <string name="settings_back_clock">返回鍵開啟時鐘</string>
+  <string name="settings_clock_wallpaper">時鐘背後的桌布</string>
+  <string name="settings_reduced_motion">減少動態效果</string>
+  <string name="settings_focus_overshoot">彈性焦點</string>
+  <string name="settings_habit_hint">習慣提示</string>
+  <string name="settings_input_arrival">新輸入來源提醒</string>
+  <string name="settings_follow_theme">跟隨主題（重設電視上的選擇）</string>
+  <string name="settings_tv_settings">電視系統設定</string>
+  <string name="settings_save_failed">無法儲存設定</string>
+</resources>

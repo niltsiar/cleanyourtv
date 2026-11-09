@@ -10,7 +10,7 @@ import java.io.File
  * throws on the TV set to that language and nowhere else. aapt2 and lint do not read the specifiers.
  */
 class StringResourcesTest {
-    private val modules = listOf("app", "feature/home", "feature/library", "service/keys")
+    private val modules = listOf("app", "feature/home", "feature/library", "feature/settings", "service/keys")
     private val root = File(System.getProperty("user.dir")).parentFile
     private val comment = Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL)
     private val string = Regex("""<string\s+name="([^"]+)"[^>]*>(.*?)</string>""", RegexOption.DOT_MATCHES_ALL)

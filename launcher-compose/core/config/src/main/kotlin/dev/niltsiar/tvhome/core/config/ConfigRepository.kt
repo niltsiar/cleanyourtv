@@ -48,7 +48,12 @@ public class ConfigRepository(
     @Volatile private var store: DataStore<Preferences>? = null
     private var unlockReceiver: BroadcastReceiver? = null
 
+    private val following = MutableStateFlow(true)
+
     public val config: StateFlow<TvConfig>
+
+    /** True while no choice is stored, open on start included: the config is the theme's alone. It changes with [config]. */
+    public val followsTheme: StateFlow<Boolean> = following.asStateFlow()
 
     /** What is stored, for tests. */
     internal val stored: Flow<Preferences> get() = openStore().choices()
@@ -90,11 +95,19 @@ public class ConfigRepository(
         val signature = themes.signature().takeIf { themes.mounted }
         try {
             val first = opened.updateData { current -> current.toMutablePreferences().apply { signature?.let { resetForNewTheme(it) } } }
-            state.value = overlay(theme, first)
+            publish(theme, first)
         } catch (e: IOException) {
             Log.w(TAG, "could not read the stored choices: ${e.message}")
         }
-        scope.launch { opened.choices().collect { state.value = overlay(theme, it) } }
+        scope.launch { opened.choices().collect { publish(theme, it) } }
+    }
+
+    private fun publish(
+        theme: TvConfig,
+        prefs: Preferences,
+    ) {
+        state.value = overlay(theme, prefs)
+        following.value = Choices.all.none { it.key in prefs }
     }
 
     private fun waitForUnlock(users: UserManager) {
