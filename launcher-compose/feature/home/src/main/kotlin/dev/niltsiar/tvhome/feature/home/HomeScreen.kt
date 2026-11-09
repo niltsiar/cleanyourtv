@@ -726,7 +726,14 @@ private fun HomeContent(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .gridEdges(gridState, dim::lowPx, cutoff = shelfBottom - ShelfToFade, names = layout.showNames)
+                    .moreCue(
+                        gridState,
+                        dim::lowPx,
+                        dim.fold::value,
+                        layout.columns,
+                        (grid.size + layout.columns - 1) / layout.columns,
+                        layout.showNames,
+                    ).gridEdges(gridState, dim::lowPx, cutoff = shelfBottom - ShelfToFade, names = layout.showNames)
                     .onFocusChanged {
                         input.gridFocused = it.hasFocus
                         if (!it.hasFocus) input.travel.reset()
@@ -1264,8 +1271,7 @@ private fun FocusDim.hiddenFromRow(
         val item = info.visibleItemsInfo[i]
         val index = item.index - GRID_ITEMS_BEFORE
         if (index < 0 || item.key == LIBRARY_FOCUS) continue
-        val shown = end - (item.offset.y + shift)
-        if (shown < minOf(minVisible, item.size.width / TILE_ASPECT)) first = minOf(first, index / columns)
+        if (!item.drawsAbove(end, item.offset.y + shift, minVisible)) first = minOf(first, index / columns)
     }
     return first
 }

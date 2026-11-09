@@ -98,7 +98,10 @@ import dev.niltsiar.tvhome.core.designsystem.KeyChipHeight
 import dev.niltsiar.tvhome.core.designsystem.KeyChipLook
 import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.OverlaySurface
+import dev.niltsiar.tvhome.core.designsystem.ScrollCuePillHeight
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.designsystem.drawCueChevron
+import dev.niltsiar.tvhome.core.designsystem.drawScrollDownCue
 import dev.niltsiar.tvhome.core.designsystem.eatsOkUp
 import dev.niltsiar.tvhome.core.designsystem.menuReleased
 import dev.niltsiar.tvhome.core.model.LibraryArt
@@ -577,15 +580,10 @@ private fun Cards(
 
 private val CueWidth = 14.dp
 private val CueHeight = 7.dp
-private val CueStroke = 2.dp
 private const val CUE_ALPHA = 0.55f
-private val CueBottomWidth = 18.dp
-private val CueBottomHeight = 9.dp
-private val CuePillWidth = 36.dp
-private val CuePillHeight = 20.dp
 private const val CUE_PILL_ALPHA = 0.15f
 
-/** The bottom pill's middle is this far under the grid: its top, [CuePillHeight] / 2 above it, is 1 dp inside the grid's bottom edge. */
+/** The bottom pill's middle is this far under the grid: its top, [ScrollCuePillHeight] / 2 above it, is 1 dp inside the grid's bottom edge. */
 private val CuePillDrop = 9.dp
 
 /**
@@ -597,39 +595,14 @@ private fun ScrollCue(grid: LazyGridState) {
     val ink = TvTheme.colors.onSurface
     Box(
         Modifier.fillMaxSize().drawBehind {
-            if (grid.canScrollBackward) drawChevron(ink, GridEdge.toPx() / 2f, CueWidth.toPx(), CueHeight.toPx(), down = false)
+            if (grid.canScrollBackward) {
+                drawCueChevron(ink.copy(alpha = CUE_ALPHA), GridEdge.toPx() / 2f, CueWidth.toPx(), CueHeight.toPx(), down = false)
+            }
             if (grid.canScrollForward) {
-                val centreY = size.height + CuePillDrop.toPx()
-                val pill = Size(CuePillWidth.toPx(), CuePillHeight.toPx())
-                drawRoundRect(
-                    ink.copy(alpha = CUE_PILL_ALPHA),
-                    Offset((size.width - pill.width) / 2f, centreY - pill.height / 2f),
-                    pill,
-                    CornerRadius(pill.height / 2f),
-                )
-                drawChevron(ink, centreY, CueBottomWidth.toPx(), CueBottomHeight.toPx(), down = true)
+                drawScrollDownCue(size.height + CuePillDrop.toPx(), ink.copy(alpha = CUE_ALPHA), ink.copy(alpha = CUE_PILL_ALPHA))
             }
         },
     )
-}
-
-private fun DrawScope.drawChevron(
-    ink: Color,
-    centreY: Float,
-    width: Float,
-    height: Float,
-    down: Boolean,
-) {
-    val centreX = size.width / 2f
-    val halfWidth = width / 2f
-    val halfHeight = height / 2f * if (down) 1f else -1f
-    val path =
-        Path().apply {
-            moveTo(centreX - halfWidth, centreY - halfHeight)
-            lineTo(centreX, centreY + halfHeight)
-            lineTo(centreX + halfWidth, centreY - halfHeight)
-        }
-    drawPath(path, ink.copy(alpha = CUE_ALPHA), style = Stroke(CueStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
 }
 
 /** The grid's move for an arrow key, null for any other key. Left and right swap in a right-to-left layout. */

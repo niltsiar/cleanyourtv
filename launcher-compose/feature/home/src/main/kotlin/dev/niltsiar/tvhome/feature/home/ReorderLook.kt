@@ -63,11 +63,11 @@ private val LiftHeight = TileGap - FocusRingReach - TrayRimClear
  * round-capped [ChevronStroke] stroke; the disc keeps it readable, so the chevron has no outline of its own.
  */
 private val ArrowDisc = 22.dp
-private val ArrowDiscColor = Color.Black.copy(alpha = 0.60f)
+internal val ArrowDiscColor = Color.Black.copy(alpha = 0.60f)
 private val ChevronHeight = 12.dp
 private val ChevronDepth = 6.dp
 private val ChevronStroke = 2.5.dp
-private val ChevronColor = Color.White.copy(alpha = 0.95f)
+internal val ChevronColor = Color.White.copy(alpha = 0.95f)
 
 /**
  * A tile's look in reorder and edit-dock modes: dimmed unless it is the carried one, which lifts, is drawn at its rest size
