@@ -3,6 +3,7 @@ package dev.niltsiar.tvhome.data.inputs
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.content.pm.PackageInfo
 import android.content.pm.ResolveInfo
 import android.os.Looper
 import android.provider.Settings
@@ -87,6 +88,25 @@ class OpenOnStartTest {
         val launch = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
         shadowOf(context.packageManager).addResolveInfoForIntent(Intent(launch), info)
         shadowOf(context.packageManager).addResolveInfoForIntent(Intent(launch).setPackage(pkg), info)
+    }
+
+    /** An app with only a phone entry point, `pkg/pkg.Phone`, as the package manager answers for that package. */
+    private fun phoneApp(pkg: String) {
+        val info =
+            ResolveInfo().apply {
+                activityInfo =
+                    ActivityInfo().apply {
+                        packageName = pkg
+                        name = "$pkg.Phone"
+                    }
+            }
+        val launch = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setPackage(pkg)
+        shadowOf(context.packageManager).addResolveInfoForIntent(launch, info)
+    }
+
+    /** An installed app with no activity to open. */
+    private fun appWithoutEntry(pkg: String) {
+        shadowOf(context.packageManager).installPackage(PackageInfo().apply { packageName = pkg })
     }
 
     private fun bootCount(count: Int) {
@@ -277,6 +297,34 @@ class OpenOnStartTest {
 
             assertEquals(emptyList<Intent>(), opened)
             assertEquals(7, context.getSharedPreferences("boot", Context.MODE_PRIVATE).getInt("live_tv_boot", -1))
+        }
+
+    @Test
+    fun a_pick_with_only_a_phone_entry_opens_that_entry_at_boot_and_on_a_wake() =
+        runTest {
+            phoneApp("com.phone.pick")
+            bootCount(7)
+            val opener = pickOpener(MutableStateFlow(chosen.copy(openOnStartOnWake = true)), MutableStateFlow("com.phone.pick"))
+
+            opener.openAfterBoot { opened += it }
+            listenForWakes(opener)
+            wake()
+
+            assertEquals(listOf("com.phone.pick.Phone", "com.phone.pick.Phone"), opened.map { it.component?.className })
+        }
+
+    @Test
+    fun a_pick_with_neither_a_tv_nor_a_phone_entry_keeps_home_at_boot_and_on_a_wake() =
+        runTest {
+            appWithoutEntry("com.no.entry")
+            bootCount(7)
+            val opener = pickOpener(MutableStateFlow(chosen.copy(openOnStartOnWake = true)), MutableStateFlow("com.no.entry"))
+
+            opener.openAfterBoot { opened += it }
+            listenForWakes(opener)
+            wake()
+
+            assertEquals(emptyList<Intent>(), opened)
         }
 
     @Test

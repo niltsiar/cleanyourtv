@@ -35,10 +35,11 @@ import org.robolectric.annotation.Config
 
 /**
  * The ways into the Launcher settings page and back, on the real MainActivity. A controller drives the lifecycle so Home stops
- * under the page as it does on a TV: ActivityScenario.moveToState blocks inside a Compose test body.
+ * under the page as it does on a TV: ActivityScenario.moveToState blocks inside a Compose test body. It runs on an SDK level
+ * no other test class uses, for the reason MainActivityConfigTest gives.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [33], application = TvHomeApplication::class, qualifiers = "w960dp-h540dp-xhdpi")
+@Config(sdk = [34], application = TvHomeApplication::class, qualifiers = "w960dp-h540dp-xhdpi")
 class LauncherSettingsEntryTest {
     private val app: Application = RuntimeEnvironment.getApplication()
     private val graph get() = (app as TvHomeApplication).graph

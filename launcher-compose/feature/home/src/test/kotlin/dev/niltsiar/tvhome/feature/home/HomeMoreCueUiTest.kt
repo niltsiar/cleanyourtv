@@ -5,6 +5,9 @@ import androidx.compose.runtime.Composer
 import androidx.compose.runtime.CompositionTracer
 import androidx.compose.runtime.InternalComposeTracingApi
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
@@ -58,6 +61,9 @@ class HomeMoreCueUiTest {
 
     private val inks = listOf(Color(0xFF1B4F9C), Color(0xFFB33A3A), Color(0xFF2E7D5B))
 
+    /** The layout Home is drawn in; a test may change it after [showHome]. */
+    private var layout by mutableStateOf(TvConfig().homeLayout())
+
     /** [count] coloured tiles: the first [TvConfig.columns] are the dock, the rest the grid. */
     private fun showHome(
         config: TvConfig = TvConfig(columns = 4),
@@ -65,13 +71,14 @@ class HomeMoreCueUiTest {
     ) {
         val apps = (1..count).map { AppEntry("pkg.$it", "pkg.$it", "App $it", image = art(inks[it % inks.size])) }
         val sources = sources(apps = flowOf(AppList(apps)))
+        layout = config.homeLayout()
         compose.setContent {
             TvTheme {
                 val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(
                     state = { state.value },
-                    layout = config.homeLayout(),
+                    layout = layout,
                     onFocus = viewModel::onFocus,
                     onClick = {},
                     topBar = config.topBarLayout(),
@@ -179,6 +186,19 @@ class HomeMoreCueUiTest {
         compose.onNodeWithTag("tile:pkg.17").assertIsFocused()
         assertNull("cue with the last row on screen", pill(from = bottomOf("tile:pkg.17")))
         assertEquals("HomeContent recomposed with the focus moves", before, homeContent())
+    }
+
+    @Test
+    fun the_recomposition_count_sees_home_content_run_when_its_layout_changes() {
+        showHome()
+        press(Key.DirectionDown)
+        val homeContent = count("HomeContent")
+        val before = homeContent()
+
+        layout = layout.copy(showNames = true)
+        settle()
+
+        assertTrue("HomeContent runs: before $before, after ${homeContent()}", homeContent() > before)
     }
 
     @Test
