@@ -40,7 +40,9 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -71,8 +73,11 @@ import dev.niltsiar.tvhome.core.designsystem.FocusPill
 import dev.niltsiar.tvhome.core.designsystem.MenuDivider
 import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.OverlaySurface
+import dev.niltsiar.tvhome.core.designsystem.SCROLL_CUE_ALPHA
+import dev.niltsiar.tvhome.core.designsystem.SCROLL_CUE_PILL_ALPHA
 import dev.niltsiar.tvhome.core.designsystem.ScrollsClearOfEdge
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.designsystem.drawScrollDownCue
 import dev.niltsiar.tvhome.core.designsystem.fadeScrolledEdges
 import dev.niltsiar.tvhome.core.designsystem.menuRowShape
 import kotlinx.coroutines.CoroutineStart
@@ -107,6 +112,9 @@ private const val HEADING_ALPHA = 0.65f
 private const val RULE_ALPHA = 0.12f
 private const val SELECTED_FILL_ALPHA = 0.16f
 private const val SELECTED_RIM_ALPHA = 0.42f
+
+/** The alpha of the page's content while a picker is open over it. */
+private const val PAGE_DIM_ALPHA = 0.4f
 
 private const val WALLPAPER_STOP = "wallpaper"
 private const val OPEN_ON_START_STOP = "open_on_start"
@@ -256,7 +264,10 @@ public fun SettingsScreen(
                         .fillMaxHeight()
                         .revealed(reveal),
             ) {
-                Column(Modifier.fillMaxSize()) {
+                val ink = TvTheme.colors.onSurface
+                val cueInk = ink.copy(alpha = SCROLL_CUE_ALPHA)
+                val cuePill = ink.copy(alpha = SCROLL_CUE_PILL_ALPHA)
+                Column(Modifier.fillMaxSize().alpha(if (pickerStop != null) PAGE_DIM_ALPHA else 1f)) {
                     PanelTitle(stringResource(R.string.settings_title), "settings:title")
                     ScrollsClearOfEdge(ScrollClear) {
                         Column(
@@ -264,7 +275,10 @@ public fun SettingsScreen(
                                 .weight(1f)
                                 .fillMaxWidth()
                                 .testTag("settings:list")
-                                .fadeScrolledEdges(scroll)
+                                .drawWithContent {
+                                    drawContent()
+                                    if (scroll.canScrollForward) drawScrollDownCue(size.height - PanelSide.toPx() / 2f, cueInk, cuePill)
+                                }.fadeScrolledEdges(scroll)
                                 .verticalScroll(scroll)
                                 .padding(start = PanelSide, end = PanelSide, bottom = PanelSide),
                         ) {
@@ -577,7 +591,6 @@ internal fun ActionRow(
                     left = FocusRequester.Cancel
                     right = FocusRequester.Cancel
                 },
-        background = { if (selected) SelectedLook(rest, shape) },
     ) { ink ->
         Row(
             Modifier.align(Alignment.CenterStart).fillMaxWidth().padding(horizontal = RowSide),

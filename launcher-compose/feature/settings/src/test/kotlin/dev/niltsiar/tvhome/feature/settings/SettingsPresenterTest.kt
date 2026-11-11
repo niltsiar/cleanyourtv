@@ -23,6 +23,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import java.io.File
+import java.util.Locale
 
 /** The presenter over the real repository: a pick is stored, and the rows read back what the store holds. */
 @RunWith(RobolectricTestRunner::class)
@@ -391,7 +392,7 @@ class SettingsPresenterTest {
         settings.awaitState { it.wallpaper != null }
 
         settings.storeWallpaper("dusk.jpg")
-        settings.awaitState { it.wallpaper == OptionLabel.Text("dusk") }
+        settings.awaitState { it.wallpaper == OptionLabel.Text("Dusk") }
 
         settings.storeWallpaper("none")
         settings.awaitState { it.wallpaper == OptionLabel.Res(R.string.wallpaper_none) }
@@ -407,9 +408,9 @@ class SettingsPresenterTest {
         val entries =
             listOf(
                 OptionLabel.Res(R.string.wallpaper_theme_default),
-                OptionLabel.Text("wallpaper"),
-                OptionLabel.Text("dusk"),
-                OptionLabel.Text("dawn"),
+                OptionLabel.Text("Wallpaper"),
+                OptionLabel.Text("Dusk"),
+                OptionLabel.Text("Dawn"),
                 OptionLabel.Res(R.string.wallpaper_none),
             )
 
@@ -418,7 +419,7 @@ class SettingsPresenterTest {
         settings.viewModel.actions.onClosePicker()
         settings.awaitState { it.wallpaperPicker == null }
         settings.storeWallpaper("dusk.jpg")
-        settings.awaitState { it.wallpaper == OptionLabel.Text("dusk") }
+        settings.awaitState { it.wallpaper == OptionLabel.Text("Dusk") }
         assertEquals(WallpaperPicker(entries, 2), settings.openWallpaperPicker())
 
         settings.viewModel.actions.onClosePicker()
@@ -441,7 +442,7 @@ class SettingsPresenterTest {
         settings.openWallpaperPicker()
 
         settings.viewModel.actions.onPickWallpaper(3)
-        settings.awaitState { it.wallpaperPicker == null && !it.followsTheme && it.wallpaper == OptionLabel.Text("dawn") }
+        settings.awaitState { it.wallpaperPicker == null && !it.followsTheme && it.wallpaper == OptionLabel.Text("Dawn") }
         assertEquals("dawn.jpg", settings.wallpaperChoice)
         settings.awaitApplied()
 
@@ -457,7 +458,7 @@ class SettingsPresenterTest {
     fun theme_default_removes_the_choice_and_reports_nothing() {
         val settings = settings(wallpapers = pictures)
         settings.storeWallpaper("dusk.jpg")
-        settings.awaitState { it.wallpaper == OptionLabel.Text("dusk") }
+        settings.awaitState { it.wallpaper == OptionLabel.Text("Dusk") }
         settings.openWallpaperPicker()
 
         settings.viewModel.actions.onPickWallpaper(0)
@@ -471,7 +472,7 @@ class SettingsPresenterTest {
     fun closing_the_wallpaper_picker_and_a_pick_with_no_picker_open_change_nothing() {
         val settings = settings(wallpapers = pictures)
         settings.storeWallpaper("dusk.jpg")
-        settings.awaitState { it.wallpaper == OptionLabel.Text("dusk") }
+        settings.awaitState { it.wallpaper == OptionLabel.Text("Dusk") }
         settings.openWallpaperPicker()
 
         settings.viewModel.actions.onClosePicker()
@@ -518,12 +519,29 @@ class SettingsPresenterTest {
     }
 
     @Test
-    fun picture_names_lose_their_extension_only_when_every_name_has_one_and_the_rest_stay_distinct() {
-        assertEquals(listOf("a", "b"), wallpaperLabels(listOf("a.jpg", "b.png")))
+    fun a_picture_shows_as_a_name_and_its_file_name_is_what_a_pick_stores() {
+        val settings = settings(wallpapers = listOf("moon_lake.jpg", "golden-hour.png"))
+        settings.awaitState { it.wallpaper != null }
+        val picker = settings.openWallpaperPicker()
+        assertEquals(listOf(OptionLabel.Text("Moon lake"), OptionLabel.Text("Golden hour")), picker.entries.subList(1, 3))
+
+        settings.viewModel.actions.onPickWallpaper(1)
+        settings.awaitState { it.wallpaperPicker == null && !it.followsTheme }
+
+        assertEquals("moon_lake.jpg", settings.wallpaperChoice)
+        settings.awaitState { it.wallpaper == OptionLabel.Text("Moon lake") }
+    }
+
+    @Test
+    fun picture_names_lose_the_extension_and_separators_and_start_upper_case_unless_two_come_out_the_same_or_blank() {
+        assertEquals(listOf("A", "B"), wallpaperLabels(listOf("a.jpg", "b.png")))
+        assertEquals(listOf("Moon lake", "Golden hour"), wallpaperLabels(listOf("moon_lake.jpg", "golden-hour.png")))
+        assertEquals(listOf("A", "B"), wallpaperLabels(listOf("a.jpg", "b")))
+        assertEquals(listOf("My.dusk"), wallpaperLabels(listOf("my.dusk.jpg")))
+        assertEquals(listOf("İzmir"), wallpaperLabels(listOf("izmir.jpg"), Locale.forLanguageTag("tr")))
         assertEquals(listOf("a.jpg", "a.png"), wallpaperLabels(listOf("a.jpg", "a.png")))
-        assertEquals(listOf("a.jpg", "b"), wallpaperLabels(listOf("a.jpg", "b")))
+        assertEquals(listOf("moon_lake.jpg", "moon-lake.jpg"), wallpaperLabels(listOf("moon_lake.jpg", "moon-lake.jpg")))
         assertEquals(listOf("a.jpg", ".png"), wallpaperLabels(listOf("a.jpg", ".png")))
-        assertEquals(listOf("my.dusk"), wallpaperLabels(listOf("my.dusk.jpg")))
     }
 
     private fun SettingsHarness.storeWallpaper(value: String) = runBlocking { repository.set(Choices.WallpaperChoice, value) }

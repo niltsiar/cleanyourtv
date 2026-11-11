@@ -98,6 +98,8 @@ import dev.niltsiar.tvhome.core.designsystem.KeyChipHeight
 import dev.niltsiar.tvhome.core.designsystem.KeyChipLook
 import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.OverlaySurface
+import dev.niltsiar.tvhome.core.designsystem.SCROLL_CUE_ALPHA
+import dev.niltsiar.tvhome.core.designsystem.SCROLL_CUE_PILL_ALPHA
 import dev.niltsiar.tvhome.core.designsystem.ScrollCuePillHeight
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.drawCueChevron
@@ -580,8 +582,6 @@ private fun Cards(
 
 private val CueWidth = 14.dp
 private val CueHeight = 7.dp
-private const val CUE_ALPHA = 0.55f
-private const val CUE_PILL_ALPHA = 0.15f
 
 /** The bottom pill's middle is this far under the grid: its top, [ScrollCuePillHeight] / 2 above it, is 1 dp inside the grid's bottom edge. */
 private val CuePillDrop = 9.dp
@@ -596,10 +596,14 @@ private fun ScrollCue(grid: LazyGridState) {
     Box(
         Modifier.fillMaxSize().drawBehind {
             if (grid.canScrollBackward) {
-                drawCueChevron(ink.copy(alpha = CUE_ALPHA), GridEdge.toPx() / 2f, CueWidth.toPx(), CueHeight.toPx(), down = false)
+                drawCueChevron(ink.copy(alpha = SCROLL_CUE_ALPHA), GridEdge.toPx() / 2f, CueWidth.toPx(), CueHeight.toPx(), down = false)
             }
             if (grid.canScrollForward) {
-                drawScrollDownCue(size.height + CuePillDrop.toPx(), ink.copy(alpha = CUE_ALPHA), ink.copy(alpha = CUE_PILL_ALPHA))
+                drawScrollDownCue(
+                    size.height + CuePillDrop.toPx(),
+                    ink.copy(alpha = SCROLL_CUE_ALPHA),
+                    ink.copy(alpha = SCROLL_CUE_PILL_ALPHA),
+                )
             }
         },
     )

@@ -7,6 +7,7 @@ import dev.niltsiar.tvhome.core.config.ClockFormat
 import dev.niltsiar.tvhome.core.config.ConfigRepository
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
+import java.util.Locale
 
 internal class Option<T>(
     val label: OptionLabel,
@@ -155,10 +156,24 @@ internal fun startPicker(
     pick: String?,
 ) = OpenOnStartPicker(apps, apps.indexOfFirst { it.packageName == pick } + 1)
 
-/** The names as the page shows them: without their extension when every name has one and that leaves them distinct. */
-internal fun wallpaperLabels(names: List<String>): List<String> {
-    val bare = names.map { it.substringBeforeLast('.', "") }
-    return if (bare.none { it.isEmpty() } && bare.distinct().size == bare.size) bare else names
+/**
+ * The file names as the page shows them: without the extension, with "_" and "-" as spaces and the first letter upper case in
+ * [locale]. The file names themselves show when that leaves a name blank or two names the same.
+ */
+internal fun wallpaperLabels(
+    names: List<String>,
+    locale: Locale = Locale.getDefault(),
+): List<String> {
+    val shown =
+        names.map { name ->
+            name
+                .substringBeforeLast('.')
+                .replace('_', ' ')
+                .replace('-', ' ')
+                .trim()
+                .replaceFirstChar { it.titlecase(locale) }
+        }
+    return if (shown.none { it.isEmpty() } && shown.distinct().size == shown.size) shown else names
 }
 
 /** The stored choice when the theme can honour it; a picture that is gone leaves the theme deciding. */

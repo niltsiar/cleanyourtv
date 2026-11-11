@@ -571,7 +571,7 @@ class SettingsScreenTest {
 
         compose.onNodeWithTag("settings:picker").assertIsDisplayed()
         compose.onNodeWithTag("settings:picker:title").assertTextEquals("Wallpaper")
-        listOf("Theme default", "wallpaper", "dusk", "dawn", "None").forEachIndexed { index, text -> entry(index).assertTextEquals(text) }
+        listOf("Theme default", "Wallpaper", "Dusk", "Dawn", "None").forEachIndexed { index, text -> entry(index).assertTextEquals(text) }
         entry(2).assertIsFocused()
         entry(2).assertIsSelected()
         entry(0).assertIsNotSelected()
@@ -618,7 +618,7 @@ class SettingsScreenTest {
         compose.waitForIdle()
 
         assertEquals(0, compose.onAllNodesWithTag("settings:picker").fetchSemanticsNodes().size)
-        wallpaperRow().assertTextEquals("Wallpaper", "dawn")
+        wallpaperRow().assertTextEquals("Wallpaper", "Dawn")
         wallpaperRow().assertIsFocused()
         settings.awaitApplied()
     }

@@ -17,6 +17,10 @@ private val ScrollCuePillWidth = 36.dp
 /** The height of the pill that [drawScrollDownCue] draws; it is 36 dp wide. */
 public val ScrollCuePillHeight: Dp = 20.dp
 
+/** The alpha of the theme's text colour for a panel's scroll cue chevron, and for the pill under the down one. */
+public const val SCROLL_CUE_ALPHA: Float = 0.55f
+public const val SCROLL_CUE_PILL_ALPHA: Float = 0.15f
+
 private val CueStroke = 2.dp
 private val DownWidth = 18.dp
 private val DownHeight = 9.dp

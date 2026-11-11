@@ -20,12 +20,17 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.designsystem.OverlaySurface
+import dev.niltsiar.tvhome.core.designsystem.SCROLL_CUE_ALPHA
+import dev.niltsiar.tvhome.core.designsystem.SCROLL_CUE_PILL_ALPHA
+import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.designsystem.drawScrollDownCue
 
 private val PickerMaxWidth = 560.dp
 private val PickerMargin = 32.dp
@@ -69,11 +74,20 @@ internal fun BoxScope.PickerPanel(
                 .focusProperties { exit = { FocusRequester.Cancel } }
                 .focusGroup(),
     ) {
+        val ink = TvTheme.colors.onSurface
+        val cueInk = ink.copy(alpha = SCROLL_CUE_ALPHA)
+        val cuePill = ink.copy(alpha = SCROLL_CUE_PILL_ALPHA)
         Column {
             PanelTitle(stringResource(title), "settings:picker:title")
+            // The bottom margin is outside the list, so the rows never scroll under the cue drawn in it.
             LazyColumn(
+                modifier =
+                    Modifier.padding(bottom = PickerSide).drawWithContent {
+                        drawContent()
+                        if (list.canScrollForward) drawScrollDownCue(size.height + PickerSide.toPx() / 2f, cueInk, cuePill)
+                    },
                 state = list,
-                contentPadding = PaddingValues(start = PickerSide, end = PickerSide, bottom = PickerSide),
+                contentPadding = PaddingValues(horizontal = PickerSide),
                 verticalArrangement = Arrangement.spacedBy(PickerGap),
             ) {
                 itemsIndexed(entries) { index, label ->

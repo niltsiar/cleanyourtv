@@ -12,6 +12,8 @@ import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
@@ -33,6 +35,7 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.EdgeFade
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.model.OpenOnStartApp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -57,6 +60,7 @@ class SettingsEdgesUiTest {
 
     private val density get() = compose.activity.resources.displayMetrics.density
     private val viewport = mutableStateOf(540.dp)
+    private val picker = mutableStateOf<OpenOnStartPicker?>(null)
 
     /** The page with a list [listHeight] tall: the function gets the list's bounds at the full height and says how tall it should be. */
     private fun show(
@@ -74,6 +78,7 @@ class SettingsEdgesUiTest {
                                 reorder = reorder,
                                 openOnStart = OptionLabel.Res(R.string.settings_off),
                                 wallpaper = OptionLabel.Res(R.string.wallpaper_theme_default),
+                                picker = picker.value,
                             )
                         },
                         actions = SettingsActions(),
@@ -134,6 +139,111 @@ class SettingsEdgesUiTest {
         b: Color,
     ) = 255 * max(abs(a.red - b.red), max(abs(a.green - b.green), abs(a.blue - b.blue)))
 
+    /** The most any pixel of [area], dp by dp, differs from the pixel at [groundX] on its row. */
+    private fun PixelMap.peakInk(
+        area: DpRect,
+        groundX: Dp,
+    ): Float {
+        var peak = 0f
+        var y = area.top
+        while (y < area.bottom) {
+            var x = area.left
+            while (x < area.right) {
+                peak = max(peak, distance(pixel(x, y), pixel(groundX, y)))
+                x += 1.dp
+            }
+            y += 1.dp
+        }
+        return peak
+    }
+
+    /**
+     * How far the down cue's pill shows in a box [above] the bottom of [bounds]: the pill's half beside the chevron, against the
+     * same spot 40 dp further along, where the pill does not reach.
+     */
+    private fun cueInk(
+        bounds: DpRect,
+        above: Dp,
+    ): Float {
+        val middle = (bounds.left + bounds.right) / 2
+        val y = bounds.bottom - above
+        return shot().ink(middle + 13.dp, y, surfaceX = middle + 53.dp)
+    }
+
+    @Test
+    fun a_selected_row_without_focus_draws_no_fill_only_its_check() {
+        show()
+        repeat(30) { press(Key.DirectionDown) }
+        compose.onNodeWithTag("settings:tv_settings").assertIsFocused()
+        val row = compose.onNodeWithTag("settings:follow_theme")
+        row.assertIsSelected()
+        val pill = row.getBoundsInRoot()
+        val middle = (pill.top + pill.bottom) / 2
+
+        val shot = shot()
+        val ground = list().left + 12.dp
+        val fill = shot.peakInk(DpRect(pill.left + 400.dp, pill.top + 4.dp, pill.left + 600.dp, pill.bottom - 4.dp), ground)
+        val rim = shot.peakInk(DpRect(pill.left + 400.dp, pill.top, pill.left + 600.dp, pill.top + 2.dp), ground)
+        val check = shot.peakInk(DpRect(pill.right - 40.dp, middle - 10.dp, pill.right - 12.dp, middle + 10.dp), ground)
+        assertTrue("no fill: $fill", fill < 3f)
+        assertTrue("no stroke: $rim", rim < 3f)
+        assertTrue("the check shows: $check", check > 100f)
+    }
+
+    @Test
+    fun the_list_shows_the_down_cue_while_rows_lie_below_and_not_at_its_end() {
+        show()
+        assertTrue("rows lie below", scrolled().let { (value, end) -> value < end })
+        val shown = cueInk(list(), above = PanelSideHalf)
+
+        repeat(30) { press(Key.DirectionDown) }
+        assertTrue("the list is at its end", scrolled().let { (value, end) -> value == end })
+        val hidden = cueInk(list(), above = PanelSideHalf)
+
+        assertTrue("the cue shows with rows below: $shown", shown > 15f)
+        assertTrue("no cue at the end: $hidden", hidden < 3f)
+    }
+
+    @Test
+    fun a_picker_shows_the_down_cue_while_entries_lie_below_and_not_at_the_last_one() {
+        show()
+        picker.value = OpenOnStartPicker(apps, 0)
+        settle()
+        compose.onNodeWithTag("picker:0").assertIsFocused()
+        val shown = cueInk(bounds("settings:picker"), above = PanelSideHalf)
+
+        repeat(apps.size) { press(Key.DirectionDown) }
+        compose.onNodeWithTag("picker:${apps.size}").assertIsFocused()
+        val hidden = cueInk(bounds("settings:picker"), above = PanelSideHalf)
+
+        assertTrue("the cue shows with entries below: $shown", shown > 15f)
+        assertTrue("no cue at the last entry: $hidden", hidden < 3f)
+    }
+
+    @Test
+    fun the_page_dims_while_a_picker_is_open_and_not_after_it_closes() {
+        show()
+        val panel = bounds("settings:panel")
+        val ground = panel.left + 8.dp
+
+        fun title(): Float {
+            val title = bounds("settings:title")
+            return shot().peakInk(DpRect(title.left, title.top, panel.left + 130.dp, title.bottom), ground)
+        }
+        val before = title()
+        picker.value = OpenOnStartPicker(apps, 0)
+        settle()
+        assertTrue("the picker leaves the title's start in view", bounds("settings:picker").left > panel.left + 150.dp)
+        val open = title()
+        picker.value = null
+        settle()
+        val after = title()
+
+        assertTrue("the title shows: $before", before > 100f)
+        assertTrue("dimmed while the picker is open: $open against $before", open <= 0.5f * before)
+        assertEquals("whole again after it closes", before, after, 2f)
+    }
+
     @Test
     fun at_rest_the_top_edge_is_whole_and_the_bottom_edge_fades() {
         show { list -> bounds("option:ClockFormat:0").top + 40.dp - list.top }
@@ -159,17 +269,22 @@ class SettingsEdgesUiTest {
     fun after_scrolling_down_the_top_edge_fades() {
         show { 190.dp }
         repeat(30) { press(Key.DirectionDown) }
+        val selected = settingsSections(TvConfig()).flatMap { it.rows }.first { it.id == SettingsRowId.InputArrival }.selected
+        val chipTag = "option:InputArrival:$selected"
+        // The list grows at its end, so its top rises to 2 dp under the top of the last row's selected chip.
+        viewport.value += list().top - compose.onNodeWithTag(chipTag).getUnclippedBoundsInRoot().top - 2.dp
+        settle()
         val (value, max) = scrolled()
         assertTrue("the list is scrolled to its end", value > 0f && value == max)
         val list = list()
-        val pill = compose.onNodeWithTag("settings:follow_theme").getUnclippedBoundsInRoot()
-        assertTrue("the Follow theme pill runs under the top edge", pill.top < list.top && pill.bottom > list.top + 36.dp)
+        val chip = compose.onNodeWithTag(chipTag).getUnclippedBoundsInRoot()
+        assertTrue("the selected chip runs under the top edge: $chip in $list", chip.top < list.top && chip.bottom > list.top + 30.dp)
 
         val shot = shot()
-        val inBand = shot.ink(pill.left + 400.dp, list.top + 1.dp, surfaceX = list.left + 12.dp)
-        val belowBand = shot.ink(pill.left + 400.dp, list.top + 36.dp, surfaceX = list.left + 12.dp)
-        assertTrue("the selected pill must show below the band: $belowBand", belowBand > 20f)
-        assertTrue("the top edge is cut straight: $inBand against $belowBand", inBand * 3f < belowBand)
+        val inBand = shot.ink(chip.left + 14.dp, list.top + 1.dp, surfaceX = list.left + 12.dp)
+        val belowBand = shot.ink(chip.left + 14.dp, list.top + 30.dp, surfaceX = list.left + 12.dp)
+        assertTrue("the selected chip must show below the band: $belowBand", belowBand > 20f)
+        assertTrue("the top edge fades: $inBand against $belowBand", inBand * 3f < belowBand)
     }
 
     /** From the first entry down to the last and back up, the focused one stays clear of every edge that fades. */
@@ -315,5 +430,11 @@ class SettingsEdgesUiTest {
     fun in_a_right_to_left_language_the_chevron_points_left() {
         show()
         assertEquals(-1, chevronTip("settings:wallpaper"))
+    }
+
+    private companion object {
+        /** The cue's middle sits half the 28 dp bottom margin above the bottom of the list's or the picker's box. */
+        val PanelSideHalf = 14.dp
+        val apps = (1..12).map { OpenOnStartApp("App %02d".format(it), "com.app$it") }
     }
 }
