@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.Settings
 import androidx.core.net.toUri
+import dev.niltsiar.tvhome.core.model.AppOpened
 import dev.niltsiar.tvhome.core.model.startActivitySafely
 import dev.niltsiar.tvhome.core.model.tvLaunchIntent
 
@@ -17,22 +18,27 @@ internal fun newTaskFlags(clearTask: Boolean): Int =
 /**
  * Opens the TV's system settings the way the reference launcher does. [fallbackComponents] are vendor settings
  * activities ("package/class") tried in order when no standard handler is usable. [vpnApp] gives the package the
- * network button opens instead of Wi-Fi settings, when it is installed; it is asked at each press.
+ * network button opens instead of Wi-Fi settings, when it is installed; it is asked at each press. A VPN app that
+ * started is passed to [opened].
  */
 public class SystemSettings internal constructor(
     private val context: Context,
     private val fallbackComponents: List<String>,
+    private val opened: AppOpened,
     private val vpnApp: () -> String?,
 ) {
     /** With the vendor settings activities this module ships. */
-    public constructor(context: Context, vpnApp: () -> String? = { null }) :
-        this(context, context.resources.getStringArray(R.array.settings_fallback_components).toList(), vpnApp)
+    public constructor(context: Context, opened: AppOpened = AppOpened {}, vpnApp: () -> String? = { null }) :
+        this(context, context.resources.getStringArray(R.array.settings_fallback_components).toList(), opened, vpnApp)
 
     /** True when the system accepted the intent. [clearTask] starts Settings in a fresh task, so Back from it goes Home. */
     public fun openSettings(clearTask: Boolean = false): Boolean = open(intent(Settings.ACTION_SETTINGS), clearTask)
 
     /** The VPN app when one is set and launchable, else Wi-Fi settings. */
-    public fun openNetwork(): Boolean = open(vpnAppIntent() ?: intent(Settings.ACTION_WIFI_SETTINGS))
+    public fun openNetwork(): Boolean {
+        val vpn = vpnAppIntent() ?: return open(intent(Settings.ACTION_WIFI_SETTINGS))
+        return open(vpn).also { if (it) opened.opened(vpn) }
+    }
 
     /** True when the system accepted the intent. Always Wi-Fi settings: the remote's "wifi" key must not open the VPN app. */
     public fun openWifiSettings(): Boolean = open(intent(Settings.ACTION_WIFI_SETTINGS))

@@ -3,6 +3,7 @@ package dev.niltsiar.tvhome.service.keys
 import android.content.Context
 import android.view.KeyEvent
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.model.AppOpened
 import dev.niltsiar.tvhome.data.system.SystemSettings
 import kotlinx.coroutines.flow.StateFlow
 
@@ -12,26 +13,28 @@ private const val FIRST_VENDOR_KEYCODE = 1000
 /**
  * The remote keys that Home answers itself, for a set where no key service runs or a key never reaches it: app_keys with a
  * vendor keycode (TCL's Netflix button is 4062), with their "hold:" entries, and the Settings buttons of
- * settings_key_keycodes. The caller passes only the keys that arrive while Home is in front. [openSettings] opens the TV's
- * settings. The app_keys map and the Live TV package are read in again when [config] changes them.
+ * settings_key_keycodes. The caller passes only the keys that arrive while Home is in front. An app a key opens is passed
+ * to [opened]. [openSettings] opens the TV's settings. The app_keys map and the Live TV package are read in again when
+ * [config] changes them.
  */
 public class VendorKeys(
     private val context: Context,
     private val config: StateFlow<TvConfig>,
     private val settings: SystemSettings,
+    private val opened: AppOpened,
     private val openSettings: () -> Unit,
 ) {
     private var appKeys = config.value.appKeys
     private var liveTvPackage = config.value.liveTvPackage
     private var keys = AppKeys(appKeys)
-    private var launcher = TargetLauncher(context, settings, performGlobal = null, liveTvPackage = liveTvPackage)
+    private var launcher = TargetLauncher(context, settings, performGlobal = null, liveTvPackage = liveTvPackage, opened = opened)
 
     private fun readAgain(now: TvConfig) {
         if (now.appKeys == appKeys && now.liveTvPackage == liveTvPackage) return
         appKeys = now.appKeys
         liveTvPackage = now.liveTvPackage
         keys = AppKeys(appKeys)
-        launcher = TargetLauncher(context, settings, performGlobal = null, liveTvPackage = liveTvPackage)
+        launcher = TargetLauncher(context, settings, performGlobal = null, liveTvPackage = liveTvPackage, opened = opened)
     }
 
     /** True when the key was taken, so Home does not handle it. */

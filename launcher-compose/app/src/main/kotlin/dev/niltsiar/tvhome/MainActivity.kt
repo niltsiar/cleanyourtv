@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
      * when that key opened another app.
      */
     private var resumed = false
-    private val vendorKeys by lazy { VendorKeys(this, config, graph.systemSettings, ::openSettingsFromKey) }
+    private val vendorKeys by lazy { VendorKeys(this, config, graph.systemSettings, graph.appLauncher, ::openSettingsFromKey) }
     private val idleClock by lazy {
         IdleClock({ TimeUnit.MINUTES.toMillis(config.value.homeIdleClockMinutes.toLong()) }, { resumed }, ::showClock)
     }
@@ -280,7 +280,8 @@ class MainActivity : ComponentActivity() {
 
     /** The Live TV app of boot_to_live_tv, or the app picked for Open on start. */
     private fun openIntent(intent: Intent) {
-        if (!startActivitySafely(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))) toast(R.string.not_available)
+        val started = startActivitySafely(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        if (started) graph.appLauncher.opened(intent) else toast(R.string.not_available)
     }
 
     private fun toast(

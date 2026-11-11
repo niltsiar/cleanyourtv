@@ -5,6 +5,10 @@ import android.content.ComponentName
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
+import android.os.Environment
+import dev.niltsiar.tvhome.core.config.ThemeDirectory
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -15,6 +19,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowEnvironment
+import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [31])
@@ -72,6 +78,23 @@ class OpenPackageActivityTest {
         open("market://launch?id=com.both.app")
 
         assertEquals("com.both.app.Tv", shadowOf(app).nextStartedActivity.component?.className)
+    }
+
+    @Test
+    fun with_the_cinematic_home_the_app_it_opens_is_noted_under_its_home_tile_key() {
+        ShadowEnvironment.setExternalStorageState(Environment.MEDIA_MOUNTED)
+        File(ThemeDirectory(app).dir!!, "config.json").writeText("""{"cinematic_home": true}""")
+        install("com.netflix.ninja", Intent.CATEGORY_LEANBACK_LAUNCHER)
+
+        open("market://launch?id=com.netflix.ninja")
+
+        val opened =
+            runBlocking {
+                (app as TvHomeApplication)
+                    .graph.homeSources.lastOpened
+                    .first()
+            }
+        assertEquals(setOf("com.netflix.ninja/.Main"), opened.keys)
     }
 
     @Test

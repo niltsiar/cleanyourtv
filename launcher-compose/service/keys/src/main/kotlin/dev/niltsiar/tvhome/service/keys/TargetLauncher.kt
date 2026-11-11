@@ -6,6 +6,7 @@ import android.content.Intent
 import android.media.AudioManager
 import android.media.tv.TvContract
 import android.os.Build
+import dev.niltsiar.tvhome.core.model.AppOpened
 import dev.niltsiar.tvhome.core.model.LauncherIntents
 import dev.niltsiar.tvhome.core.model.startActivitySafely
 import dev.niltsiar.tvhome.core.model.tvLaunchIntent
@@ -16,13 +17,15 @@ private const val CHANNEL_TYPE = "vnd.android.cursor.item/channel"
 
 /**
  * Runs what an app_keys target stands for. [performGlobal] is the accessibility service's global action; Home has none
- * (null), so back, home, recents and sleep are swallowed there and do nothing.
+ * (null), so back, home, recents and sleep are swallowed there and do nothing. An app or activity target that started is
+ * passed to [opened].
  */
 internal class TargetLauncher(
     private val context: Context,
     private val settings: SystemSettings,
     private val performGlobal: ((Int) -> Boolean)?,
     private val liveTvPackage: String?,
+    private val opened: AppOpened,
 ) {
     fun launch(target: String) {
         when (val parsed = parseTarget(target)) {
@@ -52,7 +55,7 @@ internal class TargetLauncher(
             }
 
             is KeyTarget.Activity -> {
-                ComponentName.unflattenFromString(parsed.component)?.let { start(Intent().setComponent(it)) }
+                ComponentName.unflattenFromString(parsed.component)?.let { startApp(Intent().setComponent(it)) }
             }
 
             is KeyTarget.App -> {
@@ -62,7 +65,11 @@ internal class TargetLauncher(
     }
 
     private fun openApp(packageName: String) {
-        context.packageManager.tvLaunchIntent(packageName)?.let(::start)
+        context.packageManager.tvLaunchIntent(packageName)?.let(::startApp)
+    }
+
+    private fun startApp(intent: Intent) {
+        if (start(intent)) opened.opened(intent)
     }
 
     private fun run(action: ActionWord) {

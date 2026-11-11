@@ -3,6 +3,7 @@ package dev.niltsiar.tvhome
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import dev.niltsiar.tvhome.core.model.AppOpened
 import dev.niltsiar.tvhome.core.model.startActivitySafely
 import dev.niltsiar.tvhome.core.model.tvLaunchIntent
 
@@ -15,7 +16,9 @@ class OpenPackageActivity : Activity() {
         super.onCreate(savedInstanceState)
         val packageName = intent.data?.getQueryParameter("id")
         if (!packageName.isNullOrBlank()) {
-            packageManager.tvLaunchIntent(packageName)?.let { startActivitySafely(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            packageManager.tvLaunchIntent(packageName)?.let {
+                if (startActivitySafely(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))) (application as AppOpened).opened(it)
+            }
         }
         finish()
     }

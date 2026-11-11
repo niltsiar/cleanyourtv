@@ -19,6 +19,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.android)
 
+    testImplementation(project(":data:apps"))
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
 }

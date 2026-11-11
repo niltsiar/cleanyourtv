@@ -20,6 +20,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -156,6 +157,23 @@ class MainActivityStartTest {
 
         compose.waitUntil(10_000) { shadowOf(home.get()).peekNextStartedActivity() != null }
         assertEquals(ComponentName("pkg.5", "pkg.5.Main"), shadowOf(home.get()).nextStartedActivity.component)
+    }
+
+    /**
+     * The boot and the wake open the pick through the same MainActivity call, so the wake covers both. unused_fade_days
+     * turns the record on as cinematic_home does; the cinematic Home cannot draw under Robolectric.
+     */
+    @Test
+    fun with_the_record_on_the_app_open_on_start_opens_is_noted_under_its_home_tile_key() {
+        writeTheme("""{"unused_fade_days": 30, "open_on_start_choice": true, "open_on_start_on_wake": true}""")
+        val home = showHome()
+        pick("pkg.5")
+        compose.waitForIdle()
+
+        screenOn()
+
+        compose.waitUntil(10_000) { shadowOf(home.get()).peekNextStartedActivity() != null }
+        assertEquals(setOf("pkg.5/.Main"), runBlocking { graph.homeSources.lastOpened.first() }.keys)
     }
 
     @Test

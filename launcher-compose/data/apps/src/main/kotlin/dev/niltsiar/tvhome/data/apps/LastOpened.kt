@@ -23,12 +23,13 @@ private const val PREFS = "last_opened"
 /** The preference that holds when the record began. No tile key starts with "@". */
 private const val SINCE = "@since"
 
-/** library_least_used or unused_fade_days: Home keeps the record of when it opened each app, and of when the record began. */
+/** library_least_used or unused_fade_days: the launcher keeps the record of when it opened each app, and of when the record began. */
 internal val TvConfig.recordsUsage: Boolean get() = libraryLeastUsed || unusedFadeDays > 0
 
 /**
- * When Home last opened each app, for the cinematic shelf's "Last opened" line: Home notes the time whenever it opens
- * an app. It reads nothing from other apps, so an app started some other way shows the last time Home opened it.
+ * When the launcher last opened each app, for the cinematic shelf's "Last opened" line: it notes the time whenever it
+ * starts an app, from a Home tile, the library, a remote key or Open on start. It reads nothing from other apps, so an
+ * app started some other way shows the last time the launcher opened it.
  * Files are read and written on [io]; [times] is current at once. The record begins when [recordsUsage] first holds, also
  * after the start, and not before: nothing is filled in for the time it was off.
  */
@@ -45,7 +46,7 @@ public class LastOpened(
     private val began = MutableStateFlow<Long?>(null)
     private val loaded = CompletableDeferred<Unit>()
 
-    /** Tile key to the milliseconds since the epoch of the last launch; a tile Home never opened is missing. */
+    /** Tile key to the milliseconds since the epoch of the last launch; a tile the launcher never opened is missing. */
     public val times: StateFlow<Map<String, Long>> = saved.asStateFlow()
 
     /** Milliseconds since the epoch when the record began, null while it has not. */
@@ -76,7 +77,7 @@ public class LastOpened(
         return OpenedRecord(saved.value, began.value)
     }
 
-    /** Notes that Home just opened the tile [key]. Main thread. */
+    /** Notes that the launcher just opened the tile [key]. Main thread. */
     public fun record(
         key: String,
         now: Long = System.currentTimeMillis(),

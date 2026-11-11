@@ -21,6 +21,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
 import dev.niltsiar.tvhome.core.config.ConfigRepositoryOwner
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.model.AppOpened
 import dev.niltsiar.tvhome.core.model.LauncherIntents
 import dev.niltsiar.tvhome.core.model.startActivitySafely
 import dev.niltsiar.tvhome.data.system.SystemSettings
@@ -50,7 +51,8 @@ private const val PROBE_BOOT_KEY = "probe_boot"
  * the screen is off and [GuardKeep] lists it again at screen-on.
  *
  * The config and the Open on start pick come from the app's [ConfigRepositoryOwner] and are followed: the maps are read in
- * again when a value the service uses changes (see [KeyServiceConfig]).
+ * again when a value the service uses changes (see [KeyServiceConfig]). An app a key opens is noted through the app's
+ * [AppOpened].
  *
  * Enable over adb with scripts/switch-home.sh, or in the TV's accessibility settings.
  */
@@ -159,7 +161,7 @@ public class KeyService : AccessibilityService() {
         if (recorded) ServiceRepair.connected(this, javaClass)
         keys = AppKeys(config.appKeys)
         val settings = SystemSettings(this).also { settings = it }
-        launcher = TargetLauncher(this, settings, ::performGlobalAction, config.liveTvPackage)
+        launcher = TargetLauncher(this, settings, ::performGlobalAction, config.liveTvPackage, application as AppOpened)
         if (config.consumeVolumeKeys) {
             val audio = getSystemService(AudioManager::class.java)
             volume = VolumeRepeat(timer) { audio?.adjustVolume(it, AudioManager.FLAG_SHOW_UI) }

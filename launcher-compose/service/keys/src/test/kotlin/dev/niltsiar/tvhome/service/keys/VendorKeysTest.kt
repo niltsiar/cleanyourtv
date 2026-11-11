@@ -32,7 +32,7 @@ class VendorKeysTest {
 
     private fun keys(vararg entries: String): VendorKeys {
         config = MutableStateFlow(TvConfig(appKeys = entries.asList(), settingsKeyKeycodes = listOf(83)))
-        return VendorKeys(app, config, SystemSettings(app)) { settingsOpened++ }
+        return VendorKeys(app, config, SystemSettings(app), {}) { settingsOpened++ }
     }
 
     @Before

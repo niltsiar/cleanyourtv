@@ -24,7 +24,9 @@ class SystemSettingsTest {
     private val packages = shadowOf(app.packageManager)
     private val vendor = "com.vendor.settings/com.vendor.settings.Main"
 
-    private fun settings(vpnApp: String? = null) = SystemSettings(app, listOf("broken", vendor)) { vpnApp }
+    private val opened = mutableListOf<Intent>()
+
+    private fun settings(vpnApp: String? = null) = SystemSettings(app, listOf("broken", vendor), opened::add) { vpnApp }
 
     private fun answerStandardAction(activity: String) {
         val info =
@@ -111,6 +113,7 @@ class SystemSettingsTest {
         assertEquals(true, settings(vpnApp = "com.vpn.app").openNetwork())
 
         assertEquals("com.vpn.app", shadowOf(app).nextStartedActivity.component?.packageName)
+        assertEquals(listOf(ComponentName("com.vpn.app", "com.vpn.app.Main")), opened.map { it.component })
     }
 
     @Test
@@ -130,6 +133,7 @@ class SystemSettingsTest {
         assertEquals(true, settings(vpnApp = "com.vpn.missing").openNetwork())
 
         assertEquals(Settings.ACTION_WIFI_SETTINGS, shadowOf(app).nextStartedActivity.action)
+        assertEquals(emptyList<Intent>(), opened)
     }
 
     @Test

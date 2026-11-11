@@ -1,6 +1,8 @@
 package dev.niltsiar.tvhome.data.apps
 
+import android.content.ComponentName
 import android.content.Intent
+import android.content.IntentFilter
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.InputTarget
@@ -121,12 +123,41 @@ class AppLauncherTest {
     }
 
     @Test
-    fun an_app_opened_from_the_library_is_noted_as_last_opened_only_when_a_usage_key_is_on() {
-        assertTrue(launcher(recordOpened = true, recordLibraryOpened = false).openFromLibrary(tile))
+    fun an_app_opened_from_the_library_is_noted_as_last_opened_with_the_cinematic_home_or_a_usage_key() {
+        assertTrue(launcher(recordOpened = false).openFromLibrary(tile))
         assertEquals(emptyMap<String, Long>(), lastOpened.times.value)
 
-        assertTrue(launcher(recordOpened = true, recordLibraryOpened = true).openFromLibrary(tile))
+        assertTrue(launcher(recordOpened = true).openFromLibrary(tile))
         assertEquals(setOf(tile.key), lastOpened.times.value.keys)
+
+        val other = tile.copy(key = "com.other/.Main", packageName = "com.other")
+        assertTrue(launcher(recordOpened = false, recordLibraryOpened = true).openFromLibrary(other))
+        assertEquals(setOf(tile.key, other.key), lastOpened.times.value.keys)
+    }
+
+    @Test
+    fun with_the_record_off_no_launch_is_noted_from_any_path() {
+        val launcher = launcher(recordOpened = false)
+
+        launcher.open(tile)
+        launcher.openFromLibrary(tile)
+        launcher.opened(Intent(Intent.ACTION_MAIN).setComponent(ComponentName("com.shop", "com.shop.Main")))
+
+        assertEquals(emptyMap<String, Long>(), lastOpened.times.value)
+    }
+
+    @Test
+    fun an_app_started_by_an_intent_without_a_component_is_noted_under_the_activity_it_resolves_to() {
+        val watch = ComponentName("com.tv.live", "com.tv.live.Watch")
+        shadowOf(context.packageManager).addActivityIfNotPresent(watch)
+        shadowOf(context.packageManager).addIntentFilterForActivity(
+            watch,
+            IntentFilter("com.tv.live.WATCH").apply { addCategory(Intent.CATEGORY_DEFAULT) },
+        )
+
+        launcher().opened(Intent("com.tv.live.WATCH").setPackage("com.tv.live"))
+
+        assertEquals(setOf("com.tv.live/.Watch"), lastOpened.times.value.keys)
     }
 
     @Test

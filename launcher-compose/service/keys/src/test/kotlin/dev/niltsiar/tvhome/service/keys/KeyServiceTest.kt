@@ -42,6 +42,7 @@ import java.time.Duration
 class KeyServiceTest {
     private val app: Application = RuntimeEnvironment.getApplication()
     private val packages = shadowOf(app.packageManager)
+    private val recorder = app as ConfigApplication
     private val home = ComponentName(app.packageName, "${app.packageName}.MainActivity")
     private val homeIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
     private lateinit var service: KeyService
@@ -100,6 +101,31 @@ class KeyServiceTest {
 
         assertEquals("com.netflix.ninja", started()?.component?.packageName)
         assertNull(started())
+    }
+
+    @Test
+    fun an_app_a_remapped_button_opens_is_noted_under_its_home_tile_key() {
+        installLeanbackApp("com.netflix.ninja")
+        val phone = ComponentName("com.netflix.ninja", "com.netflix.ninja.Phone")
+        packages.addActivityIfNotPresent(phone)
+        packages.addIntentFilterForActivity(phone, IntentFilter(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_LAUNCHER) })
+        recorder.recordConfig.value = TvConfig(cinematicHome = true)
+        service.start(TvConfig(appKeys = listOf("190:com.netflix.ninja")))
+
+        assertTrue(tap(190))
+
+        assertEquals(setOf("com.netflix.ninja/.Main"), recorder.lastOpened.times.value.keys)
+    }
+
+    @Test
+    fun with_the_record_off_an_app_a_remapped_button_opens_is_not_noted() {
+        installLeanbackApp("com.netflix.ninja")
+        service.start(TvConfig(appKeys = listOf("190:com.netflix.ninja")))
+
+        assertTrue(tap(190))
+
+        assertEquals("com.netflix.ninja", started()?.component?.packageName)
+        assertEquals(emptyMap<String, Long>(), recorder.lastOpened.times.value)
     }
 
     @Test

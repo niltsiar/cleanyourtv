@@ -150,7 +150,8 @@ interface AppGraph {
     fun provideSystemSettings(
         application: Application,
         repository: ConfigRepository,
-    ): SystemSettings = SystemSettings(application) { repository.config.value.vpnApp }
+        appLauncher: AppLauncher,
+    ): SystemSettings = SystemSettings(application, appLauncher) { repository.config.value.vpnApp }
 
     @Provides
     @SingleIn(AppScope::class)
