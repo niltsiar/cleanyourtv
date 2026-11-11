@@ -20,9 +20,17 @@ public enum class ReorderHint {
     DockPlaceForApp,
 }
 
+/** The dock place an edit-dock session fills, counted from 1, and the name of the [app] in it now. */
+@Immutable
+public data class DockSlot(
+    val number: Int,
+    val app: String,
+)
+
 /**
  * What the screen shows of a reorder or edit-dock session: the [carried] tile, the tiles to draw [dimmed], and the [hint].
- * [canMoveLeft] and [canMoveRight] say which way the carried tile can still go along the list.
+ * [canMoveLeft] and [canMoveRight] say which way the carried tile can still go along the list. [slot] is the dock place
+ * that the app to choose goes to ([ReorderHint.DockChooseApp]).
  */
 @Immutable
 public data class ReorderView(
@@ -31,6 +39,7 @@ public data class ReorderView(
     val hint: ReorderHint,
     val canMoveLeft: Boolean = false,
     val canMoveRight: Boolean = false,
+    val slot: DockSlot? = null,
 )
 
 /** The order to keep: tile [keys] first to last and, with fill_dock off, how many lead the dock (else -1). */
@@ -145,9 +154,15 @@ internal data class ReorderState(
             else -> ReorderHint.DockChoosePlace
         }
 
-    fun view(): ReorderView {
+    /** What the screen shows, with [label] giving the name of the app of a key. */
+    fun view(label: (String) -> String?): ReorderView {
         val at = keys.indexOf(carried)
-        return ReorderView(carried, dimmed(), hint(), canMoveLeft = at > 0, canMoveRight = at in 0 until keys.lastIndex)
+        val slot =
+            dockEdit
+                ?.slot
+                ?.takeIf { hint() == ReorderHint.DockChooseApp }
+                ?.let { place -> label(keys[place])?.let { DockSlot(place + 1, it) } }
+        return ReorderView(carried, dimmed(), hint(), canMoveLeft = at > 0, canMoveRight = at in 0 until keys.lastIndex, slot = slot)
     }
 
     companion object {

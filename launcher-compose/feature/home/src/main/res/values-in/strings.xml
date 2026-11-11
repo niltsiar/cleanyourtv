@@ -30,7 +30,7 @@
   <string name="power_menu">Mulai ulang TV</string>
   <string name="reorder_hint">OK mengambil aplikasi, panah memindahkannya, Kembali menempatkannya. Kembali lagi untuk selesai.</string>
   <string name="dock_edit_hint">Pilih posisi dock yang ingin diubah lalu tekan OK. Kembali untuk selesai.</string>
-  <string name="dock_edit_pick_app">Sekarang pilih aplikasi untuk ditempatkan di sana lalu tekan OK. Kembali untuk memilih posisi lain.</string>
+  <string name="dock_edit_pick_app">Posisi %1$d, sekarang %2$s: pilih aplikasi untuk ditempatkan di sana lalu tekan OK. Kembali untuk memilih posisi lain.</string>
   <string name="dock_edit_pick_place">Pilih posisi dock untuk aplikasi ini lalu tekan OK. Kembali untuk membatalkan.</string>
   <string name="reorder_key_ok">OK</string>
   <string name="reorder_pick_up">ambil</string>

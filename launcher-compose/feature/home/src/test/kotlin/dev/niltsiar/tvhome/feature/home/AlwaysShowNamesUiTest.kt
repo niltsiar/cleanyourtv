@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
@@ -62,10 +63,11 @@ class AlwaysShowNamesUiTest {
         config: TvConfig,
         wallpaper: Wallpaper = Wallpaper(),
         apps: List<AppEntry> = this.apps,
+        motion: Motion = Motion(),
     ) {
         val sources = sources(apps = flowOf(AppList(apps)), wallpaper = flowOf(wallpaper))
         compose.setContent {
-            TvTheme {
+            TvTheme(motion = motion) {
                 val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(
@@ -122,6 +124,43 @@ class AlwaysShowNamesUiTest {
         expected: Dp,
         actual: Dp,
     ) = assertTrue("expected $expected, got $actual", abs(expected.value - actual.value) <= 1f)
+
+    /** The pixels of [tag] as the screen draws them now. */
+    private fun frame(tag: String): List<Color> {
+        val pixels = compose.onNodeWithTag(tag).captureToImage().toPixelMap()
+        return (0 until pixels.height).flatMap { y -> (0 until pixels.width).map { x -> pixels[x, y] } }
+    }
+
+    private val longNames =
+        apps.mapIndexed { i, app ->
+            if (i < 2) app.copy(label = "Control de TV con altavoces inteligentes ${i + 1}") else app
+        }
+
+    @Test
+    fun the_focused_tile_s_cut_name_scrolls_and_a_cut_name_without_focus_stays_still() {
+        showHome(TvConfig(columns = 4, alwaysShowNames = true), apps = longNames)
+        // Waiting for idle would run a whole pass and back to its start.
+        compose.mainClock.autoAdvance = false
+        val focused = frame("name:pkg.1")
+        val other = frame("name:pkg.2")
+
+        compose.mainClock.advanceTimeBy(2_000)
+
+        assertTrue("the focused cut name did not move", frame("name:pkg.1") != focused)
+        assertEquals(other, frame("name:pkg.2"))
+    }
+
+    @Test
+    fun with_reduced_motion_the_focused_tile_s_cut_name_stays_still() {
+        showHome(TvConfig(columns = 4, alwaysShowNames = true), apps = longNames, motion = Motion(reducedMotion = true))
+        // Waiting for idle would run a whole pass and back to its start.
+        compose.mainClock.autoAdvance = false
+        val focused = frame("name:pkg.1")
+
+        compose.mainClock.advanceTimeBy(2_000)
+
+        assertEquals(focused, frame("name:pkg.1"))
+    }
 
     @Test
     fun a_name_cut_to_two_lines_on_a_text_tile_ends_in_an_ellipsis_with_no_space_before_it() {

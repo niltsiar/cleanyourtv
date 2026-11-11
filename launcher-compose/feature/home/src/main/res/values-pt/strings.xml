@@ -30,7 +30,7 @@
   <string name="power_menu">Reiniciar TV</string>
   <string name="reorder_hint">OK pega numa app, as setas movem-na, Voltar pousa-a. Voltar outra vez para terminar.</string>
   <string name="dock_edit_hint">Escolha o lugar do dock que quer mudar e pressione OK. Voltar para terminar.</string>
-  <string name="dock_edit_pick_app">Agora escolha o app para colocar lá e pressione OK. Voltar para escolher outro lugar.</string>
+  <string name="dock_edit_pick_app">Lugar %1$d, agora %2$s: escolha o app para colocar lá e pressione OK. Voltar para escolher outro lugar.</string>
   <string name="dock_edit_pick_place">Escolha o lugar do dock para este app e pressione OK. Voltar para cancelar.</string>
   <string name="reorder_key_ok">OK</string>
   <string name="reorder_pick_up">pegar</string>

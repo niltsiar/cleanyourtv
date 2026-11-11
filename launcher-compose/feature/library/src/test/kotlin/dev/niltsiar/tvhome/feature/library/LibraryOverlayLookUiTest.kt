@@ -214,6 +214,46 @@ class LibraryOverlayLookUiTest {
         return redAt(card.left + 5.dp, (card.top + card.bottom) / 2)
     }
 
+    /** Two names too long for a card's two lines; the first sorts first and takes focus. */
+    private val cutNames =
+        listOf("Alta TV con altavoces inteligentes y control por voz", "Altavoces inteligentes con control de la TV por voz")
+
+    /** The pixels of the card [name] as the screen draws them now. */
+    private fun cardFrame(name: String): List<Color> {
+        val pixels = compose.onNodeWithTag("card:${key(name)}").captureToImage().toPixelMap()
+        return (0 until pixels.height).flatMap { y -> (0 until pixels.width).map { x -> pixels[x, y] } }
+    }
+
+    @Test
+    fun the_focused_card_s_cut_name_scrolls_and_a_cut_name_without_focus_stays_still() {
+        showLibrary(cutNames.map { libraryApp(it) } + nineApps)
+        val (first, second) = cutNames
+        compose.onNodeWithTag("card:${key(first)}").assertIsFocused()
+        // Waiting for idle would run a whole pass and back to its start.
+        compose.mainClock.autoAdvance = false
+        val focused = cardFrame(first)
+        val other = cardFrame(second)
+
+        compose.mainClock.advanceTimeBy(2_000)
+
+        assertTrue("the focused cut name did not move", cardFrame(first) != focused)
+        assertEquals(other, cardFrame(second))
+    }
+
+    @Test
+    fun with_reduced_motion_the_focused_card_s_cut_name_stays_still() {
+        showLibrary(cutNames.map { libraryApp(it) } + nineApps, motion = Motion(reducedMotion = true))
+        val first = cutNames.first()
+        compose.onNodeWithTag("card:${key(first)}").assertIsFocused()
+        // Waiting for idle would run a whole pass and back to its start.
+        compose.mainClock.autoAdvance = false
+        val focused = cardFrame(first)
+
+        compose.mainClock.advanceTimeBy(2_000)
+
+        assertEquals(focused, cardFrame(first))
+    }
+
     @Test
     fun a_focused_card_shows_the_plate_behind_it_with_glass() {
         showLibrary(nineApps, focusStyle = FocusStyle.Glass)

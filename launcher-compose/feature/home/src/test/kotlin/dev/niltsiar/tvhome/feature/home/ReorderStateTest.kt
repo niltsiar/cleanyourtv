@@ -167,6 +167,16 @@ class ReorderStateTest {
     }
 
     @Test
+    fun only_the_app_choice_step_names_its_dock_place_from_1_and_the_app_in_it_now() {
+        val label = { key: String -> "Name of $key" }
+
+        assertEquals(DockSlot(3, "Name of k3"), session().copy(dockEdit = DockEdit(slot = 2)).view(label).slot)
+        assertNull(session().copy(dockEdit = DockEdit()).view(label).slot)
+        assertNull(session().copy(dockEdit = DockEdit(appKey = "k7")).view(label).slot)
+        assertNull(session().view(label).slot)
+    }
+
+    @Test
     fun the_hint_follows_the_step() {
         assertEquals(ReorderHint.Reorder, session().hint())
         assertEquals(ReorderHint.DockChoosePlace, session().copy(dockEdit = DockEdit()).hint())

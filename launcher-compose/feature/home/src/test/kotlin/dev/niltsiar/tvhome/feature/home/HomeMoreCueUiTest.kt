@@ -256,22 +256,28 @@ class HomeMoreCueUiTest {
     }
 
     @Test
-    fun there_is_no_cue_when_the_band_under_the_last_row_is_under_the_pill_and_4_dp() {
+    fun with_names_and_apps_below_a_band_too_short_for_the_cue_has_it_over_the_tiles_above_the_names() {
         // Five columns with names: the second row's names end 38 px above the bottom edge, 10 px short of the 48 the cue needs.
         showHome(TvConfig(columns = 5, alwaysShowNames = true), count = 30)
-
         press(Key.DirectionDown)
         compose.onNodeWithTag("tile:pkg.6").assertIsFocused()
+        val (withCue, x) = column()
 
-        // The middle column's name stands in the column the cue is looked for in, so look from under it.
-        val belowNames =
-            (
-                compose
-                    .onNodeWithTag("name:pkg.13")
-                    .getBoundsInRoot()
-                    .bottom.value + 3f
-            ) * density
-        assertNull(pill(from = belowNames))
+        layout = layout.copy(scrollCue = false)
+        settle()
+        val (without, _) = column()
+
+        val drawn = (0 until withCue.height).filter { y -> withCue[x, y] != without[x, y] }
+        assertTrue("no cue with names on and apps below", drawn.isNotEmpty())
+        val tileBottom = bottomOf("tile:pkg.13")
+        val nameTop =
+            compose
+                .onNodeWithTag("name:pkg.13")
+                .getBoundsInRoot()
+                .top.value * density
+        assertNear(20f * density, (drawn.last() - drawn.first() + 1).toFloat())
+        assertNear(tileBottom - 2f * density, drawn.last() + 1f)
+        assertTrue("cue ends at ${drawn.last()}, over the name at $nameTop", drawn.last() < nameTop)
     }
 
     /** Counts the bodies of the composable [name] that run; the compiler calls the tracer for each one that does not skip. */

@@ -23,6 +23,9 @@ private const val ROW_PITCH = 275
 private const val FIRST_ROW_TOP = 488
 private const val COLUMNS = 4
 
+/** What a row adds under its tiles for the names with always_show_names. */
+private const val NAME_ROOM = 48
+
 private inline fun <reified T : Any> proxy(crossinline answer: (String) -> Any?): T =
     Proxy.newProxyInstance(T::class.java.classLoader, arrayOf(T::class.java)) { _, method, _ -> answer(method.name) } as T
 
@@ -100,16 +103,38 @@ class MoreCueTest {
     }
 
     @Test
-    fun the_cue_needs_a_band_of_its_pill_and_4_dp_and_is_drawn_at_exactly_that() {
+    fun the_cue_is_centred_in_a_band_of_exactly_its_pill_and_4_dp_and_a_shorter_band_puts_it_on_the_screen_edge() {
         val exact = cue(gridRows(0..1, firstTop = 1032 - TILE_HEIGHT - ROW_PITCH))
-        assertNotNull(exact)
         assertEquals(SCREEN_HEIGHT - ROOM / 2f, exact!!.centre, 0.01f)
 
-        assertNull(cue(gridRows(0..1, firstTop = 1033 - TILE_HEIGHT - ROW_PITCH)))
+        val short = cue(gridRows(0..1, firstTop = 1033 - TILE_HEIGHT - ROW_PITCH))
+        assertEquals(SCREEN_HEIGHT - ROOM / 2f, short!!.centre, 0.01f)
     }
 
     @Test
-    fun there_is_no_cue_under_a_row_that_peeks_past_the_bottom_edge() {
-        assertNull(cue(gridRows(0..1, firstTop = 600)))
+    fun a_row_that_peeks_past_the_bottom_edge_with_apps_below_it_gets_the_cue_on_the_screen_edge_over_it() {
+        val peeking = cue(gridRows(0..1, firstTop = 600))
+
+        assertEquals(SCREEN_HEIGHT - ROOM / 2f, peeking!!.centre, 0.01f)
+    }
+
+    @Test
+    fun with_names_a_row_whose_names_fall_off_the_screen_gets_the_cue_over_its_tiles_above_the_names() {
+        // Design review 22, capture 20: the second row's tiles end at 1067, its names below the screen, a third row below.
+        val tileTop = 1067 - TILE_HEIGHT
+        val rows = gridRows(0..2, firstTop = tileTop - ROW_PITCH, height = TILE_HEIGHT + NAME_ROOM)
+
+        val place = cue(rows, names = true)
+
+        assertNotNull("no cue with names on and apps below", place)
+        val tileBottom = tileTop + TILE_WIDTH / TILE_ASPECT
+        assertEquals(tileBottom - ROOM / 2f, place!!.centre, 0.01f)
+    }
+
+    @Test
+    fun with_names_a_row_cut_by_the_bottom_edge_gets_the_cue_on_the_screen_edge_over_its_tiles() {
+        val rows = gridRows(0..2, firstTop = 1100 - TILE_HEIGHT - ROW_PITCH, height = TILE_HEIGHT + NAME_ROOM)
+
+        assertEquals(SCREEN_HEIGHT - ROOM / 2f, cue(rows, names = true)!!.centre, 0.01f)
     }
 }

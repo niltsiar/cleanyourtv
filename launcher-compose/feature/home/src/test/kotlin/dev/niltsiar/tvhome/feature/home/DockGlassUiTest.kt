@@ -43,6 +43,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import kotlin.math.abs
+import kotlin.math.ceil
 
 /**
  * The dock panel read from the rendered pixels. The wallpaper's picture is left out, so the screen is black except for
@@ -219,6 +220,42 @@ class DockGlassUiTest {
 
     private val dark = Color(0xFF0B0D12)
     private val light = Color(0xFFF4F6FA)
+
+    /** The red channel of the screen [inPx] pixels inside dock tile [n]'s left edge, half way down it. */
+    private fun tileEdgeAt(
+        n: Int,
+        inPx: Int,
+    ): Float {
+        val tile = dockTile(n)
+        val density = compose.activity.resources.displayMetrics.density
+        val x = ceil(tile.left.value * density).toInt() + inPx
+        return compose
+            .onRoot()
+            .captureToImage()
+            .toPixelMap()[x, ((tile.top.value + tile.bottom.value) / 2f * density).toInt()]
+            .red
+    }
+
+    private val bannerApps =
+        (1..9).map {
+            AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it", image = bitmap(16, 9) { _, _ -> grey(245) })
+        }
+
+    @Test
+    fun with_dock_glass_a_dock_tile_has_a_1_5_px_black_018_edge_inside_it() {
+        showHome(white, cinematic.copy(dockGlass = true), shown = bannerApps)
+
+        val inside = tileEdgeAt(3, inPx = 4)
+        assertEquals(245f / 255f, inside, 0.01f)
+        assertEquals(0.82f * inside, tileEdgeAt(3, inPx = 0), 0.015f)
+    }
+
+    @Test
+    fun without_dock_glass_a_dock_tile_has_no_edge() {
+        showHome(white, cinematic, shown = bannerApps)
+
+        assertEquals(tileEdgeAt(3, inPx = 4), tileEdgeAt(3, inPx = 0), 0.01f)
+    }
 
     @Test
     fun the_dock_panel_tints_the_frost_by_016_on_a_dim_wallpaper() {
@@ -631,10 +668,12 @@ class DockGlassUiTest {
     }
 
     @Test
-    fun a_dark_tile_gets_no_edge_on_the_light_tray() {
+    fun a_dark_tile_gets_the_glass_edge_and_not_the_light_tile_edge_on_the_light_tray() {
         showHome(uniform, cinematic.copy(dockGlass = true), shown = darkApps)
 
-        assertNoEdge("tile:pkg.2", 40f / 255f)
+        val (edge, inside) = edgeOf("tile:pkg.2")
+        assertEquals(40f / 255f, inside, 0.01f)
+        assertEquals("edge $edge", 0.82f * 40f / 255f, edge.min(), 0.01f)
     }
 
     @Test

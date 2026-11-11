@@ -55,6 +55,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -231,6 +232,10 @@ private val TileCorner = 12.dp
 private val TileShape = RoundedCornerShape(TileCorner)
 private val LightTileEdgeWidth = 1.dp
 private val LightTileEdge = Color.Black.copy(alpha = 0.75f)
+
+/** The edge of a dock tile on the light glass dock (dock_glass), 1.5 px wide, so a white tile holds on it. */
+private const val GLASS_TILE_EDGE_PX = 1.5f
+private val GlassTileEdge = Color.Black.copy(alpha = 0.18f)
 
 private val DockShape = RoundedCornerShape(32.dp)
 private val GridBottom = 48.dp
@@ -1473,6 +1478,8 @@ private data class HeroLine(
     val never: Boolean = false,
     val usual: Boolean = false,
     val hint: ReorderHint? = null,
+    /** The dock place the app to choose goes to, named in the hint. */
+    val slot: DockSlot? = null,
     val quick: Boolean = false,
     /** The title names a chrome control (a top-bar button or the library pill), which gets a smaller title than an app. */
     val chrome: Boolean = false,
@@ -1506,6 +1513,7 @@ private fun HeroTitle(
     val link by remember(state) { derivedStateOf { state().network.link } }
     val launcherSettings by remember(state) { derivedStateOf { state().config.launcherSettingsButton } }
     val focusedLabel by remember(state) { derivedStateOf { state().focusedLabel } }
+    val dockSlot by remember(state) { derivedStateOf { state().reorder?.slot } }
     val tile by remember(state) {
         derivedStateOf {
             val home = state()
@@ -1521,7 +1529,11 @@ private fun HeroTitle(
     val line =
         when (val chosen = source()) {
             is HeroSource.Mode -> {
-                HeroLine(if (chosen.hint == ReorderHint.Reorder) focusedLabel else stringResource(R.string.dock_edit), hint = chosen.hint)
+                HeroLine(
+                    if (chosen.hint == ReorderHint.Reorder) focusedLabel else stringResource(R.string.dock_edit),
+                    hint = chosen.hint,
+                    slot = dockSlot,
+                )
             }
 
             HeroSource.Library -> {
@@ -1595,10 +1607,16 @@ private fun HeroTitle(
                         }
 
                         else -> {
+                            val slot = shown.slot
                             BasicText(
-                                stringResource(keys.label()),
+                                if (slot != null) {
+                                    stringResource(R.string.dock_edit_pick_app, slot.number, slot.app)
+                                } else {
+                                    stringResource(keys.label())
+                                },
                                 style = metaStyle,
                                 maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.testTag("reorder:hint").subtitlePill(pill),
                             )
                         }
@@ -1745,6 +1763,7 @@ private fun Dock(
                             tileMenu = layout.tileMenu,
                             showName = layout.showNames,
                             edge = edge,
+                            glassEdge = look.band && look.glass,
                             modifier =
                                 Modifier
                                     .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = TvTheme.motion.placementSpec)
@@ -1801,6 +1820,7 @@ private fun Dock(
                             tileMenu = layout.tileMenu,
                             showName = layout.showNames,
                             edge = edge,
+                            glassEdge = look.band && look.glass,
                             modifier =
                                 (if (shrunk) Modifier.width(rowTileWidth) else Modifier.weight(1f))
                                     .slideToIndex(index, TileGap)
@@ -1939,6 +1959,7 @@ private fun AppTile(
     habitMark: Boolean = true,
     fadeUnused: Boolean = false,
     edge: DockEdgeLight? = null,
+    glassEdge: Boolean = false,
     bannerName: Boolean = true,
     growthPivot: ((Float) -> Float)? = null,
 ) {
@@ -1963,6 +1984,7 @@ private fun AppTile(
                 habitMark = false,
                 fadeUnused = fadeUnused,
                 edge = edge,
+                glassEdge = glassEdge,
                 bannerName = false,
                 growthPivot = pivot,
             )
@@ -2038,10 +2060,15 @@ private fun AppTile(
                 .fillMaxSize()
                 .drawBehind { drawRect(surface) }
                 .then(
-                    if (app.lightArt) {
+                    if (app.lightArt || glassEdge) {
                         Modifier.drawWithContent {
                             drawContent()
-                            drawLightTileEdge()
+                            // The light tile's edge is darker and covers the glass dock's.
+                            if (app.lightArt) {
+                                drawTileEdge(LightTileEdge, LightTileEdgeWidth.toPx())
+                            } else {
+                                drawTileEdge(GlassTileEdge, GLASS_TILE_EDGE_PX)
+                            }
                         }
                     } else {
                         Modifier
@@ -2065,7 +2092,8 @@ private fun AppTile(
 
 /**
  * [tile] with [app]'s name under it, on one line, on a pill as wide as the text and no wider than the tile, which looks the same
- * with focus or without. The pill is [nameGap] under the tile and does not move with focus.
+ * with focus or without, but for a cut name, which scrolls while the tile has focus. The pill is [nameGap] under the tile and
+ * does not move with focus.
  */
 @Composable
 private fun NameUnder(
@@ -2074,12 +2102,14 @@ private fun NameUnder(
     modifier: Modifier = Modifier,
     tile: @Composable () -> Unit,
 ) {
+    val focused = remember { mutableStateOf(false) }
+    val scrolling = remember(focused) { { focused.value } }
     Layout(
         content = {
             tile()
-            NameChip(app)
+            NameChip(app, scrolling = scrolling)
         },
-        modifier = modifier,
+        modifier = modifier.onFocusChanged { focused.value = it.hasFocus },
     ) { measurables, constraints ->
         val art = measurables[0].measure(constraints)
         val name = measurables[1].measure(Constraints(maxWidth = art.width))
@@ -2093,11 +2123,12 @@ private fun NameUnder(
     }
 }
 
-/** [app]'s name in a pill of one line, [NameLine] high. */
+/** [app]'s name in a pill of one line, [NameLine] high; a cut name scrolls while [scrolling] says so. */
 @Composable
 private fun NameChip(
     app: AppEntry,
     modifier: Modifier = Modifier,
+    scrolling: (() -> Boolean)? = null,
 ) {
     val density = LocalDensity.current
     val label = TvTheme.typography.tileLabel
@@ -2120,15 +2151,18 @@ private fun NameChip(
             style,
             maxLines = 1,
             modifier = Modifier.testTag("name:${app.key}").clearAndSetSemantics {},
+            scrolling = scrolling,
         )
     }
 }
 
-/** A 1 dp edge drawn inside the tile's shape over its art, so a light tile holds on any surface, and a dark one costs it nothing. */
-private fun ContentDrawScope.drawLightTileEdge() {
-    val width = LightTileEdgeWidth.toPx()
+/** An edge [width] pixels wide drawn inside the tile's shape over its art: a light tile's, so it holds on any surface, or the glass dock's. */
+private fun ContentDrawScope.drawTileEdge(
+    color: Color,
+    width: Float,
+) {
     drawRoundRect(
-        LightTileEdge,
+        color,
         topLeft = Offset(width / 2f, width / 2f),
         size = Size(size.width - width, size.height - width),
         cornerRadius = CornerRadius(TileCorner.toPx() - width / 2f),
@@ -2210,7 +2244,13 @@ private fun HomeScreenSpanishPreview() {
 private fun HomeScreenReorderSpanishPreview() {
     val others = PreviewNames.map { "example.${it.lowercase()}" } - "example.music"
     HomePreview(
-        reorder = ReorderView(carried = "example.music", dimmed = others.toSet(), hint = ReorderHint.DockChooseApp),
+        reorder =
+            ReorderView(
+                carried = "example.music",
+                dimmed = others.toSet(),
+                hint = ReorderHint.DockChooseApp,
+                slot = DockSlot(2, "Music"),
+            ),
         focused = "example.music",
     )
 }

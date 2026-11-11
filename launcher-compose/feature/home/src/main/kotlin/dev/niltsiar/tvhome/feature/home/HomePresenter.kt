@@ -135,7 +135,7 @@ internal fun homePresenter(
         cinematic = current.cinematicHome,
         lastOpened = lastOpened,
         menu = interaction.menu,
-        reorder = remember(session) { session?.view() },
+        reorder = remember(session, shown) { session?.view { key -> shown.all.firstOrNull { it.key == key }?.label } },
         focusRequest = interaction.focusRequest,
         inputs = interaction.inputs ?: UnknownInputs,
         inputsOpen = interaction.inputsOpen,

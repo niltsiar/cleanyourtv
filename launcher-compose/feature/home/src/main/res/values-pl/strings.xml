@@ -29,7 +29,7 @@
   <string name="power_menu">Zrestartuj TV</string>
   <string name="reorder_hint">OK podnosi aplikację, strzałki ją przesuwają, Wstecz ją upuszcza. Ponownie Wstecz, aby zakończyć.</string>
   <string name="dock_edit_hint">Wybierz miejsce w docku do zmiany i naciśnij OK. Wstecz, aby zakończyć.</string>
-  <string name="dock_edit_pick_app">Teraz wybierz aplikację, która ma się tam znaleźć, i naciśnij OK. Wstecz, aby wybrać inne miejsce.</string>
+  <string name="dock_edit_pick_app">Miejsce %1$d, teraz %2$s: wybierz aplikację, która ma się tam znaleźć, i naciśnij OK. Wstecz, aby wybrać inne miejsce.</string>
   <string name="dock_edit_pick_place">Wybierz miejsce w docku dla tej aplikacji i naciśnij OK. Wstecz, aby anulować.</string>
   <string name="reorder_key_ok">OK</string>
   <string name="reorder_pick_up">podnieś</string>

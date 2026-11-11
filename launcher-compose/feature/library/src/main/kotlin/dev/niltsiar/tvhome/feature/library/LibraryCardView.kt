@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
 import dev.niltsiar.tvhome.core.designsystem.FocusSurface
+import dev.niltsiar.tvhome.core.designsystem.MarqueeLine
 import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.holdOk
@@ -179,6 +180,7 @@ internal fun LibraryCardView(
     val ring = remember(artwork, layout) { layout.ringColour(artwork?.accent ?: Color.Unspecified, artwork?.edge ?: Color.Unspecified) }
     val ringBlends = remember(ring, artwork) { ringBlendsWith(ring, artwork?.accent ?: Color.Unspecified) }
     val focusProgress = remember(focus) { { focus.value.coerceIn(0f, 1f) } }
+    val scrolling = remember(focus) { { focus.targetValue == 1f } }
     val checkScale = remember(pulse) { { 1f + CHECK_PULSE_SCALE * (1f - abs(2f * pulse.value - 1f)).coerceIn(0f, 1f) } }
     Box(
         modifier =
@@ -239,7 +241,7 @@ internal fun LibraryCardView(
                     ),
                 ) {
                     Art(card, artwork, layout.selection && !card.onHome, focusProgress, Modifier.padding(horizontal = ArtInset))
-                    Name(card.app.label, measurer, widthPx - with(density) { CardSide.roundToPx() * 2 })
+                    Name(card.app.label, measurer, widthPx - with(density) { CardSide.roundToPx() * 2 }, scrolling)
                 }
                 Status(
                     card,
@@ -345,24 +347,39 @@ private fun DrawScope.drawPlus(
 /** The first character, whole: a letter outside the Basic Multilingual Plane is two chars. */
 internal fun String.firstCodePoint(): String = if (isEmpty()) this else take(Character.charCount(codePointAt(0)))
 
+/** [label] in [NAME_LINES] lines of [widthPx]; one that is cut shows whole on one line, scrolling sideways, while [scrolling] says so. */
 @Composable
 private fun Name(
     label: String,
     measurer: TextMeasurer,
     widthPx: Int,
+    scrolling: () -> Boolean,
 ) {
     val typography = TvTheme.typography
     val style = remember(typography) { typography.pillLabel.copy(fontSize = 13.sp, lineHeight = 16.sp, textAlign = TextAlign.Center) }
     val shown = remember(label, style, widthPx) { shownName(label, measurer, style, widthPx) }
     val fit = remember(style) { WholeWords(style.fontSize) }
-    BasicText(
-        text = shown,
-        style = style,
-        maxLines = NAME_LINES,
-        overflow = TextOverflow.Ellipsis,
-        autoSize = if (shown == label) fit else null,
-        modifier = Modifier.fillMaxWidth().heightIn(max = NameHeight),
-    )
+    val scroll = scrolling.takeIf { shown != label && TvTheme.motion.animated }
+    Box(Modifier.fillMaxWidth().heightIn(max = NameHeight)) {
+        BasicText(
+            text = shown,
+            style = style,
+            maxLines = NAME_LINES,
+            overflow = TextOverflow.Ellipsis,
+            autoSize = if (shown == label) fit else null,
+            modifier =
+                Modifier.fillMaxWidth().then(
+                    if (scroll !=
+                        null
+                    ) {
+                        Modifier.graphicsLayer { alpha = if (scroll()) 0f else 1f }
+                    } else {
+                        Modifier
+                    },
+                ),
+        )
+        if (scroll != null) MarqueeLine(label, style, scroll, Modifier.matchParentSize())
+    }
 }
 
 private val Ellipsis = Char(0x2026).toString()

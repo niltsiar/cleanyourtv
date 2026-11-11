@@ -257,6 +257,24 @@ class HomeMenuUiTest {
         compose.onNodeWithTag("shelf:title").assertTextEquals("Choose dock apps")
     }
 
+    @Test
+    fun once_a_dock_place_is_chosen_the_hint_names_it_and_the_app_in_it_now() {
+        showHome()
+        press(Key.DirectionUp)
+        repeat(2) { press(Key.DirectionRight) }
+        holdOk()
+        releaseOk()
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+        repeat(2) { press(Key.DirectionRight) }
+
+        press(Key.DirectionCenter)
+
+        compose
+            .onNodeWithTag("reorder:hint")
+            .assertTextEquals("Place 3, now App 3: choose the app to put there and press OK. Back to choose another place.")
+    }
+
     private fun boundsOf(tag: String): Rect = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
 
     @Test

@@ -27,7 +27,7 @@
   <string name="power_menu">รีสตาร์ททีวี</string>
   <string name="reorder_hint">กด OK เพื่อเลือกแอป ใช้ลูกศรเพื่อย้าย กดย้อนกลับเพื่อวาง กดย้อนกลับอีกครั้งเพื่อเสร็จสิ้น</string>
   <string name="dock_edit_hint">เลือกตำแหน่งในแถบแอปที่ต้องการเปลี่ยน แล้วกด OK กดย้อนกลับเพื่อเสร็จสิ้น</string>
-  <string name="dock_edit_pick_app">จากนั้นเลือกแอปที่จะวางตรงนั้น แล้วกด OK กดย้อนกลับเพื่อเลือกตำแหน่งอื่น</string>
+  <string name="dock_edit_pick_app">ตำแหน่ง %1$d ตอนนี้คือ %2$s: เลือกแอปที่จะวางตรงนั้น แล้วกด OK กดย้อนกลับเพื่อเลือกตำแหน่งอื่น</string>
   <string name="dock_edit_pick_place">เลือกตำแหน่งในแถบแอปสำหรับแอปนี้ แล้วกด OK กดย้อนกลับเพื่อยกเลิก</string>
   <string name="reorder_key_ok">OK</string>
   <string name="reorder_pick_up">เลือก</string>
