@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -54,8 +56,9 @@ public fun OverlayHost(
     val motion = TvTheme.motion
     val scrim = remember { Animatable(0f) }
     val look = remember { ScrimLook() }
+    val currentOpen by rememberUpdatedState(open)
     LaunchedEffect(motion) {
-        snapshotFlow(open).collectLatest { shown ->
+        snapshotFlow { currentOpen() }.collectLatest { shown ->
             scrim.animateTo(if (shown) 1f else 0f, motion.tweenSpec(if (shown) SCRIM_IN_MS else SCRIM_OUT_MS))
         }
     }

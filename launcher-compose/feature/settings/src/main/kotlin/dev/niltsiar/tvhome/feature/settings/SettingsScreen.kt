@@ -40,7 +40,6 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
@@ -112,9 +111,6 @@ private const val HEADING_ALPHA = 0.65f
 private const val RULE_ALPHA = 0.12f
 private const val SELECTED_FILL_ALPHA = 0.16f
 private const val SELECTED_RIM_ALPHA = 0.42f
-
-/** The alpha of the page's content while a picker is open over it. */
-private const val PAGE_DIM_ALPHA = 0.4f
 
 private const val WALLPAPER_STOP = "wallpaper"
 private const val OPEN_ON_START_STOP = "open_on_start"
@@ -267,7 +263,7 @@ public fun SettingsScreen(
                 val ink = TvTheme.colors.onSurface
                 val cueInk = ink.copy(alpha = SCROLL_CUE_ALPHA)
                 val cuePill = ink.copy(alpha = SCROLL_CUE_PILL_ALPHA)
-                Column(Modifier.fillMaxSize().alpha(if (pickerStop != null) PAGE_DIM_ALPHA else 1f)) {
+                Column(Modifier.fillMaxSize()) {
                     PanelTitle(stringResource(R.string.settings_title), "settings:title")
                     ScrollsClearOfEdge(ScrollClear) {
                         Column(
