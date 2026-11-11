@@ -84,6 +84,7 @@ public fun parseTvConfig(json: String): ParsedConfig {
             singleRow = o.bool("single_row", d.singleRow),
             alwaysShowNames = o.bool("always_show_names", d.alwaysShowNames),
             dockTitle = o.bool("dock_title", d.dockTitle),
+            gridScrollCue = o.bool("grid_scroll_cue", d.gridScrollCue),
             launchActions = packageMap(o.stringList("launch_actions", emptyList())),
             appLabels = packageMap(o.stringList("app_labels", emptyList())),
             topBarApps = topBarApps,

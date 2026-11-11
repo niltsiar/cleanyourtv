@@ -222,7 +222,7 @@ public class WallpaperProvider internal constructor(
             }
             if (files.isEmpty()) WallpaperRotation.usable(single)?.let(files::add)
         }
-        // The on-TV pick wins over the theme's rotation and over wallpaper false, as in the reference launcher.
+        // The on-TV pick wins over the theme's rotation and over wallpaper false.
         WallpaperRotation.chosen(collection, WallpaperRotation.usable(single), choice)?.let { picked ->
             files.clear()
             files += picked

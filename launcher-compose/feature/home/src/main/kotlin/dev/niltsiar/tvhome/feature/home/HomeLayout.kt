@@ -14,7 +14,8 @@ import dev.niltsiar.tvhome.core.model.showLibraryPill
  * [inputArrival] whether the Inputs button offers a device that was just switched on (input_arrival), and [habitMark]
  * whether the app usually opened at this time of day has a mark under its tile (habit_hint), and [unusedFade] whether
  * grid tiles of apps not opened for a while are drawn faded (unused_fade_days), and [dockTitle] whether the band above the dock
- * names the focused tile (dock_title); its reorder, dock-edit, library and top-bar lines show either way.
+ * names the focused tile (dock_title); its reorder, dock-edit, library and top-bar lines show either way. [scrollCue] is whether
+ * a down cue under the grid marks rows of apps below the screen (grid_scroll_cue).
  */
 @Immutable
 public data class HomeLayout(
@@ -29,6 +30,7 @@ public data class HomeLayout(
     val habitMark: Boolean = false,
     val unusedFade: Boolean = false,
     val dockTitle: Boolean = true,
+    val scrollCue: Boolean = true,
 )
 
 public fun TvConfig.homeLayout(): HomeLayout =
@@ -44,6 +46,7 @@ public fun TvConfig.homeLayout(): HomeLayout =
         habitMark = habitHint,
         unusedFade = unusedFadeDays > 0,
         dockTitle = dockTitle,
+        scrollCue = gridScrollCue,
     )
 
 private const val MIN_TILE_SHARE = 0.85f

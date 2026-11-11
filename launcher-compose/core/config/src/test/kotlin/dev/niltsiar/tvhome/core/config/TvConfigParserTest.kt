@@ -354,6 +354,21 @@ class TvConfigParserTest {
     }
 
     @Test
+    fun grid_scroll_cue_is_on_unless_a_theme_says_false_and_a_value_that_is_not_a_boolean_keeps_it_on() {
+        assertTrue(parseTvConfig("""{}""").config.gridScrollCue)
+
+        val off = parseTvConfig("""{"grid_scroll_cue": false}""")
+        assertFalse(off.config.gridScrollCue)
+        assertEquals(emptyList<String>(), off.rejectedKeys + off.unknownKeys)
+
+        for (bad in listOf("\"false\"", "0")) {
+            val parsed = parseTvConfig("""{"grid_scroll_cue": $bad}""")
+            assertTrue(bad, parsed.config.gridScrollCue)
+            assertEquals(bad, listOf("grid_scroll_cue"), parsed.rejectedKeys)
+        }
+    }
+
+    @Test
     fun glass_style_is_glass_unless_a_theme_says_rim_or_halo_in_any_case_and_any_other_value_keeps_glass() {
         assertEquals(GlassStyle.Glass, parseTvConfig("""{}""").config.glassStyle)
         assertEquals(GlassStyle.Glass, parseTvConfig("""{"glass_style": "glass"}""").config.glassStyle)
@@ -562,6 +577,7 @@ class TvConfigParserTest {
             "single_row" to ("true" to defaults.copy(singleRow = true)),
             "always_show_names" to ("true" to defaults.copy(alwaysShowNames = true)),
             "dock_title" to ("false" to defaults.copy(dockTitle = false)),
+            "grid_scroll_cue" to ("false" to defaults.copy(gridScrollCue = false)),
             "launch_actions" to ("""["com.a=ACT"]""" to defaults.copy(launchActions = mapOf("com.a" to "ACT"))),
             "app_labels" to ("""["com.a=Alpha"]""" to defaults.copy(appLabels = mapOf("com.a" to "Alpha"))),
             "top_bar_apps" to

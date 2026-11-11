@@ -726,13 +726,19 @@ private fun HomeContent(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .moreCue(
-                        gridState,
-                        dim::lowPx,
-                        dim.fold::value,
-                        layout.columns,
-                        (grid.size + layout.columns - 1) / layout.columns,
-                        layout.showNames,
+                    .then(
+                        if (layout.scrollCue) {
+                            Modifier.moreCue(
+                                gridState,
+                                dim::lowPx,
+                                dim.fold::value,
+                                layout.columns,
+                                (grid.size + layout.columns - 1) / layout.columns,
+                                layout.showNames,
+                            )
+                        } else {
+                            Modifier
+                        },
                     ).gridEdges(gridState, dim::lowPx, cutoff = shelfBottom - ShelfToFade, names = layout.showNames)
                     .onFocusChanged {
                         input.gridFocused = it.hasFocus

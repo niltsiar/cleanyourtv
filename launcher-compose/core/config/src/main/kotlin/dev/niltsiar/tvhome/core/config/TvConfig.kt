@@ -71,6 +71,8 @@ public data class TvConfig(
     val alwaysShowNames: Boolean = false,
     /** False hides the focused tile's name and status above the dock; the reorder, dock-edit, library and top-bar lines stay. */
     val dockTitle: Boolean = true,
+    /** False draws no down cue under the grid while rows of apps lie below the screen. */
+    val gridScrollCue: Boolean = true,
     /** Package to the action its tile sends instead of opening the start screen. */
     val launchActions: Map<String, String> = emptyMap(),
     /** Package to the name its tile shows instead of the app's label. */

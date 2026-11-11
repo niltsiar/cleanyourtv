@@ -189,6 +189,18 @@ class HomeMoreCueUiTest {
     }
 
     @Test
+    fun grid_scroll_cue_false_draws_no_cue_where_the_default_draws_one() {
+        showHome()
+        press(Key.DirectionDown)
+        assertNotNull("cue with grid_scroll_cue on", pill(from = bottomOf("tile:pkg.9")))
+
+        layout = TvConfig(columns = 4, gridScrollCue = false).homeLayout()
+        settle()
+        compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
+        assertNull("cue with grid_scroll_cue false", pill(from = bottomOf("tile:pkg.9")))
+    }
+
+    @Test
     fun the_recomposition_count_sees_home_content_run_when_its_layout_changes() {
         showHome()
         press(Key.DirectionDown)
