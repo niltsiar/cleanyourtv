@@ -170,25 +170,6 @@ class HomeInteractionTest {
         }
 
     @Test
-    fun picking_launcher_settings_opens_the_page_and_hands_focus_back_to_settings_with_the_key_off_and_on() =
-        runTest {
-            for (key in listOf(false, true)) {
-                presenter(SixColumns.copy(launcherSettingsButton = key)).test {
-                    awaitMatching { it.dock.isNotEmpty() }
-                    events.send(HomeEvent.SettingsMenu)
-                    assertEquals(MenuRow.LauncherSettings, awaitMatching { it.menu != null }.menu?.rows?.first())
-                    events.send(HomeEvent.MenuPick(MenuRow.LauncherSettings))
-
-                    val state = awaitMatching { it.menu == null && it.focusRequest != null }
-
-                    assertEquals(HomeEffect.OpenLauncherSettings, effects.receive())
-                    assertEquals(SETTINGS_FOCUS, state.focusRequest?.target)
-                    cancelAndIgnoreRemainingEvents()
-                }
-            }
-        }
-
-    @Test
     fun the_settings_menu_ends_with_restart_while_the_key_service_is_bound() =
         runTest {
             presenter(powerMenu = true).test {

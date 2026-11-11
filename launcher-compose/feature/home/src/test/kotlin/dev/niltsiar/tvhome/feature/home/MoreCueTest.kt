@@ -120,7 +120,7 @@ class MoreCueTest {
 
     @Test
     fun with_names_a_row_whose_names_fall_off_the_screen_gets_the_cue_over_its_tiles_above_the_names() {
-        // Design review 22, capture 20: the second row's tiles end at 1067, its names below the screen, a third row below.
+        // The second row's tiles end at 1067, its names below the screen, a third row below.
         val tileTop = 1067 - TILE_HEIGHT
         val rows = gridRows(0..2, firstTop = tileTop - ROW_PITCH, height = TILE_HEIGHT + NAME_ROOM)
 
