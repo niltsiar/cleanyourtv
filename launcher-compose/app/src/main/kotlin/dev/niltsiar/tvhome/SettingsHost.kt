@@ -3,29 +3,34 @@ package dev.niltsiar.tvhome
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.feature.settings.MoleculeSettingsViewModel
+import dev.niltsiar.tvhome.feature.settings.PageNotice
 import dev.niltsiar.tvhome.feature.settings.SettingsEffect
 import dev.niltsiar.tvhome.feature.settings.SettingsScreen
+import dev.niltsiar.tvhome.feature.settings.R as SettingsR
 
-/** Launcher settings in the TV theme of the config, which the choices on this screen change as they are made. */
+/**
+ * Launcher settings in the TV theme of the config, which the choices on this screen change as they are made. A refused
+ * write, a stored wallpaper and TV settings that [onOpenTvSettings] could not open are told in the page's notice.
+ */
 @Composable
 internal fun SettingsHost(
     graph: AppGraph,
     viewModel: MoleculeSettingsViewModel,
     onChooseDefaultHome: () -> Unit,
-    onOpenTvSettings: () -> Unit,
+    onOpenTvSettings: () -> Boolean,
     onReorder: () -> Unit,
-    onSaveFailed: () -> Unit,
-    onWallpaperApplied: () -> Unit,
 ) {
+    val notice = remember { PageNotice() }
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
             when (effect) {
-                SettingsEffect.SaveFailed -> onSaveFailed()
-                SettingsEffect.WallpaperApplied -> onWallpaperApplied()
+                SettingsEffect.SaveFailed -> notice.show(SettingsR.string.settings_save_failed)
+                SettingsEffect.WallpaperApplied -> notice.show(SettingsR.string.wallpaper_applied)
             }
         }
     }
@@ -38,8 +43,9 @@ internal fun SettingsHost(
             state = { state.value },
             actions = viewModel.actions,
             onChooseDefaultHome = onChooseDefaultHome,
-            onOpenTvSettings = onOpenTvSettings,
+            onOpenTvSettings = { if (!onOpenTvSettings()) notice.show(R.string.not_available) },
             onReorder = onReorder,
+            notice = notice,
         )
     }
 }

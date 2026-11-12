@@ -171,6 +171,33 @@ class SettingsEdgesUiTest {
         return shot().ink(middle + 13.dp, y, surfaceX = middle + 53.dp)
     }
 
+    /** The red half way down the option row [id], 8 dp out from each end of its label and chips, where no text is. */
+    private fun PixelMap.rowEnds(id: SettingsRowId): List<Float> {
+        val row = bounds("setting:${id.name}")
+        val middle = (row.top + row.bottom) / 2
+        return listOf(pixel(row.left - 8.dp, middle).red, pixel(row.right + 8.dp, middle).red)
+    }
+
+    @Test
+    fun a_focused_option_row_draws_a_faint_pill_behind_its_label_and_chips_and_an_unfocused_one_does_not() {
+        show()
+        compose.onNode(isFocused() and hasAnyAncestor(hasTestTag("setting:Columns"))).assertExists()
+        val first = shot()
+        val focused = first.rowEnds(SettingsRowId.Columns)
+        val unfocused = first.rowEnds(SettingsRowId.RowsBelowDock)
+
+        press(Key.DirectionDown)
+        val second = shot()
+
+        // The pill is the page's ink at 0.10: lighter on a dark page, darker on a light one.
+        for (end in 0..1) {
+            assertTrue("end $end: focused $focused, unfocused $unfocused", abs(focused[end] - unfocused[end]) > 0.05f)
+            val left = second.rowEnds(SettingsRowId.Columns)[end]
+            assertEquals("end $end of the row focus left", unfocused[end], left, 0.02f)
+            assertTrue("end $end of the row focus reached", abs(second.rowEnds(SettingsRowId.RowsBelowDock)[end] - left) > 0.05f)
+        }
+    }
+
     @Test
     fun a_selected_row_without_focus_draws_no_fill_only_its_check() {
         show()

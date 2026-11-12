@@ -29,6 +29,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -53,6 +55,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -80,6 +83,7 @@ import dev.niltsiar.tvhome.core.designsystem.drawScrollDownCue
 import dev.niltsiar.tvhome.core.designsystem.fadeScrolledEdges
 import dev.niltsiar.tvhome.core.designsystem.menuRowShape
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private val PanelMaxWidth = 920.dp
@@ -111,6 +115,11 @@ private const val HEADING_ALPHA = 0.65f
 private const val RULE_ALPHA = 0.12f
 private const val SELECTED_FILL_ALPHA = 0.16f
 private const val SELECTED_RIM_ALPHA = 0.42f
+private const val FOCUSED_ROW_ALPHA = 0.10f
+
+private const val NOTICE_MS = 2_000L
+private const val NOTICE_FADE_MS = 200
+private val NoticeHeight = 36.dp
 
 private const val WALLPAPER_STOP = "wallpaper"
 private const val OPEN_ON_START_STOP = "open_on_start"
@@ -187,12 +196,35 @@ private fun focusStops(keys: List<String>): Map<String, FocusStop> {
     }
 }
 
+/** A short message in the page's title band, in place of a system toast: [show] puts one there for 2 s, in place of any still showing. */
+@Stable
+public class PageNotice {
+    internal var shown: Shown? by mutableStateOf(null)
+        private set
+
+    public fun show(
+        @StringRes text: Int,
+    ) {
+        shown = Shown(text)
+    }
+
+    internal fun clear(of: Shown) {
+        if (shown === of) shown = null
+    }
+
+    /** One showing of a message: the same text shown again is a new one, with its own 2 s. */
+    internal class Shown(
+        @StringRes val text: Int,
+    )
+}
+
 /**
  * Launcher settings as one panel. With [SettingsUiState.reorder] the first row is Reorder apps, which has focus when the screen
  * opens and runs [onReorder]; otherwise the first row's selected option has focus. The setting rows follow in groups, each
  * listing its options side by side, with the Wallpaper row after Clock and the Open on start row after the first group when the
  * state has them. Their pickers open over the panel. Follow theme, Choose default home ([onChooseDefaultHome]) and TV system
- * settings ([onOpenTvSettings]) end the list. OK on an option stores it, unless it is the selected one.
+ * settings ([onOpenTvSettings]) end the list. OK on an option stores it, unless it is the selected one. A [notice] shows at the
+ * end of the title band.
  * Up and Down move between rows, onto the selected option of the next one; Left and Right move between a row's options and
  * stop at its ends. Focus cannot leave the screen.
  */
@@ -205,6 +237,7 @@ public fun SettingsScreen(
     onOpenTvSettings: () -> Unit,
     modifier: Modifier = Modifier,
     onReorder: () -> Unit = {},
+    notice: PageNotice = remember { PageNotice() },
 ) {
     val reveal = rememberReveal()
     val ui = state()
@@ -262,7 +295,10 @@ public fun SettingsScreen(
                 val cueInk = ink.copy(alpha = SCROLL_CUE_ALPHA)
                 val cuePill = ink.copy(alpha = SCROLL_CUE_PILL_ALPHA)
                 Column(Modifier.fillMaxSize()) {
-                    PanelTitle(stringResource(R.string.settings_title), "settings:title")
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        PanelTitle(stringResource(R.string.settings_title), "settings:title", Modifier.weight(1f))
+                        notice.shown?.let { NoticePill(it, notice::clear) }
+                    }
                     ScrollsClearOfEdge(ScrollClear) {
                         Column(
                             Modifier
@@ -393,6 +429,7 @@ internal fun Modifier.revealed(reveal: Animatable<Float, AnimationVector1D>): Mo
 internal fun PanelTitle(
     text: String,
     tag: String,
+    modifier: Modifier = Modifier,
 ) {
     val typography = TvTheme.typography
     val style = remember(typography) { typography.shelfTitle.copy(fontSize = 30.sp) }
@@ -402,11 +439,42 @@ internal fun PanelTitle(
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
                 .padding(start = PanelSide + RowSide, end = PanelSide, top = TitleTop, bottom = TitleBottom)
                 .testTag(tag),
     )
+}
+
+/** The [shown] message as a pill level with the title, which fades in, stays 2 s, fades out and then is [gone]. */
+@Composable
+private fun NoticePill(
+    shown: PageNotice.Shown,
+    gone: (PageNotice.Shown) -> Unit,
+) {
+    val motion = TvTheme.motion
+    val typography = TvTheme.typography
+    val ink = TvTheme.colors.onSurface
+    val style = remember(typography, ink) { typography.pillLabel.copy(fontSize = 16.sp, color = ink) }
+    val alpha = remember(shown) { Animatable(0f) }
+    LaunchedEffect(shown) {
+        alpha.animateTo(1f, motion.tweenSpec(NOTICE_FADE_MS))
+        delay(NOTICE_MS)
+        alpha.animateTo(0f, motion.tweenSpec(NOTICE_FADE_MS))
+        gone(shown)
+    }
+    Box(
+        Modifier
+            .padding(top = TitleTop, bottom = TitleBottom, end = PanelSide)
+            .graphicsLayer { this.alpha = alpha.value }
+            .height(NoticeHeight)
+            .background(ink.copy(alpha = SELECTED_FILL_ALPHA), CircleShape)
+            .border(1.dp, ink.copy(alpha = SELECTED_RIM_ALPHA), CircleShape)
+            .testTag("settings:notice"),
+        contentAlignment = Alignment.Center,
+    ) {
+        BasicText(stringResource(shown.text), style = style, maxLines = 1, modifier = Modifier.padding(horizontal = ChipPadding))
+    }
 }
 
 @Composable
@@ -436,8 +504,9 @@ private fun Heading(
 }
 
 /**
- * A row: its label, which brightens while an option of the row has focus, and its options. The [stop]'s entry is on the
- * selected option (the first one when none is); its up and down are the entries of the rows around it.
+ * A row: its label and its options, on a faint pill as wide as an action row's while an option of the row has focus, when
+ * the label brightens too. The [stop]'s entry is on the selected option (the first one when none is); its up and down are
+ * the entries of the rows around it.
  */
 @Composable
 private fun SettingRow(
@@ -452,11 +521,19 @@ private fun SettingRow(
     val idle = remember(ink) { ink.copy(alpha = LABEL_IDLE_ALPHA) }
     val focus = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
+    val pill = remember(ink) { ink.copy(alpha = FOCUSED_ROW_ALPHA) }
+    val shape = remember { menuRowShape() }
     Row(
         Modifier
             .fillMaxWidth()
             .heightIn(min = RowMinHeight)
-            .padding(horizontal = RowSide)
+            .drawWithCache {
+                val outline = shape.createOutline(size, layoutDirection, this)
+                onDrawBehind {
+                    val shown = focus.value.coerceIn(0f, 1f)
+                    if (shown > 0f) drawOutline(outline, pill, alpha = shown)
+                }
+            }.padding(horizontal = RowSide)
             .testTag("setting:${row.id.name}"),
         verticalAlignment = Alignment.CenterVertically,
     ) {

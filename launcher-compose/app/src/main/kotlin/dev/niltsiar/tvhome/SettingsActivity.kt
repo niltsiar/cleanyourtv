@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContract
@@ -12,7 +11,6 @@ import androidx.activity.viewModels
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import dev.niltsiar.tvhome.feature.settings.MoleculeSettingsViewModel
-import dev.niltsiar.tvhome.feature.settings.R as SettingsR
 
 /** Opens [SettingsActivity] and answers whether it ended with the Reorder row, which asks Home to start reorder mode. */
 internal object LauncherSettingsPage : ActivityResultContract<Unit, Boolean>() {
@@ -46,10 +44,8 @@ class SettingsActivity : ComponentActivity() {
                 graph = graph,
                 viewModel = viewModel,
                 onChooseDefaultHome = ::chooseDefaultHome,
-                onOpenTvSettings = ::openTvSettings,
+                onOpenTvSettings = { graph.systemSettings.openSettings() },
                 onReorder = ::reorder,
-                onSaveFailed = { Toast.makeText(this, SettingsR.string.settings_save_failed, Toast.LENGTH_LONG).show() },
-                onWallpaperApplied = { Toast.makeText(this, SettingsR.string.wallpaper_applied, Toast.LENGTH_SHORT).show() },
             )
         }
     }
@@ -60,8 +56,4 @@ class SettingsActivity : ComponentActivity() {
     }
 
     private fun chooseDefaultHome() = startActivity(Intent(this, HomeSettingsActivity::class.java))
-
-    private fun openTvSettings() {
-        if (!graph.systemSettings.openSettings()) Toast.makeText(this, R.string.not_available, Toast.LENGTH_LONG).show()
-    }
 }
