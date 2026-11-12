@@ -28,9 +28,10 @@
   <string name="dock_edit">Vybrat aplikace v doku</string>
   <string name="reorder">Seřadit aplikace</string>
   <string name="power_menu">Restartovat TV</string>
-  <string name="reorder_hint">OK zvedne aplikaci, šipky ji posunou, Zpět ji položí. Dalším Zpět skončíte.</string>
   <string name="dock_edit_hint">Vyberte místo v doku, které chcete změnit, a stiskněte OK. Tlačítkem Zpět skončíte.</string>
-  <string name="dock_edit_pick_app">Místo %1$d, nyní %2$s: vyberte aplikaci pro toto místo a stiskněte OK. Tlačítkem Zpět vyberete jiné místo.</string>
+  <string name="dock_edit_slot">Místo %1$d z %2$d · nyní %3$s</string>
+  <string name="dock_edit_put_here">dát sem</string>
+  <string name="dock_edit_other_place">jiné místo</string>
   <string name="dock_edit_pick_place">Vyberte místo v doku pro tuto aplikaci a stiskněte OK. Tlačítkem Zpět zrušíte.</string>
   <string name="reorder_key_ok">OK</string>
   <string name="reorder_pick_up">zvednout</string>

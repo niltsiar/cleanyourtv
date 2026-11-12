@@ -28,9 +28,10 @@
   <string name="dock_edit">选择程序坤应用</string>
   <string name="reorder">调整应用顺序</string>
   <string name="power_menu">重新启动电视</string>
-  <string name="reorder_hint">按确定选中应用，方向键移动，按返回放下。再按一次返回完成。</string>
   <string name="dock_edit_hint">选择要更改的程序坞位置，然后按确定。按返回完成。</string>
-  <string name="dock_edit_pick_app">第 %1$d 个位置，当前是 %2$s：选择要放在那里的应用，然后按确定。按返回重新选择位置。</string>
+  <string name="dock_edit_slot">第 %1$d 个位置（共 %2$d 个）· 当前是 %3$s</string>
+  <string name="dock_edit_put_here">放在这里</string>
+  <string name="dock_edit_other_place">其他位置</string>
   <string name="dock_edit_pick_place">选择这个应用要放的程序坞位置，然后按确定。按返回取消。</string>
   <string name="reorder_key_ok">确定</string>
   <string name="reorder_pick_up">选中</string>

@@ -17,6 +17,7 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -258,7 +259,7 @@ class HomeMenuUiTest {
     }
 
     @Test
-    fun once_a_dock_place_is_chosen_the_hint_names_it_and_the_app_in_it_now() {
+    fun once_a_dock_place_is_chosen_the_hint_names_it_of_the_dock_places_and_the_app_in_it_now_beside_the_ok_and_back_chips() {
         showHome()
         press(Key.DirectionUp)
         repeat(2) { press(Key.DirectionRight) }
@@ -270,9 +271,18 @@ class HomeMenuUiTest {
 
         press(Key.DirectionCenter)
 
-        compose
-            .onNodeWithTag("reorder:hint")
-            .assertTextEquals("Place 3, now App 3: choose the app to put there and press OK. Back to choose another place.")
+        compose.onNodeWithTag("reorder:slot").assertTextEquals("Place 3 of 6 \u00B7 now App 3")
+        for ((chip, texts) in listOf(
+            "reorder:chip:put" to listOf("OK", "put here"),
+            "reorder:chip:other" to listOf("Back", "other place"),
+        )) {
+            for (text in texts) {
+                compose
+                    .onNode(
+                        hasText(text) and hasAnyAncestor(hasTestTag(chip) and hasAnyAncestor(hasTestTag("reorder:hint"))),
+                    ).assertExists()
+            }
+        }
     }
 
     private fun boundsOf(tag: String): Rect = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot

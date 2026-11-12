@@ -27,9 +27,10 @@
   <string name="dock_edit">ডকের অ্যাপ বেছে নিন</string>
   <string name="reorder">অ্যাপ সাজান</string>
   <string name="power_menu">টিভি রিস্টার্ট করুন</string>
-  <string name="reorder_hint">OK দিয়ে অ্যাপ তুলুন, তীর দিয়ে সরান, Back দিয়ে বসান। শেষ করতে আবার Back চাপুন।</string>
   <string name="dock_edit_hint">ডকের যে জায়গাটি বদলাতে চান সেটি বেছে OK চাপুন। শেষ হলে Back চাপুন।</string>
-  <string name="dock_edit_pick_app">জায়গা %1$d, এখন %2$s: ওই জায়গায় যে অ্যাপ রাখতে চান সেটি বেছে OK চাপুন। অন্য জায়গা বাছতে Back চাপুন।</string>
+  <string name="dock_edit_slot">জায়গা %1$d / %2$d · এখন %3$s</string>
+  <string name="dock_edit_put_here">এখানে রাখুন</string>
+  <string name="dock_edit_other_place">অন্য জায়গা</string>
   <string name="dock_edit_pick_place">এই অ্যাপের জন্য ডকের একটি জায়গা বেছে OK চাপুন। বাতিল করতে Back চাপুন।</string>
   <string name="reorder_key_ok">OK</string>
   <string name="reorder_pick_up">তুলুন</string>

@@ -20,10 +20,11 @@ public enum class ReorderHint {
     DockPlaceForApp,
 }
 
-/** The dock place an edit-dock session fills, counted from 1, and the name of the [app] in it now. */
+/** The dock place an edit-dock session fills, counted from 1 of the dock's [count] places, and the name of the [app] in it now. */
 @Immutable
 public data class DockSlot(
     val number: Int,
+    val count: Int,
     val app: String,
 )
 
@@ -161,7 +162,7 @@ internal data class ReorderState(
             dockEdit
                 ?.slot
                 ?.takeIf { hint() == ReorderHint.DockChooseApp }
-                ?.let { place -> label(keys[place])?.let { DockSlot(place + 1, it) } }
+                ?.let { place -> label(keys[place])?.let { DockSlot(place + 1, minOf(columns, keys.size), it) } }
         return ReorderView(carried, dimmed(), hint(), canMoveLeft = at > 0, canMoveRight = at in 0 until keys.lastIndex, slot = slot)
     }
 

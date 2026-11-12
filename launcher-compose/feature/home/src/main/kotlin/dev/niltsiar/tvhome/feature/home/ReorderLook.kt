@@ -60,7 +60,8 @@ private val LiftHeight = TileGap - FocusRingReach - TrayRimClear
  * A move arrow: a round [ArrowDisc] of black at 0.60 centred on the outer edge of a carried tile's ring, so that half its
  * width lies under the ring and tile and the other half, [ArrowDisc] / 2 past the ring, leaves the rest of the [TileGap]
  * (4 dp) to the next tile. On it stands a white chevron at 0.95, [ChevronHeight] tall and [ChevronDepth] deep, drawn with a
- * round-capped [ChevronStroke] stroke; the disc keeps it readable, so the chevron has no outline of its own.
+ * round-capped [ChevronStroke] stroke; the disc keeps it readable, so the chevron has no outline of its own. The chevron is
+ * centred on the middle of the disc's outer half, so its stroke, caps included, keeps off the ring and inside the disc.
  */
 private val ArrowDisc = 22.dp
 internal val ArrowDiscColor = Color.Black.copy(alpha = 0.60f)
@@ -183,19 +184,24 @@ internal fun DrawScope.drawArrowDisc(
     alpha: Float,
 ) = drawCircle(ArrowDiscColor, radius = ArrowDisc.toPx() / 2f, center = center, alpha = alpha)
 
-/** A move arrow's chevron centred on [center], pointing left or right, at [alpha]; it stands on [drawArrowDisc]. */
+/**
+ * A move arrow's chevron on the [drawArrowDisc] centred on [discCentre], pointing left or right, at [alpha]: it stands in the
+ * disc's half on the side it points to, the half away from the tile.
+ */
 internal fun DrawScope.drawChevron(
-    center: Offset,
+    discCentre: Offset,
     pointsLeft: Boolean,
     alpha: Float,
 ) {
     val half = ChevronHeight.toPx() / 2f
-    val tip = if (pointsLeft) -ChevronDepth.toPx() / 2f else ChevronDepth.toPx() / 2f
+    val outward = if (pointsLeft) -1f else 1f
+    val x = discCentre.x + outward * ArrowDisc.toPx() / 4f
+    val tip = outward * ChevronDepth.toPx() / 2f
     val path =
         Path().apply {
-            moveTo(center.x - tip, center.y - half)
-            lineTo(center.x + tip, center.y)
-            lineTo(center.x - tip, center.y + half)
+            moveTo(x - tip, discCentre.y - half)
+            lineTo(x + tip, discCentre.y)
+            lineTo(x - tip, discCentre.y + half)
         }
     drawPath(path, ChevronColor, alpha = alpha, style = Stroke(ChevronStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
 }

@@ -29,9 +29,10 @@
   <string name="dock_edit">Scegli le app del dock</string>
   <string name="reorder">Riordina le app</string>
   <string name="power_menu">Riavvia la TV</string>
-  <string name="reorder_hint">OK prende un\'app, le frecce la spostano, Indietro la posiziona. Ancora Indietro per finire.</string>
   <string name="dock_edit_hint">Scegli il posto del dock da cambiare e premi OK. Indietro per finire.</string>
-  <string name="dock_edit_pick_app">Posto %1$d, ora %2$s: scegli l\'app da mettere lì e premi OK. Indietro per scegliere un altro posto.</string>
+  <string name="dock_edit_slot">Posto %1$d di %2$d · ora %3$s</string>
+  <string name="dock_edit_put_here">metti qui</string>
+  <string name="dock_edit_other_place">altro posto</string>
   <string name="dock_edit_pick_place">Scegli il posto del dock per questa app e premi OK. Indietro per annullare.</string>
   <string name="reorder_key_ok">OK</string>
   <string name="reorder_pick_up">prendi</string>

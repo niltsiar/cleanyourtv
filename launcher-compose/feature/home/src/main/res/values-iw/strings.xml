@@ -29,9 +29,10 @@
   <string name="dock_edit">בחירת אפליקציות לשורת המועדפים</string>
   <string name="reorder">סידור אפליקציות</string>
   <string name="power_menu">הפעלת הטלוויזיה מחדש</string>
-  <string name="reorder_hint">אישור מרים אפליקציה, החצים מזיזים אותה, חזרה מניחה אותה. חזרה שוב לסיום.</string>
   <string name="dock_edit_hint">בחרו מקום בשורת המועדפים ולחצו אישור. חזרה לסיום.</string>
-  <string name="dock_edit_pick_app">מקום %1$d, כרגע %2$s: בחרו את האפליקציה שתופיע שם ולחצו אישור. חזרה לבחירת מקום אחר.</string>
+  <string name="dock_edit_slot">מקום %1$d מתוך %2$d · כרגע %3$s</string>
+  <string name="dock_edit_put_here">הצבה כאן</string>
+  <string name="dock_edit_other_place">מקום אחר</string>
   <string name="dock_edit_pick_place">בחרו מקום בשורת המועדפים לאפליקציה הזו ולחצו אישור. חזרה לביטול.</string>
   <string name="reorder_key_ok">אישור</string>
   <string name="reorder_pick_up">הרמה</string>

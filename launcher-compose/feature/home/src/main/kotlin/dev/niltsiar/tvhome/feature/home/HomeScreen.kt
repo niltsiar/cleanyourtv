@@ -118,6 +118,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -1606,14 +1607,14 @@ private fun HeroTitle(
                             )
                         }
 
-                        else -> {
-                            val slot = shown.slot
+                        ReorderHint.DockChooseApp -> {
+                            SlotChips(shown.slot, metaStyle, pill)
+                        }
+
+                        ReorderHint.DockChoosePlace, ReorderHint.DockPlaceForApp -> {
+                            val text = if (keys == ReorderHint.DockChoosePlace) R.string.dock_edit_hint else R.string.dock_edit_pick_place
                             BasicText(
-                                if (slot != null) {
-                                    stringResource(R.string.dock_edit_pick_app, slot.number, slot.app)
-                                } else {
-                                    stringResource(keys.label())
-                                },
+                                stringResource(text),
                                 style = metaStyle,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -1697,6 +1698,39 @@ private fun KeyChips(carried: State<String?>) {
                 Modifier.testTag("reorder:chip:back"),
             )
         }
+    }
+}
+
+/**
+ * The app choice step of edit-dock mode: which dock place of how many, and the app in it now, when its name is known; then
+ * the keys, OK to put the focused app there and Back to choose another place.
+ */
+@Composable
+private fun SlotChips(
+    slot: DockSlot?,
+    style: TextStyle,
+    pill: () -> Boolean,
+) {
+    Row(
+        Modifier.testTag("reorder:hint"),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (slot != null) {
+            BasicText(
+                stringResource(R.string.dock_edit_slot, slot.number, slot.count, slot.app),
+                style = style,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false).testTag("reorder:slot").subtitlePill(pill),
+            )
+        }
+        KeyChip(stringResource(R.string.reorder_key_ok), stringResource(R.string.dock_edit_put_here), Modifier.testTag("reorder:chip:put"))
+        KeyChip(
+            stringResource(R.string.reorder_key_back),
+            stringResource(R.string.dock_edit_other_place),
+            Modifier.testTag("reorder:chip:other"),
+        )
     }
 }
 
@@ -2249,7 +2283,7 @@ private fun HomeScreenReorderSpanishPreview() {
                 carried = "example.music",
                 dimmed = others.toSet(),
                 hint = ReorderHint.DockChooseApp,
-                slot = DockSlot(2, "Music"),
+                slot = DockSlot(2, 6, "Music"),
             ),
         focused = "example.music",
     )

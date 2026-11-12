@@ -28,9 +28,10 @@
   <string name="dock_edit">Вибрати застосунки дока</string>
   <string name="reorder">Упорядкувати застосунки</string>
   <string name="power_menu">Перезапустити ТВ</string>
-  <string name="reorder_hint">OK бере застосунок, стрілки переміщують, «Назад» ставить на місце. Ще раз «Назад» — завершити.</string>
   <string name="dock_edit_hint">Виберіть місце в доку, яке треба змінити, і натисніть OK. «Назад» — завершити.</string>
-  <string name="dock_edit_pick_app">Місце %1$d, зараз %2$s: виберіть застосунок для цього місця та натисніть OK. «Назад»: вибрати інше місце.</string>
+  <string name="dock_edit_slot">Місце %1$d з %2$d · зараз %3$s</string>
+  <string name="dock_edit_put_here">поставити сюди</string>
+  <string name="dock_edit_other_place">інше місце</string>
   <string name="dock_edit_pick_place">Виберіть місце в доку для цього застосунку та натисніть OK. «Назад» — скасувати.</string>
   <string name="reorder_key_ok">OK</string>
   <string name="reorder_pick_up">взяти</string>

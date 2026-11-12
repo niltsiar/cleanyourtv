@@ -28,9 +28,10 @@
   <string name="dock_edit">Dock-apps kiezen</string>
   <string name="reorder">Apps ordenen</string>
   <string name="power_menu">Tv herstarten</string>
-  <string name="reorder_hint">OK pakt een app op, de pijlen verplaatsen hem, Terug zet hem neer. Nog eens Terug om te stoppen.</string>
   <string name="dock_edit_hint">Kies de plek in het dock die je wilt wijzigen en druk op OK. Terug om te stoppen.</string>
-  <string name="dock_edit_pick_app">Plek %1$d, nu %2$s: kies de app voor die plek en druk op OK. Terug om een andere plek te kiezen.</string>
+  <string name="dock_edit_slot">Plek %1$d van %2$d · nu %3$s</string>
+  <string name="dock_edit_put_here">hier zetten</string>
+  <string name="dock_edit_other_place">andere plek</string>
   <string name="dock_edit_pick_place">Kies de plek in het dock voor deze app en druk op OK. Terug om te annuleren.</string>
   <string name="reorder_key_ok">OK</string>
   <string name="reorder_pick_up">oppakken</string>

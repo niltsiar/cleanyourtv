@@ -27,9 +27,10 @@
   <string name="dock_edit">Izaberi aplikacije za dok</string>
   <string name="reorder">Promeni redosled aplikacija</string>
   <string name="power_menu">Ponovo pokreni TV</string>
-  <string name="reorder_hint">OK podiže aplikaciju, strelice je pomeraju, Nazad je postavlja. Ponovo Nazad za kraj.</string>
   <string name="dock_edit_hint">Izaberite mesto u doku i pritisnite OK. Nazad za kraj.</string>
-  <string name="dock_edit_pick_app">Mesto %1$d, sada %2$s: izaberite aplikaciju za to mesto i pritisnite OK. Nazad da izaberete drugo mesto.</string>
+  <string name="dock_edit_slot">Mesto %1$d od %2$d · sada %3$s</string>
+  <string name="dock_edit_put_here">stavi ovde</string>
+  <string name="dock_edit_other_place">drugo mesto</string>
   <string name="dock_edit_pick_place">Izaberite mesto u doku za ovu aplikaciju i pritisnite OK. Nazad za otkazivanje.</string>
   <string name="reorder_key_ok">OK</string>
   <string name="reorder_pick_up">podigni</string>

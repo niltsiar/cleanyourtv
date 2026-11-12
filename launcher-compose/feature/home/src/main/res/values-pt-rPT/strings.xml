@@ -5,7 +5,9 @@
   <string name="tile_replace_in_dock">Substituir por outra app</string>
   <string name="dock_edit">Escolher apps da dock</string>
   <string name="dock_edit_hint">Escolha o lugar da dock a mudar e prima OK. Voltar para terminar.</string>
-  <string name="dock_edit_pick_app">Lugar %1$d, agora %2$s: escolha a app a colocar lá e prima OK. Voltar para escolher outro lugar.</string>
+  <string name="dock_edit_slot">Lugar %1$d de %2$d · agora %3$s</string>
+  <string name="dock_edit_put_here">colocar aqui</string>
+  <string name="dock_edit_other_place">outro lugar</string>
   <string name="dock_edit_pick_place">Escolha o lugar da dock para esta app e prima OK. Voltar para cancelar.</string>
   <string name="habit_usual">Costuma abri-la a esta hora</string>
   <string name="launcher_settings">Definições do launcher</string>

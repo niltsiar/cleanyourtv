@@ -27,9 +27,10 @@
   <string name="dock_edit">Tria les apps del dock</string>
   <string name="reorder">Reordena les aplicacions</string>
   <string name="power_menu">Reinicia la TV</string>
-  <string name="reorder_hint">D\'acord agafa una aplicació, les fletxes la mouen, Enrere la deixa. Torna a prémer Enrere per acabar.</string>
   <string name="dock_edit_hint">Tria la posició del dock que vols canviar i prem D\'acord. Enrere per acabar.</string>
-  <string name="dock_edit_pick_app">Posició %1$d, ara %2$s: tria l\'aplicació que hi vols posar i prem D\'acord. Enrere per triar una altra posició.</string>
+  <string name="dock_edit_slot">Posició %1$d de %2$d · ara %3$s</string>
+  <string name="dock_edit_put_here">posar aquí</string>
+  <string name="dock_edit_other_place">una altra posició</string>
   <string name="dock_edit_pick_place">Tria la posició del dock per a aquesta aplicació i prem D\'acord. Enrere per cancel·lar.</string>
   <string name="reorder_key_ok">D\'acord</string>
   <string name="reorder_pick_up">agafar</string>

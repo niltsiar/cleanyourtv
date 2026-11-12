@@ -28,9 +28,10 @@
   <string name="dock_edit">독 앱 선택</string>
   <string name="reorder">앱 순서 바꾸기</string>
   <string name="power_menu">TV 다시 시작</string>
-  <string name="reorder_hint">OK로 앱을 선택 후 방향키로 옮기고, 뒤로 가기(←) 버튼으로 내려놓습니다. 뒤로 가기(←) 버튼을 한 번 더 누르면 종료됩니다.</string>
   <string name="dock_edit_hint">바꿀 독 위치를 고르고 OK를 누르세요. 뒤로 가기(←) 버튼을 누르면 종료됩니다.</string>
-  <string name="dock_edit_pick_app">%1$d번 위치, 현재 %2$s: 그 자리에 넣을 앱을 고르고 OK를 누르세요. 뒤로 가기(←) 버튼을 누르면 다른 위치를 고릅니다.</string>
+  <string name="dock_edit_slot">%2$d개 중 %1$d번 위치 · 현재 %3$s</string>
+  <string name="dock_edit_put_here">여기에 넣기</string>
+  <string name="dock_edit_other_place">다른 위치</string>
   <string name="dock_edit_pick_place">이 앱을 넣을 독 위치를 고르고 OK를 누르세요. 뒤로 가기(←) 버튼을 누르면 취소됩니다.</string>
   <string name="reorder_key_ok">OK</string>
   <string name="reorder_pick_up">선택</string>

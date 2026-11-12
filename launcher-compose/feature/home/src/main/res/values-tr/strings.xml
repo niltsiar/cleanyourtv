@@ -27,9 +27,10 @@
   <string name="dock_edit">Dock uygulamalarını seç</string>
   <string name="reorder">Uygulamaları sırala</string>
   <string name="power_menu">TV’yi yeniden başlat</string>
-  <string name="reorder_hint">Tamam bir uygulamayı alır, oklar taşır, Geri bırakır. Bitirmek için tekrar Geri.</string>
   <string name="dock_edit_hint">Değiştirilecek dock yerini seçip Tamam\'a basın. Bitirmek için Geri.</string>
-  <string name="dock_edit_pick_app">Yer %1$d, şu an %2$s: oraya konacak uygulamayı seçip Tamam\'a basın. Başka bir yer seçmek için Geri.</string>
+  <string name="dock_edit_slot">Yer %1$d / %2$d · şu an %3$s</string>
+  <string name="dock_edit_put_here">buraya koy</string>
+  <string name="dock_edit_other_place">başka yer</string>
   <string name="dock_edit_pick_place">Bu uygulama için bir dock yeri seçip Tamam\'a basın. İptal için Geri.</string>
   <string name="reorder_key_ok">Tamam</string>
   <string name="reorder_pick_up">al</string>

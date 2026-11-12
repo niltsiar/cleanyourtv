@@ -28,9 +28,10 @@
   <string name="dock_edit">Dock ilovalarini tanlash</string>
   <string name="reorder">Ilovalar tartibini oʻzgartirish</string>
   <string name="power_menu">TVni qayta yoqish</string>
-  <string name="reorder_hint">OK ilovani ushlaydi, strelkalar suradi, Back joyiga qoʻyadi. Tugatish uchun yana Back.</string>
   <string name="dock_edit_hint">Oʻzgartiriladigan joyni tanlab, OK ni bosing. Tugatish uchun Back.</string>
-  <string name="dock_edit_pick_app">%1$d-joy, hozir %2$s: u yerga qoʻyiladigan ilovani tanlab, OK ni bosing. Boshqa joy tanlash uchun Back.</string>
+  <string name="dock_edit_slot">%1$d-joy (%2$d tadan) · hozir %3$s</string>
+  <string name="dock_edit_put_here">shu yerga qoʻyish</string>
+  <string name="dock_edit_other_place">boshqa joy</string>
   <string name="dock_edit_pick_place">Bu ilova uchun dockdagi joyni tanlab, OK ni bosing. Bekor qilish uchun Back.</string>
   <string name="reorder_key_ok">OK</string>
   <string name="reorder_pick_up">ushlash</string>

@@ -28,9 +28,10 @@
   <string name="dock_edit">Pilih aplikasi Dock</string>
   <string name="reorder">Tata Ulang App</string>
   <string name="power_menu">Mulai ulang TV</string>
-  <string name="reorder_hint">OK mengambil aplikasi, panah memindahkannya, Kembali menempatkannya. Kembali lagi untuk selesai.</string>
   <string name="dock_edit_hint">Pilih posisi dock yang ingin diubah lalu tekan OK. Kembali untuk selesai.</string>
-  <string name="dock_edit_pick_app">Posisi %1$d, sekarang %2$s: pilih aplikasi untuk ditempatkan di sana lalu tekan OK. Kembali untuk memilih posisi lain.</string>
+  <string name="dock_edit_slot">Posisi %1$d dari %2$d · sekarang %3$s</string>
+  <string name="dock_edit_put_here">taruh di sini</string>
+  <string name="dock_edit_other_place">posisi lain</string>
   <string name="dock_edit_pick_place">Pilih posisi dock untuk aplikasi ini lalu tekan OK. Kembali untuk membatalkan.</string>
   <string name="reorder_key_ok">OK</string>
   <string name="reorder_pick_up">ambil</string>

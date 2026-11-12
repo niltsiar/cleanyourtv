@@ -98,12 +98,3 @@ internal fun MenuOverlay(
         )
     }
 }
-
-@StringRes
-internal fun ReorderHint.label(): Int =
-    when (this) {
-        ReorderHint.Reorder -> R.string.reorder_hint
-        ReorderHint.DockChoosePlace -> R.string.dock_edit_hint
-        ReorderHint.DockChooseApp -> R.string.dock_edit_pick_app
-        ReorderHint.DockPlaceForApp -> R.string.dock_edit_pick_place
-    }

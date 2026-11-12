@@ -28,9 +28,10 @@
   <string name="dock_edit">Velg apper i favorittraden</string>
   <string name="reorder">Endre apprekkefølge</string>
   <string name="power_menu">Start TV-en på nytt</string>
-  <string name="reorder_hint">Trykk OK for å velge en app, bruk pilene for å flytte den, og trykk Tilbake for å plassere den. Trykk Tilbake igjen for å avslutte.</string>
   <string name="dock_edit_hint">Velg plassen du vil endre i favorittraden, og trykk OK. Trykk Tilbake for å avslutte.</string>
-  <string name="dock_edit_pick_app">Plass %1$d, nå %2$s: Velg appen du vil plassere der, og trykk OK. Trykk Tilbake for å velge en annen plass.</string>
+  <string name="dock_edit_slot">Plass %1$d av %2$d · nå %3$s</string>
+  <string name="dock_edit_put_here">sett her</string>
+  <string name="dock_edit_other_place">annen plass</string>
   <string name="dock_edit_pick_place">Velg en plass i favorittraden for denne appen, og trykk OK. Trykk Tilbake for å avbryte.</string>
   <string name="reorder_key_ok">OK</string>
   <string name="reorder_pick_up">velg</string>
