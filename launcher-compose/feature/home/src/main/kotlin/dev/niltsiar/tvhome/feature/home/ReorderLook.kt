@@ -57,8 +57,8 @@ private val LiftShadowColor = Color.Black.copy(alpha = 0.55f)
 private val LiftHeight = TileGap - FocusRingReach - TrayRimClear
 
 /**
- * A move arrow: a round [ArrowDisc] of black at 0.60 centred on the outer edge of a carried tile's ring, so that it covers
- * half its width of ring and tile and the other half, [ArrowDisc] / 2 past the ring, leaves the rest of the [TileGap]
+ * A move arrow: a round [ArrowDisc] of black at 0.60 centred on the outer edge of a carried tile's ring, so that half its
+ * width lies under the ring and tile and the other half, [ArrowDisc] / 2 past the ring, leaves the rest of the [TileGap]
  * (4 dp) to the next tile. On it stands a white chevron at 0.95, [ChevronHeight] tall and [ChevronDepth] deep, drawn with a
  * round-capped [ChevronStroke] stroke; the disc keeps it readable, so the chevron has no outline of its own.
  */
@@ -135,18 +135,29 @@ internal fun Modifier.reorderLook(
         spotShadowColor = LiftShadowColor
     }.drawWithCache {
         onDrawWithContent {
-            drawContent()
             val lifted = lift.value.coerceIn(0f, 1f)
             val onLeft = lifted * left.value.coerceIn(0f, 1f)
             val onRight = lifted * right.value.coerceIn(0f, 1f)
-            if (onLeft == 0f && onRight == 0f) return@onDrawWithContent
+            if (onLeft == 0f && onRight == 0f) {
+                drawContent()
+                return@onDrawWithContent
+            }
             // The layer is scaled by the lift: draw in the tile's own measures by undoing that.
             val raised = 1f + (1f / grown - 1f) * lift.value
             val centre = ringReach(size.width, grown * raised)
-            scale(1f / raised, Offset(size.width / 2f, size.height / 2f)) {
-                val middle = size.height / 2f
-                if (onLeft > 0f) drawChevron(Offset(-centre, middle), pointsLeft = true, alpha = onLeft)
-                if (onRight > 0f) drawChevron(Offset(size.width + centre, middle), pointsLeft = false, alpha = onRight)
+            val middle = size.height / 2f
+            val pivot = Offset(size.width / 2f, middle)
+            val leftAt = Offset(-centre, middle)
+            val rightAt = Offset(size.width + centre, middle)
+            // The discs go under the tile, so that its ring is drawn over them; the chevrons stay on top.
+            scale(1f / raised, pivot) {
+                if (onLeft > 0f) drawArrowDisc(leftAt, alpha = onLeft)
+                if (onRight > 0f) drawArrowDisc(rightAt, alpha = onRight)
+            }
+            drawContent()
+            scale(1f / raised, pivot) {
+                if (onLeft > 0f) drawChevron(leftAt, pointsLeft = true, alpha = onLeft)
+                if (onRight > 0f) drawChevron(rightAt, pointsLeft = false, alpha = onRight)
             }
         }
     }
@@ -166,13 +177,18 @@ private fun HomeInput.badgeAtStart(
     side: State<Boolean>,
 ): Float = Snapshot.withoutReadObservation { if (carried.value == key && side.value) 1f else 0f }
 
-/** A move arrow centred on [center], at [alpha]: its disc, then its chevron pointing left or right. */
+/** A move arrow's disc centred on [center], at [alpha]. */
+internal fun DrawScope.drawArrowDisc(
+    center: Offset,
+    alpha: Float,
+) = drawCircle(ArrowDiscColor, radius = ArrowDisc.toPx() / 2f, center = center, alpha = alpha)
+
+/** A move arrow's chevron centred on [center], pointing left or right, at [alpha]; it stands on [drawArrowDisc]. */
 internal fun DrawScope.drawChevron(
     center: Offset,
     pointsLeft: Boolean,
     alpha: Float,
 ) {
-    drawCircle(ArrowDiscColor, radius = ArrowDisc.toPx() / 2f, center = center, alpha = alpha)
     val half = ChevronHeight.toPx() / 2f
     val tip = if (pointsLeft) -ChevronDepth.toPx() / 2f else ChevronDepth.toPx() / 2f
     val path =

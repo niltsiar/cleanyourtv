@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.height
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
@@ -74,10 +75,11 @@ class HomeLookUiTest {
         wallpaper: Wallpaper = Wallpaper(),
         config: TvConfig = SixColumns,
         skyIntensity: Int = 0,
+        motion: Motion = Motion(),
     ) {
         val sources = sources(apps = flowOf(AppList(apps)), wallpaper = flowOf(wallpaper))
         compose.setContent {
-            TvTheme {
+            TvTheme(motion = motion) {
                 val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(
@@ -521,6 +523,29 @@ class HomeLookUiTest {
         }
     }
 
+    @Test
+    @Config(qualifiers = "+night")
+    fun the_carried_tiles_ring_is_drawn_over_its_arrow_discs() {
+        // Without the wiggle the tile stands upright, so the ring and the chevron sit where the tile's bounds put them.
+        showHome(apps = clearApps(3), motion = Motion(reducedMotion = true))
+        val rest = restTiles(3)
+        carryFirstTile()
+        press(Key.DirectionRight)
+        val at = rest[1]
+        val middle = (at.top.value + at.bottom.value) / 2f - 7f
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+        val density = compose.activity.resources.displayMetrics.density
+
+        // The orange band runs 3 to 6 dp past the art, inside a disc centred 9 dp past it; the chevron ends 7.25 dp above
+        // and below that centre.
+        for (x in listOf(at.left.value - 4.5f, at.right.value + 4.5f)) {
+            for (y in listOf(middle - 8.5f, middle + 8.5f)) {
+                val pixel = pixels[(x * density).toInt(), (y * density).toInt()]
+                assertTrue("the ring at ($x, $y): $pixel", isRingOrange(pixel))
+            }
+        }
+    }
+
     /** The runs of columns, in dp, that hold a pixel with green over [level] (white is 1) at some row from [top] to [bottom] dp, between [from] and [to] dp. */
     private fun whiteRuns(
         from: Float,
@@ -598,7 +623,7 @@ class HomeLookUiTest {
         val ringRight = at.right.value + ringReach
         val ringLeft = at.left.value - ringReach
 
-        // The disc covers the ring there, so the chevron's whole width is searched for from well inside the ring.
+        // The chevron reaches into the ring, so its whole width is searched for from well inside the ring.
         val chevronRight = whiteRuns(ringRight - 8f, at.right.value + 80f, middle - 10f, middle + 10f).single()
         val chevronLeft = whiteRuns(at.left.value - 80f, ringLeft + 8f, middle - 10f, middle + 10f).single()
         val centreRight = (chevronRight.start + chevronRight.endInclusive) / 2f
@@ -643,6 +668,7 @@ class HomeLookUiTest {
         val image = ImageBitmap(100, 100)
         Canvas(image).drawRect(Rect(0f, 0f, 100f, 100f), Paint().apply { color = ground })
         CanvasDrawScope().draw(Density(2f), LayoutDirection.Ltr, Canvas(image), Size(100f, 100f)) {
+            drawArrowDisc(Offset(50f, 50f), alpha = 1f)
             drawChevron(Offset(50f, 50f), pointsLeft = pointsLeft, alpha = 1f)
         }
         return image.toPixelMap()
