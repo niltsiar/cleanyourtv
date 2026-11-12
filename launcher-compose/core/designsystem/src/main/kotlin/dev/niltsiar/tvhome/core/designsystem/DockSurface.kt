@@ -45,7 +45,7 @@ private val DockRimWidth = 1.5.dp
 private val TopLine = Color.White.copy(alpha = 0.30f)
 private val TopLineWidth = 1.dp
 private val DockSheen = Brush.verticalGradient(0f to Color.White.copy(alpha = 0.16f), 0.35f to Color.Transparent)
-private val BottomEdge = Color.Black.copy(alpha = 0.25f)
+private val BottomEdge = Brush.verticalGradient(0.5f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.25f))
 private val BottomEdgeWidth = 1.dp
 private val OuterHairline = Color.Black.copy(alpha = 0.30f)
 private val OuterHairlineWidth = 1.dp
@@ -55,11 +55,12 @@ private val DockShadowDrop = 6.dp
 
 /**
  * The dock's panel: the frost under a [tint] (read in the draw phase), a sheen over its top, a 1.5 dp rim that is white 0.40
- * at the top and fades to 0.08 at the bottom, a 1 dp black 0.25 edge along its bottom half, and a shadow that falls 6 dp lower
- * than the panel. With an [edgeLight] the focused tile lights the rim and the floor. With [outerHairline] a 1 dp black 0.30 line
- * runs round the outside of the panel, so a light panel keeps its edge on a bright picture. [gloss] (read in the draw phase,
- * 0 to 1) scales the sheen and the rim: at less than 1 a white 0.30 line, [TopLineWidth] thick, takes over the rim's top edge
- * as it fades. [shade] (read in the draw phase, 0 to 1) is the alpha of a black layer over the whole panel, content included.
+ * at the top and fades to 0.08 at the bottom, a 1 dp black edge that grows from nothing at mid-height to 0.25 at the bottom (so
+ * the sides darken without a step), and a shadow that falls 6 dp lower than the panel. With an [edgeLight] the focused tile
+ * lights the rim and the floor. With [outerHairline] a 1 dp black 0.30 line runs round the outside of the panel, so a light
+ * panel keeps its edge on a bright picture. [gloss] (read in the draw phase, 0 to 1) scales the sheen and the rim: at less
+ * than 1 a white 0.30 line, [TopLineWidth] thick, takes over the rim's top edge as it fades. [shade] (read in the draw phase,
+ * 0 to 1) is the alpha of a black layer over the whole panel, content included.
  */
 @Composable
 public fun DockSurface(
@@ -95,10 +96,8 @@ public fun DockSurface(
                         val edge = outline.grownBy(-line / 2f)
                         clipRect(bottom = line) { drawOutline(edge, TopLine, alpha = 1f - glossy, style = Stroke(line)) }
                     }
-                    clipRect(top = size.height / 2f) {
-                        val width = BottomEdgeWidth.toPx()
-                        drawOutline(outline.grownBy(-width / 2f), BottomEdge, style = Stroke(width))
-                    }
+                    val bottom = BottomEdgeWidth.toPx()
+                    drawOutline(outline.grownBy(-bottom / 2f), BottomEdge, style = Stroke(bottom))
                     edgeLight?.run { drawRim() }
                     val shaded = shade()
                     if (shaded > 0f) drawOutline(outline, Color.Black, alpha = shaded)

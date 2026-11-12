@@ -15,8 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.toRect
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorProducer
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
@@ -35,9 +40,13 @@ private const val MARQUEE_PASSES = 3
 /** The space between the end of the text and its next copy, as a part of the box's width, as basicMarquee leaves it. */
 private const val MARQUEE_GAP = 1f / 3f
 
+/** How far in from each side of the box the scrolling text fades out, so no glyph shows cut at the clip. */
+private val MarqueeFade = 12.dp
+
 /**
  * [text] on one line, centred in the height of the box [modifier] gives it, scrolled sideways as basicMarquee scrolls it while
  * [scrolling] is true, and not drawn while it is false; each time [scrolling] turns true it starts again from the start. It
+ * fades out over [MarqueeFade] at the box's right side and, once it has moved off its start position, at its left side. It
  * is drawn, not laid out as text, and [scrolling] is read in the draw phase and in an effect, so a change of it neither
  * recomposes nor relays out: lay it over a still copy that hides while it scrolls and gives the text to accessibility.
  */
@@ -75,8 +84,25 @@ public fun MarqueeLine(
                 if (!scrolling()) return@drawBehind
                 val top = (size.height - line.size.height) / 2f
                 val tint = color?.invoke() ?: Color.Unspecified
-                drawText(line, tint, Offset(-offset.value, top))
-                drawText(line, tint, Offset(line.size.width + size.width * MARQUEE_GAP - offset.value, top))
+                val shift = offset.value
+                val distance = line.size.width + size.width * MARQUEE_GAP
+                val fade = MarqueeFade.toPx()
+                // The left fade comes in as the text leaves its start position and goes as the next copy reaches it, with no jump.
+                val lead = (minOf(shift, distance - shift) / fade).coerceIn(0f, 1f)
+                drawContext.canvas.saveLayer(size.toRect(), Paint())
+                drawText(line, tint, Offset(-shift, top))
+                drawText(line, tint, Offset(distance - shift, top))
+                val left = Brush.horizontalGradient(0f to Color.Black.copy(alpha = 1f - lead), 1f to Color.Black, endX = fade)
+                drawRect(left, size = Size(fade, size.height), blendMode = BlendMode.DstIn)
+                val right =
+                    Brush.horizontalGradient(
+                        0f to Color.Black,
+                        1f to Color.Transparent,
+                        startX = size.width - fade,
+                        endX = size.width,
+                    )
+                drawRect(right, Offset(size.width - fade, 0f), Size(fade, size.height), blendMode = BlendMode.DstIn)
+                drawContext.canvas.restore()
             },
     )
 }
