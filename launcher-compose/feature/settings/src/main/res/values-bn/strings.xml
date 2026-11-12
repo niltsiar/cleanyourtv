@@ -12,10 +12,12 @@
   <string name="settings_clock_24">২৪ ঘণ্টা</string>
   <string name="settings_on">চালু</string>
   <string name="settings_off">বন্ধ</string>
+  <string name="settings_group_general">সাধারণ</string>
   <string name="settings_group_home">হোম লেআউট</string>
   <string name="settings_group_library">অ্যাপ লাইব্রেরি</string>
   <string name="settings_group_clock">ঘড়ির স্ক্রিন</string>
   <string name="settings_group_motion">গতি ও ইঙ্গিত</string>
+  <string name="settings_group_system">সিস্টেম</string>
   <string name="settings_names">প্রতিটি অ্যাপের নিচে নাম</string>
   <string name="settings_greeting">শুভেচ্ছা</string>
   <string name="settings_date_below">ঘড়ির নিচে তারিখ</string>

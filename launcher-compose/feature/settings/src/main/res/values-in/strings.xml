@@ -12,10 +12,12 @@
   <string name="settings_clock_24">24 jam</string>
   <string name="settings_on">Aktif</string>
   <string name="settings_off">Mati</string>
+  <string name="settings_group_general">Umum</string>
   <string name="settings_group_home">Tata letak layar utama</string>
   <string name="settings_group_library">Pustaka aplikasi</string>
   <string name="settings_group_clock">Layar jam</string>
   <string name="settings_group_motion">Gerakan dan petunjuk</string>
+  <string name="settings_group_system">Sistem</string>
   <string name="settings_names">Nama di bawah setiap app</string>
   <string name="settings_greeting">Salam</string>
   <string name="settings_date_below">Tanggal di bawah jam</string>

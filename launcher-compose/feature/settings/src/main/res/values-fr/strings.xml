@@ -12,10 +12,12 @@
   <string name="settings_clock_24">24 heures</string>
   <string name="settings_on">Activé</string>
   <string name="settings_off">Désactivé</string>
+  <string name="settings_group_general">Général</string>
   <string name="settings_group_home">Disposition de l\'accueil</string>
   <string name="settings_group_library">Bibliothèque d’applications</string>
   <string name="settings_group_clock">Écran de l\'horloge</string>
   <string name="settings_group_motion">Mouvement et astuces</string>
+  <string name="settings_group_system">Système</string>
   <string name="settings_names">Noms sous chaque application</string>
   <string name="settings_greeting">Salutation</string>
   <string name="settings_date_below">Date sous l\'horloge</string>

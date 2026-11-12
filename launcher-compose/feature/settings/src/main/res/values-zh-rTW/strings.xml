@@ -12,10 +12,12 @@
   <string name="settings_clock_24">24 小時制</string>
   <string name="settings_on">開</string>
   <string name="settings_off">關</string>
+  <string name="settings_group_general">一般</string>
   <string name="settings_group_home">主畫面版面</string>
   <string name="settings_group_library">應用程式庫</string>
   <string name="settings_group_clock">時鐘畫面</string>
   <string name="settings_group_motion">動態與提示</string>
+  <string name="settings_group_system">系統</string>
   <string name="settings_names">每個 app 下方顯示名稱</string>
   <string name="settings_greeting">問候語</string>
   <string name="settings_date_below">時鐘下方顯示日期</string>

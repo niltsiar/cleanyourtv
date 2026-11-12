@@ -105,7 +105,7 @@ class SettingsPresenterTest {
 
         assertEquals(
             listOf(
-                null,
+                R.string.settings_group_general,
                 R.string.settings_group_home,
                 R.string.settings_group_library,
                 R.string.settings_group_clock,

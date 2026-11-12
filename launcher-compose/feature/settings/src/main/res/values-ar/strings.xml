@@ -12,10 +12,12 @@
   <string name="settings_clock_24">24 ساعة</string>
   <string name="settings_on">تشغيل</string>
   <string name="settings_off">إيقاف</string>
+  <string name="settings_group_general">عام</string>
   <string name="settings_group_home">تخطيط الشاشة الرئيسية</string>
   <string name="settings_group_library">مكتبة التطبيقات</string>
   <string name="settings_group_clock">شاشة الساعة</string>
   <string name="settings_group_motion">الحركة والتلميحات</string>
+  <string name="settings_group_system">النظام</string>
   <string name="settings_names">الأسماء تحت كل تطبيق</string>
   <string name="settings_greeting">التحية</string>
   <string name="settings_date_below">التاريخ تحت الساعة</string>

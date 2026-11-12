@@ -47,10 +47,10 @@ public data class SettingsRow(
     val selected: Int,
 )
 
-/** Rows under one [heading]; the first group has none. */
+/** Rows under one [heading]. */
 @Immutable
 public data class SettingsSection(
-    @StringRes val heading: Int?,
+    @StringRes val heading: Int,
     val rows: List<SettingsRow>,
 )
 

@@ -12,10 +12,12 @@
   <string name="settings_clock_24">24 saat</string>
   <string name="settings_on">Açık</string>
   <string name="settings_off">Kapalı</string>
+  <string name="settings_group_general">Genel</string>
   <string name="settings_group_home">Ana ekran düzeni</string>
   <string name="settings_group_library">Uygulama kitaplığı</string>
   <string name="settings_group_clock">Saat ekranı</string>
   <string name="settings_group_motion">Hareket ve ipuçları</string>
+  <string name="settings_group_system">Sistem</string>
   <string name="settings_names">Her uygulamanın altında ad</string>
   <string name="settings_greeting">Karşılama</string>
   <string name="settings_date_below">Saatin altında tarih</string>

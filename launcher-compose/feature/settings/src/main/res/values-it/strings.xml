@@ -12,10 +12,12 @@
   <string name="settings_clock_24">24 ore</string>
   <string name="settings_on">Sì</string>
   <string name="settings_off">No</string>
+  <string name="settings_group_general">Generali</string>
   <string name="settings_group_home">Layout della home</string>
   <string name="settings_group_library">Libreria app</string>
   <string name="settings_group_clock">Schermata dell\'orologio</string>
   <string name="settings_group_motion">Movimento e suggerimenti</string>
+  <string name="settings_group_system">Sistema</string>
   <string name="settings_names">Nomi sotto ogni app</string>
   <string name="settings_greeting">Saluto</string>
   <string name="settings_date_below">Data sotto l\'orologio</string>

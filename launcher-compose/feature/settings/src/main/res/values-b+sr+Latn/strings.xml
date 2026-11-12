@@ -12,10 +12,12 @@
   <string name="settings_clock_24">24-časovni</string>
   <string name="settings_on">Uklj.</string>
   <string name="settings_off">Isklj.</string>
+  <string name="settings_group_general">Opšte</string>
   <string name="settings_group_home">Raspored početnog ekrana</string>
   <string name="settings_group_library">Biblioteka aplikacija</string>
   <string name="settings_group_clock">Ekran sa satom</string>
   <string name="settings_group_motion">Kretanje i saveti</string>
+  <string name="settings_group_system">Sistem</string>
   <string name="settings_names">Nazivi ispod svake aplikacije</string>
   <string name="settings_greeting">Pozdrav</string>
   <string name="settings_date_below">Datum ispod sata</string>

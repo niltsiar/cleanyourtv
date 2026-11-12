@@ -65,11 +65,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.designsystem.FocusPill
-import dev.niltsiar.tvhome.core.designsystem.MenuDivider
 import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.OverlaySurface
 import dev.niltsiar.tvhome.core.designsystem.SCROLL_CUE_ALPHA
@@ -90,7 +90,7 @@ private val PanelRise = 40.dp
 private const val PANEL_START_SCALE = 0.94f
 private val TitleTop = 24.dp
 private val TitleBottom = 8.dp
-private val RowMinHeight = 52.dp
+internal val RowMinHeight = 52.dp
 private val RowSide = 16.dp
 private val ChipHeight = 40.dp
 private val ChipMinWidth = 64.dp
@@ -120,8 +120,6 @@ private sealed interface PageItem {
     data class Heading(
         @StringRes val id: Int,
     ) : PageItem
-
-    data object Divider : PageItem
 }
 
 private sealed interface Focusable : PageItem {
@@ -167,14 +165,14 @@ private fun pageItems(ui: SettingsUiState): List<PageItem> =
     buildList {
         if (ui.reorder) add(ReorderItem)
         for ((position, section) in ui.sections.withIndex()) {
-            section.heading?.let { add(PageItem.Heading(it)) }
+            add(PageItem.Heading(section.heading))
             for (row in section.rows) {
                 add(SettingItem(row))
                 if (row.id == SettingsRowId.ClockFormat) ui.wallpaper?.let { add(WallpaperItem(it)) }
             }
             if (position == 0) ui.openOnStart?.let { add(OpenOnStartItem(it)) }
         }
-        add(PageItem.Divider)
+        add(PageItem.Heading(R.string.settings_group_system))
         add(FollowThemeItem)
         add(DefaultHomeItem)
         add(TvSettingsItem)
@@ -288,7 +286,6 @@ public fun SettingsScreen(
                                             tag = "settings:reorder",
                                             stop = stops.getValue(item.stop),
                                         )
-                                        Spacer(Modifier.height(ChipGap))
                                     }
 
                                     is PageItem.Heading -> {
@@ -321,10 +318,6 @@ public fun SettingsScreen(
                                         )
                                     }
 
-                                    is PageItem.Divider -> {
-                                        MenuDivider(Modifier.padding(vertical = 10.dp))
-                                    }
-
                                     is FollowThemeItem -> {
                                         ActionRow(
                                             label = stringResource(R.string.settings_follow_theme),
@@ -333,7 +326,6 @@ public fun SettingsScreen(
                                             tag = "settings:follow_theme",
                                             stop = stops.getValue(item.stop),
                                         )
-                                        Spacer(Modifier.height(ChipGap))
                                     }
 
                                     is DefaultHomeItem -> {
@@ -344,7 +336,6 @@ public fun SettingsScreen(
                                             tag = "settings:default_home",
                                             stop = stops.getValue(item.stop),
                                         )
-                                        Spacer(Modifier.height(ChipGap))
                                     }
 
                                     is TvSettingsItem -> {
@@ -551,7 +542,8 @@ internal class FocusStop(
 /**
  * A full-width button of the panel; a [selected] one is marked with a check. With a [value] the row reads like the others: the
  * label on the start side, the value and a chevron towards the end side, and one description of both for a screen reader.
- * Without a [stop] focus arrives and moves by the defaults, as in a list that moves focus itself.
+ * Without a [stop] focus arrives and moves by the defaults, as in a list that moves focus itself. The row is [RowMinHeight]
+ * tall and its pill [pillHeight], centred, so that by default the pill keeps a margin to the rows around it, as an option does.
  */
 @Composable
 internal fun ActionRow(
@@ -562,6 +554,7 @@ internal fun ActionRow(
     modifier: Modifier = Modifier,
     value: String? = null,
     stop: FocusStop? = null,
+    pillHeight: Dp = ChipHeight,
 ) {
     val typography = TvTheme.typography
     val style = remember(typography) { typography.pillLabel.copy(fontSize = 18.sp) }
@@ -575,7 +568,8 @@ internal fun ActionRow(
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(RowMinHeight)
+                .padding(vertical = (RowMinHeight - pillHeight) / 2)
+                .height(pillHeight)
                 .testTag(tag)
                 .semantics {
                     this.selected = selected

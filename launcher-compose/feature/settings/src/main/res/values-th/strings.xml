@@ -12,10 +12,12 @@
   <string name="settings_clock_24">24 ชั่วโมง</string>
   <string name="settings_on">เปิด</string>
   <string name="settings_off">ปิด</string>
+  <string name="settings_group_general">ทั่วไป</string>
   <string name="settings_group_home">เลย์เอาต์หน้าหลัก</string>
   <string name="settings_group_library">คลังแอป</string>
   <string name="settings_group_clock">หน้าจอนาฬิกา</string>
   <string name="settings_group_motion">การเคลื่อนไหวและคำแนะนำ</string>
+  <string name="settings_group_system">ระบบ</string>
   <string name="settings_names">ชื่อใต้แอปทุกตัว</string>
   <string name="settings_greeting">คำทักทาย</string>
   <string name="settings_date_below">วันที่ใต้นาฬิกา</string>

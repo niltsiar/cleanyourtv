@@ -12,10 +12,12 @@
   <string name="settings_clock_24">24시간</string>
   <string name="settings_on">켜짐</string>
   <string name="settings_off">꺼짐</string>
+  <string name="settings_group_general">일반</string>
   <string name="settings_group_home">홈 화면 구성</string>
   <string name="settings_group_library">앱 보관함</string>
   <string name="settings_group_clock">시계 화면</string>
   <string name="settings_group_motion">움직임 및 힌트</string>
+  <string name="settings_group_system">시스템</string>
   <string name="settings_names">모든 앱 아래에 이름 표시</string>
   <string name="settings_greeting">인사말</string>
   <string name="settings_date_below">시계 아래에 날짜 표시</string>

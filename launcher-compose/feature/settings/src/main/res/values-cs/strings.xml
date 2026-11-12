@@ -12,10 +12,12 @@
   <string name="settings_clock_24">24hodinové</string>
   <string name="settings_on">Zapnuto</string>
   <string name="settings_off">Vypnuto</string>
+  <string name="settings_group_general">Obecné</string>
   <string name="settings_group_home">Rozvržení plochy</string>
   <string name="settings_group_library">Knihovna aplikací</string>
   <string name="settings_group_clock">Obrazovka s hodinami</string>
   <string name="settings_group_motion">Pohyb a nápovědy</string>
+  <string name="settings_group_system">Systém</string>
   <string name="settings_names">Názvy pod každou aplikací</string>
   <string name="settings_greeting">Pozdrav</string>
   <string name="settings_date_below">Datum pod hodinami</string>

@@ -97,6 +97,7 @@ internal fun BoxScope.PickerPanel(
                         onClick = { onPick(index) },
                         tag = "picker:$index",
                         stop = if (index == selected) stop else null,
+                        pillHeight = RowMinHeight,
                     )
                 }
             }

@@ -22,6 +22,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
@@ -246,16 +247,17 @@ class SettingsEdgesUiTest {
 
     @Test
     fun at_rest_the_top_edge_is_whole_and_the_bottom_edge_fades() {
-        show { list -> bounds("option:ClockFormat:0").top + 40.dp - list.top }
+        show(reorder = true) { list -> bounds("option:ClockFormat:0").top + 40.dp - list.top }
         val list = list()
         val (value, _) = scrolled()
         assertEquals(0f, value, 0f)
 
         val shot = shot()
-        val first = bounds("option:Columns:0")
-        val topInBand = shot.ink(first.left + 20.dp, list.top + 10.dp)
-        val topBelowBand = shot.ink(first.left + 20.dp, list.top + 30.dp)
-        assertTrue("the focused chip must show at the top edge: $topBelowBand", topBelowBand > 100f)
+        val first = bounds("settings:reorder")
+        val ground = list.left + 12.dp
+        val topInBand = shot.ink(first.left + 300.dp, list.top + 10.dp, surfaceX = ground)
+        val topBelowBand = shot.ink(first.left + 300.dp, list.top + 30.dp, surfaceX = ground)
+        assertTrue("the focused row must show at the top edge: $topBelowBand", topBelowBand > 100f)
         assertTrue("the top edge fades at rest: $topInBand against $topBelowBand", topInBand > 0.9f * topBelowBand)
 
         val chip = bounds("option:ClockFormat:0")
@@ -315,6 +317,43 @@ class SettingsEdgesUiTest {
     fun the_focused_row_stays_out_of_the_fade_with_the_reorder_row_and_a_short_list() {
         show(reorder = true) { 190.dp }
         assertFocusClearOfTheFade(entries = 24)
+    }
+
+    private fun unclipped(tag: String) = compose.onNodeWithTag(tag).getUnclippedBoundsInRoot()
+
+    private fun centre(tag: String) = unclipped(tag).let { (it.top + it.bottom) / 2 }
+
+    @Test
+    fun a_button_row_is_one_option_row_pitch_from_the_rows_around_it_and_its_pill_keeps_a_margin() {
+        show(reorder = true)
+        val pitch = centre("setting:RowsBelowDock") - centre("setting:Columns")
+
+        for ((above, below) in listOf(
+            "setting:ClockFormat" to "settings:wallpaper",
+            "settings:wallpaper" to "setting:Animations",
+            "setting:Animations" to "settings:open_on_start",
+            "settings:follow_theme" to "settings:default_home",
+            "settings:default_home" to "settings:tv_settings",
+        )) {
+            assertEquals("$above to $below", pitch.value, (centre(below) - centre(above)).value, 0.5f)
+        }
+        val margin = unclipped("settings:default_home").top - unclipped("settings:follow_theme").bottom
+        assertTrue("the pills keep a margin: $margin", margin >= 8.dp)
+    }
+
+    @Test
+    fun every_group_has_a_heading_with_general_over_the_first_options_and_system_over_the_buttons_that_end_the_page() {
+        show(reorder = true)
+        val headings = compose.onAllNodesWithTag("settings:heading")
+
+        val texts = headings.fetchSemanticsNodes().map { node -> node.config[SemanticsProperties.Text].joinToString { it.text } }
+        assertEquals(listOf("General", "Home layout", "App library", "Clock screen", "Motion and hints", "System"), texts)
+        val general = headings[0].getUnclippedBoundsInRoot()
+        val system = headings[texts.lastIndex].getUnclippedBoundsInRoot()
+        assertTrue("General between Reorder and Columns", unclipped("settings:reorder").bottom <= general.top)
+        assertTrue("General between Reorder and Columns", general.bottom <= unclipped("setting:Columns").top)
+        assertTrue("System between the last option and Follow theme", unclipped("setting:InputArrival").bottom <= system.top)
+        assertTrue("System between the last option and Follow theme", system.bottom <= unclipped("settings:follow_theme").top)
     }
 
     /** A text of the row tagged [tag]: a row merges its texts, so the unmerged tree is read. */

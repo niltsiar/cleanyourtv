@@ -37,7 +37,7 @@ internal class ChoiceRow<T>(
 }
 
 internal class Group(
-    @StringRes val heading: Int?,
+    @StringRes val heading: Int,
     val rows: List<ChoiceRow<*>>,
 )
 
@@ -60,7 +60,7 @@ private fun onOff(
 internal val settingsGroups: List<Group> =
     listOf(
         Group(
-            heading = null,
+            heading = R.string.settings_group_general,
             rows =
                 listOf(
                     ChoiceRow(SettingsRowId.Columns, R.string.settings_columns, Choices.Columns, numbers(4, 5, 6, 7)) { it.columns },

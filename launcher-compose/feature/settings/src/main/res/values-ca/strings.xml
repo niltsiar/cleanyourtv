@@ -12,10 +12,12 @@
   <string name="settings_clock_24">24 hores</string>
   <string name="settings_on">Activat</string>
   <string name="settings_off">Desactivat</string>
+  <string name="settings_group_general">General</string>
   <string name="settings_group_home">Disposició de l\'inici</string>
   <string name="settings_group_library">Biblioteca d’aplicacions</string>
   <string name="settings_group_clock">Pantalla del rellotge</string>
   <string name="settings_group_motion">Moviment i suggeriments</string>
+  <string name="settings_group_system">Sistema</string>
   <string name="settings_names">Noms sota cada aplicació</string>
   <string name="settings_greeting">Salutació</string>
   <string name="settings_date_below">Data sota el rellotge</string>

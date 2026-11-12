@@ -12,10 +12,12 @@
   <string name="settings_clock_24">24 tuntia</string>
   <string name="settings_on">Päällä</string>
   <string name="settings_off">Pois</string>
+  <string name="settings_group_general">Yleiset</string>
   <string name="settings_group_home">Kotinäytön ulkoasu</string>
   <string name="settings_group_library">Sovelluskirjasto</string>
   <string name="settings_group_clock">Kellonäyttö</string>
   <string name="settings_group_motion">Liike ja vihjeet</string>
+  <string name="settings_group_system">Järjestelmä</string>
   <string name="settings_names">Nimet kunkin sovelluksen alla</string>
   <string name="settings_greeting">Tervehdys</string>
   <string name="settings_date_below">Päivämäärä kellon alla</string>

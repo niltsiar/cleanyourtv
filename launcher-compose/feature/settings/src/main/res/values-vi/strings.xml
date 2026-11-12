@@ -12,10 +12,12 @@
   <string name="settings_clock_24">24 giờ</string>
   <string name="settings_on">Bật</string>
   <string name="settings_off">Tắt</string>
+  <string name="settings_group_general">Chung</string>
   <string name="settings_group_home">Bố cục màn hình chính</string>
   <string name="settings_group_library">Thư viện ứng dụng</string>
   <string name="settings_group_clock">Màn hình đồng hồ</string>
   <string name="settings_group_motion">Chuyển động và gợi ý</string>
+  <string name="settings_group_system">Hệ thống</string>
   <string name="settings_names">Tên dưới mỗi ứng dụng</string>
   <string name="settings_greeting">Lời chào</string>
   <string name="settings_date_below">Ngày dưới đồng hồ</string>

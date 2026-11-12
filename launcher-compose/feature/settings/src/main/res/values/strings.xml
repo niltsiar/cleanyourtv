@@ -12,10 +12,12 @@
   <string name="settings_clock_24">24-hour</string>
   <string name="settings_on">On</string>
   <string name="settings_off">Off</string>
+  <string name="settings_group_general">General</string>
   <string name="settings_group_home">Home layout</string>
   <string name="settings_group_library">App library</string>
   <string name="settings_group_clock">Clock screen</string>
   <string name="settings_group_motion">Motion and hints</string>
+  <string name="settings_group_system">System</string>
   <string name="settings_names">Names under every tile</string>
   <string name="settings_greeting">Greeting</string>
   <string name="settings_date_below">Date below the clock</string>

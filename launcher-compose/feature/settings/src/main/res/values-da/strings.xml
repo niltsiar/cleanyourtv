@@ -12,10 +12,12 @@
   <string name="settings_clock_24">24 timer</string>
   <string name="settings_on">Til</string>
   <string name="settings_off">Fra</string>
+  <string name="settings_group_general">Generelt</string>
   <string name="settings_group_home">Layout på startskærmen</string>
   <string name="settings_group_library">App-bibliotek</string>
   <string name="settings_group_clock">Urskærm</string>
   <string name="settings_group_motion">Bevægelse og tip</string>
+  <string name="settings_group_system">System</string>
   <string name="settings_names">Navne under hver app</string>
   <string name="settings_greeting">Hilsen</string>
   <string name="settings_date_below">Dato under uret</string>

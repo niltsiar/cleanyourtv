@@ -12,10 +12,12 @@
   <string name="settings_clock_24">24-uurs</string>
   <string name="settings_on">Aan</string>
   <string name="settings_off">Uit</string>
+  <string name="settings_group_general">Algemeen</string>
   <string name="settings_group_home">Indeling van het startscherm</string>
   <string name="settings_group_library">Appbibliotheek</string>
   <string name="settings_group_clock">Klokscherm</string>
   <string name="settings_group_motion">Beweging en tips</string>
+  <string name="settings_group_system">Systeem</string>
   <string name="settings_names">Namen onder elke app</string>
   <string name="settings_greeting">Begroeting</string>
   <string name="settings_date_below">Datum onder de klok</string>

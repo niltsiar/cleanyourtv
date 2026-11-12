@@ -12,10 +12,12 @@
   <string name="settings_clock_24">24-часовой</string>
   <string name="settings_on">Вкл.</string>
   <string name="settings_off">Выкл.</string>
+  <string name="settings_group_general">Общие</string>
   <string name="settings_group_home">Вид главного экрана</string>
   <string name="settings_group_library">Библиотека приложений</string>
   <string name="settings_group_clock">Экран часов</string>
   <string name="settings_group_motion">Движение и подсказки</string>
+  <string name="settings_group_system">Система</string>
   <string name="settings_names">Названия под каждым приложением</string>
   <string name="settings_greeting">Приветствие</string>
   <string name="settings_date_below">Дата под часами</string>

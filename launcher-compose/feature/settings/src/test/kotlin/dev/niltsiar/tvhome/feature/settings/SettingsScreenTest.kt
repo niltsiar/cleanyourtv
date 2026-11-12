@@ -678,12 +678,12 @@ class SettingsScreenTest {
         val byId = settingsSections(TvConfig()).flatMap { it.rows }.associateBy { it.id }
 
         fun section(
-            heading: Int?,
+            heading: Int,
             vararg ids: SettingsRowId,
         ) = SettingsSection(heading, ids.map { byId.getValue(it) })
         val sections =
             listOf(
-                section(null, SettingsRowId.Columns, SettingsRowId.Animations),
+                section(R.string.settings_group_general, SettingsRowId.Columns, SettingsRowId.Animations),
                 section(R.string.settings_group_home, SettingsRowId.DockOpacity, SettingsRowId.ClockFormat, SettingsRowId.ShowGreeting),
                 section(R.string.settings_group_motion, SettingsRowId.InputArrival),
             )

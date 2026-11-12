@@ -12,10 +12,12 @@
   <string name="settings_clock_24">24-godzinny</string>
   <string name="settings_on">Wł.</string>
   <string name="settings_off">Wył.</string>
+  <string name="settings_group_general">Ogólne</string>
   <string name="settings_group_home">Układ ekranu głównego</string>
   <string name="settings_group_library">Biblioteka aplikacji</string>
   <string name="settings_group_clock">Ekran zegara</string>
   <string name="settings_group_motion">Ruch i podpowiedzi</string>
+  <string name="settings_group_system">System</string>
   <string name="settings_names">Nazwy pod każdą aplikacją</string>
   <string name="settings_greeting">Powitanie</string>
   <string name="settings_date_below">Data pod zegarem</string>

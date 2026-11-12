@@ -12,10 +12,12 @@
   <string name="settings_clock_24">24-годинний</string>
   <string name="settings_on">Увімк.</string>
   <string name="settings_off">Вимк.</string>
+  <string name="settings_group_general">Загальні</string>
   <string name="settings_group_home">Вигляд головного екрана</string>
   <string name="settings_group_library">Бібліотека застосунків</string>
   <string name="settings_group_clock">Екран годинника</string>
   <string name="settings_group_motion">Рух і підказки</string>
+  <string name="settings_group_system">Система</string>
   <string name="settings_names">Назви під кожним застосунком</string>
   <string name="settings_greeting">Привітання</string>
   <string name="settings_date_below">Дата під годинником</string>

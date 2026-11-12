@@ -12,10 +12,12 @@
   <string name="settings_clock_24">24 hores</string>
   <string name="settings_on">Sí</string>
   <string name="settings_off">Non</string>
+  <string name="settings_group_general">Xeneral</string>
   <string name="settings_group_home">Distribución del aniciu</string>
   <string name="settings_group_library">Biblioteca d\'aplicaciones</string>
   <string name="settings_group_clock">Pantalla del reló</string>
   <string name="settings_group_motion">Movimientu y pistes</string>
+  <string name="settings_group_system">Sistema</string>
   <string name="settings_names">Nomes embaxo de cada aplicación</string>
   <string name="settings_greeting">Saludu</string>
   <string name="settings_date_below">Data embaxo del reló</string>

@@ -12,10 +12,12 @@
   <string name="settings_clock_24">24 שעות</string>
   <string name="settings_on">פעיל</string>
   <string name="settings_off">כבוי</string>
+  <string name="settings_group_general">כללי</string>
   <string name="settings_group_home">פריסת מסך הבית</string>
   <string name="settings_group_library">ספריית אפליקציות</string>
   <string name="settings_group_clock">מסך השעון</string>
   <string name="settings_group_motion">תנועה ורמזים</string>
+  <string name="settings_group_system">מערכת</string>
   <string name="settings_names">שמות מתחת לכל אפליקציה</string>
   <string name="settings_greeting">ברכה</string>
   <string name="settings_date_below">תאריך מתחת לשעון</string>

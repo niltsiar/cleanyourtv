@@ -12,10 +12,12 @@
   <string name="settings_clock_24">24 soatlik</string>
   <string name="settings_on">Yoqilgan</string>
   <string name="settings_off">Oʻchiq</string>
+  <string name="settings_group_general">Umumiy</string>
   <string name="settings_group_home">Bosh ekran koʻrinishi</string>
   <string name="settings_group_library">Ilovalar kutubxonasi</string>
   <string name="settings_group_clock">Soat ekrani</string>
   <string name="settings_group_motion">Harakat va maslahatlar</string>
+  <string name="settings_group_system">Tizim</string>
   <string name="settings_names">Har bir ilova ostida nomlar</string>
   <string name="settings_greeting">Salomlashuv</string>
   <string name="settings_date_below">Soat ostida sana</string>
