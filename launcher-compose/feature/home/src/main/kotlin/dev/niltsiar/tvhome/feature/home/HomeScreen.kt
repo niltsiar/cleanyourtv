@@ -1074,6 +1074,7 @@ private fun rememberDockPadding(
     val density = LocalDensity.current
     val windowWidth = LocalWindowInfo.current.containerSize.width
     val shrunk by remember(state, layout, look) { derivedStateOf { look.shrinks(layout, state.value().dock.size) } }
+    val gridEmpty by remember(state) { derivedStateOf { state.value().grid.isEmpty() } }
     val scale = TvTheme.motion.focusScale(TILE_FOCUSED_SCALE)
     val peak = TvTheme.motion.focusPeakScale(TILE_FOCUSED_SCALE)
     val tileWidth = dockRowTileWidth(with(density) { windowWidth.toDp() } - ScreenMargin * 2, layout.columns)
@@ -1082,8 +1083,8 @@ private fun rememberDockPadding(
     val over = roomOver(pivot, scale, peak).dp
     // With names the pills are under the tiles, and the gap to them already holds the ring.
     val under = if (layout.showNames) TileGap else roomOver(tileHeight - pivot, scale, peak).dp
-    // A first-row tile is as wide as this one at most, and grows about the same point.
-    val rowGap = if (layout.singleRow) TileGap else over
+    // A first-row tile is as wide as this one at most, and grows about the same point. The library pill does not pop.
+    val rowGap = if (layout.singleRow || gridEmpty) TileGap else over
     return dockPadding(density.dockRingSide(tileWidth, peak), shrunk, look.evenPadding, over, under, rowGap)
 }
 

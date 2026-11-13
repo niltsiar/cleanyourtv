@@ -24,7 +24,7 @@ import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -49,17 +49,22 @@ class DockPaddingUiTest {
     private val apps = (1..18).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") }
     private var look by mutableStateOf(DockLook())
     private var shown by mutableStateOf(SixColumns)
+    private var motion by mutableStateOf(Motion())
+    private val appList = MutableStateFlow(AppList())
 
     private fun showHome(
         config: TvConfig = SixColumns,
         docked: Int = 0,
         motion: Motion = Motion(),
+        list: List<AppEntry> = apps,
     ) {
-        val sources = sources(apps = flowOf(AppList(apps, docked)))
+        appList.value = AppList(list, docked)
+        val sources = sources(apps = appList)
         look = config.dockLook()
         shown = config
+        this.motion = motion
         compose.setContent {
-            TvTheme(motion = motion) {
+            TvTheme(motion = this.motion) {
                 key(shown) {
                     val viewModel = rememberHomeViewModel(sources, shown, mutableListOf())
                     val state = viewModel.uiState.collectAsState()
@@ -284,6 +289,46 @@ class DockPaddingUiTest {
             switchTo(config)
 
             assertEquals("$config", 24f, (rowOneTile(config.columns).top - dock().bottom).value, 0.6f)
+        }
+    }
+
+    @Test
+    @Config(qualifiers = TALL)
+    fun with_focus_overshoot_a_lone_grid_tiles_ring_at_the_peak_keeps_4_dp_under_the_dock_panel() {
+        val first = rowOneConfigs.first()
+        showHome(first, motion = Motion(focusOvershoot = true), list = apps.take(first.columns + 1))
+        for (config in rowOneConfigs) {
+            appList.value = AppList(apps.take(config.columns + 1))
+            switchTo(config)
+            val tile = rowOneTile(config.columns)
+            val ring = peakRing((tile.bottom - tile.top).value, config.alwaysShowNames)
+            val room = (tile.top - dock().bottom).value
+
+            assertTrue("$config: $room dp under the panel over a ring of ${ring.over}", room >= ring.over + 4f - HALF_PIXEL)
+        }
+    }
+
+    /** Configs with the App library pill after the grid, which [emptyGrid] leaves with no tile: the dock takes every app. */
+    private val pillConfigs = rowOneConfigs.map { it.copy(appLibrary = true) }
+    private val emptyGrid = apps.take(2)
+
+    private fun pillUnderPanel(): Float = (compose.onNodeWithTag("library:pill").getBoundsInRoot().top - dock().bottom).value
+
+    @Test
+    @Config(qualifiers = TALL)
+    fun with_focus_overshoot_and_an_empty_grid_the_library_pill_is_as_far_under_the_dock_panel_as_without() {
+        showHome(pillConfigs.first(), list = emptyGrid)
+        for (config in pillConfigs) {
+            switchTo(config)
+            compose.onNode(hasTestTag("tile:pkg.2") and hasAnyAncestor(hasTestTag("dock"))).assertExists()
+            val plain = pillUnderPanel()
+
+            motion = Motion(focusOvershoot = true)
+            settle()
+
+            assertEquals("$config", plain, pillUnderPanel(), 0.6f)
+            motion = Motion()
+            settle()
         }
     }
 
