@@ -115,13 +115,17 @@ private val CheckInk = Color(0xFF07080C)
 private const val CHECK_PULSE_MS = 140
 private const val CHECK_PULSE_SCALE = 0.12f
 private const val NEVER_OPENED_ALPHA = 0.45f
-private const val OFF_HOME_ART_ALPHA = 0.5f
+private const val OFF_HOME_ART_ALPHA = 0.45f
+private const val OFF_HOME_FOCUSED_ART_ALPHA = 0.75f
+private const val OFF_HOME_NAME_ALPHA = 0.60f
+private const val OFF_HOME_MS = 150
 
 /**
  * One card of the grid: the app's art on a small tile and its name of up to [NAME_LINES] lines, in the room above the status
  * slot, which says in one line what is not the usual state. An app on Home has no mark; in the chooser
- * ([LibraryLayout.selection]) the art of an app that is not on Home is dimmed, but not while its card has focus, and the status
- * slot holds a check for an app on Home and a ring for one that is not. An idle card is opaque, so nothing of Home shows
+ * ([LibraryLayout.selection]) an app that is not on Home has its art at 0.45 and its name at 0.60, or 0.75 and whole while its
+ * card has focus, so OK on a focused card shows, and the status slot holds a check for an app on Home and a ring for one that
+ * is not. An idle card is opaque, so nothing of Home shows
  * through it; a focused one lets the plate [FocusSurface] draws behind it show, unless the focus style has no slab: then the
  * card keeps its fill. It rises in once per opening, with the delay [CardEntrance] gives it, and when its
  * Home shortcut changes pops a little, or in the chooser pulses its mark. Both run in the layer lambda. The status slot keeps
@@ -154,6 +158,12 @@ internal fun LibraryCardView(
         }
     }
     val pop = remember { Animatable(0f) }
+    val offHome = layout.selection && !card.onHome
+    val dim = remember { Animatable(if (offHome) 1f else 0f) }
+    LaunchedEffect(offHome) {
+        val target = if (offHome) 1f else 0f
+        if (layout.animated) dim.animateTo(target, tween(OFF_HOME_MS)) else dim.snapTo(target)
+    }
     val pulse = remember { Animatable(0f) }
     val wasOnHome = remember { booleanArrayOf(card.onHome) }
     LaunchedEffect(card.onHome) {
@@ -181,6 +191,8 @@ internal fun LibraryCardView(
     val ringBlends = remember(ring, artwork) { ringBlendsWith(ring, artwork?.accent ?: Color.Unspecified) }
     val focusProgress = remember(focus) { { focus.value.coerceIn(0f, 1f) } }
     val scrolling = remember(focus) { { focus.targetValue == 1f } }
+    val artAlpha = remember(focus, dim) { { lerp(1f, lerp(OFF_HOME_ART_ALPHA, OFF_HOME_FOCUSED_ART_ALPHA, focusProgress()), dim.value) } }
+    val nameAlpha = remember(focus, dim) { { lerp(1f, lerp(OFF_HOME_NAME_ALPHA, 1f, focusProgress()), dim.value) } }
     val checkScale = remember(pulse) { { 1f + CHECK_PULSE_SCALE * (1f - abs(2f * pulse.value - 1f)).coerceIn(0f, 1f) } }
     Box(
         modifier =
@@ -240,8 +252,8 @@ internal fun LibraryCardView(
                         bottom = if (statusFree) 0.dp else CardBottom + StatusHeight,
                     ),
                 ) {
-                    Art(card, artwork, layout.selection && !card.onHome, focusProgress, Modifier.padding(horizontal = ArtInset))
-                    Name(card.app.label, measurer, widthPx - with(density) { CardSide.roundToPx() * 2 }, scrolling)
+                    Art(card, artwork, artAlpha, Modifier.padding(horizontal = ArtInset))
+                    Name(card.app.label, measurer, widthPx - with(density) { CardSide.roundToPx() * 2 }, scrolling, nameAlpha)
                 }
                 Status(
                     card,
@@ -300,8 +312,7 @@ private fun ArtAndName(
 private fun Art(
     card: LibraryCard,
     artwork: LibraryArt?,
-    dimmed: Boolean,
-    focus: () -> Float,
+    opacity: () -> Float,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -311,7 +322,7 @@ private fun Art(
                 .aspectRatio(ART_ASPECT)
                 .graphicsLayer {
                     compositingStrategy = CompositingStrategy.ModulateAlpha
-                    alpha = if (dimmed) lerp(OFF_HOME_ART_ALPHA, 1f, focus()) else 1f
+                    alpha = opacity()
                 }.clip(ArtShape)
                 .background(TvTheme.colors.surface)
                 .testTag("card:art:${card.app.key}"),
@@ -347,20 +358,29 @@ private fun DrawScope.drawPlus(
 /** The first character, whole: a letter outside the Basic Multilingual Plane is two chars. */
 internal fun String.firstCodePoint(): String = if (isEmpty()) this else take(Character.charCount(codePointAt(0)))
 
-/** [label] in [NAME_LINES] lines of [widthPx]; one that is cut shows whole on one line, scrolling sideways, while [scrolling] says so. */
+/**
+ * [label] in [NAME_LINES] lines of [widthPx], at [opacity]; one that is cut shows whole on one line, scrolling sideways, while
+ * [scrolling] says so.
+ */
 @Composable
 private fun Name(
     label: String,
     measurer: TextMeasurer,
     widthPx: Int,
     scrolling: () -> Boolean,
+    opacity: () -> Float,
 ) {
     val typography = TvTheme.typography
     val style = remember(typography) { typography.pillLabel.copy(fontSize = 13.sp, lineHeight = 16.sp, textAlign = TextAlign.Center) }
     val shown = remember(label, style, widthPx) { shownName(label, measurer, style, widthPx) }
     val fit = remember(style) { WholeWords(style.fontSize) }
     val scroll = scrolling.takeIf { shown != label && TvTheme.motion.animated }
-    Box(Modifier.fillMaxWidth().heightIn(max = NameHeight)) {
+    Box(
+        Modifier.fillMaxWidth().heightIn(max = NameHeight).graphicsLayer {
+            compositingStrategy = CompositingStrategy.ModulateAlpha
+            alpha = opacity()
+        },
+    ) {
         BasicText(
             text = shown,
             style = style,

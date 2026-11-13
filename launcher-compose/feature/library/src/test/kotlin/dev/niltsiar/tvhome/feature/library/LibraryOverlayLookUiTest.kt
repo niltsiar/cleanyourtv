@@ -945,30 +945,120 @@ class LibraryOverlayLookUiTest {
         assertEquals("under the card", 0, whitePixels(below))
     }
 
-    @Test
-    @Config(qualifiers = "+night")
-    fun in_the_chooser_the_art_of_an_app_off_home_draws_at_half_alpha() {
-        showChooser()
+    private fun centre(box: DpRect): Pair<Dp, Dp> = (box.left + box.right) / 2 to (box.top + box.bottom) / 2
 
-        val on = art("Bbb")
-        val off = art("Ccc")
-        val onRed = redAt((on.left + on.right) / 2, (on.top + on.bottom) / 2)
-        val offRed = redAt((off.left + off.right) / 2, (off.top + off.bottom) / 2)
-        assertEquals(255, onRed)
-        assertEquals("half of the red art over the card", 142f, offRed.toFloat(), 14f)
+    /** The red in the middle of the art of [name], and the red of its card 2 dp left of the art drawn [scale] times about the card's centre. */
+    private fun artOverCard(
+        name: String,
+        scale: Float = 1f,
+    ): Pair<Int, Int> {
+        val art = art(name)
+        val (x, y) = centre(art)
+        val cardX = centre(card(name)).first
+        return redAt(x, y) to redAt(cardX - (cardX - art.left) * scale - 2.dp, y)
+    }
+
+    /** How much lighter than its ground the name of [name] peaks, in red levels. */
+    private fun nameContrast(name: String): Int {
+        val box =
+            compose
+                .onNode(hasText(name) and hasAnyAncestor(hasTestTag("card:${key(name)}")), useUnmergedTree = true)
+                .getBoundsInRoot()
+        val (peak, ground) = lineBrightness(box)
+        return peak - ground
     }
 
     @Test
     @Config(qualifiers = "+night")
-    fun in_the_chooser_the_art_of_a_focused_app_off_home_draws_whole() {
+    fun in_the_chooser_an_idle_app_off_home_draws_its_art_at_045_and_its_name_at_060_where_an_app_on_home_draws_both_whole() {
+        showChooser()
+
+        assertEquals(255, artOverCard("Bbb").first)
+        val (off, card) = artOverCard("Ccc")
+        assertEquals("the art over a card of $card", card + 0.45f * (255 - card), off.toFloat(), 6f)
+        val ratio = nameContrast("Ccc").toFloat() / nameContrast("Bbb")
+        assertTrue("the name off Home is $ratio of the name on Home", ratio in 0.54f..0.66f)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun in_the_chooser_ok_on_a_focused_app_off_home_lifts_its_art_from_075_to_whole_and_its_name_stays_whole() {
         showChooser()
         press(Key.DirectionRight, times = 2)
         compose.onNodeWithTag("card:${key("Ccc")}").assertIsFocused()
-        settle()
 
-        val off = art("Ccc")
-        assertEquals(255, redAt((off.left + off.right) / 2, (off.top + off.bottom) / 2))
+        val (before, card) = artOverCard("Ccc", FOCUSED_SCALE)
+        val nameBefore = nameContrast("Ccc")
+        press(Key.DirectionCenter)
+        compose.onNodeWithTag("card:check:${key("Ccc")}", useUnmergedTree = true).assertExists()
+        val after = artOverCard("Ccc").first
+
+        assertEquals("the art over a card of $card", card + 0.75f * (255 - card), before.toFloat(), 8f)
+        assertEquals(255, after)
+        assertTrue("the art goes from $before to $after", after - before >= 40)
+        val name = nameContrast("Ccc").toFloat() / nameBefore
+        assertTrue("the name after OK is $name of the name before", name in 0.95f..1.05f)
     }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun in_browse_mode_an_app_off_home_draws_its_art_and_name_as_an_app_on_home_does() {
+        showLibrary(
+            listOf(libraryApp("Aaa"), libraryApp("Bbb", onHome = true), libraryApp("Ccc")),
+            art = LibraryArt(red, Color.Red),
+        )
+
+        assertEquals(255, artOverCard("Bbb").first)
+        assertEquals(255, artOverCard("Ccc").first)
+        val ratio = nameContrast("Ccc").toFloat() / nameContrast("Bbb")
+        assertTrue("the name off Home is $ratio of the name on Home", ratio in 0.95f..1.05f)
+    }
+
+    /** The red in the middle of Ccc's focused card's art before OK, then on each of the 16 frames after it, in the chooser of [config]. */
+    private fun artFramesOfAddingCcc(config: TvConfig): Pair<Int, List<Int>> {
+        showLibrary(
+            listOf(libraryApp("Aaa", onHome = true), libraryApp("Bbb", onHome = true), libraryApp("Ccc"), libraryApp("Ddd")),
+            art = LibraryArt(red, Color.Red),
+            config = config,
+        )
+        press(Key.DirectionRight, times = 2)
+        compose.onNodeWithTag("card:${key("Ccc")}").assertIsFocused()
+        val (x, y) = centre(art("Ccc"))
+        val before = redAt(x, y)
+        compose.mainClock.autoAdvance = false
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+        val reds =
+            List(16) {
+                compose.mainClock.advanceTimeByFrame()
+                redAt(x, y)
+            }
+        compose.mainClock.autoAdvance = true
+        settle()
+        return before to reds
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun in_the_chooser_ok_fades_the_focused_card_s_art_to_whole_over_about_150_ms() {
+        val (before, reds) = artFramesOfAddingCcc(chooser)
+
+        val frames = reds.indexOfFirst { it == 255 } - reds.indexOfLast { it <= before + 1 }
+        assertTrue("from $before: $reds", frames in 7..12)
+    }
+
+    private fun assertArtJumps(config: TvConfig) {
+        val (before, reds) = artFramesOfAddingCcc(config)
+
+        assertTrue("from $before: $reds", reds.all { it <= before + 3 || it == 255 } && reds.last() == 255)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun with_motion_reduced_ok_changes_the_focused_card_s_art_in_one_frame() = assertArtJumps(chooser.copy(reducedMotion = true))
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun with_animations_off_ok_changes_the_focused_card_s_art_in_one_frame() = assertArtJumps(chooser.copy(animations = false))
 
     @Test
     @Config(qualifiers = "+night")
