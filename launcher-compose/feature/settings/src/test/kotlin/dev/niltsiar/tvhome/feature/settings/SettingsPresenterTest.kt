@@ -1,6 +1,7 @@
 package dev.niltsiar.tvhome.feature.settings
 
 import android.app.Application
+import androidx.compose.ui.graphics.Color
 import dev.niltsiar.tvhome.core.config.Choices
 import dev.niltsiar.tvhome.core.config.ClockFormat
 import dev.niltsiar.tvhome.core.config.TvConfig
@@ -43,7 +44,9 @@ class SettingsPresenterTest {
         apps: List<OpenOnStartApp> = emptyList(),
         appsGate: Deferred<Unit>? = null,
         wallpapers: List<WallpaperPicture> = emptyList(),
-    ) = SettingsHarness(app, theme, apps = apps, appsGate = appsGate, wallpapers = wallpapers).also { harness = it }
+        themeDefault: WallpaperPicture? = null,
+    ) = SettingsHarness(app, theme, apps = apps, appsGate = appsGate, wallpapers = wallpapers, themeDefault = themeDefault)
+        .also { harness = it }
 
     private val withChoice = """{"open_on_start_choice": true}"""
     private val apps =
@@ -434,6 +437,15 @@ class SettingsPresenterTest {
         settings.storeWallpaper("gone.jpg")
         settings.awaitState { it.wallpaper == OptionLabel.Res(R.string.wallpaper_theme_default) }
         assertEquals(WallpaperPicker(entries, pictures, 0), settings.openWallpaperPicker())
+    }
+
+    @Test
+    fun the_wallpaper_picker_carries_the_picture_home_shows_for_the_theme_default_and_the_page_the_themes_backdrop() {
+        val settings = settings("""{"background_color": "#203040"}""", wallpapers = pictures, themeDefault = pictures[2])
+        settings.awaitState { it.wallpaper != null }
+
+        assertEquals(pictures[2], settings.openWallpaperPicker().themeDefault)
+        assertEquals(Color(0xFF203040), settings.state.backdrop)
     }
 
     @Test

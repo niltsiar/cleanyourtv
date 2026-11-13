@@ -394,7 +394,7 @@ public fun SettingsScreen(
             }
             OverlayHost(open = { pickerStop != null }) {
                 ui.picker?.let { picker ->
-                    val entries = remember(picker) { startEntries(picker.apps) }
+                    val entries = remember(picker, ui.backdrop) { startEntries(picker.apps, ui.backdrop) }
                     PickerPanel(
                         R.string.open_on_start_label,
                         entries,
@@ -405,7 +405,7 @@ public fun SettingsScreen(
                     )
                 }
                 ui.wallpaperPicker?.let { picker ->
-                    val entries = remember(picker) { wallpaperEntries(picker) }
+                    val entries = remember(picker, ui.backdrop) { wallpaperEntries(picker, ui.backdrop) }
                     PickerPanel(
                         R.string.wallpaper_label,
                         entries,

@@ -9,6 +9,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import dev.niltsiar.tvhome.core.config.Choices
 import dev.niltsiar.tvhome.core.config.ConfigRepository
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
@@ -33,6 +34,7 @@ internal fun settingsPresenter(
     val currentOnEffect by rememberUpdatedState(onEffect)
     var picker by remember { mutableStateOf<OpenOnStartPicker?>(null) }
     var wallpaperOpen by remember { mutableStateOf(false) }
+    var themeDefault by remember { mutableStateOf<WallpaperPicture?>(null) }
     val pictures by produceState(emptyList<WallpaperPicture>(), sources) { value = sources.wallpaperPictures() }
     val currentPictures by rememberUpdatedState(pictures)
     LaunchedEffect(events, repository, sources) {
@@ -57,6 +59,7 @@ internal fun settingsPresenter(
                     }
 
                     SettingsEvent.OpenWallpaperPicker -> {
+                        if (currentPictures.isNotEmpty()) themeDefault = sources.themeDefaultPicture()
                         wallpaperOpen = currentPictures.isNotEmpty()
                     }
 
@@ -109,7 +112,9 @@ internal fun settingsPresenter(
     val wallpaperChoice by repository.wallpaperChoice.collectAsState()
     val wallpaperRow = remember(pictures, wallpaperChoice) { wallpaperLabel(pictures, wallpaperChoice) }
     val wallpaperPicker =
-        remember(wallpaperOpen, pictures, wallpaperChoice) { if (wallpaperOpen) wallpaperPicker(pictures, wallpaperChoice) else null }
+        remember(wallpaperOpen, pictures, wallpaperChoice, themeDefault) {
+            if (wallpaperOpen) wallpaperPicker(pictures, wallpaperChoice, themeDefault) else null
+        }
     return remember(config, followsTheme, startRow, picker, wallpaperRow, wallpaperPicker) {
         SettingsUiState(
             settingsSections(config),
@@ -119,6 +124,7 @@ internal fun settingsPresenter(
             picker,
             wallpaperRow,
             wallpaperPicker,
+            Color(config.backgroundColor),
         )
     }
 }

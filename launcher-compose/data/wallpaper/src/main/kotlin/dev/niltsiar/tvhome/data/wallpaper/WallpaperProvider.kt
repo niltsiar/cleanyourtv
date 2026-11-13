@@ -7,6 +7,7 @@ import dev.niltsiar.tvhome.core.config.ThemeDirectory
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.SkyPalette
 import dev.niltsiar.tvhome.core.model.Wallpaper
+import dev.niltsiar.tvhome.core.model.WallpaperPicture
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -213,15 +215,8 @@ public class WallpaperProvider internal constructor(
     private fun loadPictures(choice: String?): Pictures {
         val current = config.value
         val collection = WallpaperRotation.images(folder)
-        val files = mutableListOf<File>()
-        var fromFolder = false
-        if (current.wallpaper) {
-            if (current.wallpaperRotationMinutes > 0) {
-                files += collection
-                fromFolder = files.isNotEmpty()
-            }
-            if (files.isEmpty()) WallpaperRotation.usable(single)?.let(files::add)
-        }
+        val files = themeFiles(current, collection).toMutableList()
+        var fromFolder = files.isNotEmpty() && files.first() in collection
         // The on-TV pick wins over the theme's rotation and over wallpaper false.
         WallpaperRotation.chosen(collection, WallpaperRotation.usable(single), choice)?.let { picked ->
             files.clear()
@@ -229,8 +224,8 @@ public class WallpaperProvider internal constructor(
             fromFolder = picked.isNotEmpty() && picked.first() in collection
         }
         // Playback state belongs to one collection. A different collection starts from its first picture instead of
-        // resuming a file name that belonged to the previous one. Names and sizes notice a change without hashing.
-        val key = files.joinToString("") { "${it.name}:${it.length()};" }
+        // resuming a file name that belonged to the previous one.
+        val key = collectionKey(files)
         if (key != preferences.getString(KEY_COLLECTION, "")) {
             preferences
                 .edit()
@@ -242,4 +237,33 @@ public class WallpaperProvider internal constructor(
         val captions = if (current.wallpaperCaptions && fromFolder) WallpaperCaptions.read(folder) else emptyMap()
         return Pictures(choice, files, captions)
     }
+
+    /** What the theme plays with no on-TV choice: its collection when it rotates, else its wallpaper.jpg; none with wallpaper false. */
+    private fun themeFiles(
+        current: TvConfig,
+        collection: List<File>,
+    ): List<File> {
+        if (!current.wallpaper) return emptyList()
+        if (current.wallpaperRotationMinutes > 0 && collection.isNotEmpty()) return collection
+        return listOfNotNull(WallpaperRotation.usable(single))
+    }
+
+    /**
+     * The picture Home shows for the theme default at [now], read off the main thread: the one up now while Home plays the
+     * theme's collection, else the first picture of the collection the time of day plays, or the theme's wallpaper.jpg. Null
+     * when the theme default shows no picture. [WallpaperPicture.single] is true for the wallpaper.jpg.
+     */
+    public suspend fun themeDefault(now: LocalDateTime = LocalDateTime.now(zone())): WallpaperPicture? =
+        withContext(Dispatchers.IO) {
+            val current = config.value
+            val files = themeFiles(current, WallpaperRotation.images(folder))
+            val playing = preferences.getString(KEY_COLLECTION, "") == collectionKey(files)
+            val shown = if (playing) preferences.getString(KEY_IMAGE, "").orEmpty() else ""
+            val playable = playable(current, files, now, zone())
+            val file = WallpaperRotation.find(playable, shown) ?: playable.firstOrNull()
+            file?.let { WallpaperPicture(it.name, single = it == WallpaperRotation.usable(single)) }
+        }
 }
+
+/** Names and sizes, which notice a changed collection without hashing it. */
+private fun collectionKey(files: List<File>): String = files.joinToString("") { "${it.name}:${it.length()};" }

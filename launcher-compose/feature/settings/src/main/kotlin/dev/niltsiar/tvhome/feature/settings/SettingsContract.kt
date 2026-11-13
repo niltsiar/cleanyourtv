@@ -2,6 +2,7 @@ package dev.niltsiar.tvhome.feature.settings
 
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
 import dev.niltsiar.tvhome.core.model.WallpaperPicture
@@ -65,13 +66,14 @@ public data class OpenOnStartPicker(
 
 /**
  * The picker over the page: Theme default, the theme's [pictures], then None. [entries] are what each of them is called, and
- * [selected] indexes them.
+ * [selected] indexes them. [themeDefault] is the picture Home shows for Theme default, or null when it shows none.
  */
 @Immutable
 public data class WallpaperPicker(
     val entries: List<OptionLabel>,
     val pictures: List<WallpaperPicture>,
     val selected: Int,
+    val themeDefault: WallpaperPicture? = null,
 )
 
 /**
@@ -80,7 +82,8 @@ public data class WallpaperPicker(
  * (the picked app's label, its package when it is gone, Off, or empty while the label loads); it is there with
  * open_on_start_choice, and [picker] is set while its picker is open. [wallpaper] is the value of the Wallpaper row, which
  * follows the Clock row (the picked picture's name, None, or Theme default); it is there when the theme has a picture, and
- * [wallpaperPicker] is set while its picker is open.
+ * [wallpaperPicker] is set while its picker is open. [backdrop] is what Home draws where it has no picture: the theme's
+ * background_color.
  */
 @Immutable
 public data class SettingsUiState(
@@ -91,6 +94,7 @@ public data class SettingsUiState(
     val picker: OpenOnStartPicker? = null,
     val wallpaper: OptionLabel? = null,
     val wallpaperPicker: WallpaperPicker? = null,
+    val backdrop: Color = Color.Black,
 )
 
 /** What the page asks of the rest of the launcher for Open on start and Wallpaper. */
@@ -103,6 +107,8 @@ public class SettingsSources(
     public val wallpaperPictures: suspend () -> List<WallpaperPicture>,
     /** What the pickers show beside their entries. */
     public val art: PickerArt,
+    /** The picture Home shows for the theme default, or null for none, loaded off the main thread. */
+    public val themeDefaultPicture: suspend () -> WallpaperPicture?,
 )
 
 /** The art beside the pickers' entries, loaded off the main thread at a width and height in pixels; null when there is none. */

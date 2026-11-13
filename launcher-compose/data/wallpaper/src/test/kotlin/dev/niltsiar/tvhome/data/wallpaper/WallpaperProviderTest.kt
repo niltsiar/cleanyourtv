@@ -7,6 +7,7 @@ import dev.niltsiar.tvhome.core.config.Place
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.config.WallpaperMood
 import dev.niltsiar.tvhome.core.config.WallpaperOrder
+import dev.niltsiar.tvhome.core.model.WallpaperPicture
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -127,6 +128,41 @@ class WallpaperProviderTest {
         assertNull(provider(TvConfig(wallpaper = false)).advance(noon).picture)
         assertEquals(listOf("wallpaper.jpg"), decoded)
     }
+
+    @Test
+    fun the_theme_default_is_the_picture_up_while_home_plays_it_and_the_one_home_starts_it_with_after_a_choice() =
+        runBlocking {
+            val choice = MutableStateFlow<String?>(null)
+            val provider = provider(rotating, choice)
+            provider.advance(noon)
+            provider.shows("b.jpg", noon.plusMinutes(5))
+            assertEquals(WallpaperPicture("b.jpg"), provider.themeDefault(noon.plusMinutes(6)))
+
+            choice.value = "c.jpg"
+            provider.shows("c.jpg", noon.plusMinutes(7))
+            val default = provider.themeDefault(noon.plusMinutes(8))
+            choice.value = null
+            provider.shows(default!!.fileName, noon.plusMinutes(8))
+        }
+
+    @Test
+    fun the_theme_default_is_the_time_of_days_picture_when_the_theme_has_moods() =
+        runBlocking {
+            val moods = mapOf(WallpaperMood.Morning to setOf("a.jpg"), WallpaperMood.Night to setOf("c.jpg"))
+            val provider = provider(rotating.copy(wallpaperRotationMinutes = 1440, wallpaperMoods = moods))
+            val default = provider.themeDefault(noon.withHour(23))
+
+            provider.shows(default!!.fileName, noon.withHour(23))
+        }
+
+    @Test
+    fun the_theme_default_is_the_single_wallpaper_without_rotation_and_none_with_the_wallpaper_off() =
+        runBlocking {
+            File(themeDir.root, "wallpaper.jpg").writeBytes(ByteArray(8) { _ -> 1 })
+
+            assertEquals(WallpaperPicture("wallpaper.jpg", single = true), provider(TvConfig()).themeDefault(noon))
+            assertNull(provider(TvConfig(wallpaper = false)).themeDefault(noon))
+        }
 
     @Test
     fun captions_name_the_shown_picture_when_the_theme_asks() {

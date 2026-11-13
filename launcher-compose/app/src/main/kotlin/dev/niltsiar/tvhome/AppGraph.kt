@@ -140,6 +140,7 @@ interface AppGraph {
         application: Application,
         openOnStart: OpenOnStart,
         appsProvider: PackageManagerAppsProvider,
+        wallpaperProvider: WallpaperProvider,
     ): SettingsSources {
         val pictures = WallpaperPictures(ThemeDirectory(application))
         return SettingsSources(
@@ -147,6 +148,7 @@ interface AppGraph {
             openOnStart::skipThisBoot,
             pictures::pictures,
             PickerArt(pictures::thumbnail, appsProvider::art),
+            { wallpaperProvider.themeDefault() },
         )
     }
 

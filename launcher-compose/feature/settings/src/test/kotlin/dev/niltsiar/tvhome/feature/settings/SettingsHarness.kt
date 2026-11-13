@@ -36,7 +36,7 @@ import kotlin.coroutines.EmptyCoroutineContext
  * records the pick stored at each skipThisBoot call. The apps are not listed before [appsGate] opens. The apps and the theme's pictures ([wallpapers]) are listed off the
  * calling thread as the app does: a list that came back at once would be stored while the first composition applies, and
  * Molecule's immediate recompositions on the UI thread would stall. [awaitApplied] waits for a wallpaper pick that was stored,
- * [awaitSaveFailed] for a write the store refused. The pickers show [art].
+ * [awaitSaveFailed] for a write the store refused. The pickers show [art], and Home shows [themeDefault] for the theme default.
  */
 internal class SettingsHarness(
     private val app: Application,
@@ -46,6 +46,7 @@ internal class SettingsHarness(
     appsGate: Deferred<Unit>? = null,
     wallpapers: List<WallpaperPicture> = emptyList(),
     art: PickerArt = PickerArt(),
+    themeDefault: WallpaperPicture? = null,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val presenterScope = if (uiThread) CoroutineScope(SupervisorJob() + Dispatchers.Main) else scope
@@ -68,6 +69,7 @@ internal class SettingsHarness(
                 { skippedAt += repository.openOnStartApp.value },
                 { withContext(Dispatchers.Default) { wallpapers } },
                 art,
+                { withContext(Dispatchers.Default) { themeDefault } },
             )
         viewModel = MoleculeSettingsViewModel(repository, sources, presenterScope, RecompositionMode.Immediate, EmptyCoroutineContext)
         scope.launch {

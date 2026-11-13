@@ -1,6 +1,7 @@
 package dev.niltsiar.tvhome.feature.settings
 
 import androidx.annotation.StringRes
+import androidx.compose.ui.graphics.Color
 import dev.niltsiar.tvhome.core.config.Choice
 import dev.niltsiar.tvhome.core.config.Choices
 import dev.niltsiar.tvhome.core.config.ClockFormat
@@ -157,10 +158,16 @@ internal fun startPicker(
     pick: String?,
 ) = OpenOnStartPicker(apps, apps.indexOfFirst { it.packageName == pick } + 1)
 
-/** The Open on start picker's entries: Off, then each app with its art, and its package under a label two or more apps share. */
-internal fun startEntries(apps: List<OpenOnStartApp>): List<PickerEntry<String>> {
+/**
+ * The Open on start picker's entries: Off with a swatch of the [backdrop] Home shows, then each app with its art, and its
+ * package under a label two or more apps share.
+ */
+internal fun startEntries(
+    apps: List<OpenOnStartApp>,
+    backdrop: Color,
+): List<PickerEntry<String>> {
     val counts = apps.groupingBy { it.label }.eachCount()
-    return listOf(PickerEntry<String>(res(R.string.settings_off))) +
+    return listOf(PickerEntry<String>(res(R.string.settings_off), swatch = backdrop)) +
         apps.map { app ->
             PickerEntry(
                 OptionLabel.Text(app.label),
@@ -170,9 +177,18 @@ internal fun startEntries(apps: List<OpenOnStartApp>): List<PickerEntry<String>>
         }
 }
 
-/** The wallpaper picker's entries: each picture with its thumbnail, Theme default and None without one. */
-internal fun wallpaperEntries(picker: WallpaperPicker): List<PickerEntry<WallpaperPicture>> =
-    picker.entries.mapIndexed { index, label -> PickerEntry(label, art = picker.pictures.getOrNull(index - 1)) }
+/**
+ * The wallpaper picker's entries: Theme default with the thumbnail of the picture Home shows for it, each picture with its
+ * thumbnail, and None with a swatch of the [backdrop] Home shows without a picture, as Theme default has when it shows none.
+ */
+internal fun wallpaperEntries(
+    picker: WallpaperPicker,
+    backdrop: Color,
+): List<PickerEntry<WallpaperPicture>> =
+    picker.entries.mapIndexed { index, label ->
+        val art = if (index == 0) picker.themeDefault else picker.pictures.getOrNull(index - 1)
+        PickerEntry(label, art = art, swatch = backdrop)
+    }
 
 /**
  * The file names as the page shows them: without the extension, with "_" and "-" as spaces and the first letter upper case in
@@ -231,6 +247,7 @@ internal fun wallpaperLabel(
 internal fun wallpaperPicker(
     pictures: List<WallpaperPicture>,
     choice: String?,
+    themeDefault: WallpaperPicture? = null,
 ): WallpaperPicker {
     val names = pictures.map { it.fileName }
     val entries = listOf(res(R.string.wallpaper_theme_default)) + pictureLabels(pictures) + res(R.string.wallpaper_none)
@@ -240,7 +257,7 @@ internal fun wallpaperPicker(
             Choices.WALLPAPER_NONE -> entries.lastIndex
             else -> names.indexOf(held) + 1
         }
-    return WallpaperPicker(entries, pictures, selected)
+    return WallpaperPicker(entries, pictures, selected, themeDefault)
 }
 
 /** What the picker's entry at [index] stores: null for Theme default, which removes the choice. */
