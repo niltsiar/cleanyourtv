@@ -177,7 +177,7 @@ class MainActivity : ComponentActivity() {
             settingsOpen = false
             homeKeyOverSettings = false
         }
-        bootOpening = lifecycleScope.launch { graph.openOnStart.openAfterBoot(::openIntent) }
+        bootOpening = lifecycleScope.launch { graph.openOnStart.openAfterBoot(::openInput, ::openIntent) }
         idleClock.restart()
     }
 

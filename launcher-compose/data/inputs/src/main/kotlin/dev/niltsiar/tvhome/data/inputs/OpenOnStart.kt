@@ -7,7 +7,9 @@ import android.content.IntentFilter
 import android.provider.Settings
 import androidx.core.content.ContextCompat
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
+import dev.niltsiar.tvhome.core.model.inputIdOf
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -56,20 +58,29 @@ public class OpenOnStart(
     private val context = context.applicationContext
     private val liveTv = LiveTv(this.context, config)
 
-    /** The first Home of a boot: [open] gets the intent of the app to open, once per boot. */
-    public suspend fun openAfterBoot(open: (Intent) -> Unit) {
+    /**
+     * The first Home of a boot: [open] gets the intent of the app to open, once per boot. With boot_to_live_tv and an
+     * `input:<id>` launch action for the Live TV app, [switchInput] gets that input instead, without the network wait.
+     */
+    public suspend fun openAfterBoot(
+        switchInput: (InputTarget.TvInput) -> Unit,
+        open: (Intent) -> Unit,
+    ) {
         val current = config.value
         val picked = pick.value.takeIf { current.openOnStartChoice }
         val target = if (current.bootToLiveTv) current.liveTvPackage else picked
         if (target.isNullOrEmpty()) return
-        val intent =
+        val handled =
             withContext(io) {
                 val boot = bootCount()
                 val prefs = bootPrefs()
-                if (!openOnStartDue(boot, prefs.getInt(BOOT_KEY, -1), target, context.packageName)) return@withContext null
-                if (!prefs.edit().putInt(BOOT_KEY, boot).commit()) return@withContext null
-                if (current.bootToLiveTv) liveTv.appIntent() else pickIntent(target)
-            } ?: return
+                openOnStartDue(boot, prefs.getInt(BOOT_KEY, -1), target, context.packageName) &&
+                    prefs.edit().putInt(BOOT_KEY, boot).commit()
+            }
+        if (!handled) return
+        val liveTvInput = if (current.bootToLiveTv) inputIdOf(current.launchActions[target]) else null
+        if (liveTvInput != null) return switchInput(InputTarget.TvInput(liveTvInput))
+        val intent = withContext(io) { if (current.bootToLiveTv) liveTv.appIntent() else pickIntent(target) } ?: return
         openWhenReady(intent, open)
     }
 

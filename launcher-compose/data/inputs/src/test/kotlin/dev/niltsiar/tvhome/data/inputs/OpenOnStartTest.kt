@@ -8,6 +8,7 @@ import android.content.pm.ResolveInfo
 import android.os.Looper
 import android.provider.Settings
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.model.InputTarget
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -63,6 +64,7 @@ class OpenOnStartRulesTest {
 class OpenOnStartTest {
     private val context: Context = RuntimeEnvironment.getApplication()
     private val opened = mutableListOf<Intent>()
+    private val switched = mutableListOf<InputTarget.TvInput>()
 
     init {
         // Before Android 13 the compat call asks for this permission of its own to register a not-exported receiver.
@@ -139,12 +141,12 @@ class OpenOnStartTest {
             bootCount(7)
             val opener = opener()
 
-            opener.openAfterBoot { opened += it }
-            opener.openAfterBoot { opened += it }
+            opener.openAfterBoot(switched::add) { opened += it }
+            opener.openAfterBoot(switched::add) { opened += it }
             assertEquals(listOf("com.tv.live"), opened.map { it.component?.packageName })
 
             bootCount(8)
-            opener.openAfterBoot { opened += it }
+            opener.openAfterBoot(switched::add) { opened += it }
             assertEquals(2, opened.size)
         }
 
@@ -154,7 +156,7 @@ class OpenOnStartTest {
             liveTvApp()
             bootCount(7)
 
-            opener().openAfterBoot {
+            opener().openAfterBoot(switched::add) {
                 assertEquals(7, context.getSharedPreferences("boot", Context.MODE_PRIVATE).getInt("live_tv_boot", -1))
                 opened += it
             }
@@ -166,7 +168,7 @@ class OpenOnStartTest {
     fun an_unknown_boot_count_or_a_missing_app_opens_nothing() =
         runTest {
             liveTvApp()
-            opener().openAfterBoot { opened += it }
+            opener().openAfterBoot(switched::add) { opened += it }
             assertEquals(emptyList<Intent>(), opened)
 
             bootCount(7)
@@ -177,7 +179,7 @@ class OpenOnStartTest {
                     MutableStateFlow(null),
                     MutableStateFlow(true),
                 )
-            withoutApp.openAfterBoot { opened += it }
+            withoutApp.openAfterBoot(switched::add) { opened += it }
             assertEquals(emptyList<Intent>(), opened)
         }
 
@@ -189,11 +191,11 @@ class OpenOnStartTest {
             val config = MutableStateFlow(TvConfig(bootToLiveTv = false, liveTvPackage = "com.tv.live"))
             val opener = pickOpener(config)
 
-            opener.openAfterBoot { opened += it }
+            opener.openAfterBoot(switched::add) { opened += it }
             assertEquals(emptyList<Intent>(), opened)
 
             config.value = config.value.copy(bootToLiveTv = true)
-            opener.openAfterBoot { opened += it }
+            opener.openAfterBoot(switched::add) { opened += it }
             assertEquals(listOf("com.tv.live"), opened.map { it.component?.packageName })
         }
 
@@ -202,8 +204,9 @@ class OpenOnStartTest {
         runTest {
             liveTvApp()
             bootCount(7)
+            val opener = pickOpener(MutableStateFlow(TvConfig(bootToLiveTv = false, liveTvPackage = "com.tv.live")))
 
-            pickOpener(MutableStateFlow(TvConfig(bootToLiveTv = false, liveTvPackage = "com.tv.live"))).openAfterBoot { opened += it }
+            opener.openAfterBoot(switched::add) { opened += it }
 
             assertEquals(emptyList<Intent>(), opened)
         }
@@ -214,7 +217,7 @@ class OpenOnStartTest {
             liveTvApp()
             bootCount(7)
             val network = MutableStateFlow(false)
-            val job = launch { opener(wait = 60, validated = network).openAfterBoot { opened += it } }
+            val job = launch { opener(wait = 60, validated = network).openAfterBoot(switched::add) { opened += it } }
 
             advanceTimeBy(59_000)
             runCurrent()
@@ -230,7 +233,7 @@ class OpenOnStartTest {
         runTest {
             liveTvApp()
             bootCount(7)
-            val job = launch { opener(wait = 60, validated = MutableStateFlow(false)).openAfterBoot { opened += it } }
+            val job = launch { opener(wait = 60, validated = MutableStateFlow(false)).openAfterBoot(switched::add) { opened += it } }
 
             advanceTimeBy(59_999)
             assertEquals(0, opened.size)
@@ -245,13 +248,50 @@ class OpenOnStartTest {
         runTest {
             liveTvApp()
             bootCount(7)
-            val job = launch { opener(wait = 60, validated = MutableStateFlow(false)).openAfterBoot { opened += it } }
+            val job = launch { opener(wait = 60, validated = MutableStateFlow(false)).openAfterBoot(switched::add) { opened += it } }
             advanceTimeBy(10_000)
 
             job.cancel()
-            opener().openAfterBoot { opened += it }
+            opener().openAfterBoot(switched::add) { opened += it }
 
             assertEquals(emptyList<Intent>(), opened)
+        }
+
+    @Test
+    fun an_input_launch_action_for_the_live_tv_app_switches_to_that_input_at_once_and_once_per_boot() =
+        runTest {
+            liveTvApp()
+            bootCount(7)
+            val config =
+                TvConfig(
+                    bootToLiveTv = true,
+                    liveTvPackage = "com.tv.live",
+                    launchActions = mapOf("com.tv.live" to "input:a/.B/HW5"),
+                    openOnStartNetworkWait = 60,
+                )
+            val opener = pickOpener(MutableStateFlow(config), validated = MutableStateFlow(false))
+
+            opener.openAfterBoot({
+                assertEquals(7, context.getSharedPreferences("boot", Context.MODE_PRIVATE).getInt("live_tv_boot", -1))
+                switched += it
+            }) { opened += it }
+            opener.openAfterBoot(switched::add) { opened += it }
+
+            assertEquals(listOf(InputTarget.TvInput("a/.B/HW5")), switched)
+            assertEquals(emptyList<Intent>(), opened)
+        }
+
+    @Test
+    fun an_input_launch_action_for_the_live_tv_app_does_nothing_without_boot_to_live_tv() =
+        runTest {
+            tvApp("com.tv.pick")
+            bootCount(7)
+            val config = chosen.copy(liveTvPackage = "com.tv.live", launchActions = mapOf("com.tv.live" to "input:a/.B/HW5"))
+
+            pickOpener(MutableStateFlow(config), MutableStateFlow("com.tv.pick")).openAfterBoot(switched::add) { opened += it }
+
+            assertEquals(emptyList<InputTarget.TvInput>(), switched)
+            assertEquals(listOf("com.tv.pick"), opened.map { it.component?.packageName })
         }
 
     @Test
@@ -262,16 +302,16 @@ class OpenOnStartTest {
             val config = MutableStateFlow(TvConfig(openOnStartChoice = false))
             val opener = pickOpener(config, MutableStateFlow("com.tv.pick"))
 
-            opener.openAfterBoot { opened += it }
+            opener.openAfterBoot(switched::add) { opened += it }
             assertEquals(emptyList<Intent>(), opened)
 
             config.value = chosen
-            opener.openAfterBoot { opened += it }
-            opener.openAfterBoot { opened += it }
+            opener.openAfterBoot(switched::add) { opened += it }
+            opener.openAfterBoot(switched::add) { opened += it }
             assertEquals(listOf("com.tv.pick"), opened.map { it.component?.packageName })
 
             bootCount(8)
-            opener.openAfterBoot { opened += it }
+            opener.openAfterBoot(switched::add) { opened += it }
             assertEquals(2, opened.size)
         }
 
@@ -283,7 +323,7 @@ class OpenOnStartTest {
             bootCount(7)
             val config = MutableStateFlow(chosen.copy(bootToLiveTv = true, liveTvPackage = "com.tv.live"))
 
-            pickOpener(config, MutableStateFlow("com.tv.pick")).openAfterBoot { opened += it }
+            pickOpener(config, MutableStateFlow("com.tv.pick")).openAfterBoot(switched::add) { opened += it }
 
             assertEquals(listOf("com.tv.live"), opened.map { it.component?.packageName })
         }
@@ -293,7 +333,7 @@ class OpenOnStartTest {
         runTest {
             bootCount(7)
 
-            pickOpener(MutableStateFlow(chosen), MutableStateFlow("com.gone")).openAfterBoot { opened += it }
+            pickOpener(MutableStateFlow(chosen), MutableStateFlow("com.gone")).openAfterBoot(switched::add) { opened += it }
 
             assertEquals(emptyList<Intent>(), opened)
             assertEquals(7, context.getSharedPreferences("boot", Context.MODE_PRIVATE).getInt("live_tv_boot", -1))
@@ -306,7 +346,7 @@ class OpenOnStartTest {
             bootCount(7)
             val opener = pickOpener(MutableStateFlow(chosen.copy(openOnStartOnWake = true)), MutableStateFlow("com.phone.pick"))
 
-            opener.openAfterBoot { opened += it }
+            opener.openAfterBoot(switched::add) { opened += it }
             listenForWakes(opener)
             wake()
 
@@ -320,7 +360,7 @@ class OpenOnStartTest {
             bootCount(7)
             val opener = pickOpener(MutableStateFlow(chosen.copy(openOnStartOnWake = true)), MutableStateFlow("com.no.entry"))
 
-            opener.openAfterBoot { opened += it }
+            opener.openAfterBoot(switched::add) { opened += it }
             listenForWakes(opener)
             wake()
 
@@ -332,7 +372,7 @@ class OpenOnStartTest {
         runTest {
             bootCount(7)
 
-            pickOpener(MutableStateFlow(chosen), MutableStateFlow(context.packageName)).openAfterBoot { opened += it }
+            pickOpener(MutableStateFlow(chosen), MutableStateFlow(context.packageName)).openAfterBoot(switched::add) { opened += it }
 
             assertEquals(emptyList<Intent>(), opened)
         }
@@ -349,7 +389,7 @@ class OpenOnStartTest {
 
             pick.value = "com.tv.second"
             bootCount(8)
-            opener.openAfterBoot { opened += it }
+            opener.openAfterBoot(switched::add) { opened += it }
 
             assertEquals(listOf("com.tv.second"), opened.map { it.component?.packageName })
         }
@@ -362,11 +402,11 @@ class OpenOnStartTest {
             val opener = pickOpener(MutableStateFlow(chosen), MutableStateFlow("com.tv.pick"))
 
             opener.skipThisBoot()
-            opener.openAfterBoot { opened += it }
+            opener.openAfterBoot(switched::add) { opened += it }
             assertEquals(emptyList<Intent>(), opened)
 
             bootCount(8)
-            opener.openAfterBoot { opened += it }
+            opener.openAfterBoot(switched::add) { opened += it }
             assertEquals(1, opened.size)
         }
 
@@ -377,7 +417,7 @@ class OpenOnStartTest {
             bootCount(7)
             val network = MutableStateFlow(false)
             val opener = pickOpener(MutableStateFlow(chosen.copy(openOnStartNetworkWait = 60)), MutableStateFlow("com.tv.pick"), network)
-            val job = launch { opener.openAfterBoot { opened += it } }
+            val job = launch { opener.openAfterBoot(switched::add) { opened += it } }
 
             advanceTimeBy(30_000)
             runCurrent()
