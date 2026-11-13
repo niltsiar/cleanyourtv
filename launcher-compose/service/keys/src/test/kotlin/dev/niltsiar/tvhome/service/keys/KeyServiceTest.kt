@@ -424,7 +424,7 @@ class KeyServiceTest {
     }
 
     @Test
-    fun key_filter_false_drops_the_filter_flag_and_a_redirect_asks_for_window_events() {
+    fun key_filter_false_drops_the_filter_flag_true_sets_it_again_and_a_redirect_asks_for_window_events() {
         val filtering = AccessibilityServiceInfo().apply { flags = AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS }
 
         assertFalse(adjustServiceInfo(filtering, keyFilter = true, windowEvents = false))
@@ -435,6 +435,7 @@ class KeyServiceTest {
         assertEquals(0, filtering.eventTypes)
 
         assertTrue(adjustServiceInfo(filtering, keyFilter = true, windowEvents = true))
+        assertEquals(AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS, filtering.flags)
         assertEquals(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED, filtering.eventTypes)
     }
 

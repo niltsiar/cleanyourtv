@@ -404,15 +404,17 @@ public class KeyService : AccessibilityService() {
 
 /**
  * key_filter false drops the filter flag, so the service stays enabled for nothing but stops filtering (some TCL Android
- * 12 firmware loses key repeat once any service filters); [windowEvents] subscribes to window changes. True when [info]
- * changed.
+ * 12 firmware loses key repeat once any service filters). True sets the flag again: a restart can come while a gamepad or
+ * a volume change has it dropped, or after key_filter false. [windowEvents] subscribes to window changes. True when
+ * [info] changed.
  */
 internal fun adjustServiceInfo(
     info: AccessibilityServiceInfo,
     keyFilter: Boolean,
     windowEvents: Boolean,
 ): Boolean {
-    val flags = if (keyFilter) info.flags else info.flags and AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS.inv()
+    val filter = AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
+    val flags = if (keyFilter) info.flags or filter else info.flags and filter.inv()
     val events = if (windowEvents) info.eventTypes or AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED else info.eventTypes
     if (flags == info.flags && events == info.eventTypes) return false
     info.flags = flags

@@ -100,6 +100,17 @@ class KeyFilterPauseTest {
     }
 
     @Test
+    fun a_new_config_during_a_volume_pause_turns_filtering_back_on() {
+        service.start(TvConfig(volumePausesFilter = true))
+        volumeChanged()
+        assertFalse(filtering())
+
+        service.start(TvConfig())
+
+        assertTrue(filtering())
+    }
+
+    @Test
     fun no_volume_change_is_watched_without_volume_pauses_filter_or_without_key_filter() {
         service.start(TvConfig())
         assertFalse(watchingVolume())
