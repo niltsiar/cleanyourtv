@@ -12,13 +12,14 @@ import androidx.compose.runtime.setValue
 import dev.niltsiar.tvhome.core.config.Choices
 import dev.niltsiar.tvhome.core.config.ConfigRepository
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
+import dev.niltsiar.tvhome.core.model.WallpaperPicture
 import kotlinx.coroutines.flow.Flow
 import java.io.IOException
 
 /**
  * The settings screen's state logic: the rows are the repository's config read through [settingsGroups], nothing is
  * kept apart from it, and a pick or Follow theme goes to the repository, which answers through the same flow.
- * Only the open pickers, the theme's picture names and the picked app's label are kept here. [onEffect] gets
+ * Only the open pickers, the theme's pictures and the picked app's label are kept here. [onEffect] gets
  * [SettingsEffect.SaveFailed] when the store refuses a write and [SettingsEffect.WallpaperApplied] after a picture or None
  * was stored as the wallpaper.
  */
@@ -32,7 +33,7 @@ internal fun settingsPresenter(
     val currentOnEffect by rememberUpdatedState(onEffect)
     var picker by remember { mutableStateOf<OpenOnStartPicker?>(null) }
     var wallpaperOpen by remember { mutableStateOf(false) }
-    val pictures by produceState(emptyList<String>(), sources) { value = sources.wallpaperPictures() }
+    val pictures by produceState(emptyList<WallpaperPicture>(), sources) { value = sources.wallpaperPictures() }
     val currentPictures by rememberUpdatedState(pictures)
     LaunchedEffect(events, repository, sources) {
         events.collect { event ->

@@ -42,4 +42,5 @@
   <string name="wallpaper_none">Нет</string>
   <string name="wallpaper_applied">Обои изменены</string>
   <string name="wallpaper_theme_default">Как в теме</string>
+  <string name="wallpaper_theme_picture">Изображение темы</string>
 </resources>

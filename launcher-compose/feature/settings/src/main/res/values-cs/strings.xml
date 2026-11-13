@@ -42,4 +42,5 @@
   <string name="wallpaper_none">Žádná</string>
   <string name="wallpaper_applied">Tapeta změněna</string>
   <string name="wallpaper_theme_default">Podle motivu</string>
+  <string name="wallpaper_theme_picture">Obrázek motivu</string>
 </resources>

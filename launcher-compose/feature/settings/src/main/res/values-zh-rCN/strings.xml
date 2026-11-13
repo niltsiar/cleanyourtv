@@ -42,4 +42,5 @@
   <string name="wallpaper_none">无</string>
   <string name="wallpaper_applied">壁纸已更改</string>
   <string name="wallpaper_theme_default">主题默认</string>
+  <string name="wallpaper_theme_picture">主题图片</string>
 </resources>

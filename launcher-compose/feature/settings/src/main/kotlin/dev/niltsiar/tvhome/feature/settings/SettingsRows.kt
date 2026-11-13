@@ -7,6 +7,7 @@ import dev.niltsiar.tvhome.core.config.ClockFormat
 import dev.niltsiar.tvhome.core.config.ConfigRepository
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
+import dev.niltsiar.tvhome.core.model.WallpaperPicture
 import java.util.Locale
 
 internal class Option<T>(
@@ -156,6 +157,23 @@ internal fun startPicker(
     pick: String?,
 ) = OpenOnStartPicker(apps, apps.indexOfFirst { it.packageName == pick } + 1)
 
+/** The Open on start picker's entries: Off, then each app with its art, and its package under a label two or more apps share. */
+internal fun startEntries(apps: List<OpenOnStartApp>): List<PickerEntry<String>> {
+    val counts = apps.groupingBy { it.label }.eachCount()
+    return listOf(PickerEntry<String>(res(R.string.settings_off))) +
+        apps.map { app ->
+            PickerEntry(
+                OptionLabel.Text(app.label),
+                detail = app.packageName.takeIf { counts.getValue(app.label) > 1 },
+                art = app.packageName,
+            )
+        }
+}
+
+/** The wallpaper picker's entries: each picture with its thumbnail, Theme default and None without one. */
+internal fun wallpaperEntries(picker: WallpaperPicker): List<PickerEntry<WallpaperPicture>> =
+    picker.entries.mapIndexed { index, label -> PickerEntry(label, art = picker.pictures.getOrNull(index - 1)) }
+
 /**
  * The file names as the page shows them: without the extension, with "_" and "-" as spaces and the first letter upper case in
  * [locale]. The file names themselves show when that leaves a name blank or two names the same.
@@ -176,48 +194,62 @@ internal fun wallpaperLabels(
     return if (shown.none { it.isEmpty() } && shown.distinct().size == shown.size) shown else names
 }
 
+/** What the page calls each of [pictures]: its caption, Theme picture for wallpaper.jpg, else the name made of its file name. */
+internal fun pictureLabels(pictures: List<WallpaperPicture>): List<OptionLabel> {
+    val names = wallpaperLabels(pictures.map { it.fileName })
+    return pictures.mapIndexed { index, picture ->
+        val caption = picture.caption
+        when {
+            caption != null -> OptionLabel.Text(caption)
+            picture.single -> res(R.string.wallpaper_theme_picture)
+            else -> OptionLabel.Text(names[index])
+        }
+    }
+}
+
 /** The stored choice when the theme can honour it; a picture that is gone leaves the theme deciding. */
 private fun honoured(
     choice: String?,
     names: List<String>,
 ): String? = choice?.takeIf { it == Choices.WALLPAPER_NONE || it in names }
 
-/** The value of the Wallpaper row for a theme with [names] as pictures, or null for a theme with none. */
+/** The value of the Wallpaper row for a theme with [pictures], or null for a theme with none. */
 internal fun wallpaperLabel(
-    names: List<String>,
+    pictures: List<WallpaperPicture>,
     choice: String?,
 ): OptionLabel? {
-    if (names.isEmpty()) return null
+    if (pictures.isEmpty()) return null
+    val names = pictures.map { it.fileName }
     return when (val held = honoured(choice, names)) {
         null -> res(R.string.wallpaper_theme_default)
         Choices.WALLPAPER_NONE -> res(R.string.wallpaper_none)
-        else -> OptionLabel.Text(wallpaperLabels(names)[names.indexOf(held)])
+        else -> pictureLabels(pictures)[names.indexOf(held)]
     }
 }
 
-/** The picker over [names]: Theme default first, None last, with the entry of the honoured [choice] selected. */
+/** The picker over [pictures]: Theme default first, None last, with the entry of the honoured [choice] selected. */
 internal fun wallpaperPicker(
-    names: List<String>,
+    pictures: List<WallpaperPicture>,
     choice: String?,
 ): WallpaperPicker {
-    val entries =
-        listOf(res(R.string.wallpaper_theme_default)) + wallpaperLabels(names).map(OptionLabel::Text) + res(R.string.wallpaper_none)
+    val names = pictures.map { it.fileName }
+    val entries = listOf(res(R.string.wallpaper_theme_default)) + pictureLabels(pictures) + res(R.string.wallpaper_none)
     val selected =
         when (val held = honoured(choice, names)) {
             null -> 0
             Choices.WALLPAPER_NONE -> entries.lastIndex
             else -> names.indexOf(held) + 1
         }
-    return WallpaperPicker(entries, selected)
+    return WallpaperPicker(entries, pictures, selected)
 }
 
 /** What the picker's entry at [index] stores: null for Theme default, which removes the choice. */
 internal fun wallpaperValue(
-    names: List<String>,
+    pictures: List<WallpaperPicture>,
     index: Int,
 ): String? =
     when (index) {
         0 -> null
-        names.size + 1 -> Choices.WALLPAPER_NONE
-        else -> names[index - 1]
+        pictures.size + 1 -> Choices.WALLPAPER_NONE
+        else -> pictures[index - 1].fileName
     }

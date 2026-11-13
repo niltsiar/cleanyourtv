@@ -2,7 +2,9 @@ package dev.niltsiar.tvhome.feature.settings
 
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.graphics.ImageBitmap
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
+import dev.niltsiar.tvhome.core.model.WallpaperPicture
 
 /** One row of Launcher settings that offers a set of options. */
 public enum class SettingsRowId {
@@ -61,10 +63,14 @@ public data class OpenOnStartPicker(
     val selected: Int,
 )
 
-/** The picker over the page: Theme default, the theme's pictures, then None. [selected] indexes [entries]. */
+/**
+ * The picker over the page: Theme default, the theme's [pictures], then None. [entries] are what each of them is called, and
+ * [selected] indexes them.
+ */
 @Immutable
 public data class WallpaperPicker(
     val entries: List<OptionLabel>,
+    val pictures: List<WallpaperPicture>,
     val selected: Int,
 )
 
@@ -93,8 +99,18 @@ public class SettingsSources(
     public val openOnStartApps: suspend () -> List<OpenOnStartApp>,
     /** Makes the Home that follows a pick stay Home. */
     public val skipThisBoot: suspend () -> Unit,
-    /** The file names of the theme's pictures, in the order the wallpaper picker lists them, loaded off the main thread. */
-    public val wallpaperPictures: suspend () -> List<String>,
+    /** The theme's pictures, in the order the wallpaper picker lists them, loaded off the main thread. */
+    public val wallpaperPictures: suspend () -> List<WallpaperPicture>,
+    /** What the pickers show beside their entries. */
+    public val art: PickerArt,
+)
+
+/** The art beside the pickers' entries, loaded off the main thread at a width and height in pixels; null when there is none. */
+public class PickerArt(
+    /** A picture's centre, cropped to that size. */
+    public val wallpaper: suspend (WallpaperPicture, Int, Int) -> ImageBitmap? = { _, _, _ -> null },
+    /** An app's art as its tile on Home shows it, from its package name. */
+    public val app: suspend (String, Int, Int) -> ImageBitmap? = { _, _, _ -> null },
 )
 
 /** One-shot results the host handles outside the UI state. */

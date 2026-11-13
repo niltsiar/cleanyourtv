@@ -42,4 +42,5 @@
   <string name="wallpaper_none">Yoʻq</string>
   <string name="wallpaper_applied">Fon rasmi oʻzgartirildi</string>
   <string name="wallpaper_theme_default">Mavzu boʻyicha</string>
+  <string name="wallpaper_theme_picture">Mavzu rasmi</string>
 </resources>

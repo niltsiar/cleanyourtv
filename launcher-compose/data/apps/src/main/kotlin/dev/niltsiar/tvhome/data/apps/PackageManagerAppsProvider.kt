@@ -165,6 +165,27 @@ public class PackageManagerAppsProvider(
         }
 
     /**
+     * The art of [packageName]'s TV entry point as its tile shows it (its banner, else its icon in the middle) at [width] x
+     * [height] pixels, made by the tile's loader; null when the app has no TV entry point or its art fails to load.
+     */
+    public suspend fun art(
+        packageName: String,
+        width: Int,
+        height: Int,
+    ): ImageBitmap? =
+        withContext(Dispatchers.IO) {
+            val pm = context.packageManager
+            val tv = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER).setPackage(packageName)
+            val info = pm.queryIntentActivities(tv, 0).firstOrNull() ?: return@withContext null
+            try {
+                TileImages(context, width, height).load(info.activityInfo) { info.loadIcon(pm) }.image
+            } catch (e: RuntimeException) {
+                Log.w(TAG, "no artwork for $packageName: $e")
+                null
+            }
+        }
+
+    /**
      * Keeps the owner's tile order: [keys] first to last. [docked] says how many lead the dock when fill_dock is off,
      * else it is -1. Loads the tiles again, sorted by it. False, with a log line, when the file could not be written.
      */

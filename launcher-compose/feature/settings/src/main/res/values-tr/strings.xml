@@ -42,4 +42,5 @@
   <string name="wallpaper_none">Yok</string>
   <string name="wallpaper_applied">Duvar kağıdı değiştirildi</string>
   <string name="wallpaper_theme_default">Tema varsayılanı</string>
+  <string name="wallpaper_theme_picture">Tema görseli</string>
 </resources>

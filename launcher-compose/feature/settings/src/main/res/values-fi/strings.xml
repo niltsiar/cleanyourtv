@@ -42,4 +42,5 @@
   <string name="wallpaper_none">Ei taustakuvaa</string>
   <string name="wallpaper_applied">Taustakuva vaihdettu</string>
   <string name="wallpaper_theme_default">Teeman oletus</string>
+  <string name="wallpaper_theme_picture">Teeman kuva</string>
 </resources>

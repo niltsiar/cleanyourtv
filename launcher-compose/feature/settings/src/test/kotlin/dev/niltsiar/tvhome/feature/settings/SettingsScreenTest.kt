@@ -26,6 +26,7 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
+import dev.niltsiar.tvhome.core.model.WallpaperPicture
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -61,7 +62,7 @@ class SettingsScreenTest {
     private fun show(
         theme: String = "{}",
         apps: List<OpenOnStartApp> = installed,
-        wallpapers: List<String> = emptyList(),
+        wallpapers: List<WallpaperPicture> = emptyList(),
     ) {
         settings =
             SettingsHarness(
@@ -571,11 +572,30 @@ class SettingsScreenTest {
 
         compose.onNodeWithTag("settings:picker").assertIsDisplayed()
         compose.onNodeWithTag("settings:picker:title").assertTextEquals("Wallpaper")
-        listOf("Theme default", "Wallpaper", "Dusk", "Dawn", "None").forEachIndexed { index, text -> entry(index).assertTextEquals(text) }
+        listOf("Theme default", "Theme picture", "Dusk", "Dawn", "None").forEachIndexed {
+            index,
+            text,
+            ->
+            entry(index).assertTextEquals(text)
+        }
         entry(2).assertIsFocused()
         entry(2).assertIsSelected()
         entry(0).assertIsNotSelected()
         entry(4).assertIsNotSelected()
+    }
+
+    @Test
+    @Config(qualifiers = "es-w960dp-h540dp-xhdpi")
+    fun in_spanish_the_themes_wallpaper_jpg_is_imagen_del_tema_in_the_picker_and_the_row_and_a_pick_stores_its_file_name() {
+        showWallpaperPicker()
+        entry(1).assertTextEquals("Imagen del tema")
+
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+        waitUntilIdle { settings.wallpaperChoice == "wallpaper.jpg" && settings.state.wallpaperPicker == null }
+        compose.waitForIdle()
+
+        wallpaperRow().assertTextEquals("Fondo", "Imagen del tema")
     }
 
     @Test
@@ -708,7 +728,10 @@ class SettingsScreenTest {
         val actions =
             SettingsActions(
                 onOpenPicker = { startPicker = OpenOnStartPicker(installed.take(2), 0) },
-                onOpenWallpaperPicker = { wallpaperPicker = WallpaperPicker(listOf(OptionLabel.Res(R.string.wallpaper_none)), 0) },
+                onOpenWallpaperPicker = {
+                    wallpaperPicker =
+                        WallpaperPicker(listOf(OptionLabel.Res(R.string.wallpaper_none)), emptyList(), 0)
+                },
                 onClosePicker = {
                     startPicker = null
                     wallpaperPicker = null
@@ -765,6 +788,6 @@ class SettingsScreenTest {
 
     private companion object {
         const val WITH_CHOICE = """{"open_on_start_choice": true}"""
-        val pictures = listOf("wallpaper.jpg", "dusk.jpg", "dawn.jpg")
+        val pictures = listOf(WallpaperPicture("wallpaper.jpg", single = true), WallpaperPicture("dusk.jpg"), WallpaperPicture("dawn.jpg"))
     }
 }

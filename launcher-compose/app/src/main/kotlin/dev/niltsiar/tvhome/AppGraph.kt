@@ -23,6 +23,7 @@ import dev.niltsiar.tvhome.data.wallpaper.WallpaperProvider
 import dev.niltsiar.tvhome.feature.home.FocusMemory
 import dev.niltsiar.tvhome.feature.home.HomeSources
 import dev.niltsiar.tvhome.feature.library.LibrarySources
+import dev.niltsiar.tvhome.feature.settings.PickerArt
 import dev.niltsiar.tvhome.feature.settings.SettingsSources
 import dev.niltsiar.tvhome.service.keys.PowerMenu
 import dev.zacsweers.metro.AppScope
@@ -138,12 +139,16 @@ interface AppGraph {
     fun provideSettingsSources(
         application: Application,
         openOnStart: OpenOnStart,
-    ): SettingsSources =
-        SettingsSources(
+        appsProvider: PackageManagerAppsProvider,
+    ): SettingsSources {
+        val pictures = WallpaperPictures(ThemeDirectory(application))
+        return SettingsSources(
             openOnStart::apps,
             openOnStart::skipThisBoot,
-            WallpaperPictures(ThemeDirectory(application))::names,
+            pictures::pictures,
+            PickerArt(pictures::thumbnail, appsProvider::art),
         )
+    }
 
     @Provides
     @SingleIn(AppScope::class)

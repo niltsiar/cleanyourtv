@@ -46,6 +46,7 @@ internal fun SettingsHost(
             onOpenTvSettings = { if (!onOpenTvSettings()) notice.show(R.string.not_available) },
             onReorder = onReorder,
             notice = notice,
+            art = viewModel.art,
         )
     }
 }

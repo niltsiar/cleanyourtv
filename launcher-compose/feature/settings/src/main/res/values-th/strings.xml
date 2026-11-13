@@ -42,4 +42,5 @@
   <string name="wallpaper_none">ไม่มี</string>
   <string name="wallpaper_applied">เปลี่ยนวอลเปเปอร์แล้ว</string>
   <string name="wallpaper_theme_default">ค่าเริ่มต้นของธีม</string>
+  <string name="wallpaper_theme_picture">รูปภาพของธีม</string>
 </resources>

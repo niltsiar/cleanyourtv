@@ -6,6 +6,7 @@ import dev.niltsiar.tvhome.core.config.ClockFormat
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.config.parseTvConfig
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
+import dev.niltsiar.tvhome.core.model.WallpaperPicture
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.first
@@ -41,7 +42,7 @@ class SettingsPresenterTest {
         theme: String = "{}",
         apps: List<OpenOnStartApp> = emptyList(),
         appsGate: Deferred<Unit>? = null,
-        wallpapers: List<String> = emptyList(),
+        wallpapers: List<WallpaperPicture> = emptyList(),
     ) = SettingsHarness(app, theme, apps = apps, appsGate = appsGate, wallpapers = wallpapers).also { harness = it }
 
     private val withChoice = """{"open_on_start_choice": true}"""
@@ -408,31 +409,31 @@ class SettingsPresenterTest {
         val entries =
             listOf(
                 OptionLabel.Res(R.string.wallpaper_theme_default),
-                OptionLabel.Text("Wallpaper"),
+                OptionLabel.Res(R.string.wallpaper_theme_picture),
                 OptionLabel.Text("Dusk"),
                 OptionLabel.Text("Dawn"),
                 OptionLabel.Res(R.string.wallpaper_none),
             )
 
-        assertEquals(WallpaperPicker(entries, 0), settings.openWallpaperPicker())
+        assertEquals(WallpaperPicker(entries, pictures, 0), settings.openWallpaperPicker())
 
         settings.viewModel.actions.onClosePicker()
         settings.awaitState { it.wallpaperPicker == null }
         settings.storeWallpaper("dusk.jpg")
         settings.awaitState { it.wallpaper == OptionLabel.Text("Dusk") }
-        assertEquals(WallpaperPicker(entries, 2), settings.openWallpaperPicker())
+        assertEquals(WallpaperPicker(entries, pictures, 2), settings.openWallpaperPicker())
 
         settings.viewModel.actions.onClosePicker()
         settings.awaitState { it.wallpaperPicker == null }
         settings.storeWallpaper("none")
         settings.awaitState { it.wallpaper == OptionLabel.Res(R.string.wallpaper_none) }
-        assertEquals(WallpaperPicker(entries, 4), settings.openWallpaperPicker())
+        assertEquals(WallpaperPicker(entries, pictures, 4), settings.openWallpaperPicker())
 
         settings.viewModel.actions.onClosePicker()
         settings.awaitState { it.wallpaperPicker == null }
         settings.storeWallpaper("gone.jpg")
         settings.awaitState { it.wallpaper == OptionLabel.Res(R.string.wallpaper_theme_default) }
-        assertEquals(WallpaperPicker(entries, 0), settings.openWallpaperPicker())
+        assertEquals(WallpaperPicker(entries, pictures, 0), settings.openWallpaperPicker())
     }
 
     @Test
@@ -520,7 +521,7 @@ class SettingsPresenterTest {
 
     @Test
     fun a_picture_shows_as_a_name_and_its_file_name_is_what_a_pick_stores() {
-        val settings = settings(wallpapers = listOf("moon_lake.jpg", "golden-hour.png"))
+        val settings = settings(wallpapers = listOf(WallpaperPicture("moon_lake.jpg"), WallpaperPicture("golden-hour.png")))
         settings.awaitState { it.wallpaper != null }
         val picker = settings.openWallpaperPicker()
         assertEquals(listOf(OptionLabel.Text("Moon lake"), OptionLabel.Text("Golden hour")), picker.entries.subList(1, 3))
@@ -530,6 +531,38 @@ class SettingsPresenterTest {
 
         assertEquals("moon_lake.jpg", settings.wallpaperChoice)
         settings.awaitState { it.wallpaper == OptionLabel.Text("Moon lake") }
+    }
+
+    @Test
+    fun a_captioned_picture_shows_its_caption_another_its_file_name_and_wallpaper_jpg_the_theme_picture_and_a_pick_stores_the_file() {
+        val settings =
+            settings(
+                wallpapers =
+                    listOf(
+                        WallpaperPicture("wallpaper.jpg", single = true),
+                        WallpaperPicture("001.jpg", "Dusk over the peaks"),
+                        WallpaperPicture("moon_lake.jpg"),
+                    ),
+            )
+        settings.awaitState { it.wallpaper != null }
+        val picker = settings.openWallpaperPicker()
+        assertEquals(
+            listOf(
+                OptionLabel.Res(R.string.wallpaper_theme_picture),
+                OptionLabel.Text("Dusk over the peaks"),
+                OptionLabel.Text("Moon lake"),
+            ),
+            picker.entries.subList(1, 4),
+        )
+
+        settings.viewModel.actions.onPickWallpaper(2)
+        settings.awaitState { it.wallpaperPicker == null && it.wallpaper == OptionLabel.Text("Dusk over the peaks") }
+        assertEquals("001.jpg", settings.wallpaperChoice)
+
+        settings.openWallpaperPicker()
+        settings.viewModel.actions.onPickWallpaper(1)
+        settings.awaitState { it.wallpaperPicker == null && it.wallpaper == OptionLabel.Res(R.string.wallpaper_theme_picture) }
+        assertEquals("wallpaper.jpg", settings.wallpaperChoice)
     }
 
     @Test
@@ -552,7 +585,7 @@ class SettingsPresenterTest {
         val onOff = listOf(true, false)
 
         /** What the theme's source lists: its single wallpaper, then its folder. */
-        val pictures = listOf("wallpaper.jpg", "dusk.jpg", "dawn.jpg")
+        val pictures = listOf(WallpaperPicture("wallpaper.jpg", single = true), WallpaperPicture("dusk.jpg"), WallpaperPicture("dawn.jpg"))
 
         /** Every key at the last option of its row, so the first pick of each row differs from what the theme holds. */
         const val LAST_OPTIONS =

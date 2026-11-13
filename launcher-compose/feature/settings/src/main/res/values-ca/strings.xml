@@ -42,4 +42,5 @@
   <string name="wallpaper_none">Cap</string>
   <string name="wallpaper_applied">Fons de pantalla canviat</string>
   <string name="wallpaper_theme_default">El del tema</string>
+  <string name="wallpaper_theme_picture">Imatge del tema</string>
 </resources>

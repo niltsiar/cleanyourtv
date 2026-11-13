@@ -43,6 +43,9 @@ public class MoleculeSettingsViewModel(
 
     public val effects: Flow<SettingsEffect> = effectChannel.receiveAsFlow()
 
+    /** What the pickers show beside their entries. */
+    public val art: PickerArt = sources.art
+
     public val uiState: StateFlow<SettingsUiState> =
         viewModelScope.launchMolecule(recompositionMode, context) {
             settingsPresenter(eventFlow, repository, sources, effectChannel::trySend)

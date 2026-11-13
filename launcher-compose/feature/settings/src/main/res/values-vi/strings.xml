@@ -42,4 +42,5 @@
   <string name="wallpaper_none">Không có</string>
   <string name="wallpaper_applied">Đã đổi hình nền</string>
   <string name="wallpaper_theme_default">Theo theme</string>
+  <string name="wallpaper_theme_picture">Ảnh của theme</string>
 </resources>

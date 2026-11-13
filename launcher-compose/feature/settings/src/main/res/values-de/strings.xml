@@ -42,4 +42,5 @@
   <string name="wallpaper_none">Keines</string>
   <string name="wallpaper_applied">Hintergrundbild geändert</string>
   <string name="wallpaper_theme_default">Standard des Designs</string>
+  <string name="wallpaper_theme_picture">Bild des Designs</string>
 </resources>

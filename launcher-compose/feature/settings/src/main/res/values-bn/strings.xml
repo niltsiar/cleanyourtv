@@ -42,4 +42,5 @@
   <string name="wallpaper_none">কোনোটি নয়</string>
   <string name="wallpaper_applied">ওয়ালপেপার বদলানো হয়েছে</string>
   <string name="wallpaper_theme_default">থিমের ডিফল্ট</string>
+  <string name="wallpaper_theme_picture">থিমের ছবি</string>
 </resources>

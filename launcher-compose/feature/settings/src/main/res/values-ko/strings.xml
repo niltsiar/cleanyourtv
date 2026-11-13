@@ -42,4 +42,5 @@
   <string name="wallpaper_none">없음</string>
   <string name="wallpaper_applied">배경화면 변경됨</string>
   <string name="wallpaper_theme_default">테마 기본값</string>
+  <string name="wallpaper_theme_picture">테마 이미지</string>
 </resources>

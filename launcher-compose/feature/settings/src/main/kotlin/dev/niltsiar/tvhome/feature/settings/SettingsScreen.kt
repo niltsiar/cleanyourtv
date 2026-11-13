@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -122,6 +123,7 @@ private const val NOTICE_FADE_MS = 200
 private val NoticeHeight = 36.dp
 
 private const val WALLPAPER_STOP = "wallpaper"
+private val NoPickerArt = PickerArt()
 private const val OPEN_ON_START_STOP = "open_on_start"
 
 /** One thing the list shows, top to bottom. The [Focusable] ones are what Up and Down move between, in this order. */
@@ -224,7 +226,7 @@ public class PageNotice {
  * listing its options side by side, with the Wallpaper row after Clock and the Open on start row after the first group when the
  * state has them. Their pickers open over the panel. Follow theme, Choose default home ([onChooseDefaultHome]) and TV system
  * settings ([onOpenTvSettings]) end the list. OK on an option stores it, unless it is the selected one. A [notice] shows at the
- * end of the title band.
+ * end of the title band. The pickers show [art] beside their entries.
  * Up and Down move between rows, onto the selected option of the next one; Left and Right move between a row's options and
  * stop at its ends. Focus cannot leave the screen.
  */
@@ -238,6 +240,7 @@ public fun SettingsScreen(
     modifier: Modifier = Modifier,
     onReorder: () -> Unit = {},
     notice: PageNotice = remember { PageNotice() },
+    art: PickerArt = NoPickerArt,
 ) {
     val reveal = rememberReveal()
     val ui = state()
@@ -391,15 +394,26 @@ public fun SettingsScreen(
             }
             OverlayHost(open = { pickerStop != null }) {
                 ui.picker?.let { picker ->
-                    val labels =
-                        remember(picker) {
-                            listOf<OptionLabel>(OptionLabel.Res(R.string.settings_off)) +
-                                picker.apps.map { OptionLabel.Text(it.label) }
-                        }
-                    PickerPanel(R.string.open_on_start_label, labels, picker.selected, actions.onPickStartApp, actions.onClosePicker)
+                    val entries = remember(picker) { startEntries(picker.apps) }
+                    PickerPanel(
+                        R.string.open_on_start_label,
+                        entries,
+                        picker.selected,
+                        art.app,
+                        actions.onPickStartApp,
+                        actions.onClosePicker,
+                    )
                 }
-                ui.wallpaperPicker?.let {
-                    PickerPanel(R.string.wallpaper_label, it.entries, it.selected, actions.onPickWallpaper, actions.onClosePicker)
+                ui.wallpaperPicker?.let { picker ->
+                    val entries = remember(picker) { wallpaperEntries(picker) }
+                    PickerPanel(
+                        R.string.wallpaper_label,
+                        entries,
+                        picker.selected,
+                        art.wallpaper,
+                        actions.onPickWallpaper,
+                        actions.onClosePicker,
+                    )
                 }
             }
         }
@@ -619,8 +633,9 @@ internal class FocusStop(
 /**
  * A full-width button of the panel; a [selected] one is marked with a check. With a [value] the row reads like the others: the
  * label on the start side, the value and a chevron towards the end side, and one description of both for a screen reader.
- * Without a [stop] focus arrives and moves by the defaults, as in a list that moves focus itself. The row is [RowMinHeight]
- * tall and its pill [pillHeight], centred, so that by default the pill keeps a margin to the rows around it, as an option does.
+ * A [detail] line in a smaller muted style goes under the label, and [leading] before both. Without a [stop] focus arrives
+ * and moves by the defaults, as in a list that moves focus itself. The row is [RowMinHeight] tall, or [pillHeight] when that
+ * is more, and its pill [pillHeight], centred, so that by default the pill keeps a margin to the rows around it, as an option does.
  */
 @Composable
 internal fun ActionRow(
@@ -632,9 +647,12 @@ internal fun ActionRow(
     value: String? = null,
     stop: FocusStop? = null,
     pillHeight: Dp = ChipHeight,
+    detail: String? = null,
+    leading: (@Composable () -> Unit)? = null,
 ) {
     val typography = TvTheme.typography
     val style = remember(typography) { typography.pillLabel.copy(fontSize = 18.sp) }
+    val detailStyle = remember(typography) { typography.pillLabel.copy(fontSize = 14.sp) }
     val rest = TvTheme.colors.onSurface
     val focusedInk = TvTheme.surfaces.pillContent
     val idle = remember(rest) { rest.copy(alpha = LABEL_IDLE_ALPHA) }
@@ -645,7 +663,7 @@ internal fun ActionRow(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(vertical = (RowMinHeight - pillHeight) / 2)
+                .padding(vertical = ((RowMinHeight - pillHeight) / 2).coerceAtLeast(0.dp))
                 .height(pillHeight)
                 .testTag(tag)
                 .semantics {
@@ -663,14 +681,30 @@ internal fun ActionRow(
             Modifier.align(Alignment.CenterStart).fillMaxWidth().padding(horizontal = RowSide),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            BasicText(
-                label,
-                style = style,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = if (value == null) ink.content else ColorProducer { lerp(idle, focusedInk, ink.progress()) },
-                modifier = Modifier.weight(1f),
-            )
+            if (leading != null) {
+                leading()
+                Spacer(Modifier.width(RowSide))
+            }
+            Column(Modifier.weight(1f)) {
+                BasicText(
+                    label,
+                    style = style,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = if (value == null) ink.content else ColorProducer { lerp(idle, focusedInk, ink.progress()) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (detail != null) {
+                    BasicText(
+                        detail,
+                        style = detailStyle,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = ink.secondary,
+                        modifier = Modifier.fillMaxWidth().testTag("$tag:detail"),
+                    )
+                }
+            }
             if (value != null) {
                 BasicText(
                     value,
