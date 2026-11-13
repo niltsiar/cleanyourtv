@@ -86,16 +86,19 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
 import dev.niltsiar.tvhome.core.designsystem.BesideAnchor
 import dev.niltsiar.tvhome.core.designsystem.FocusPill
+import dev.niltsiar.tvhome.core.designsystem.FocusRingReach
 import dev.niltsiar.tvhome.core.designsystem.GlassMenu
 import dev.niltsiar.tvhome.core.designsystem.KeyChip
 import dev.niltsiar.tvhome.core.designsystem.KeyChipHeight
 import dev.niltsiar.tvhome.core.designsystem.KeyChipLook
+import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.OverlaySurface
 import dev.niltsiar.tvhome.core.designsystem.SCROLL_CUE_ALPHA
@@ -137,8 +140,15 @@ private val RowGap = 19.dp
 /** A focused card's growth and ring reach 13 dp past its sides, and the grid clips at its edges. */
 private val GridEdge = 13.dp
 
-private val PanelHeight =
-    PanelTop + HeaderTitleHeight + HeaderHintHeight + HeaderGridGap + GridEdge * 2 + CardHeight * ROWS + RowGap * (ROWS - 1) + PanelBottom
+/** The grid's top and bottom padding: [GridEdge], or with a pop the reach of a focused card's growth and ring at its peak. */
+private fun Motion.gridEdgeY(): Dp {
+    val peak = focusPeakScale(FOCUSED_SCALE)
+    return if (peak > focusScale(FOCUSED_SCALE)) CardHeight * ((peak - 1f) / 2f) + FocusRingReach * peak else GridEdge
+}
+
+private fun panelHeight(gridEdgeY: Dp): Dp =
+    PanelTop + HeaderTitleHeight + HeaderHintHeight + HeaderGridGap + gridEdgeY * 2 + CardHeight * ROWS + RowGap * (ROWS - 1) + PanelBottom
+
 private val MenuEdge = 48.dp
 
 /**
@@ -203,7 +213,7 @@ internal fun LibraryScreen(
                     .testTag("library:panel")
                     .widthIn(max = PanelMaxWidth)
                     .fillMaxWidth()
-                    .heightIn(max = if (empty) EmptyPanelHeight else PanelHeight)
+                    .heightIn(max = if (empty) EmptyPanelHeight else panelHeight(TvTheme.motion.gridEdgeY()))
                     .fillMaxHeight()
                     .graphicsLayer {
                         compositingStrategy = CompositingStrategy.ModulateAlpha
@@ -518,7 +528,8 @@ private fun Cards(
     val scope = rememberCoroutineScope()
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val pitch = with(density) { (CardHeight + RowGap).toPx() }
-    val bringIntoView = remember(gridState, density) { RowBringIntoViewSpec(gridState, with(density) { GridEdge.toPx() }) }
+    val gridEdgeY = TvTheme.motion.gridEdgeY()
+    val bringIntoView = remember(gridState, density, gridEdgeY) { RowBringIntoViewSpec(gridState, with(density) { gridEdgeY.toPx() }) }
     // Read here, not in the grid's content, so a focus move does not rebuild what the grid lists.
     val cards = remember(state) { derivedStateOf { state().cards } }.value
     val statusFree = remember(cards, layout) { cards.none { it.hasStatusLine(layout) } }
@@ -534,7 +545,7 @@ private fun Cards(
             LazyVerticalGrid(
                 columns = GridCells.Fixed(COLUMNS),
                 state = gridState,
-                contentPadding = PaddingValues(GridEdge),
+                contentPadding = PaddingValues(horizontal = GridEdge, vertical = gridEdgeY),
                 horizontalArrangement = Arrangement.spacedBy(CardGap),
                 verticalArrangement = Arrangement.spacedBy(RowGap),
                 modifier =
@@ -576,7 +587,7 @@ private fun Cards(
                 }
             }
         }
-        ScrollCue(gridState)
+        ScrollCue(gridState, gridEdgeY)
     }
 }
 
@@ -587,16 +598,19 @@ private val CueHeight = 7.dp
 private val CuePillDrop = 9.dp
 
 /**
- * A chevron in a pill under the grid while cards lie below the view, and a smaller one in its top padding while cards lie
- * above. It is drawn from the grid's scroll state in the draw phase: no layer, nothing recomposes with a focus move.
+ * A chevron in a pill under the grid while cards lie below the view, and a smaller one in its top padding, [topPadding] high,
+ * while cards lie above. It is drawn from the grid's scroll state in the draw phase: no layer, nothing recomposes with a focus move.
  */
 @Composable
-private fun ScrollCue(grid: LazyGridState) {
+private fun ScrollCue(
+    grid: LazyGridState,
+    topPadding: Dp,
+) {
     val ink = TvTheme.colors.onSurface
     Box(
         Modifier.fillMaxSize().drawBehind {
             if (grid.canScrollBackward) {
-                drawCueChevron(ink.copy(alpha = SCROLL_CUE_ALPHA), GridEdge.toPx() / 2f, CueWidth.toPx(), CueHeight.toPx(), down = false)
+                drawCueChevron(ink.copy(alpha = SCROLL_CUE_ALPHA), topPadding.toPx() / 2f, CueWidth.toPx(), CueHeight.toPx(), down = false)
             }
             if (grid.canScrollForward) {
                 drawScrollDownCue(

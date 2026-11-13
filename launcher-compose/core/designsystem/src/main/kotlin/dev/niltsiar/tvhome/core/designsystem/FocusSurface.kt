@@ -185,7 +185,8 @@ public fun FocusSurface(
                     val target = if (it.isFocused) 1f else 0f
                     if (focus.targetValue != target) {
                         // Undispatched, its first frame is the one that shows the new focus, not the frame after.
-                        scope.launch(start = CoroutineStart.UNDISPATCHED) { focus.animateTo(target, motion.focusSpec) }
+                        val spec = motion.focusSpec(it.isFocused, focus.value)
+                        scope.launch(start = CoroutineStart.UNDISPATCHED) { focus.animateTo(target, spec) }
                     }
                     if (it.isFocused) onFocused()
                 }.clickable(interactionSource = interactionSource, indication = null, role = Role.Button, onClick = onClick),

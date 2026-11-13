@@ -95,11 +95,14 @@ class FocusSurfaceMotionTest {
     }
 
     @Test
-    fun a_focused_tile_grows_to_108_percent_and_overshoots_when_focus_overshoot_is_on() {
+    fun a_focused_tile_pops_to_114_percent_then_settles_at_108_percent_when_focus_overshoot_is_on() {
         val widths = widthsAfterFocus(Motion(focusOvershoot = true))
+        val peak = widths.indexOf(widths.max())
 
-        assertEquals(108f, widths.last(), 0.5f)
-        assertTrue("peaked at ${widths.max()}", widths.max() > widths.last() + 0.5f)
+        // The test clock rounds each 10 ms step up to a 16 ms frame, and no frame falls on the 120 ms peak of 114.4 dp.
+        assertTrue("peaked at ${widths[peak]}", widths[peak] in 113.4f..114.9f)
+        assertTrue("peaked at frame $peak: ${widths.take(24)}", peak in 6..9)
+        assertTrue("settled ${widths.drop(20).distinct()}", widths.drop(20).all { it in 107.5f..108.5f })
     }
 
     @Test

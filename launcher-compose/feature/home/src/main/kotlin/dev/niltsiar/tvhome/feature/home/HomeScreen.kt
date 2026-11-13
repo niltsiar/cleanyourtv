@@ -990,7 +990,10 @@ private class FocusDim(
 private const val GROUP_MS = 320
 private const val GROUP_OVERSHOOT_DAMPING = 0.7f
 
-/** The dock panel's padding in this window, from the width of the dock row's tiles, which sets the room a focused end tile's ring needs. */
+/**
+ * The dock panel's padding in this window, from the width of the dock row's tiles, which sets the room a focused end tile's
+ * ring needs: at the tile's peak size, past its grown size with focus_overshoot.
+ */
 @Composable
 private fun rememberDockPadding(
     state: State<() -> HomeUiState>,
@@ -1000,7 +1003,7 @@ private fun rememberDockPadding(
     val density = LocalDensity.current
     val windowWidth = LocalWindowInfo.current.containerSize.width
     val shrunk by remember(state, layout, look) { derivedStateOf { look.shrinks(layout, state.value().dock.size) } }
-    val scale = TvTheme.motion.focusScale(TILE_FOCUSED_SCALE)
+    val scale = TvTheme.motion.focusPeakScale(TILE_FOCUSED_SCALE)
     val tileWidth = dockRowTileWidth(with(density) { windowWidth.toDp() } - ScreenMargin * 2, layout.columns)
     return dockPadding(density.dockRingSide(tileWidth, scale), shrunk, look.evenPadding)
 }

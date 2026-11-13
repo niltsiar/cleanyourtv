@@ -431,6 +431,14 @@ class LibraryOverlayLookUiTest {
     }
 
     @Test
+    fun with_focus_overshoot_the_grid_leaves_room_over_its_top_row_for_the_ring_at_the_peak_of_the_pop() {
+        showLibrary(nineApps, motion = Motion(focusOvershoot = true))
+
+        val peakReach = 109f * (1.144f - 1f) / 2f + FocusRingReach.value * 1.144f
+        assertEquals(peakReach, (card("App 1").top - bounds("library:cards").top).value, 0.6f)
+    }
+
+    @Test
     fun a_focused_top_row_card_has_its_ring_at_least_16_dp_below_the_hint_row_key_caps() {
         showLibrary(nineApps)
 

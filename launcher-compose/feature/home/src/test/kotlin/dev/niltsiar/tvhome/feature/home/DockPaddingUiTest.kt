@@ -17,6 +17,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.DpRect
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
@@ -47,11 +48,12 @@ class DockPaddingUiTest {
     private fun showHome(
         config: TvConfig = SixColumns,
         docked: Int = 0,
+        motion: Motion = Motion(),
     ) {
         val sources = sources(apps = flowOf(AppList(apps, docked)))
         look = config.dockLook()
         compose.setContent {
-            TvTheme {
+            TvTheme(motion = motion) {
                 val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(
@@ -128,6 +130,14 @@ class DockPaddingUiTest {
         showHome(SixColumns)
 
         val room = ringRoom(126.67f)
+        assertSides(Sides(room, 24f, room, 24f), padding(last = 6))
+    }
+
+    @Test
+    fun with_focus_overshoot_a_dock_pads_its_sides_for_the_ring_at_the_peak_of_the_pop() {
+        showHome(SixColumns, motion = Motion(focusOvershoot = true))
+
+        val room = 126.67f * 0.072f + 9f * 1.144f + 12f
         assertSides(Sides(room, 24f, room, 24f), padding(last = 6))
     }
 

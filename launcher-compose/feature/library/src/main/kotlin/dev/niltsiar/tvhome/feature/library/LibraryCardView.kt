@@ -94,7 +94,7 @@ private val NameHeight = 32.dp
 internal const val NAME_LINES = 2
 private val EnterRise = 28.dp
 private const val POP_SCALE = 0.12f
-private const val FOCUSED_SCALE = 1.08f
+internal const val FOCUSED_SCALE = 1.08f
 private val OnHomeTint = Color(0x1475BBA4)
 private const val RIM_ALPHA = 0.09f
 private val RecentGreen = Color(0xFF70D9A0)
@@ -222,7 +222,8 @@ internal fun LibraryCardView(
                     .onFocusChanged {
                         val target = if (it.isFocused) 1f else 0f
                         if (focus.targetValue != target) {
-                            scope.launch(start = CoroutineStart.UNDISPATCHED) { focus.animateTo(target, motion.focusSpec) }
+                            val spec = motion.focusSpec(it.isFocused, focus.value)
+                            scope.launch(start = CoroutineStart.UNDISPATCHED) { focus.animateTo(target, spec) }
                         }
                     }.then(
                         if (layout.selection) {
