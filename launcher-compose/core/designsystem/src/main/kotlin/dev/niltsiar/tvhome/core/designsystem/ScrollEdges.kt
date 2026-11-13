@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
@@ -20,44 +20,46 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/** How far a scrolling panel fades its content out at an edge with more content past it. */
-public val EdgeFade: Dp = 24.dp
+/** The band at an edge of a scrolling panel in which [fadeScrolledEdges] hides the content fully, the first part of [EdgeFade]. */
+private val EdgeClear: Dp = 12.dp
+
+/** How far a scrolling panel fades its content out at an edge with more content past it: [EdgeClear], then a 24 dp ramp. */
+public val EdgeFade: Dp = 36.dp
 
 /**
- * Fades the content over [EdgeFade] at the top and at the bottom as far as [scroll] has content hidden past that edge. Put it
- * before the `verticalScroll` it belongs to, so that it fades the viewport.
+ * Fades the content at the top and at the bottom as far as [scroll] has content hidden past that edge. Over [EdgeFade] from
+ * the edge, the first [EdgeClear] is hidden and the rest ramps to opaque. Less than [EdgeFade] from an end of the scroll the
+ * fade at that edge is weaker in proportion: with a scroll a quarter of [EdgeFade] from its start, the content at the top edge
+ * keeps three quarters of its alpha. Put it before the `verticalScroll` it belongs to, so that it fades the viewport.
  */
 public fun Modifier.fadeScrolledEdges(scroll: ScrollState): Modifier =
     graphicsLayer {
         val hidden = scroll.value > 0 || scroll.value < scroll.maxValue
         compositingStrategy = if (hidden) CompositingStrategy.Offscreen else CompositingStrategy.Auto
-    }.drawWithContent {
-        drawContent()
+    }.drawWithCache {
         val fade = EdgeFade.toPx()
-        val above = (scroll.value / fade).coerceIn(0f, 1f)
-        val below = ((scroll.maxValue - scroll.value) / fade).coerceIn(0f, 1f)
+        val clear = EdgeClear.toPx() / fade
         val mask = Size(size.width, fade)
-        if (above > 0f) {
-            drawRect(
-                Brush.verticalGradient(listOf(Color.Black.copy(alpha = 1f - above), Color.Black), 0f, fade),
-                size = mask,
-                blendMode = BlendMode.DstIn,
-            )
-        }
-        if (below > 0f) {
-            translate(top = size.height - fade) {
-                drawRect(
-                    Brush.verticalGradient(listOf(Color.Black, Color.Black.copy(alpha = 1f - below)), 0f, fade),
-                    size = mask,
-                    blendMode = BlendMode.DstIn,
-                )
+        // The masks cut the content out (DstOut) as far as they are opaque; the draw's alpha sets how strong a fade is.
+        val top = Brush.verticalGradient(0f to Color.Black, clear to Color.Black, 1f to Color.Transparent, endY = fade)
+        val bottom = Brush.verticalGradient(0f to Color.Transparent, 1f - clear to Color.Black, 1f to Color.Black, endY = fade)
+        onDrawWithContent {
+            drawContent()
+            val above = (scroll.value / fade).coerceIn(0f, 1f)
+            val below = ((scroll.maxValue - scroll.value) / fade).coerceIn(0f, 1f)
+            if (above > 0f) drawRect(top, size = mask, alpha = above, blendMode = BlendMode.DstOut)
+            if (below > 0f) {
+                translate(top = size.height - fade) {
+                    drawRect(bottom, size = mask, alpha = below, blendMode = BlendMode.DstOut)
+                }
             }
         }
     }
 
 /**
  * [content] in which a focused child scrolls at least [clear] clear of the edge it moves towards, [EdgeFade] by default so
- * that focus stays out of the fade of [fadeScrolledEdges]; a scroll that cannot go further leaves it nearer.
+ * that focus stays out of the whole fade of [fadeScrolledEdges], its hidden band and its ramp. A scroll that cannot go further
+ * leaves it nearer, and so does a viewport less than the child's height plus twice [clear]: the child then sits in the middle.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

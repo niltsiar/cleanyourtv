@@ -41,6 +41,9 @@ import kotlin.math.abs
 private const val ROWS = 10
 private val Row = 46.dp
 
+/** Inside a row, 4 dp from the bare surface that [GlassDropdownScrollUiTest.through] reads: the sheen varies across the panel. */
+private val HiddenX = 10.dp
+
 /** A scrolling [GlassDropdown] of ten black rows, read from the rendered pixels: where it ends and where its content fades. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -137,16 +140,23 @@ class GlassDropdownScrollUiTest {
         inside.forEach { assertTrue("row $it", compose.onNodeWithTag("row:$it").getUnclippedBoundsInRoot().bottom <= panel.bottom) }
     }
 
+    /** Fails unless a row, not a gap, lies at [y]. */
+    private fun assertRowAt(y: Dp) {
+        val rows = (0 until ROWS).map { compose.onNodeWithTag("row:$it").getUnclippedBoundsInRoot() }
+        assertTrue("a row at $y", rows.any { it.top < y && it.bottom > y })
+    }
+
     @Test
-    fun the_edge_with_hidden_rows_fades_over_24_dp_and_the_edge_without_stays_whole() {
+    fun the_edge_with_hidden_rows_hides_its_first_12_dp_and_fades_over_36_dp_and_the_edge_without_stays_whole() {
         show()
 
         // Row 0 starts 14 dp under the top edge; nothing is hidden above it.
         assertNear(0, redUnderTop(15.dp), 2)
-        // Rows lie below, and the last whole row ends 4 dp over the edge: its bottom 20 dp are in the fade.
-        assertNear(through(10 / 24f, panelEdge.bottom - 10.dp), redAboveBottom(10.dp), 14)
-        assertNear(through(20 / 24f, panelEdge.bottom - 20.dp), redAboveBottom(20.dp), 14)
-        assertNear(0, redAboveBottom(28.dp), 2)
+        // Rows lie below: hidden in the 12 dp band at the edge, half shown in the middle of the ramp, whole past it.
+        listOf(6.dp, 24.dp, 40.dp).forEach { assertRowAt(panelEdge.bottom - it) }
+        assertNear(through(0f, panelEdge.bottom - 6.dp), redAt(panelEdge.bottom - 6.dp, x = HiddenX), 2)
+        assertNear(through(0.5f, panelEdge.bottom - 24.dp), redAboveBottom(24.dp), 14)
+        assertNear(0, redAboveBottom(40.dp), 2)
     }
 
     @Test
@@ -158,10 +168,10 @@ class GlassDropdownScrollUiTest {
         compose.onNodeWithTag("row:${ROWS - 1}").assertIsFocused()
         // The last row ends 14 dp over the edge; nothing is hidden below it.
         assertNear(0, redAboveBottom(15.dp), 2)
-        // A row, not a gap, lies 12 dp under the top edge: half the fade.
-        val rows = (0 until ROWS).map { compose.onNodeWithTag("row:$it").getUnclippedBoundsInRoot() }
-        assertTrue("no row at the top edge", rows.any { it.top < panelEdge.top + 12.dp && it.bottom > panelEdge.top + 12.dp })
-        assertNear(through(0.5f, panelEdge.top + 12.dp), redUnderTop(12.dp), 14)
+        // Rows lie in the band at the top edge, where they are hidden, and in the middle of the ramp, where they show half.
+        listOf(6.dp, 24.dp).forEach { assertRowAt(panelEdge.top + it) }
+        assertNear(through(0f, panelEdge.top + 6.dp), redAt(panelEdge.top + 6.dp, x = HiddenX), 2)
+        assertNear(through(0.5f, panelEdge.top + 24.dp), redUnderTop(24.dp), 14)
     }
 
     @Test

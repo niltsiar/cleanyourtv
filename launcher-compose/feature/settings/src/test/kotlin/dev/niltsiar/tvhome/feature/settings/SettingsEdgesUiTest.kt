@@ -295,7 +295,7 @@ class SettingsEdgesUiTest {
     }
 
     @Test
-    fun after_scrolling_down_the_top_edge_fades() {
+    fun after_scrolling_down_the_top_edge_fades_and_shows_nothing_in_its_first_12_dp() {
         show { 190.dp }
         repeat(30) { press(Key.DirectionDown) }
         val selected = settingsSections(TvConfig()).flatMap { it.rows }.first { it.id == SettingsRowId.InputArrival }.selected

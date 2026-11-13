@@ -150,7 +150,7 @@ public fun <T> GlassMenu(
  * one of the rows; focus cannot leave the panel. With [above] the panel sits 10 dp above the anchor when it fits
  * there, before it tries below; [anchorGap] is that distance, 10 dp by default. With [bottomLimit] (in the root's
  * coordinates) a panel that hangs below the anchor ends at or above it, and scrolls when its content is taller: it
- * fades its content over 24 dp at an edge with more content past it, and a focused child scrolls clear of that fade.
+ * fades its content over [EdgeFade] at an edge with more content past it, and a focused child scrolls clear of that fade.
  * With [childHeights], the heights of [content]'s children, such a panel ends between two children rather than through
  * one; a [MenuDivider] counts with the child under it, so that the panel never ends on a divider. With [columnGap] the
  * anchor is one column of a grid whose columns are [columnGap] apart: the panel is a whole number of
