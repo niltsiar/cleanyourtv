@@ -72,7 +72,8 @@ class TvConfigParserTest {
         )
         assertEquals(0, config.openOnStartNetworkWait)
         assertTrue(config.keyFilter)
-        assertFalse(config.gamepadPassthrough || config.consumeVolumeKeys || config.homeLongPressHome || config.captureInputKeys)
+        assertFalse(config.gamepadPassthrough || config.consumeVolumeKeys || config.volumePausesFilter)
+        assertFalse(config.homeLongPressHome || config.captureInputKeys)
         assertFalse(config.backOpensClock || config.powerOnHome || config.homeIgnoreChannelKeys)
         assertEquals(emptyList<Int>(), config.settingsKeyKeycodes + config.settingsKeyScancodes + config.inputKeyKeycodes)
         assertEquals(null, config.stockHomeRedirect)
@@ -194,13 +195,15 @@ class TvConfigParserTest {
     fun the_remote_key_service_keys_are_read_and_a_wrong_type_keeps_the_default() {
         val parsed =
             parseTvConfig(
-                """{"key_filter": false, "gamepad_passthrough": true, "consume_volume_keys": true, "home_long_press_home": true,
+                """{"key_filter": false, "gamepad_passthrough": true, "consume_volume_keys": true, "volume_pauses_filter": true,
+                   "home_long_press_home": true,
                    "back_opens_clock": true, "settings_key_scancodes": [159], "stock_home_redirect": " com.google.android.apps.tv.launcherx ",
                    "app_keys": ["scan:490:com.wbd.hbomax", "hold:KEYCODE_BUTTON_8:org.xbmc.kodi"]}""",
             )
         val config = parsed.config
         assertFalse(config.keyFilter)
-        assertTrue(config.gamepadPassthrough && config.consumeVolumeKeys && config.homeLongPressHome && config.backOpensClock)
+        assertTrue(config.gamepadPassthrough && config.consumeVolumeKeys && config.volumePausesFilter)
+        assertTrue(config.homeLongPressHome && config.backOpensClock)
         assertEquals(listOf(159), config.settingsKeyScancodes)
         assertEquals("com.google.android.apps.tv.launcherx", config.stockHomeRedirect)
         assertEquals(listOf("scan:490:com.wbd.hbomax", "hold:KEYCODE_BUTTON_8:org.xbmc.kodi"), config.appKeys)
@@ -664,6 +667,7 @@ class TvConfigParserTest {
             "key_filter" to ("false" to defaults.copy(keyFilter = false)),
             "gamepad_passthrough" to ("true" to defaults.copy(gamepadPassthrough = true)),
             "consume_volume_keys" to ("true" to defaults.copy(consumeVolumeKeys = true)),
+            "volume_pauses_filter" to ("true" to defaults.copy(volumePausesFilter = true)),
             "stock_home_redirect" to (""""com.stock"""" to defaults.copy(stockHomeRedirect = "com.stock")),
             "home_long_press_home" to ("true" to defaults.copy(homeLongPressHome = true)),
             "home_ignore_channel_keys" to ("true" to defaults.copy(homeIgnoreChannelKeys = true)),

@@ -176,7 +176,14 @@ public class KeyService : AccessibilityService() {
             if (adjustServiceInfo(it, config.keyFilter, windowEvents)) serviceInfo = it
         }
         if (stockHome.isNotEmpty() || plan.liveTv.isNotEmpty()) probeAtBoot()
-        if (config.gamepadPassthrough && config.keyFilter) gamepads = GamepadPassthrough(this).also { it.start() }
+        if (config.keyFilter && (config.gamepadPassthrough || config.volumePausesFilter)) {
+            gamepads =
+                GamepadPassthrough(this, config.gamepadPassthrough, config.volumePausesFilter, timer) {
+                    SharedPresses.release(this)
+                    // consume_volume_keys: the held key's UP will not come either.
+                    volume?.stop()
+                }.also { it.start() }
+        }
         applyStandbyOptIn()
     }
 

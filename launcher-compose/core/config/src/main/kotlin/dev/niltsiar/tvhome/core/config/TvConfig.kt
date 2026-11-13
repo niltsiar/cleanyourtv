@@ -211,6 +211,8 @@ public data class TvConfig(
     val gamepadPassthrough: Boolean = false,
     /** The key service swallows Volume Up and Down and repeats a held one itself. */
     val consumeVolumeKeys: Boolean = false,
+    /** With [keyFilter]: a volume change stops the key service filtering for 4 s, for firmware where a held volume key repeats only without a filter. */
+    val volumePausesFilter: Boolean = false,
     /** Package of the stock launcher whose home screen is sent back here; null leaves it alone. */
     val stockHomeRedirect: String? = null,
     /** The key service takes every Home press, a held one too, instead of Android's long-press action. */

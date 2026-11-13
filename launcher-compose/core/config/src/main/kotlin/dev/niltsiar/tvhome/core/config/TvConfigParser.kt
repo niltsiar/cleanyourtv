@@ -169,6 +169,7 @@ public fun parseTvConfig(json: String): ParsedConfig {
             keyFilter = o.bool("key_filter", d.keyFilter),
             gamepadPassthrough = o.bool("gamepad_passthrough", d.gamepadPassthrough),
             consumeVolumeKeys = o.bool("consume_volume_keys", d.consumeVolumeKeys),
+            volumePausesFilter = o.bool("volume_pauses_filter", d.volumePausesFilter),
             stockHomeRedirect = o.optionalString("stock_home_redirect", d.stockHomeRedirect),
             homeLongPressHome = o.bool("home_long_press_home", d.homeLongPressHome),
             homeIgnoreChannelKeys = o.bool("home_ignore_channel_keys", d.homeIgnoreChannelKeys),
