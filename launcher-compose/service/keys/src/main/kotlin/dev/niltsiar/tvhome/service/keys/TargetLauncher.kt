@@ -16,14 +16,13 @@ private const val PROGRAM_DIR_TYPE = "vnd.android.cursor.dir/program"
 private const val CHANNEL_TYPE = "vnd.android.cursor.item/channel"
 
 /**
- * Runs what an app_keys target stands for. [performGlobal] is the accessibility service's global action; Home has none
- * (null), so back, home, recents and sleep are swallowed there and do nothing. An app or activity target that started is
- * passed to [opened].
+ * Runs what an app_keys target stands for. [performGlobal] runs a global action (back, home, recents, sleep). An app or
+ * activity target that started is passed to [opened].
  */
 internal class TargetLauncher(
     private val context: Context,
     private val settings: SystemSettings,
-    private val performGlobal: ((Int) -> Boolean)?,
+    private val performGlobal: (Int) -> Boolean,
     private val liveTvPackage: String?,
     private val opened: AppOpened,
 ) {
@@ -74,7 +73,7 @@ internal class TargetLauncher(
 
     private fun run(action: ActionWord) {
         globalAction(action, Build.VERSION.SDK_INT)?.let {
-            performGlobal?.invoke(it)
+            performGlobal(it)
             return
         }
         when (action) {

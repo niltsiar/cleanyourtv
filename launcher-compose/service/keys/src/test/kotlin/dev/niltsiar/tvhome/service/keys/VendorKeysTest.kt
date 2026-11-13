@@ -1,5 +1,6 @@
 package dev.niltsiar.tvhome.service.keys
 
+import android.accessibilityservice.AccessibilityService
 import android.app.Application
 import android.content.ComponentName
 import android.content.Intent
@@ -16,6 +17,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
@@ -92,6 +94,23 @@ class VendorKeysTest {
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(HOLD_MS))
 
         assertEquals("org.xbmc.kodi", shadowOf(app).nextStartedActivity?.component?.packageName)
+    }
+
+    @Test
+    fun a_global_action_on_a_vendor_key_goes_through_the_bound_key_service() {
+        val service = Robolectric.setupService(KeyService::class.java)
+        PowerMenu.bind(service)
+        try {
+            vendorKeys = keys("4062:back")
+
+            assertTrue(vendorKeys.handle(key(KeyEvent.ACTION_DOWN, 4062, device = 507)))
+            assertTrue(vendorKeys.handle(key(KeyEvent.ACTION_UP, 4062, device = 507, at = 1_100)))
+
+            assertEquals(listOf(AccessibilityService.GLOBAL_ACTION_BACK), shadowOf(service).globalActionsPerformed)
+            assertNull(shadowOf(app).nextStartedActivity)
+        } finally {
+            PowerMenu.unbind(service)
+        }
     }
 
     @Test

@@ -27,15 +27,18 @@ public class VendorKeys(
     private var appKeys = config.value.appKeys
     private var liveTvPackage = config.value.liveTvPackage
     private var keys = AppKeys(appKeys)
-    private var launcher = TargetLauncher(context, settings, performGlobal = null, liveTvPackage = liveTvPackage, opened = opened)
+    private var launcher = TargetLauncher(context, settings, ::performGlobal, liveTvPackage = liveTvPackage, opened = opened)
 
     private fun readAgain(now: TvConfig) {
         if (now.appKeys == appKeys && now.liveTvPackage == liveTvPackage) return
         appKeys = now.appKeys
         liveTvPackage = now.liveTvPackage
         keys = AppKeys(appKeys)
-        launcher = TargetLauncher(context, settings, performGlobal = null, liveTvPackage = liveTvPackage, opened = opened)
+        launcher = TargetLauncher(context, settings, ::performGlobal, liveTvPackage = liveTvPackage, opened = opened)
     }
+
+    /** Home has no global actions of its own: back, home, recents and sleep go through the bound [KeyService], if any. */
+    private fun performGlobal(action: Int): Boolean = PowerMenu.bound()?.performGlobalAction(action) ?: false
 
     /** True when the key was taken, so Home does not handle it. */
     public fun handle(event: KeyEvent): Boolean {

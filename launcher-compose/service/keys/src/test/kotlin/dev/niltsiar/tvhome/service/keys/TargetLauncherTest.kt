@@ -38,7 +38,7 @@ class TargetLauncherTest {
     private fun launcher(
         liveTvPackage: String? = null,
         context: Context = app,
-    ) = TargetLauncher(context, SystemSettings(app), performGlobal = null, liveTvPackage = liveTvPackage, opened = appLauncher)
+    ) = TargetLauncher(context, SystemSettings(app), performGlobal = { false }, liveTvPackage = liveTvPackage, opened = appLauncher)
 
     private fun installTvApp(pkg: String) {
         val component = ComponentName(pkg, "$pkg.Main")
