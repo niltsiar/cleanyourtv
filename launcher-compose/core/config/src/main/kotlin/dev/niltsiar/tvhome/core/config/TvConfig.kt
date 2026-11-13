@@ -33,7 +33,7 @@ public enum class HeaderScrim(
     Off("off"),
 }
 
-/** glass_style: how a focused tile is lit. [Glass] is the full look; [Rim] keeps the crisp ring alone; [Halo] adds a lighter glow to it. */
+/** glass_style: how a focused tile is lit. [Glass] is the full look; [Rim] keeps the ring alone, heavier; [Halo] adds a glow in the ring's colour to it. */
 public enum class GlassStyle(
     internal val jsonValue: String,
 ) {

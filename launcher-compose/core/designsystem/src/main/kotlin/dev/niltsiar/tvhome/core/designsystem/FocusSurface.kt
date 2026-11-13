@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.addOutline
 import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
@@ -42,30 +43,40 @@ import kotlinx.coroutines.launch
 /** How much a focused [FocusSurface] grows by default. */
 public const val TILE_FOCUSED_SCALE: Float = 1.08f
 private val RingWidth = 3.dp
+private val HeavyRingWidth = 4.dp
 private val RingGap = 3.dp
 private val HairlineWidth = 1.dp
 private val Hairline = Color(0x73000000)
 private val OuterStrokeWidth = 2.dp
 private val OuterStroke = Color.Black.copy(alpha = 0.55f)
-private val InnerStrokeWidth = 2.dp
+private val InnerStrokeClear = 1.dp
 private val InnerStroke = Color.White.copy(alpha = 0.90f)
 private val GlowElevation = 16.dp
 private val Gloss = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f), Color.Transparent))
 private const val PLATE_TOP_ALPHA = 0.22f
 private const val PLATE_BOTTOM_ALPHA = 0.06f
 private const val PLATE_STROKE_ALPHA = 0.3f
+private val HaloWidth = 16.dp
+private const val HALO_STEPS = 8
+private const val HALO_UNDER_ALPHA = 0.5f
+private const val HALO_SIDE_ALPHA = 0.25f
 
 /**
  * How a focused [FocusSurface] is lit, from glass_style. [slab] gives it the lit top and, with a [FocusSurface] `plate`, the
- * plate; [glowStrength] scales the colour of its glow, 0 leaving it out. The ring and its keyline are drawn in every style.
+ * plate; [glowStrength] scales the colour of its elevation glow, 0 leaving it out. [ringWidth] is the ring's width: a wider
+ * ring takes the room from the gap inside it, so its outer edge and [FocusRingReach] stay put. [halo] draws a glow in the
+ * ring's colour, [HaloWidth] wide past the keyline, at 0.5 under the surface and 0.25 at its sides and top, fading out.
+ * The ring and its keyline are drawn in every style.
  */
 public enum class FocusStyle(
     public val slab: Boolean,
     internal val glowStrength: Float,
+    internal val ringWidth: Dp,
+    internal val halo: Boolean,
 ) {
-    Glass(slab = true, glowStrength = 1f),
-    Rim(slab = false, glowStrength = 0f),
-    Halo(slab = false, glowStrength = 0.5f),
+    Glass(slab = true, glowStrength = 1f, ringWidth = RingWidth, halo = false),
+    Rim(slab = false, glowStrength = 0f, ringWidth = HeavyRingWidth, halo = false),
+    Halo(slab = false, glowStrength = 0f, ringWidth = RingWidth, halo = true),
 }
 
 /** How far the ring, with its hairline and dark stroke, reaches past a focused surface's edge, before the surface grows. */
@@ -78,11 +89,11 @@ public val FocusRingReach: Dp = RingGap + RingWidth + HairlineWidth + OuterStrok
  * concentric to the shape's, so a parent must leave the grown surface plus 9dp times [focusedScale] free around it or it
  * clips the ring. [onFocused] fires on gaining focus. [interactionSource] receives
  * the press and focus events, for content that reacts to them. [accent] colours the glow; unspecified takes the
- * theme's. [TvTheme.focusStyle] says which of the lit top, plate and glow it gets. [ring] colours the ring instead of
- * white. [ringBlends] ([ringBlendsWith]) puts a 2 dp white stroke at 0.90 in the outer part of the gap, between the dark
- * gap and the ring. [plate], when specified, is the colour of a plate behind the surface, out to the ring's inner edge with corners concentric to the shape's: it fades and grows with the ring, as one cue, and a
- * translucent surface shows it. [glow] turns the glow off: the elevation shadow also shows through
- * a translucent surface, as a dark patch. The animation starts in the focus callback and is read in the layer and draw
+ * theme's. [TvTheme.focusStyle] says which of the lit top, plate and glow it gets, and how wide the ring is. [ring]
+ * colours the ring, and a halo glow, instead of white. [ringBlends] ([ringBlendsWith]) puts a white stroke at 0.90 across
+ * the gap but its inner 1 dp, between the dark gap and the ring. [plate], when specified, is the colour of a plate behind the surface, out to the ring's inner edge with corners concentric to the shape's: it fades and grows with the ring, as one cue, and a
+ * translucent surface shows it. [glow] turns the glow off, a halo glow too: the elevation shadow also
+ * shows through a translucent surface, as a dark patch. The animation starts in the focus callback and is read in the layer and draw
  * lambdas, so a focus change neither recomposes nor relays out. [focusedScale] is the size it grows to. The growth is
  * drawn, not a layer scale, so the surface's bounds stay put while it grows and accessibility has nothing to update.
  * [growthPivot], given the surface's height in pixels, says how far under its top the growth is anchored, in the middle
@@ -110,6 +121,7 @@ public fun FocusSurface(
     val grownScale = motion.focusScale(focusedScale)
     val style = TvTheme.focusStyle
     val glowing = glow && style.glowStrength > 0f
+    val halo = glow && style.halo
     val glowColor = accent.takeOrElse { TvTheme.colors.accent }.let { it.copy(alpha = it.alpha * style.glowStrength) }
     val plateColor = if (style.slab) plate else Color.Unspecified
     val plateFill =
@@ -140,8 +152,10 @@ public fun FocusSurface(
                     ) {
                         val progress = focus.value.coerceIn(0f, 1f)
                         val outline = if (progress > 0f) shape.createOutline(size, layoutDirection, this) else null
-                        val width = RingWidth.toPx()
-                        val gap = RingGap.toPx()
+                        val width = style.ringWidth.toPx()
+                        val gap = (RingGap + RingWidth).toPx() - width
+                        val ringColour = ring?.invoke() ?: Color.White
+                        if (outline != null && halo) drawHalo(outline, ringColour, progress)
                         if (outline != null && plateFill != null) {
                             val behind = outline.grownBy(gap)
                             drawOutline(behind, plateFill, alpha = progress)
@@ -151,12 +165,12 @@ public fun FocusSurface(
                         if (outline != null) {
                             if (style.slab) drawOutline(outline, Gloss, alpha = progress)
                             if (ringBlends) {
-                                val inner = InnerStrokeWidth.toPx()
+                                val inner = gap - InnerStrokeClear.toPx()
                                 drawOutline(outline.grownBy(gap - inner / 2f), InnerStroke, alpha = progress, style = Stroke(inner))
                             }
                             drawOutline(
                                 outline.grownBy(gap + width / 2f),
-                                ring?.invoke() ?: Color.White,
+                                ringColour,
                                 alpha = progress,
                                 style = Stroke(width),
                             )
@@ -182,6 +196,30 @@ public fun FocusSurface(
                 }.clickable(interactionSource = interactionSource, indication = null, role = Role.Button, onClick = onClick),
         content = content,
     )
+}
+
+/**
+ * A halo glow around [outline] in [colour], past the ring's keyline: [HALO_STEPS] bands, each fainter than the one inside it,
+ * lit by a gradient that goes from the side alpha to the one under the surface across the ring's reach under its bottom edge.
+ */
+private fun DrawScope.drawHalo(
+    outline: Outline,
+    colour: Color,
+    progress: Float,
+) {
+    val reach = FocusRingReach.toPx()
+    val band = HaloWidth.toPx() / HALO_STEPS
+    val light =
+        Brush.verticalGradient(
+            listOf(colour.copy(alpha = HALO_SIDE_ALPHA), colour.copy(alpha = HALO_UNDER_ALPHA)),
+            startY = size.height,
+            endY = size.height + reach,
+        )
+    val stroke = Stroke(band)
+    for (step in 0 until HALO_STEPS) {
+        val fade = (HALO_STEPS - step) / HALO_STEPS.toFloat()
+        drawOutline(outline.grownBy(reach + band * (step + 0.5f)), light, alpha = progress * fade, style = stroke)
+    }
 }
 
 /**
