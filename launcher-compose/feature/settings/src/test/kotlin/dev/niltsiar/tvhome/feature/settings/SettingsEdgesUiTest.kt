@@ -10,11 +10,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PixelMap
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.getAlignmentLinePosition
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
@@ -314,6 +316,10 @@ class SettingsEdgesUiTest {
         val belowBand = shot.ink(chip.left + 14.dp, list.top + 30.dp, surfaceX = list.left + 12.dp)
         assertTrue("the selected chip must show below the band: $belowBand", belowBand > 20f)
         assertTrue("the top edge fades: $inBand against $belowBand", inBand * 3f < belowBand)
+
+        assertTrue("scrolled past the whole fade: $value", value >= EdgeFade.value * density)
+        val clear = shot.peakInk(DpRect(list.left, list.top, list.right, list.top + 12.dp), groundX = list.left + 12.dp)
+        assertTrue("nothing shows in the top 12 dp: $clear", clear < 3f)
     }
 
     /** From the first entry down to the last and back up, the focused one stays clear of every edge that fades. */
@@ -381,6 +387,15 @@ class SettingsEdgesUiTest {
         assertTrue("General between Reorder and Columns", general.bottom <= unclipped("setting:Columns").top)
         assertTrue("System between the last option and Follow theme", unclipped("setting:InputArrival").bottom <= system.top)
         assertTrue("System between the last option and Follow theme", system.bottom <= unclipped("settings:follow_theme").top)
+    }
+
+    @Test
+    fun a_heading_is_48_dp_tall_with_its_baseline_34_dp_under_its_top() {
+        show()
+        val heading = compose.onAllNodesWithTag("settings:heading")[0]
+
+        assertEquals(48f, heading.getUnclippedBoundsInRoot().height.value, 0.5f)
+        assertEquals(34f, heading.getAlignmentLinePosition(FirstBaseline).value, 0.5f)
     }
 
     /** A text of the row tagged [tag]: a row merges its texts, so the unmerged tree is read. */
