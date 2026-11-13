@@ -517,6 +517,37 @@ class AlwaysShowNamesUiTest {
     fun with_6_columns_the_ring_keeps_4_dp_from_the_pills_and_the_rim_and_a_pill_has_1_5_times_its_gap_before_the_next_element() =
         assertRingsKeepClear(6)
 
+    /**
+     * With focus_overshoot, the room between the pills of the first grid row and the tiles of the second: a ring at the 1.144
+     * peak of a pop, grown about the tile's bottom edge or 128.5 dp down, and 4 dp.
+     */
+    private fun assertRoomOverARowFitsThePeak(columns: Int) {
+        showHome(SixColumns.copy(columns = columns, alwaysShowNames = true), motion = Motion(focusOvershoot = true))
+        repeat(2) { press(Key.DirectionDown) }
+        val tile = bounds("tile:pkg.${2 * columns + 1}")
+        val pivot = minOf(tile.height.value, 128.5f)
+        val ring = pivot * 0.144f + 9f * 1.144f
+
+        val room = tile.top.value - (bounds("name:pkg.${columns + 1}").bottom.value + 2f)
+        // The layout places in whole pixels: at xhdpi an edge moves by up to 0.25 dp.
+        assertTrue("$room dp over a ${tile.height} tile, whose ring reaches $ring", room >= ring + 4f - 0.25f)
+    }
+
+    @Test
+    @Config(qualifiers = "w960dp-h1080dp-xhdpi")
+    fun with_focus_overshoot_and_2_columns_the_ring_at_the_peak_keeps_4_dp_from_the_pills_of_the_row_above() =
+        assertRoomOverARowFitsThePeak(2)
+
+    @Test
+    @Config(qualifiers = "w960dp-h1080dp-xhdpi")
+    fun with_focus_overshoot_and_4_columns_the_ring_at_the_peak_keeps_4_dp_from_the_pills_of_the_row_above() =
+        assertRoomOverARowFitsThePeak(4)
+
+    @Test
+    @Config(qualifiers = "w960dp-h1080dp-xhdpi")
+    fun with_focus_overshoot_and_7_columns_the_ring_at_the_peak_keeps_4_dp_from_the_pills_of_the_row_above() =
+        assertRoomOverARowFitsThePeak(7)
+
     private fun pillTops(vararg keys: String): List<Float> = keys.map { bounds("name:$it").top.value }
 
     @Test

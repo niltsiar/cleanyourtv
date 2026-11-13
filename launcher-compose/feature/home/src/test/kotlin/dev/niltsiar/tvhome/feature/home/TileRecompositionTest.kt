@@ -24,6 +24,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import dev.niltsiar.tvhome.core.config.ClockFormat
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
@@ -101,6 +102,7 @@ open class TileRecompositionTest {
         }
 
     protected open val alwaysShowNames = false
+    protected open val motion = Motion()
 
     private val inputs = MutableStateFlow(FourPorts)
     private val config = MutableStateFlow(TvConfig())
@@ -117,7 +119,7 @@ open class TileRecompositionTest {
                 columns = 6,
                 cinematicHome = true,
                 appLibrary = true,
-                focusOvershoot = false,
+                focusOvershoot = motion.focusOvershoot,
                 alwaysShowNames = alwaysShowNames,
                 inputArrival = true,
                 habitHint = true,
@@ -130,7 +132,7 @@ open class TileRecompositionTest {
                 val observing = home.setObserver(items)
                 onDispose { observing?.dispose() }
             }
-            TvTheme {
+            TvTheme(motion = motion) {
                 viewModel =
                     rememberHomeViewModel(
                         sources(
@@ -259,6 +261,11 @@ open class TileRecompositionTest {
 /** The names under the tiles fade in the draw phase, so a focus move recomposes no more than without them. */
 class NamedTileRecompositionTest : TileRecompositionTest() {
     override val alwaysShowNames = true
+}
+
+/** A tile that pops draws over its neighbours by an order read in the placement phase, so a focus move recomposes no more. */
+class PoppingTileRecompositionTest : TileRecompositionTest() {
+    override val motion = Motion(focusOvershoot = true)
 }
 
 @OptIn(InternalComposeTracingApi::class)

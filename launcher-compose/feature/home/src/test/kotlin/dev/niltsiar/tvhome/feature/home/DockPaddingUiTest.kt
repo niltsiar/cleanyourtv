@@ -3,9 +3,11 @@ package dev.niltsiar.tvhome.feature.home
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
@@ -14,6 +16,7 @@ import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.DpRect
 import dev.niltsiar.tvhome.core.config.TvConfig
@@ -23,6 +26,7 @@ import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -44,6 +48,7 @@ class DockPaddingUiTest {
     // Enough apps below the dock for the grid to scroll, which is what a pivot that is off would do.
     private val apps = (1..18).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") }
     private var look by mutableStateOf(DockLook())
+    private var shown by mutableStateOf(SixColumns)
 
     private fun showHome(
         config: TvConfig = SixColumns,
@@ -52,19 +57,22 @@ class DockPaddingUiTest {
     ) {
         val sources = sources(apps = flowOf(AppList(apps, docked)))
         look = config.dockLook()
+        shown = config
         compose.setContent {
             TvTheme(motion = motion) {
-                val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
-                val state = viewModel.uiState.collectAsState()
-                HomeScreen(
-                    state = { state.value },
-                    layout = config.homeLayout(),
-                    onFocus = viewModel::onFocus,
-                    onClick = {},
-                    topBar = config.topBarLayout(),
-                    dockLook = look,
-                    actions = viewModel.actions,
-                )
+                key(shown) {
+                    val viewModel = rememberHomeViewModel(sources, shown, mutableListOf())
+                    val state = viewModel.uiState.collectAsState()
+                    HomeScreen(
+                        state = { state.value },
+                        layout = shown.homeLayout(),
+                        onFocus = viewModel::onFocus,
+                        onClick = {},
+                        topBar = shown.topBarLayout(),
+                        dockLook = look,
+                        actions = viewModel.actions,
+                    )
+                }
             }
         }
         // A TV has no touch screen; the native graphics mode starts in touch mode, where nothing takes key focus.
@@ -72,6 +80,16 @@ class DockPaddingUiTest {
             compose.activity.window.decorView
                 .requestFocusFromTouch()
         }
+        settle()
+        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+    }
+
+    /** Shows Home again with [config], in the theme [showHome] set. */
+    private fun switchTo(config: TvConfig) {
+        look = config.dockLook()
+        shown = config
+        settle()
+        compose.onNodeWithTag("tile:pkg.1").performSemanticsAction(SemanticsActions.RequestFocus)
         settle()
         compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
     }
@@ -141,6 +159,75 @@ class DockPaddingUiTest {
         assertSides(Sides(room, 24f, room, 24f), padding(last = 6))
     }
 
+    /** A dock tile's height, and how far its ring reaches over and under it at the peak of a pop, in dp. */
+    private data class PeakRing(
+        val height: Float,
+        val over: Float,
+        val under: Float,
+    )
+
+    /** The ring of a dock tile [height] dp high at the 1.144 peak of a pop: with names it grows about its bottom edge, or 128.5 dp down. */
+    private fun peakRing(
+        height: Float,
+        names: Boolean,
+    ): PeakRing {
+        val pivot = if (names) minOf(height, 128.5f) else height / 2f
+        return PeakRing(height, pivot * 0.144f + 9f * 1.144f, (height - pivot) * 0.144f + 9f * 1.144f)
+    }
+
+    /** With focus on the second tile, the first tile's ring at the peak and its room over it and under it to its name's pill. */
+    private fun namedRoom(): Triple<PeakRing, Float, Float> {
+        press(Key.DirectionRight)
+        val tile = dockTile(1)
+        val pill = compose.onNodeWithTag("name:pkg.1").getBoundsInRoot()
+        val ring = peakRing((tile.bottom - tile.top).value, names = true)
+        return Triple(ring, (tile.top - dock().top).value, (pill.top - tile.bottom).value - 2f)
+    }
+
+    @Test
+    fun with_focus_overshoot_and_names_the_ring_at_the_peak_keeps_4_dp_from_the_rim_and_the_pill_with_2_to_7_columns() {
+        showHome(TvConfig(columns = 2, alwaysShowNames = true), motion = Motion(focusOvershoot = true))
+        for (columns in 2..7) {
+            switchTo(TvConfig(columns = columns, alwaysShowNames = true))
+            val (ring, over, toPill) = namedRoom()
+
+            assertTrue("$columns columns: $over dp over a ring of ${ring.over}", over >= ring.over + 4f - HALF_PIXEL)
+            assertTrue("$columns columns: $toPill dp to the pill under a ring of ${ring.under}", toPill >= ring.under + 4f - HALF_PIXEL)
+        }
+    }
+
+    @Test
+    fun without_focus_overshoot_a_named_dock_keeps_a_gap_over_its_tiles_and_14_dp_and_their_growth_to_the_pill() {
+        showHome(TvConfig(columns = 2, alwaysShowNames = true))
+        for (columns in 2..7) {
+            switchTo(TvConfig(columns = columns, alwaysShowNames = true))
+            val (ring, over, toPill) = namedRoom()
+
+            assertEquals("$columns columns", 24f, over, 0.6f)
+            assertEquals("$columns columns", 14f + 0.08f * (ring.height - minOf(ring.height, 128.5f)), toPill, 0.6f)
+        }
+    }
+
+    @Test
+    fun with_focus_overshoot_a_2_column_dock_without_names_pads_its_top_and_bottom_for_the_ring_at_the_peak() {
+        showHome(TvConfig(columns = 2), motion = Motion(focusOvershoot = true))
+
+        val sides = padding(last = 2)
+        val tile = dockTile(1)
+        val ring = peakRing((tile.bottom - tile.top).value, names = false)
+        assertTrue("top ${sides.top} over a ring of ${ring.over}", sides.top >= ring.over + 4f - HALF_PIXEL)
+        assertTrue("bottom ${sides.bottom} under a ring of ${ring.under}", sides.bottom >= ring.under + 4f - HALF_PIXEL)
+    }
+
+    @Test
+    fun without_focus_overshoot_a_2_column_dock_without_names_pads_its_top_and_bottom_by_a_gap() {
+        showHome(TvConfig(columns = 2))
+
+        val sides = padding(last = 2)
+        assertEquals(24f, sides.top, 0.6f)
+        assertEquals(24f, sides.bottom, 0.6f)
+    }
+
     @Test
     fun even_padding_gives_the_top_and_bottom_the_sides_padding_when_that_is_more_than_a_gap() {
         showHome(SixColumns.copy(dockEvenPadding = true))
@@ -200,3 +287,6 @@ class DockPaddingUiTest {
         return clearance
     }
 }
+
+/** The layout places in whole pixels; at xhdpi rounding moves an edge by up to half of one, in dp. */
+private const val HALF_PIXEL = 0.25f

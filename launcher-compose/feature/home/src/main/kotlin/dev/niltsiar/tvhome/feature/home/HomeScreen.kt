@@ -5,6 +5,7 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -143,6 +144,7 @@ import dev.niltsiar.tvhome.core.designsystem.TILE_FOCUSED_SCALE
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.clipsHalo
 import dev.niltsiar.tvhome.core.designsystem.holdOk
+import dev.niltsiar.tvhome.core.designsystem.popsOver
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.designsystem.ringBlendsWith
 import dev.niltsiar.tvhome.core.model.AppEntry
@@ -193,20 +195,51 @@ internal fun namePivot(
     return minOf(tileHeight, reach / (scale - 1f))
 }
 
-/** The gap under a tile [tileHeight] dp high to its pill: [TileNameGap], and the tile's growth under its bottom edge past it. */
+/**
+ * The gap under a tile [tileHeight] dp high to its pill: [TileNameGap], and the tile's growth under its bottom edge past it.
+ * A tile that grows [scale] times and pops to [peak] has the gap for its growth and ring at the peak, [NameRingClearance]
+ * clear of the pill.
+ */
 internal fun nameGap(
     tileHeight: Float,
     scale: Float,
-): Float = TileNameGap.value + (scale - 1f).coerceAtLeast(0f) * (tileHeight - namePivot(tileHeight, scale))
+    peak: Float = scale,
+): Float =
+    maxOf(TileNameGap.value, FocusRingReach.value * peak + NameRingClearance.value) +
+        (peak - 1f).coerceAtLeast(0f) * (tileHeight - namePivot(tileHeight, scale))
+
+/**
+ * The room over a tile that grows [scale] times about [pivot] dp under its top: the [TileGap], or, when it pops to [peak],
+ * its growth and ring at the peak and [NameRingClearance] if that is more.
+ */
+internal fun roomOver(
+    pivot: Float,
+    scale: Float,
+    peak: Float,
+): Float =
+    if (peak <= scale) {
+        TileGap.value
+    } else {
+        maxOf(TileGap.value, pivot * (peak - 1f) + FocusRingReach.value * peak + NameRingClearance.value)
+    }
 
 /** The least the space under a pill is of its [nameGap], so that the pill reads as the name of the tile over it. */
 private const val NAME_BELOW_RATIO = 1.5f
 
-/** What a tile [tileHeight] dp high adds under its pill, so that the space to what follows (a [TileGap] away) is [NAME_BELOW_RATIO] times its gap. */
+/**
+ * What a tile [tileHeight] dp high adds under its pill, so that the space to what follows (a [TileGap] away) is
+ * [NAME_BELOW_RATIO] times its gap, and at least the [roomOver] of a tile as high in the row under it.
+ */
 internal fun nameBelow(
     tileHeight: Float,
     scale: Float,
-): Float = maxOf(0f, NAME_BELOW_RATIO * nameGap(tileHeight, scale) - TileGap.value)
+    peak: Float = scale,
+): Float =
+    maxOf(
+        0f,
+        NAME_BELOW_RATIO * nameGap(tileHeight, scale, peak) - TileGap.value,
+        roomOver(namePivot(tileHeight, scale), scale, peak) - TileGap.value,
+    )
 
 /** One line of a tile's name and the padding of its pill. */
 private val NameLine = 20.dp
@@ -260,18 +293,19 @@ internal data class DockPadding(
 )
 
 /**
- * The padding of a dock panel whose focused end tile's ring needs [ringSide] to the wall. A [shrunk] panel (fewer tiles than
- * the row holds) keeps at least [DockShrunkSide]. With [even] the top and bottom take the side's padding, or [TileGap] if
- * that is more, and so does the side.
+ * The padding of a dock panel whose focused end tile's ring needs [ringSide] to the wall and [vertical] over and under the
+ * tiles. A [shrunk] panel (fewer tiles than the row holds) keeps at least [DockShrunkSide]. With [even] the top and bottom
+ * take the side's padding, or [vertical] if that is more, and so does the side.
  */
 internal fun dockPadding(
     ringSide: Dp,
     shrunk: Boolean,
     even: Boolean,
+    vertical: Dp = TileGap,
 ): DockPadding {
     val side = if (shrunk) maxOf(DockShrunkSide, ringSide) else ringSide
-    if (!even) return DockPadding(side)
-    val all = maxOf(side, TileGap)
+    if (!even) return DockPadding(side, vertical)
+    val all = maxOf(side, vertical)
     return DockPadding(all, all)
 }
 
@@ -991,7 +1025,7 @@ private const val GROUP_MS = 320
 private const val GROUP_OVERSHOOT_DAMPING = 0.7f
 
 /**
- * The dock panel's padding in this window, from the width of the dock row's tiles, which sets the room a focused end tile's
+ * The dock panel's padding in this window, from the width of the dock row's tiles, which sets the room a focused tile's
  * ring needs: at the tile's peak size, past its grown size with focus_overshoot.
  */
 @Composable
@@ -1003,9 +1037,12 @@ private fun rememberDockPadding(
     val density = LocalDensity.current
     val windowWidth = LocalWindowInfo.current.containerSize.width
     val shrunk by remember(state, layout, look) { derivedStateOf { look.shrinks(layout, state.value().dock.size) } }
-    val scale = TvTheme.motion.focusPeakScale(TILE_FOCUSED_SCALE)
+    val scale = TvTheme.motion.focusScale(TILE_FOCUSED_SCALE)
+    val peak = TvTheme.motion.focusPeakScale(TILE_FOCUSED_SCALE)
     val tileWidth = dockRowTileWidth(with(density) { windowWidth.toDp() } - ScreenMargin * 2, layout.columns)
-    return dockPadding(density.dockRingSide(tileWidth, scale), shrunk, look.evenPadding)
+    val tileHeight = tileWidth.value / TILE_ASPECT
+    val pivot = if (layout.showNames) namePivot(tileHeight, scale) else tileHeight / 2f
+    return dockPadding(density.dockRingSide(tileWidth, peak), shrunk, look.evenPadding, roomOver(pivot, scale, peak).dp)
 }
 
 @Composable
@@ -1019,6 +1056,7 @@ private fun rememberFocusDim(
     val window = LocalWindowInfo.current.containerSize
     val gridCount by remember(state) { derivedStateOf { state.value().grid.size } }
     val scale = TvTheme.motion.focusScale(TILE_FOCUSED_SCALE)
+    val peak = TvTheme.motion.focusPeakScale(TILE_FOCUSED_SCALE)
     val (lowering, band, hero) =
         with(density) {
             val width = window.width.toDp()
@@ -1041,7 +1079,7 @@ private fun rememberFocusDim(
                         gridRows = gridRows,
                         rowsBelowDock = layout.rowsBelowDock,
                         bottomMargin = GridBottom.value,
-                        nameRoom = layout.nameRoom(tileHeight.value, scale),
+                        nameRoom = layout.nameRoom(tileHeight.value, scale, peak),
                     ).dp
                 }
             val start = gridStart(gridWidth, share)
@@ -1055,7 +1093,7 @@ private fun rememberFocusDim(
                     edge,
                     top / height,
                     end,
-                    (top + tileHeight + dockPadding.vertical * 2 + layout.nameRoom(tileHeight.value, scale).dp) / height,
+                    (top + tileHeight + dockPadding.vertical * 2 + layout.nameRoom(tileHeight.value, scale, peak).dp) / height,
                 ),
                 Rect(
                     ScreenMargin / width,
@@ -1103,7 +1141,13 @@ private fun gridStart(
 private fun HomeLayout.nameRoom(
     tileHeight: Float,
     scale: Float,
-): Float = if (showNames) nameGap(tileHeight, scale) + (NameLine + NamePillDown * 2).value + nameBelow(tileHeight, scale) else 0f
+    peak: Float,
+): Float =
+    if (showNames) {
+        nameGap(tileHeight, scale, peak) + (NameLine + NamePillDown * 2).value + nameBelow(tileHeight, scale, peak)
+    } else {
+        0f
+    }
 
 /** The row focus is on, as [FocusDim.row] counts it. */
 private fun focusRowOf(
@@ -2005,15 +2049,17 @@ private fun AppTile(
     glassEdge: Boolean = false,
     bannerName: Boolean = true,
     growthPivot: ((Float) -> Float)? = null,
+    focus: Animatable<Float, AnimationVector1D> = remember { Animatable(0f) },
 ) {
-    val marked = if (habitMark) modifier.habitMark(input.habit, app.packageName) else modifier
+    val marked = (if (habitMark) modifier.habitMark(input.habit, app.packageName) else modifier).popsOver(focus)
     if (showName) {
         val scale = TvTheme.motion.focusScale(TILE_FOCUSED_SCALE)
+        val peak = TvTheme.motion.focusPeakScale(TILE_FOCUSED_SCALE)
         val density = LocalDensity.current
         val pivot: (
             Float,
         ) -> Float = remember(density, scale) { { height -> with(density) { namePivot(height.toDp().value, scale).dp.toPx() } } }
-        NameUnder(app, scale, marked) {
+        NameUnder(app, scale, peak, marked) {
             AppTile(
                 app,
                 accent,
@@ -2030,6 +2076,7 @@ private fun AppTile(
                 glassEdge = glassEdge,
                 bannerName = false,
                 growthPivot = pivot,
+                focus = focus,
             )
         }
         return
@@ -2061,6 +2108,7 @@ private fun AppTile(
         ring = ringColour,
         ringBlends = ringBlends,
         growthPivot = growthPivot,
+        focus = focus,
         modifier =
             (if (fadeUnused) marked.unusedFade(input.faded, key) else marked)
                 .then(if (reordering) Modifier.reorderLook(key, input, TileShape, growthPivot) else Modifier)
@@ -2142,6 +2190,7 @@ private fun AppTile(
 private fun NameUnder(
     app: AppEntry,
     scale: Float,
+    peak: Float,
     modifier: Modifier = Modifier,
     tile: @Composable () -> Unit,
 ) {
@@ -2156,9 +2205,11 @@ private fun NameUnder(
     ) { measurables, constraints ->
         val art = measurables[0].measure(constraints)
         val name = measurables[1].measure(Constraints(maxWidth = art.width))
-        val gap = nameGap(art.height.toDp().value, scale).dp.roundToPx()
+        val tileHeight = art.height.toDp().value
+        val gap = nameGap(tileHeight, scale, peak).dp.roundToPx()
+        val ringRoom = ceil((roomOver(namePivot(tileHeight, scale), scale, peak) - TileGap.value).dp.toPx()).toInt()
         // In whole pixels, so that rounding the two apart cannot leave the space under the pill short of its ratio.
-        val below = maxOf(0, ceil(NAME_BELOW_RATIO * gap).toInt() - TileGap.roundToPx())
+        val below = maxOf(0, ceil(NAME_BELOW_RATIO * gap).toInt() - TileGap.roundToPx(), ringRoom)
         layout(art.width, art.height + gap + name.height + below) {
             art.place(0, 0)
             name.place((art.width - name.width) / 2, art.height + gap)

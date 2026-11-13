@@ -72,6 +72,7 @@ import dev.niltsiar.tvhome.core.designsystem.MarqueeLine
 import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.holdOk
+import dev.niltsiar.tvhome.core.designsystem.popsOver
 import dev.niltsiar.tvhome.core.designsystem.ringBlendsWith
 import dev.niltsiar.tvhome.core.model.LibraryArt
 import dev.niltsiar.tvhome.core.model.describeLastOpened
@@ -196,7 +197,7 @@ internal fun LibraryCardView(
     val checkScale = remember(pulse) { { 1f + CHECK_PULSE_SCALE * (1f - abs(2f * pulse.value - 1f)).coerceIn(0f, 1f) } }
     Box(
         modifier =
-            modifier.fillMaxWidth().height(CardHeight).graphicsLayer {
+            modifier.popsOver(focus).fillMaxWidth().height(CardHeight).graphicsLayer {
                 compositingStrategy = CompositingStrategy.ModulateAlpha
                 alpha = enter.value.coerceIn(0f, 1f)
                 translationY = (1f - enter.value) * EnterRise.toPx()

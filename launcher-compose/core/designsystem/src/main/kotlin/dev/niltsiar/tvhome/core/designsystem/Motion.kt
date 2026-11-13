@@ -28,6 +28,9 @@ public data class Motion(
     /** Springs and endless loops run. */
     public val animated: Boolean get() = animations && !reducedMotion
 
+    /** Gaining focus pops: [focusOvershoot] with [animated]. */
+    public val pops: Boolean get() = focusOvershoot && animated
+
     /**
      * How a tile's scale and ring follow focus, from the progress [from] it has now: to 1 when [focused], to 0 when not.
      * The pop's first keyframe is [from] because a keyframe spec eases its first stretch only from a keyframe at 0.
@@ -36,7 +39,7 @@ public data class Motion(
         focused: Boolean,
         from: Float,
     ): FiniteAnimationSpec<Float> =
-        if (focused && focusOvershoot && animated) {
+        if (focused && pops) {
             keyframes {
                 durationMillis = OVERSHOOT_MS
                 from at 0 using FastOutSlowInEasing
@@ -47,8 +50,7 @@ public data class Motion(
         }
 
     /** The most a tile grown to [target] draws: [focusScale], or at the peak of the pop of [focusSpec] when it pops. */
-    public fun focusPeakScale(target: Float): Float =
-        if (focusOvershoot && animated) 1f + (target - 1f) * OVERSHOOT_PEAK else focusScale(target)
+    public fun focusPeakScale(target: Float): Float = if (pops) 1f + (target - 1f) * OVERSHOOT_PEAK else focusScale(target)
 
     /** How a lazy list moves an item to its new place; null leaves it jumping. */
     public val placementSpec: FiniteAnimationSpec<IntOffset>?

@@ -1,12 +1,14 @@
 package dev.niltsiar.tvhome.core.designsystem
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -31,6 +33,7 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.isUnspecified
 import androidx.compose.ui.graphics.takeOrElse
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -92,7 +95,8 @@ public val FocusRingReach: Dp = RingGap + RingWidth + HairlineWidth + OuterStrok
  * lambdas, so a focus change neither recomposes nor relays out. [focusedScale] is the size it grows to. The growth is
  * drawn, not a layer scale, so the surface's bounds stay put while it grows and accessibility has nothing to update.
  * [growthPivot], given the surface's height in pixels, says how far under its top the growth is anchored, in the middle
- * of its width; without it the surface grows about its centre.
+ * of its width; without it the surface grows about its centre. [focus] is its focus progress, for a parent that orders
+ * its children by it ([popsOver]).
  */
 @Composable
 public fun FocusSurface(
@@ -108,10 +112,10 @@ public fun FocusSurface(
     ringBlends: Boolean = false,
     plate: Color = Color.Unspecified,
     growthPivot: ((Float) -> Float)? = null,
+    focus: Animatable<Float, AnimationVector1D> = remember { Animatable(0f) },
     content: @Composable BoxScope.() -> Unit,
 ) {
     val motion = TvTheme.motion
-    val focus = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val grownScale = motion.focusScale(focusedScale)
     val style = TvTheme.focusStyle
@@ -192,6 +196,30 @@ public fun FocusSurface(
                 }.clickable(interactionSource = interactionSource, indication = null, role = Role.Button, onClick = onClick),
         content = content,
     )
+}
+
+/**
+ * When focus pops ([Motion.pops]), draws this item over its siblings while it gains focus, and over the ones at rest while
+ * it loses it, so that no neighbour drawn after it covers the ring of a pop. [focus] is the focus progress of the
+ * [FocusSurface] in it. The order is read in the placement phase: a focus move does not recompose.
+ */
+@Composable
+public fun Modifier.popsOver(focus: Animatable<Float, AnimationVector1D>): Modifier {
+    if (!TvTheme.motion.pops) return this
+    val order =
+        remember(focus) {
+            derivedStateOf {
+                when {
+                    focus.targetValue > 0f -> 2f
+                    focus.value > 0f -> 1f
+                    else -> 0f
+                }
+            }
+        }
+    return layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints)
+        layout(placeable.width, placeable.height) { placeable.place(0, 0, zIndex = order.value) }
+    }
 }
 
 /**
