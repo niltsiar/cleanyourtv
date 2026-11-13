@@ -167,6 +167,50 @@ class StatusReadsThatLauncherTest(unittest.TestCase):
         self.assertIn((manage.CLAIM_QUERY, True), calls)
 
 
+class TvPackageWinsTest(unittest.TestCase):
+    """TV_PACKAGE names the build to read even when another one wears the launcher activity and answers HOME."""
+
+    PACKAGE = "dev.niltsiar.tvhome"
+
+    def setUp(self):
+        with mock.patch.dict("os.environ", {"TV_PACKAGE": self.PACKAGE}):
+            spec = importlib.util.spec_from_file_location("manage_tv_package", ROOT / "tools" / "manage.py")
+            self.manage = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(self.manage)
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.root = Path(tmp.name)
+        self.pushed = json.dumps({"columns": 5, "greeting_name": "Room"})
+        theme = self.root / "themes" / "aerial" / "config.json"
+        theme.parent.mkdir(parents=True)
+        theme.write_text(self.pushed, encoding="utf-8")
+
+    def test_status_reads_the_tv_package_build_while_the_default_build_answers_home(self):
+        calls = []
+        own_cat = f"cat /sdcard/Android/data/{self.PACKAGE}/files/config.json 2>/dev/null"
+
+        def fake_tv(command, quiet=False):
+            calls.append(command)
+            if command.startswith("cmd package query-activities"):
+                return DEFAULT_COMPONENT + "\n"
+            return self.pushed if command == own_cat else ""
+
+        out = io.StringIO()
+        m = self.manage
+        with mock.patch.object(m, "ROOT", self.root), \
+                mock.patch.object(m, "installed_packages", return_value={"com.gathin.tvhome", self.PACKAGE}), \
+                mock.patch.object(m, "addons", return_value=[]), \
+                mock.patch.object(m, "themes", return_value=[{"id": "aerial"}]), \
+                mock.patch.object(m, "tv", fake_tv), contextlib.redirect_stdout(out):
+            code = m.cmd_status()
+        self.assertEqual(code, 0)
+        self.assertIn("launcher: installed\n", out.getvalue())
+        self.assertIn("theme: aerial", out.getvalue())
+        self.assertIn(own_cat, calls)
+        self.assertNotIn("cat /sdcard/Android/data/com.gathin.tvhome/files/config.json 2>/dev/null", calls)
+        self.assertNotIn(m.CLAIM_QUERY, calls)
+
+
 class OneHomeQueryInTheTreeTest(unittest.TestCase):
     """A second spelling of the query would drift the day either side is edited."""
 

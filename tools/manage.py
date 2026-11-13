@@ -75,7 +75,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 TOOLS = ROOT / "tools"
 # TV_PACKAGE points the tools at another build of the launcher, such as a fork's.
-LAUNCHER_PKG = os.environ.get("TV_PACKAGE") or "com.gathin.tvhome"
+TV_PACKAGE = os.environ.get("TV_PACKAGE")
+LAUNCHER_PKG = TV_PACKAGE or "com.gathin.tvhome"
 # The launcher does not always run under its default id: some firmware only lets a package name it allowlists be
 # Home, so launcher/app/build.gradle takes -PlauncherApplicationId and the device notes send people there
 # (docs/devices/xiaomi-mitv-mftr0-debloat-home.md wants com.ts.launcher on a China Xiaomi set, and
@@ -862,7 +863,12 @@ def launcher_package():
     `com.gathin.tvhome` stays the answer for a TV that says nothing: it is the build almost every reader has, and a
     set that cannot answer the query (an Android 8 firmware without `cmd package query-activities`) still gets the
     directory that build writes.
+
+    TV_PACKAGE, when set, is the answer and the TV is not asked: with two builds installed the query names the one
+    that wears `com.gathin.tvhome.MainActivity`, and a fork whose activity class lives elsewhere never matches it.
     """
+    if TV_PACKAGE:
+        return TV_PACKAGE
     for line in tv(CLAIM_QUERY, quiet=True).splitlines():
         line = line.strip()
         if not line.endswith("/" + LAUNCHER_ACTIVITY):
