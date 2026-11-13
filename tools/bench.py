@@ -16,9 +16,16 @@ TCP with the adb_shell library, so no adb binary is needed. That matters on macO
 platform tools are not installed by default.
 
 Usage:
-    TV_HOST=192.168.1.50 python tools/bench.py --keys 36 --series 3
-    TV_HOST=192.168.1.50 python tools/bench.py --keys 36 --series 3 --out-dir my-results
-    TV_HOST=192.168.1.50 python tools/bench.py --app org.videolan.vlc/.StartActivity
+    TV_HOST=192.168.1.50 tools/venv/bin/python -I tools/bench.py --keys 36 --series 3
+    TV_HOST=192.168.1.50 tools/venv/bin/python -I tools/bench.py --keys 36 --series 3 --out-dir my-results
+    TV_HOST=192.168.1.50 tools/venv/bin/python -I tools/bench.py --app org.videolan.vlc/.StartActivity
+
+The venv's Python is the one tools/requirements.txt installs adb_shell into, and the lines above name
+it rather than a bare `python`. Started with another Python this script runs again under the venv's
+one, which rescues the packages but not the name of the interpreter - `python` on its own is a command
+neither a stock Ubuntu 24.04 nor macOS has, so the line it used to print answered `command not found`
+(exit 127) before anything was read. docs/workflows/perf-ab.md and the other tools' headers already
+name the venv this way.
 
 --app names the app the cold start and the return to Home leave Home for. Without it, the TV's
 Settings, else the first leanback app that is not the launcher.
@@ -297,7 +304,9 @@ def measure_key(tv, keycode, binary=None, package=None):
         t0 = t_before
     if t0 is None:
         return None
-    rows = frame_rows(stats)
+    # gfxinfo emits a PROFILEDATA block per window, not one global timeline.
+    # Pick the first completion and movement gap in time order across those blocks.
+    rows = sorted(frame_rows(stats), key=lambda row: row[2])
     threshold = t0 * 1_000_000
     first = last = prev = None
     for flags, intended, completed in rows:
@@ -308,7 +317,7 @@ def measure_key(tv, keycode, binary=None, package=None):
             continue
         if (intended - prev) / 1e6 > 50:      # a gap: the movement is over
             break
-        last, prev = completed, intended
+        last, prev = completed, max(prev, intended)
     if first is None:
         return None
     # A key that moves nothing (the end of a row, the focus on the top bar) leaves the next
@@ -526,7 +535,8 @@ def idle_cpu(tv, package, seconds):
         for line in lines:
             if line.startswith("cpu "):
                 fields = [int(x) for x in line.split()[1:]]
-                return (sum(fields), fields[3] + fields[4])
+                # guest and guest_nice are already included in user and nice.
+                return (sum(fields[:8]), fields[3] + fields[4])
         return None
 
     def process_ticks(lines, pid):
