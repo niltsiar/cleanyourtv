@@ -2,6 +2,7 @@ plugins {
     id("tvhome.android.application")
     alias(libs.plugins.metro)
     alias(libs.plugins.baselineprofile)
+    id("tvhome.android.testballoon")
 }
 
 android {

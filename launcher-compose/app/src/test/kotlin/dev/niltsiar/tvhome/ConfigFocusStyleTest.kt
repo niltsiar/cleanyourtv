@@ -1,23 +1,21 @@
 package dev.niltsiar.tvhome
 
+import de.infix.testBalloon.framework.core.testSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.config.parseTvConfig
 import dev.niltsiar.tvhome.core.designsystem.FocusStyle
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import io.kotest.matchers.shouldBe
 
-class ConfigFocusStyleTest {
-    private fun styleOf(json: String): FocusStyle = parseTvConfig(json).config.focusStyle()
+val ConfigFocusStyleTest by testSuite {
+    fun styleOf(json: String): FocusStyle = parseTvConfig(json).config.focusStyle()
 
-    @Test
-    fun a_theme_without_glass_style_or_with_glass_gets_the_full_glass_look() {
-        assertEquals(FocusStyle.Glass, TvConfig().focusStyle())
-        assertEquals(FocusStyle.Glass, styleOf("""{"glass_style": "glass"}"""))
+    test("a theme without glass_style or with glass gets the full glass look") {
+        TvConfig().focusStyle() shouldBe FocusStyle.Glass
+        styleOf("""{"glass_style": "glass"}""") shouldBe FocusStyle.Glass
     }
 
-    @Test
-    fun rim_and_halo_reach_the_focus_look() {
-        assertEquals(FocusStyle.Rim, styleOf("""{"glass_style": "rim"}"""))
-        assertEquals(FocusStyle.Halo, styleOf("""{"glass_style": "halo"}"""))
+    test("rim and halo reach the focus look") {
+        styleOf("""{"glass_style": "rim"}""") shouldBe FocusStyle.Rim
+        styleOf("""{"glass_style": "halo"}""") shouldBe FocusStyle.Halo
     }
 }

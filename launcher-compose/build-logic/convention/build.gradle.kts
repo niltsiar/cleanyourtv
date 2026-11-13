@@ -13,6 +13,7 @@ dependencies {
     implementation(libs.kotlin.gradlePlugin)
     implementation(libs.kotlin.composeCompilerGradlePlugin)
     implementation(libs.spotless.gradlePlugin)
+    implementation(libs.testBalloon.gradlePlugin)
 }
 
 gradlePlugin {
@@ -36,6 +37,10 @@ gradlePlugin {
         register("androidLibraryCompose") {
             id = "tvhome.android.library.compose"
             implementationClass = "dev.niltsiar.tvhome.buildlogic.AndroidLibraryComposeConventionPlugin"
+        }
+        register("androidTestBalloon") {
+            id = "tvhome.android.testballoon"
+            implementationClass = "dev.niltsiar.tvhome.buildlogic.AndroidTestBalloonConventionPlugin"
         }
     }
 }

@@ -1,0 +1,163 @@
+# Unit tests with TestBalloon and Kotest assertions
+
+Local unit tests (`testDebugUnitTest`) use [TestBalloon](https://infix-de.github.io/testBalloon/) suites with
+[Kotest assertions](https://kotest.io/docs/assertions/assertions.html). JUnit 4 classes in the same module keep running
+beside the suites, so a module moves one class at a time.
+
+## Turn it on in a module
+
+1. Add the convention plugin to the module's `build.gradle.kts`:
+
+   ```kotlin
+   plugins {
+       id("tvhome.android.testballoon")
+   }
+   ```
+
+   It applies the `de.infix.testBalloon` Gradle plugin and adds the TestBalloon core, its Robolectric and Kotest
+   integrations, and `kotest-assertions-core` to `testImplementation`. Keep `libs.junit`, `libs.robolectric` and the
+   Compose test dependencies the module already has.
+
+2. Add one test session to the module's test sources, in the module's test package:
+
+   ```kotlin
+   class AppTestSession : TestSession(testConfig = DefaultConfiguration.kotestAssertionsSupport())
+   ```
+
+   `kotestAssertionsSupport()` makes `withClue` and `assertSoftly` safe when a test's coroutine changes thread.
+
+Do not enable JUnit Platform or JUnit Vintage on these test tasks, and do not set `maxParallelForks`: TestBalloon runs
+through the JUnit 4 runner on Android host tests.
+
+## A JUnit class becomes a suite
+
+| JUnit 4 | TestBalloon |
+|---|---|
+| `class FooTest { ... }` | `val FooTest by testSuite { ... }` (top-level property, same name) |
+| `@Test fun the_thing_happens()` | `test("the thing happens") { ... }` |
+| `private fun helper()` in the class | a local `fun helper()` inside the suite lambda |
+| `@get:Rule val rule = ...`, `lateinit var` fields, `@Before` | a `testFixture { object : JUnit4RulesContext() { ... } } asContextForEach { ... }` |
+| `@RunWith(RobolectricTestRunner::class)` and `@Config(...)` | `robolectricTestSuite<FooTestContent>(name, testConfig = TestConfig.robolectric { ... })` |
+
+The test name keeps the words of the old method name, with spaces in place of underscores.
+
+### Plain JVM
+
+```kotlin
+val ConfigFocusStyleTest by testSuite {
+    fun styleOf(json: String): FocusStyle = parseTvConfig(json).config.focusStyle()
+
+    test("rim and halo reach the focus look") {
+        styleOf("""{"glass_style": "rim"}""") shouldBe FocusStyle.Rim
+    }
+}
+```
+
+### Robolectric
+
+The suite registers a Robolectric suite. Its tests live in a separate class, which Robolectric loads in its sandbox.
+The `@Config` values in this project map to `TestConfig.robolectric` settings with the same name: `sdk = 31`,
+`application = TvHomeApplication::class`, `qualifiers = "..."` and `shadows += ShadowFoo::class`. Each test gets a fresh
+application, as with the JUnit runner.
+
+```kotlin
+val ClockActivityTest by testSuite {
+    robolectricTestSuite<ClockActivityTestContent>(
+        "sdk 31",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                application = TvHomeApplication::class
+            },
+    )
+}
+
+class ClockActivityTestContent :
+    RobolectricTestSuiteContent({
+        fun clock() = Robolectric.buildActivity(ClockActivity::class.java).create().start().resume()
+
+        test("a remote motion closes the clock") {
+            val activity = clock().get()
+            activity.dispatchGenericMotionEvent(MotionEvent.obtain(0, 0, MotionEvent.ACTION_HOVER_MOVE, 0f, 0f, 0)).shouldBeTrue()
+            activity.isFinishing.shouldBeTrue()
+        }
+    })
+```
+
+The content lambda cannot see members of its own class, so helpers are local functions inside the lambda. Robolectric
+suites do not nest: put plain `testSuite` groups inside the content class instead.
+
+### Compose UI
+
+A Compose test is a Robolectric suite whose tests get a fixture that registers the Compose rule. The fixture object
+also holds the old class's fields and helpers. `createComposeRule()` and `createAndroidComposeRule<A>()` (also the `v2`
+ones) work unchanged, and so do `waitUntil`, `mainClock` and `setContent`.
+
+```kotlin
+class SettingsHostTestContent :
+    RobolectricTestSuiteContent({
+        testFixture {
+            object : JUnit4RulesContext() {
+                val compose = rule(createAndroidComposeRule<ComponentActivity>())
+                lateinit var viewModel: MoleculeSettingsViewModel
+
+                fun exists(tag: String) = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
+            }
+        } asContextForEach {
+            test("tv settings that do not open are told in the page and not by a toast") {
+                compose.setContent { /* ... */ }
+                ShadowToast.shownToastCount() shouldBe 0
+            }
+        }
+    })
+```
+
+`SettingsHostTest.kt` in `app` is the full example; `ClockActivityTest.kt` and `ConfigFocusStyleTest.kt` are the other
+two.
+
+## Assertions
+
+| JUnit 4 | Kotest |
+|---|---|
+| `assertEquals(expected, actual)` | `actual shouldBe expected` |
+| `assertNotEquals(a, b)` | `b shouldNotBe a` |
+| `assertTrue(x)` / `assertFalse(x)` | `x.shouldBeTrue()` / `x.shouldBeFalse()` |
+| `assertTrue("message", x)` | `withClue("message") { x.shouldBeTrue() }` |
+| `assertNull(x)` / `assertNotNull(x)` | `x.shouldBeNull()` / `x.shouldNotBeNull()` |
+| `assertTrue(list.contains(e))` | `list shouldContain e` |
+| `assertTrue(a < b)` | `a shouldBeLessThan b` |
+| `assertEquals(e, a, delta)` | `a shouldBe (e plusOrMinus delta)` |
+| `assertSame(e, a)` | `a shouldBeSameInstanceAs e` |
+
+A bare `shouldBeTrue()` fails with only `false should equal true`. Keep the old assert message as a `withClue`, or use
+a matcher that names the values, such as `shouldContain` or `shouldBeLessThan`.
+
+## Running and filtering
+
+`./gradlew :app:testDebugUnitTest` runs the suites and the JUnit classes together. `--tests` selects suites and tests
+by their path, with `↘` between the levels. The Robolectric suite's name is one of the levels:
+
+```shell
+./gradlew :app:testDebugUnitTest --tests 'dev.niltsiar.tvhome.ConfigFocusStyleTest↘rim and halo reach the focus look'
+./gradlew :app:testDebugUnitTest --tests 'dev.niltsiar.tvhome.ClockActivityTest↘sdk 31↘a remote motion closes the clock'
+./gradlew :app:testDebugUnitTest --tests 'dev.niltsiar.tvhome.SettingsHostTest↘*'
+./gradlew :app:testDebugUnitTest --tests ';dev.niltsiar.tvhome.ClockActivityTest;*'
+```
+
+A pattern that starts with a character other than a letter uses that character as the separator. A JUnit class name
+still selects that class alone. The configuration cache is reused across runs, filtered ones included.
+
+## What to expect in the results
+
+- The XML results put every suite test of a module into one file,
+  `TEST-de.infix.testBalloon.framework.shared.internal.entryPoint.TestBalloonJUnit4.xml`, with that class as
+  `classname` and the test name alone as `name`. The suite path shows in the console output only. Each test counts
+  once, so the module's total does not change when a class moves.
+- A module that applies the plugin but has no suite yet reports one extra test, `TestBalloonJUnit4`, in
+  `TEST-Gradle-Test-Run-<module>-testDebugUnitTest.xml`. Apply the plugin in the same change as the module's first
+  suite.
+- While a module has Robolectric tests in both forms, the JUnit runner and TestBalloon each start their own Robolectric
+  sandbox. In `app`, with three classes moved, `testDebugUnitTest` took about 5 s longer (median of 3 runs: 38 s against
+  33 s).
+- The Android Studio run gutter on a suite needs the TestBalloon plugin for IntelliJ. Status icons in the gutter do not
+  show for Android tests, and "Rerun Failed Tests" is not supported.
