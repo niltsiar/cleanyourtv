@@ -14,56 +14,62 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
-import org.junit.Assert.assertEquals
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-import org.robolectric.annotation.GraphicsMode
+import de.infix.testBalloon.framework.core.JUnit4RulesContext
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectric
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import io.kotest.assertions.withClue
+import io.kotest.matchers.floats.plusOrMinus
+import io.kotest.matchers.shouldBe
 
-@RunWith(RobolectricTestRunner::class)
-@GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [31])
-class OverlayHostTest {
-    @get:Rule
-    val compose = createComposeRule()
+val OverlayHostTest by testSuite {
+    robolectricTestSuite<OverlayHostTestContent>("sdk 31", testConfig = TestConfig.robolectric { sdk = 31 })
+}
 
-    private fun settle() {
-        compose.mainClock.advanceTimeBy(1_000)
-        compose.waitForIdle()
-    }
+class OverlayHostTestContent :
+    RobolectricTestSuiteContent({
+        testFixture {
+            object : JUnit4RulesContext() {
+                val compose = rule(createComposeRule())
 
-    /** The red channel, 0 to 255, at the middle of the white ground. */
-    private fun red(): Float {
-        val shot = compose.onNodeWithTag("ground").captureToImage().toPixelMap()
-        return shot[shot.width / 2, shot.height / 2].red * 255f
-    }
+                fun settle() {
+                    compose.mainClock.advanceTimeBy(1_000)
+                    compose.waitForIdle()
+                }
 
-    @Test
-    fun the_scrim_follows_an_open_lambda_that_reads_a_plain_value_and_changes_on_recomposition() {
-        var picked by mutableStateOf(false)
-        compose.setContent {
-            TvTheme {
-                val shown = picked
-                Box(Modifier.size(100.dp).background(Color.White).testTag("ground")) {
-                    OverlayHost(open = { shown }) {}
+                /** The red channel, 0 to 255, at the middle of the white ground. */
+                fun red(): Float {
+                    val shot = compose.onNodeWithTag("ground").captureToImage().toPixelMap()
+                    return shot[shot.width / 2, shot.height / 2].red * 255f
                 }
             }
+        } asContextForEach {
+            test("the scrim follows an open lambda that reads a plain value and changes on recomposition") {
+                var picked by mutableStateOf(false)
+                compose.setContent {
+                    TvTheme {
+                        val shown = picked
+                        Box(Modifier.size(100.dp).background(Color.White).testTag("ground")) {
+                            OverlayHost(open = { shown }) {}
+                        }
+                    }
+                }
+                settle()
+                val closed = red()
+
+                picked = true
+                settle()
+                val open = red()
+
+                picked = false
+                settle()
+                val closedAgain = red()
+
+                withClue("no scrim while closed") { closed shouldBe (255f plusOrMinus 1f) }
+                withClue("half white, half scrim while open") { open shouldBe ((255f + 0x07) / 2f plusOrMinus 2f) }
+                withClue("no scrim once closed again") { closedAgain shouldBe (255f plusOrMinus 1f) }
+            }
         }
-        settle()
-        val closed = red()
-
-        picked = true
-        settle()
-        val open = red()
-
-        picked = false
-        settle()
-        val closedAgain = red()
-
-        assertEquals("no scrim while closed", 255f, closed, 1f)
-        assertEquals("half white, half scrim while open", (255f + 0x07) / 2f, open, 2f)
-        assertEquals("no scrim once closed again", 255f, closedAgain, 1f)
-    }
-}
+    })

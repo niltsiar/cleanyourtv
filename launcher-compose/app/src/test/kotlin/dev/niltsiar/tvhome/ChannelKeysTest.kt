@@ -1,27 +1,24 @@
 package dev.niltsiar.tvhome
 
 import android.view.KeyEvent
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
 
-class ChannelKeysTest {
-    @Test
-    fun channel_up_and_down_are_consumed_with_the_key_on() {
-        assertTrue(isIgnoredChannelKey(ignoreChannelKeys = true, keyCode = KeyEvent.KEYCODE_CHANNEL_UP))
-        assertTrue(isIgnoredChannelKey(ignoreChannelKeys = true, keyCode = KeyEvent.KEYCODE_CHANNEL_DOWN))
+val ChannelKeysTest by testSuite {
+    test("channel up and down are consumed with the key on") {
+        isIgnoredChannelKey(ignoreChannelKeys = true, keyCode = KeyEvent.KEYCODE_CHANNEL_UP).shouldBeTrue()
+        isIgnoredChannelKey(ignoreChannelKeys = true, keyCode = KeyEvent.KEYCODE_CHANNEL_DOWN).shouldBeTrue()
     }
 
-    @Test
-    fun every_other_key_passes_with_the_key_on() {
-        assertFalse(isIgnoredChannelKey(ignoreChannelKeys = true, keyCode = KeyEvent.KEYCODE_DPAD_UP))
-        assertFalse(isIgnoredChannelKey(ignoreChannelKeys = true, keyCode = KeyEvent.KEYCODE_TV))
-        assertFalse(isIgnoredChannelKey(ignoreChannelKeys = true, keyCode = KeyEvent.KEYCODE_PAGE_UP))
+    test("every other key passes with the key on") {
+        isIgnoredChannelKey(ignoreChannelKeys = true, keyCode = KeyEvent.KEYCODE_DPAD_UP).shouldBeFalse()
+        isIgnoredChannelKey(ignoreChannelKeys = true, keyCode = KeyEvent.KEYCODE_TV).shouldBeFalse()
+        isIgnoredChannelKey(ignoreChannelKeys = true, keyCode = KeyEvent.KEYCODE_PAGE_UP).shouldBeFalse()
     }
 
-    @Test
-    fun nothing_is_consumed_with_the_key_off() {
-        assertFalse(isIgnoredChannelKey(ignoreChannelKeys = false, keyCode = KeyEvent.KEYCODE_CHANNEL_UP))
-        assertFalse(isIgnoredChannelKey(ignoreChannelKeys = false, keyCode = KeyEvent.KEYCODE_CHANNEL_DOWN))
+    test("nothing is consumed with the key off") {
+        isIgnoredChannelKey(ignoreChannelKeys = false, keyCode = KeyEvent.KEYCODE_CHANNEL_UP).shouldBeFalse()
+        isIgnoredChannelKey(ignoreChannelKeys = false, keyCode = KeyEvent.KEYCODE_CHANNEL_DOWN).shouldBeFalse()
     }
 }

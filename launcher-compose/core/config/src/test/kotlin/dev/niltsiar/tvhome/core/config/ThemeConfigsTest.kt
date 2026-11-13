@@ -1,13 +1,13 @@
 package dev.niltsiar.tvhome.core.config
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.assertions.withClue
+import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import java.io.File
 
-class ThemeConfigsTest {
-    @Test
-    fun every_theme_in_the_repository_parses_without_unknown_keys_or_rejected_values() {
+val ThemeConfigsTest by testSuite {
+    test("every theme in the repository parses without unknown keys or rejected values") {
         val themes = File(System.getProperty("tvhome.themesDir")!!)
         val configs =
             themes
@@ -15,7 +15,7 @@ class ThemeConfigsTest {
                 .orEmpty()
                 .map { File(it, "config.json") }
                 .filter { it.isFile }
-        assertTrue("no themes/*/config.json under $themes", configs.isNotEmpty())
+        withClue("no themes/*/config.json under $themes") { configs.shouldNotBeEmpty() }
 
         val problems =
             configs.sorted().flatMap { file ->
@@ -27,6 +27,6 @@ class ThemeConfigsTest {
                     "$theme: rejected values ${parsed.rejectedKeys}".takeIf { parsed.rejectedKeys.isNotEmpty() },
                 )
             }
-        assertEquals(emptyList<String>(), problems)
+        problems.shouldBeEmpty()
     }
 }

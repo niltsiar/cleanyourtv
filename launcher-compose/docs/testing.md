@@ -36,8 +36,14 @@ through the JUnit 4 runner on Android host tests.
 | `class FooTest { ... }` | `val FooTest by testSuite { ... }` (top-level property, same name) |
 | `@Test fun the_thing_happens()` | `test("the thing happens") { ... }` |
 | `private fun helper()` in the class | a local `fun helper()` inside the suite lambda |
-| `@get:Rule val rule = ...`, `lateinit var` fields, `@Before` | a `testFixture { object : JUnit4RulesContext() { ... } } asContextForEach { ... }` |
+| `@get:Rule val rule = ...`, `lateinit var` fields | a `testFixture { object : JUnit4RulesContext() { ... } } asContextForEach { ... }`; without rules, a plain `object { ... }` |
+| `@Before` | the fixture object's `init` block; when it needs the rules running, the innermost link of a `RuleChain` (below) |
+| `@After` | `closeWith { ... }` on the fixture: it runs after a failing test too |
+| a field each test gets new, such as `val hold = OkHold()` | `testFixture { OkHold() } asParameterForEach { test("...") { hold -> ... } }` |
+| a JUnit rule in a plain JVM class, such as `TemporaryFolder` | the same `JUnit4RulesContext` fixture, without Robolectric |
+| a class nested in the test class | a local class at the top of the suite or content lambda |
 | `@RunWith(RobolectricTestRunner::class)` and `@Config(...)` | `robolectricTestSuite<FooTestContent>(name, testConfig = TestConfig.robolectric { ... })` |
+| `@Config(...)` on one test | a second `robolectricTestSuite` with its own content class and settings |
 
 The test name keeps the words of the old method name, with spaces in place of underscores.
 
@@ -84,8 +90,22 @@ class ClockActivityTestContent :
     })
 ```
 
-The content lambda cannot see members of its own class, so helpers are local functions inside the lambda. Robolectric
-suites do not nest: put plain `testSuite` groups inside the content class instead.
+The content lambda cannot see members of its own class, so helpers are local functions inside the lambda, or private
+top-level functions in the file when two content classes share them (`LastOpenedTextTest.kt` in `core/model`). Robolectric
+suites do not nest: put plain `testSuite` groups inside the content class instead. A `@Config` without `sdk` maps to
+`robolectricTestSuite` without `testConfig`.
+
+Robolectric reads no annotation on the content class: TestBalloon passes it `RobolectricTestSuiteContent`, so
+`@GraphicsMode` has no effect, and `TestConfig.robolectric` has no graphics mode. A module whose tests need the native
+canvas sets it for its test task, as `core/designsystem` does:
+
+```kotlin
+android {
+    testOptions {
+        unitTests.all { it.systemProperty("robolectric.graphicsMode", "NATIVE") }
+    }
+}
+```
 
 ### Compose UI
 
@@ -112,8 +132,26 @@ class SettingsHostTestContent :
     })
 ```
 
+A `@Before` that ran inside the rules, such as one that waits for the activity under a Compose rule, becomes the
+innermost link of the rule chain, so it still runs after every rule has started:
+
+```kotlin
+val rules: RuleChain =
+    rule(
+        RuleChain
+            .outerRule(tvWithNineApps)
+            .around(compose)
+            .around(
+                object : ExternalResource() {
+                    override fun before() = waitForTheTiles()
+                },
+            ),
+    )
+```
+
 `SettingsHostTest.kt` in `app` is the full example; `ClockActivityTest.kt` and `ConfigFocusStyleTest.kt` are the other
-two.
+two. `MainActivityConfigTest.kt` has the rule chain, and `ConfigRepositoryTest.kt` in `core/config` has `init` and
+`closeWith`.
 
 ## Assertions
 
@@ -159,5 +197,6 @@ still selects that class alone. The configuration cache is reused across runs, f
 - While a module has Robolectric tests in both forms, the JUnit runner and TestBalloon each start their own Robolectric
   sandbox. In `app`, with three classes moved, `testDebugUnitTest` took about 5 s longer (median of 3 runs: 38 s against
   33 s).
+- TestBalloon shows a `.` in a test name as `·`: `a lightness of 0.65` is reported as `a lightness of 0·65`.
 - The Android Studio run gutter on a suite needs the TestBalloon plugin for IntelliJ. Status icons in the gutter do not
   show for Android tests, and "Rerun Failed Tests" is not supported.

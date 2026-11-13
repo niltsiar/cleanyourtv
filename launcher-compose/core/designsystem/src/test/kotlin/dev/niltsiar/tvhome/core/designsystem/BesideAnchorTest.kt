@@ -2,49 +2,43 @@ package dev.niltsiar.tvhome.core.designsystem
 
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.shouldBe
 
-class BesideAnchorTest {
-    private val screenWidth = 1920
-    private val gap = 32
-    private val top = 512
-    private val fallbackTop = 184
-    private val bottom = 984
+val BesideAnchorTest by testSuite {
+    val screenWidth = 1920
+    val gap = 32
+    val top = 512
+    val fallbackTop = 184
+    val bottom = 984
 
-    private fun place(
+    fun place(
         anchor: IntRect,
         width: Int = 400,
         height: Int = 300,
     ) = besideAnchor(anchor, width, height, screenWidth, gap, top, fallbackTop, bottom)
 
-    @Test
-    fun the_panel_sits_right_of_its_tile_centred_on_it() {
-        assertEquals(IntOffset(612, 610), place(IntRect(left = 280, top = 680, right = 580, bottom = 840)))
+    test("the panel sits right of its tile centred on it") {
+        place(IntRect(left = 280, top = 680, right = 580, bottom = 840)) shouldBe IntOffset(612, 610)
     }
 
-    @Test
-    fun a_tile_with_no_room_on_its_right_gets_the_panel_on_its_left() {
-        assertEquals(IntOffset(1048, 610), place(IntRect(left = 1480, top = 680, right = 1780, bottom = 840)))
+    test("a tile with no room on its right gets the panel on its left") {
+        place(IntRect(left = 1480, top = 680, right = 1780, bottom = 840)) shouldBe IntOffset(1048, 610)
     }
 
-    @Test
-    fun a_panel_centred_above_the_top_limit_comes_down_to_it() {
-        assertEquals(top, place(IntRect(left = 80, top = 560, right = 380, bottom = 720)).y)
+    test("a panel centred above the top limit comes down to it") {
+        place(IntRect(left = 80, top = 560, right = 380, bottom = 720)).y shouldBe top
     }
 
-    @Test
-    fun a_panel_centred_past_the_bottom_limit_goes_up_to_end_on_it() {
-        assertEquals(bottom - 300, place(IntRect(left = 80, top = 900, right = 380, bottom = 1060)).y)
+    test("a panel centred past the bottom limit goes up to end on it") {
+        place(IntRect(left = 80, top = 900, right = 380, bottom = 1060)).y shouldBe bottom - 300
     }
 
-    @Test
-    fun a_panel_taller_than_the_room_under_the_top_limit_may_rise_to_the_fallback() {
-        assertEquals(bottom - 600, place(IntRect(left = 80, top = 700, right = 380, bottom = 860), height = 600).y)
+    test("a panel taller than the room under the top limit may rise to the fallback") {
+        place(IntRect(left = 80, top = 700, right = 380, bottom = 860), height = 600).y shouldBe bottom - 600
     }
 
-    @Test
-    fun a_panel_too_tall_for_the_screen_starts_at_the_fallback() {
-        assertEquals(fallbackTop, place(IntRect(left = 80, top = 700, right = 380, bottom = 860), height = 900).y)
+    test("a panel too tall for the screen starts at the fallback") {
+        place(IntRect(left = 80, top = 700, right = 380, bottom = 860), height = 900).y shouldBe fallbackTop
     }
 }

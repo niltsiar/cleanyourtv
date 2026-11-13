@@ -13,56 +13,72 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.junit.Assert.assertTrue
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-import org.robolectric.annotation.GraphicsMode
+import de.infix.testBalloon.framework.core.JUnit4RulesContext
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectric
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import io.kotest.assertions.withClue
+import io.kotest.matchers.floats.shouldBeGreaterThan
+import io.kotest.matchers.floats.shouldBeLessThan
 
 /**
  * A long name scrolled in a 120 dp box, 2 px to a dp. The text has a white background as well as white glyphs, so
  * wherever the line lies, it is solid white, and its pixels read its alpha on the black box.
  */
-@RunWith(RobolectricTestRunner::class)
-@GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [31], qualifiers = "xhdpi")
-class MarqueeFadeTest {
-    @get:Rule
-    val compose = createComposeRule()
-
-    private fun scrolledFor(millis: Long): PixelMap {
-        compose.mainClock.autoAdvance = false
-        compose.setContent {
-            MarqueeLine(
-                "Control de TV con mando a distancia",
-                TextStyle(color = Color.White, background = Color.White, fontSize = 16.sp),
-                scrolling = { true },
-                modifier = Modifier.size(120.dp, 30.dp).background(Color.Black).testTag("line"),
-            )
-        }
-        compose.mainClock.advanceTimeBy(millis)
-        return compose.onNodeWithTag("line").captureToImage().toPixelMap()
-    }
-
-    private fun PixelMap.middle(x: Int) = this[x, height / 2].red
-
-    @Test
-    fun while_the_name_scrolls_it_fades_out_at_both_clip_edges() {
-        // 1.2 s at its start position, then 1 s at 30 dp a second: 60 dp along, well past the 12 dp fade.
-        val pixels = scrolledFor(2_200)
-
-        assertTrue("inside the fades: ${pixels.middle(120)}", pixels.middle(120) > 0.95f)
-        assertTrue("at the left clip: ${pixels.middle(1)}", pixels.middle(1) < 0.15f)
-        assertTrue("at the right clip: ${pixels.middle(pixels.width - 2)}", pixels.middle(pixels.width - 2) < 0.15f)
-    }
-
-    @Test
-    fun at_its_start_position_the_name_is_not_faded_at_the_left_but_is_at_the_right() {
-        val pixels = scrolledFor(600)
-
-        assertTrue("at the left clip: ${pixels.middle(1)}", pixels.middle(1) > 0.95f)
-        assertTrue("at the right clip: ${pixels.middle(pixels.width - 2)}", pixels.middle(pixels.width - 2) < 0.15f)
-    }
+val MarqueeFadeTest by testSuite {
+    robolectricTestSuite<MarqueeFadeTestContent>(
+        "sdk 31, xhdpi",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "xhdpi"
+            },
+    )
 }
+
+class MarqueeFadeTestContent :
+    RobolectricTestSuiteContent({
+        testFixture {
+            object : JUnit4RulesContext() {
+                val compose = rule(createComposeRule())
+
+                fun scrolledFor(millis: Long): PixelMap {
+                    compose.mainClock.autoAdvance = false
+                    compose.setContent {
+                        MarqueeLine(
+                            "Control de TV con mando a distancia",
+                            TextStyle(color = Color.White, background = Color.White, fontSize = 16.sp),
+                            scrolling = { true },
+                            modifier = Modifier.size(120.dp, 30.dp).background(Color.Black).testTag("line"),
+                        )
+                    }
+                    compose.mainClock.advanceTimeBy(millis)
+                    return compose.onNodeWithTag("line").captureToImage().toPixelMap()
+                }
+
+                fun PixelMap.middle(x: Int) = this[x, height / 2].red
+            }
+        } asContextForEach {
+            test("while the name scrolls it fades out at both clip edges") {
+                // 1.2 s at its start position, then 1 s at 30 dp a second: 60 dp along, well past the 12 dp fade.
+                val pixels = scrolledFor(2_200)
+
+                withClue("inside the fades: ${pixels.middle(120)}") { pixels.middle(120) shouldBeGreaterThan 0.95f }
+                withClue("at the left clip: ${pixels.middle(1)}") { pixels.middle(1) shouldBeLessThan 0.15f }
+                withClue("at the right clip: ${pixels.middle(pixels.width - 2)}") {
+                    pixels.middle(pixels.width - 2) shouldBeLessThan 0.15f
+                }
+            }
+
+            test("at its start position the name is not faded at the left but is at the right") {
+                val pixels = scrolledFor(600)
+
+                withClue("at the left clip: ${pixels.middle(1)}") { pixels.middle(1) shouldBeGreaterThan 0.95f }
+                withClue("at the right clip: ${pixels.middle(pixels.width - 2)}") {
+                    pixels.middle(pixels.width - 2) shouldBeLessThan 0.15f
+                }
+            }
+        }
+    })

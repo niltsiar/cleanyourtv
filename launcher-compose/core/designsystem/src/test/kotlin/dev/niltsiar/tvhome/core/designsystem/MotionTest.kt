@@ -9,17 +9,24 @@ import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.ui.unit.IntOffset
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.assertions.withClue
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.floats.plusOrMinus
+import io.kotest.matchers.floats.shouldBeGreaterThan
+import io.kotest.matchers.floats.shouldBeGreaterThanOrEqual
+import io.kotest.matchers.floats.shouldBeLessThan
+import io.kotest.matchers.floats.shouldBeLessThanOrEqual
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 
-class MotionTest {
-    private fun SpringSpec<*>.shape() = dampingRatio to stiffness
+val MotionTest by testSuite {
+    fun SpringSpec<*>.shape() = dampingRatio to stiffness
 
     /** The value of [spec] going from [from] to [to], at each millisecond from 0 to [lastMs]. */
-    private fun samples(
+    fun samples(
         spec: FiniteAnimationSpec<Float>,
         from: Float,
         to: Float,
@@ -29,101 +36,91 @@ class MotionTest {
         return List(lastMs + 1) { animation.getValueFromNanos(it * 1_000_000L) }
     }
 
-    @Test
-    fun a_focused_tile_grows_to_its_scale_in_160_ms_by_default() {
+    test("a focused tile grows to its scale in 160 ms by default") {
         val motion = Motion()
 
-        assertEquals(1.08f, motion.focusScale(1.08f), 0f)
-        assertEquals(160, (motion.focusSpec(focused = true, from = 0f) as TweenSpec<Float>).durationMillis)
-        assertEquals(160, (motion.focusSpec(focused = false, from = 1f) as TweenSpec<Float>).durationMillis)
-        assertEquals(1.08f, motion.focusPeakScale(1.08f), 0f)
+        motion.focusScale(1.08f) shouldBe (1.08f plusOrMinus 0f)
+        (motion.focusSpec(focused = true, from = 0f) as TweenSpec<Float>).durationMillis shouldBe 160
+        (motion.focusSpec(focused = false, from = 1f) as TweenSpec<Float>).durationMillis shouldBe 160
+        motion.focusPeakScale(1.08f) shouldBe (1.08f plusOrMinus 0f)
     }
 
-    @Test
-    fun with_focus_overshoot_focus_in_peaks_at_18_at_120_ms_and_settles_at_1_at_320_ms() {
+    test("with focus overshoot focus in peaks at 1.8 at 120 ms and settles at 1 at 320 ms") {
         val motion = Motion(focusOvershoot = true)
         val values = samples(motion.focusSpec(focused = true, from = 0f), 0f, 1f, lastMs = 400)
 
-        assertEquals(1.8f, values[120], 0.001f)
-        assertEquals(1.8f, values.max(), 0.001f)
-        assertEquals(1f, values[320], 0f)
-        assertEquals(1f, values[400], 0f)
-        assertTrue("half way to the peak at ${values[60]}, linear would be 0.9", values[60] > 0.9f)
-        assertEquals(1.144f, motion.focusPeakScale(1.08f), 0.0001f)
-        assertEquals(1.08f, motion.focusScale(1.08f), 0f)
+        values[120] shouldBe (1.8f plusOrMinus 0.001f)
+        values.max() shouldBe (1.8f plusOrMinus 0.001f)
+        values[320] shouldBe (1f plusOrMinus 0f)
+        values[400] shouldBe (1f plusOrMinus 0f)
+        withClue("half way to the peak at ${values[60]}, linear would be 0.9") { values[60] shouldBeGreaterThan 0.9f }
+        motion.focusPeakScale(1.08f) shouldBe (1.144f plusOrMinus 0.0001f)
+        motion.focusScale(1.08f) shouldBe (1.08f plusOrMinus 0f)
     }
 
-    @Test
-    fun with_focus_overshoot_focus_in_starts_from_the_progress_it_has() {
+    test("with focus overshoot focus in starts from the progress it has") {
         val values = samples(Motion(focusOvershoot = true).focusSpec(focused = true, from = 0.4f), 0.4f, 1f, lastMs = 320)
 
-        assertEquals(0.4f, values[0], 0f)
-        assertTrue("step at 1 ms: ${values[1]}", values[1] - values[0] < 0.05f)
-        assertEquals(1.8f, values[120], 0.001f)
+        values[0] shouldBe (0.4f plusOrMinus 0f)
+        withClue("step at 1 ms: ${values[1]}") { values[1] - values[0] shouldBeLessThan 0.05f }
+        values[120] shouldBe (1.8f plusOrMinus 0.001f)
     }
 
-    @Test
-    fun with_focus_overshoot_focus_out_from_the_peak_never_goes_below_0_and_ends_at_0_in_160_ms() {
+    test("with focus overshoot focus out from the peak never goes below 0 and ends at 0 in 160 ms") {
         val values = samples(Motion(focusOvershoot = true).focusSpec(focused = false, from = 1.8f), 1.8f, 0f, lastMs = 200)
 
-        assertTrue("lowest ${values.min()}", values.min() >= 0f)
-        assertEquals(0f, values[160], 0f)
+        withClue("lowest ${values.min()}") { values.min() shouldBeGreaterThanOrEqual 0f }
+        values[160] shouldBe (0f plusOrMinus 0f)
     }
 
-    @Test
-    fun without_animations_a_focused_tile_does_not_grow_and_focus_jumps() {
+    test("without animations a focused tile does not grow and focus jumps") {
         val motion = Motion(animations = false)
 
-        assertEquals(1f, motion.focusScale(1.1f), 0f)
-        assertTrue(motion.focusSpec(focused = true, from = 0f) is SnapSpec)
-        assertTrue(Motion(animations = false, focusOvershoot = true).focusSpec(focused = true, from = 0f) is SnapSpec)
-        assertEquals(1f, Motion(animations = false, focusOvershoot = true).focusPeakScale(1.08f), 0f)
-        assertTrue(motion.springSpec<Float>(0.75f, Spring.StiffnessMedium) is SnapSpec)
-        assertTrue(motion.tweenSpec<Float>(140) is SnapSpec)
-        assertNull(motion.placementSpec)
+        motion.focusScale(1.1f) shouldBe (1f plusOrMinus 0f)
+        motion.focusSpec(focused = true, from = 0f).shouldBeInstanceOf<SnapSpec<*>>()
+        Motion(animations = false, focusOvershoot = true).focusSpec(focused = true, from = 0f).shouldBeInstanceOf<SnapSpec<*>>()
+        Motion(animations = false, focusOvershoot = true).focusPeakScale(1.08f) shouldBe (1f plusOrMinus 0f)
+        motion.springSpec<Float>(0.75f, Spring.StiffnessMedium).shouldBeInstanceOf<SnapSpec<*>>()
+        motion.tweenSpec<Float>(140).shouldBeInstanceOf<SnapSpec<*>>()
+        motion.placementSpec.shouldBeNull()
     }
 
-    @Test
-    fun with_reduced_motion_focus_is_a_90_ms_tween_with_no_overshoot_and_the_tile_still_grows() {
+    test("with reduced motion focus is a 90 ms tween with no overshoot and the tile still grows") {
         val motion = Motion(reducedMotion = true)
 
-        assertEquals(1.1f, motion.focusScale(1.1f), 0f)
-        assertEquals(90, (motion.focusSpec(focused = true, from = 0f) as TweenSpec<Float>).durationMillis)
-        assertEquals(90, (motion.springSpec<Float>(0.3f, Spring.StiffnessLow) as TweenSpec<Float>).durationMillis)
-        assertEquals(90, (motion.placementSpec as TweenSpec<IntOffset>).durationMillis)
+        motion.focusScale(1.1f) shouldBe (1.1f plusOrMinus 0f)
+        (motion.focusSpec(focused = true, from = 0f) as TweenSpec<Float>).durationMillis shouldBe 90
+        (motion.springSpec<Float>(0.3f, Spring.StiffnessLow) as TweenSpec<Float>).durationMillis shouldBe 90
+        (motion.placementSpec as TweenSpec<IntOffset>).durationMillis shouldBe 90
     }
 
-    @Test
-    fun reduced_motion_drops_the_focus_overshoot_peak() {
+    test("reduced motion drops the focus overshoot peak") {
         val motion = Motion(reducedMotion = true, focusOvershoot = true)
         val values = samples(motion.focusSpec(focused = true, from = 0f), 0f, 1f, lastMs = 120)
 
-        assertTrue("peaked at ${values.max()}", values.max() <= 1f)
-        assertEquals(1f, values[90], 0f)
-        assertEquals(1.1f, motion.focusPeakScale(1.1f), 0f)
+        withClue("peaked at ${values.max()}") { values.max() shouldBeLessThanOrEqual 1f }
+        values[90] shouldBe (1f plusOrMinus 0f)
+        motion.focusPeakScale(1.1f) shouldBe (1.1f plusOrMinus 0f)
     }
 
-    @Test
-    fun reduced_motion_cuts_a_long_tween_to_90_ms_and_leaves_a_short_one_alone() {
+    test("reduced motion cuts a long tween to 90 ms and leaves a short one alone") {
         val motion = Motion(reducedMotion = true)
 
-        assertEquals(90, (motion.tweenSpec<Float>(140) as TweenSpec<Float>).durationMillis)
-        assertEquals(60, (motion.tweenSpec<Float>(60) as TweenSpec<Float>).durationMillis)
-        assertEquals(140, (Motion().tweenSpec<Float>(140) as TweenSpec<Float>).durationMillis)
+        (motion.tweenSpec<Float>(140) as TweenSpec<Float>).durationMillis shouldBe 90
+        (motion.tweenSpec<Float>(60) as TweenSpec<Float>).durationMillis shouldBe 60
+        (Motion().tweenSpec<Float>(140) as TweenSpec<Float>).durationMillis shouldBe 140
     }
 
-    @Test
-    fun a_lazy_list_places_items_on_the_stock_spring_by_default() {
+    test("a lazy list places items on the stock spring by default") {
         val spec = Motion().placementSpec as SpringSpec<IntOffset>
 
-        assertEquals(Spring.DampingRatioNoBouncy to Spring.StiffnessMediumLow, spec.shape())
-        assertEquals(IntOffset.VisibilityThreshold, spec.visibilityThreshold)
+        spec.shape() shouldBe (Spring.DampingRatioNoBouncy to Spring.StiffnessMediumLow)
+        spec.visibilityThreshold shouldBe IntOffset.VisibilityThreshold
     }
 
-    @Test
-    fun endless_loops_run_only_with_animations_on_and_reduced_motion_off() {
-        assertTrue(Motion().animated)
-        assertFalse(Motion(reducedMotion = true).animated)
-        assertFalse(Motion(animations = false).animated)
+    test("endless loops run only with animations on and reduced motion off") {
+        Motion().animated.shouldBeTrue()
+        Motion(reducedMotion = true).animated.shouldBeFalse()
+        Motion(animations = false).animated.shouldBeFalse()
     }
 }

@@ -1,5 +1,6 @@
 plugins {
     id("tvhome.android.library")
+    id("tvhome.android.testballoon")
 }
 
 android {

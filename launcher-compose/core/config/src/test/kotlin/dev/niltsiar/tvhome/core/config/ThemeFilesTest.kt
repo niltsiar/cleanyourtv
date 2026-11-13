@@ -1,53 +1,48 @@
 package dev.niltsiar.tvhome.core.config
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.shouldBe
 
-class ThemeFilesTest {
-    @Test
-    fun theme_files_are_allowed() {
-        assertEquals("config.json", ThemeFiles.path(listOf("config.json")))
-        assertEquals("wallpaper.jpg", ThemeFiles.path(listOf("wallpaper.jpg")))
-        assertEquals("theme_revision", ThemeFiles.path(listOf("theme_revision")))
+val ThemeFilesTest by testSuite {
+    test("theme files are allowed") {
+        ThemeFiles.path(listOf("config.json")) shouldBe "config.json"
+        ThemeFiles.path(listOf("wallpaper.jpg")) shouldBe "wallpaper.jpg"
+        ThemeFiles.path(listOf("theme_revision")) shouldBe "theme_revision"
     }
 
-    @Test
-    fun collection_images_are_allowed() {
-        assertEquals("wallpapers/dusk.jpg", ThemeFiles.path(listOf("wallpapers", "dusk.jpg")))
-        assertEquals("wallpapers/Night_2.WEBP", ThemeFiles.path(listOf("wallpapers", "Night_2.WEBP")))
+    test("collection images are allowed") {
+        ThemeFiles.path(listOf("wallpapers", "dusk.jpg")) shouldBe "wallpapers/dusk.jpg"
+        ThemeFiles.path(listOf("wallpapers", "Night_2.WEBP")) shouldBe "wallpapers/Night_2.WEBP"
     }
 
-    @Test
-    fun the_collections_captions_are_allowed() {
-        assertEquals("wallpapers/captions.txt", ThemeFiles.path(listOf("wallpapers", "captions.txt")))
-        assertNull(ThemeFiles.path(listOf("captions.txt")))
-        assertNull(ThemeFiles.path(listOf("wallpapers", "notes.txt")))
-        assertFalse(ThemeFiles.collectionImage("captions.txt"))
+    test("the collections captions are allowed") {
+        ThemeFiles.path(listOf("wallpapers", "captions.txt")) shouldBe "wallpapers/captions.txt"
+        ThemeFiles.path(listOf("captions.txt")).shouldBeNull()
+        ThemeFiles.path(listOf("wallpapers", "notes.txt")).shouldBeNull()
+        ThemeFiles.collectionImage("captions.txt").shouldBeFalse()
     }
 
-    @Test
-    fun anything_else_is_refused() {
-        assertNull(ThemeFiles.path(null))
-        assertNull(ThemeFiles.path(emptyList()))
-        assertNull(ThemeFiles.path(listOf("cards.json")))
-        assertNull(ThemeFiles.path(listOf("..")))
-        assertNull(ThemeFiles.path(listOf("..", "config.json")))
-        assertNull(ThemeFiles.path(listOf("wallpapers", "..")))
-        assertNull(ThemeFiles.path(listOf("wallpapers", "run.sh")))
-        assertNull(ThemeFiles.path(listOf("wallpapers", "a b.jpg")))
-        assertNull(ThemeFiles.path(listOf("wallpapers", "../config.jpg")))
-        assertNull(ThemeFiles.path(listOf("wallpapers", ".jpg")))
-        assertNull(ThemeFiles.path(listOf("other", "dusk.jpg")))
-        assertNull(ThemeFiles.path(listOf("wallpapers", "sub", "dusk.jpg")))
+    test("anything else is refused") {
+        ThemeFiles.path(null).shouldBeNull()
+        ThemeFiles.path(emptyList()).shouldBeNull()
+        ThemeFiles.path(listOf("cards.json")).shouldBeNull()
+        ThemeFiles.path(listOf("..")).shouldBeNull()
+        ThemeFiles.path(listOf("..", "config.json")).shouldBeNull()
+        ThemeFiles.path(listOf("wallpapers", "..")).shouldBeNull()
+        ThemeFiles.path(listOf("wallpapers", "run.sh")).shouldBeNull()
+        ThemeFiles.path(listOf("wallpapers", "a b.jpg")).shouldBeNull()
+        ThemeFiles.path(listOf("wallpapers", "../config.jpg")).shouldBeNull()
+        ThemeFiles.path(listOf("wallpapers", ".jpg")).shouldBeNull()
+        ThemeFiles.path(listOf("other", "dusk.jpg")).shouldBeNull()
+        ThemeFiles.path(listOf("wallpapers", "sub", "dusk.jpg")).shouldBeNull()
     }
 
-    @Test
-    fun only_the_bare_folder_is_the_collection() {
-        assertTrue(ThemeFiles.isCollection(listOf("wallpapers")))
-        assertFalse(ThemeFiles.isCollection(listOf("wallpapers", "dusk.jpg")))
-        assertFalse(ThemeFiles.isCollection(listOf("config.json")))
+    test("only the bare folder is the collection") {
+        ThemeFiles.isCollection(listOf("wallpapers")).shouldBeTrue()
+        ThemeFiles.isCollection(listOf("wallpapers", "dusk.jpg")).shouldBeFalse()
+        ThemeFiles.isCollection(listOf("config.json")).shouldBeFalse()
     }
 }

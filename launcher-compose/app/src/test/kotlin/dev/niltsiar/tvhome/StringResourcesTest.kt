@@ -1,25 +1,26 @@
 package dev.niltsiar.tvhome
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.assertions.withClue
+import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import java.io.File
 
 /**
  * A translation that moves a format specifier to another conversion, or names an argument the English string lacks,
  * throws on the TV set to that language and nowhere else. aapt2 and lint do not read the specifiers.
  */
-class StringResourcesTest {
-    private val modules = listOf("app", "feature/home", "feature/library", "feature/settings", "service/keys")
-    private val root = File(System.getProperty("user.dir")).parentFile
-    private val comment = Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL)
-    private val string = Regex("""<string\s+name="([^"]+)"[^>]*>(.*?)</string>""", RegexOption.DOT_MATCHES_ALL)
-    private val plurals = Regex("""<plurals\s+name="([^"]+)"[^>]*>(.*?)</plurals>""", RegexOption.DOT_MATCHES_ALL)
-    private val item = Regex("""<item\s+quantity="([^"]+)"[^>]*>(.*?)</item>""", RegexOption.DOT_MATCHES_ALL)
-    private val specifier = Regex("""%(?:(\d+)\$)?[-#+ 0,(]*\d*(?:\.\d+)?([a-zA-Z%])""")
+val StringResourcesTest by testSuite {
+    val modules = listOf("app", "feature/home", "feature/library", "feature/settings", "service/keys")
+    val root = File(System.getProperty("user.dir")).parentFile
+    val comment = Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL)
+    val string = Regex("""<string\s+name="([^"]+)"[^>]*>(.*?)</string>""", RegexOption.DOT_MATCHES_ALL)
+    val plurals = Regex("""<plurals\s+name="([^"]+)"[^>]*>(.*?)</plurals>""", RegexOption.DOT_MATCHES_ALL)
+    val item = Regex("""<item\s+quantity="([^"]+)"[^>]*>(.*?)</item>""", RegexOption.DOT_MATCHES_ALL)
+    val specifier = Regex("""%(?:(\d+)\$)?[-#+ 0,(]*\d*(?:\.\d+)?([a-zA-Z%])""")
 
     /** Resource name (a plural item as "name/quantity") to its text, comments aside. */
-    private fun read(file: File): Map<String, String> {
+    fun read(file: File): Map<String, String> {
         val text = comment.replace(file.readText(), "")
         val out = mutableMapOf<String, String>()
         string.findAll(text).forEach { out[it.groupValues[1]] = it.groupValues[2] }
@@ -30,7 +31,7 @@ class StringResourcesTest {
     }
 
     /** Argument position to conversion letter, as Java's Formatter reads them: `%s` counts apart from `%2$s`. */
-    private fun conversions(text: String): Map<Int, Char> {
+    fun conversions(text: String): Map<Int, Char> {
         var implicit = 0
         val out = mutableMapOf<Int, Char>()
         specifier.findAll(text).forEach {
@@ -42,7 +43,7 @@ class StringResourcesTest {
         return out
     }
 
-    private fun problems(): Pair<List<String>, Int> {
+    fun problems(): Pair<List<String>, Int> {
         val problems = mutableListOf<String>()
         var checked = 0
         for (module in modules) {
@@ -71,11 +72,10 @@ class StringResourcesTest {
         return problems to checked
     }
 
-    @Test
-    fun every_translation_takes_the_arguments_the_default_string_takes() {
+    test("every translation takes the arguments the default string takes") {
         val (problems, checked) = problems()
 
-        assertTrue("the translated strings were not read", checked >= 300)
-        assertEquals(emptyList<String>(), problems)
+        withClue("the translated strings were not read") { checked shouldBeGreaterThanOrEqual 300 }
+        problems.shouldBeEmpty()
     }
 }

@@ -1,9 +1,11 @@
 package dev.niltsiar.tvhome.core.model
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.ints.shouldBeGreaterThan
+import io.kotest.matchers.ints.shouldBeLessThan
+import io.kotest.matchers.shouldBe
 import java.text.Collator
 import java.util.Locale
 
@@ -17,62 +19,55 @@ private fun app(
     pkg: String = "pkg.$name",
 ) = LibraryApp(AppEntry(key = "$pkg/.Main", packageName = pkg, label = name), onHome, installedAt)
 
-class LibraryRulesTest {
-    private val english = Collator.getInstance(Locale.ENGLISH)
+val LibraryRulesTest by testSuite {
+    val english = Collator.getInstance(Locale.ENGLISH)
 
-    @Test
-    fun the_pill_hides_only_while_the_top_bar_button_is_a_way_in() {
-        assertTrue(showLibraryPill(library = true, button = false, pill = true))
-        assertTrue(showLibraryPill(library = true, button = true, pill = true))
-        assertTrue(showLibraryPill(library = true, button = false, pill = false))
-        assertFalse(showLibraryPill(library = true, button = true, pill = false))
-        assertFalse(showLibraryPill(library = false, button = true, pill = true))
-        assertFalse(showLibraryPill(library = false, button = false, pill = true))
+    test("the pill hides only while the top bar button is a way in") {
+        showLibraryPill(library = true, button = false, pill = true).shouldBeTrue()
+        showLibraryPill(library = true, button = true, pill = true).shouldBeTrue()
+        showLibraryPill(library = true, button = false, pill = false).shouldBeTrue()
+        showLibraryPill(library = true, button = true, pill = false).shouldBeFalse()
+        showLibraryPill(library = false, button = true, pill = true).shouldBeFalse()
+        showLibraryPill(library = false, button = false, pill = true).shouldBeFalse()
     }
 
-    @Test
-    fun ok_opens_home_apps_and_every_app_with_the_switch_but_never_in_selection_mode() {
-        assertTrue(okOpens(selection = false, openAll = false, onHome = true))
-        assertFalse(okOpens(selection = false, openAll = false, onHome = false))
-        assertTrue(okOpens(selection = false, openAll = true, onHome = false))
-        assertTrue(okOpens(selection = false, openAll = true, onHome = true))
-        assertFalse(okOpens(selection = true, openAll = true, onHome = false))
-        assertFalse(okOpens(selection = true, openAll = false, onHome = true))
+    test("ok opens home apps and every app with the switch but never in selection mode") {
+        okOpens(selection = false, openAll = false, onHome = true).shouldBeTrue()
+        okOpens(selection = false, openAll = false, onHome = false).shouldBeFalse()
+        okOpens(selection = false, openAll = true, onHome = false).shouldBeTrue()
+        okOpens(selection = false, openAll = true, onHome = true).shouldBeTrue()
+        okOpens(selection = true, openAll = true, onHome = false).shouldBeFalse()
+        okOpens(selection = true, openAll = false, onHome = true).shouldBeFalse()
     }
 
-    @Test
-    fun selection_mode_orders_by_label_then_package_whether_or_not_an_app_is_on_home() {
+    test("selection mode orders by label then package whether or not an app is on home") {
         val apps = listOf(app("Zeta", onHome = true), app("Same", pkg = "b.pkg"), app("alpha"), app("Same", pkg = "a.pkg", onHome = true))
 
         val sorted = sortLibrary(apps, selection = true, now = NOW, collator = english)
 
-        assertEquals(listOf("pkg.alpha", "a.pkg", "b.pkg", "pkg.Zeta"), sorted.map { it.app.packageName })
+        sorted.map { it.app.packageName } shouldBe listOf("pkg.alpha", "a.pkg", "b.pkg", "pkg.Zeta")
     }
 
-    @Test
-    fun missing_shortcuts_come_before_home_apps_even_when_the_home_app_is_newer() {
-        assertTrue(comparePriority(app("a", installedAt = DAY), app("b", onHome = true, installedAt = NOW), NOW) < 0)
-        assertTrue(comparePriority(app("b", onHome = true, installedAt = NOW), app("a", installedAt = DAY), NOW) > 0)
+    test("missing shortcuts come before home apps even when the home app is newer") {
+        comparePriority(app("a", installedAt = DAY), app("b", onHome = true, installedAt = NOW), NOW) shouldBeLessThan 0
+        comparePriority(app("b", onHome = true, installedAt = NOW), app("a", installedAt = DAY), NOW) shouldBeGreaterThan 0
     }
 
-    @Test
-    fun recent_missing_apps_come_first_newest_first_and_the_rest_use_label_order() {
-        assertTrue(comparePriority(app("a", installedAt = NOW), app("b", installedAt = NOW - DAY), NOW) < 0)
-        assertTrue(comparePriority(app("a", installedAt = NOW - DAY), app("b", installedAt = DAY), NOW) < 0)
-        assertEquals(0, comparePriority(app("a", installedAt = DAY), app("b", installedAt = 2 * DAY), NOW))
-        assertEquals(0, comparePriority(app("a", onHome = true, installedAt = NOW), app("b", onHome = true, installedAt = DAY), NOW))
+    test("recent missing apps come first newest first and the rest use label order") {
+        comparePriority(app("a", installedAt = NOW), app("b", installedAt = NOW - DAY), NOW) shouldBeLessThan 0
+        comparePriority(app("a", installedAt = NOW - DAY), app("b", installedAt = DAY), NOW) shouldBeLessThan 0
+        comparePriority(app("a", installedAt = DAY), app("b", installedAt = 2 * DAY), NOW) shouldBe 0
+        comparePriority(app("a", onHome = true, installedAt = NOW), app("b", onHome = true, installedAt = DAY), NOW) shouldBe 0
     }
 
-    @Test
-    fun recent_means_first_installed_within_seven_days_and_not_an_unknown_or_future_date() {
-        assertTrue(isRecent(NOW - 7 * DAY, NOW))
-        assertFalse(isRecent(NOW - 7 * DAY - 1, NOW))
-        assertFalse(isRecent(0, NOW))
-        assertFalse(isRecent(NOW + 1, NOW))
+    test("recent means first installed within seven days and not an unknown or future date") {
+        isRecent(NOW - 7 * DAY, NOW).shouldBeTrue()
+        isRecent(NOW - 7 * DAY - 1, NOW).shouldBeFalse()
+        isRecent(0, NOW).shouldBeFalse()
+        isRecent(NOW + 1, NOW).shouldBeFalse()
     }
 
-    @Test
-    fun the_normal_order_is_missing_recent_first_then_label_and_the_home_apps_last() {
+    test("the normal order is missing recent first then label and the home apps last") {
         val apps =
             listOf(
                 app("Zeta"),
@@ -84,35 +79,31 @@ class LibraryRulesTest {
 
         val sorted = sortLibrary(apps, selection = false, now = NOW, collator = english)
 
-        assertEquals(listOf("Fresh", "alpha", "Beta", "Zeta", "Home"), sorted.map { it.app.label })
+        sorted.map { it.app.label } shouldBe listOf("Fresh", "alpha", "Beta", "Zeta", "Home")
     }
 
-    @Test
-    fun the_selection_order_ignores_how_new_an_app_is() {
+    test("the selection order ignores how new an app is") {
         val apps = listOf(app("Zeta"), app("Home", onHome = true), app("Fresh", installedAt = NOW - DAY), app("Beta"))
 
         val sorted = sortLibrary(apps, selection = true, now = NOW, collator = english)
 
-        assertEquals(listOf("Beta", "Fresh", "Home", "Zeta"), sorted.map { it.app.label })
+        sorted.map { it.app.label } shouldBe listOf("Beta", "Fresh", "Home", "Zeta")
     }
 
-    @Test
-    fun adding_advances_past_apps_on_home_to_the_next_missing_shortcut() {
-        assertEquals(3, nextFocus(1, 5) { it == 3 || it == 4 })
-        assertEquals(0, nextFocus(4, 5) { it == 0 || it == 2 })
+    test("adding advances past apps on home to the next missing shortcut") {
+        nextFocus(1, 5) { it == 3 || it == 4 } shouldBe 3
+        nextFocus(4, 5) { it == 0 || it == 2 } shouldBe 0
     }
 
-    @Test
-    fun adding_the_last_missing_shortcut_keeps_a_nearby_card_instead_of_jumping_to_the_start() {
-        assertEquals(3, nextFocus(2, 5) { false })
-        assertEquals(3, nextFocus(4, 5) { false })
-        assertEquals(0, nextFocus(0, 1) { error("No other card to inspect") })
-        assertEquals(-1, nextFocus(0, 0) { error("Empty catalogue") })
+    test("adding the last missing shortcut keeps a nearby card instead of jumping to the start") {
+        nextFocus(2, 5) { false } shouldBe 3
+        nextFocus(4, 5) { false } shouldBe 3
+        nextFocus(0, 1) { error("No other card to inspect") } shouldBe 0
+        nextFocus(0, 0) { error("Empty catalogue") } shouldBe -1
     }
 
-    @Test
-    fun a_stale_focus_is_clamped_after_an_app_goes() {
-        assertEquals(1, nextFocus(9, 3) { it == 1 })
-        assertEquals(1, nextFocus(-1, 3) { it == 1 })
+    test("a stale focus is clamped after an app goes") {
+        nextFocus(9, 3) { it == 1 } shouldBe 1
+        nextFocus(-1, 3) { it == 1 } shouldBe 1
     }
 }

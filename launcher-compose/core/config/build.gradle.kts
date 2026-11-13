@@ -1,5 +1,6 @@
 plugins {
     id("tvhome.android.library")
+    id("tvhome.android.testballoon")
 }
 
 // The theme files that the parser test reads: every themes/*/config.json in the repository.

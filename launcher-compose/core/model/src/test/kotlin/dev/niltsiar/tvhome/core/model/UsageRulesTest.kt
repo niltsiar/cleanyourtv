@@ -1,7 +1,7 @@
 package dev.niltsiar.tvhome.core.model
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.shouldBe
 import java.text.Collator
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -26,59 +26,53 @@ private fun app(
 
 private fun key(name: String) = "pkg.$name/.Main"
 
-class UsageRulesTest {
-    private val english = Collator.getInstance(Locale.ENGLISH)
-    private val today = LocalDate.of(2026, 11, 6)
+val UsageRulesTest by testSuite {
+    val english = Collator.getInstance(Locale.ENGLISH)
+    val today = LocalDate.of(2026, 11, 6)
 
-    private fun unused(
+    fun unused(
         record: OpenedRecord,
         days: Int,
         vararg names: String,
     ) = record.unusedKeys(names.map(::key), days, today, zone)
 
-    @Test
-    fun an_app_opened_more_than_n_days_ago_is_unused_and_one_opened_exactly_n_days_ago_is_not() {
+    test("an app opened more than n days ago is unused and one opened exactly n days ago is not") {
         val record =
             OpenedRecord(
                 times = mapOf(key("Old") to millis(today.minusDays(61)), key("Edge") to millis(today.minusDays(60))),
                 since = millis(today.minusDays(100)),
             )
 
-        assertEquals(setOf(key("Old")), unused(record, 60, "Old", "Edge"))
+        unused(record, 60, "Old", "Edge") shouldBe setOf(key("Old"))
     }
 
-    @Test
-    fun the_hour_of_the_last_open_does_not_move_the_day_it_counts_from() {
+    test("the hour of the last open does not move the day it counts from") {
         val late = OpenedRecord(times = mapOf(key("A") to millis(today.minusDays(60), hour = 23)), since = 0L)
         val early = OpenedRecord(times = mapOf(key("A") to millis(today.minusDays(61), hour = 0)), since = 0L)
 
-        assertEquals(emptySet<String>(), unused(late, 60, "A"))
-        assertEquals(setOf(key("A")), unused(early, 60, "A"))
+        unused(late, 60, "A") shouldBe emptySet()
+        unused(early, 60, "A") shouldBe setOf(key("A"))
     }
 
-    @Test
-    fun an_app_never_opened_counts_from_the_start_of_the_record() {
+    test("an app never opened counts from the start of the record") {
         val young = OpenedRecord(since = millis(today.minusDays(10)))
         val old = OpenedRecord(since = millis(today.minusDays(61)))
 
-        assertEquals(emptySet<String>(), unused(young, 60, "Never"))
-        assertEquals(setOf(key("Never")), unused(old, 60, "Never"))
+        unused(young, 60, "Never") shouldBe emptySet()
+        unused(old, 60, "Never") shouldBe setOf(key("Never"))
     }
 
-    @Test
-    fun a_record_that_has_not_started_calls_nothing_unused() {
-        assertEquals(emptySet<String>(), unused(OpenedRecord(), 60, "Never"))
+    test("a record that has not started calls nothing unused") {
+        unused(OpenedRecord(), 60, "Never") shouldBe emptySet()
     }
 
-    @Test
-    fun zero_days_fades_nothing() {
+    test("zero days fades nothing") {
         val record = OpenedRecord(since = millis(today.minusDays(500)))
 
-        assertEquals(emptySet<String>(), unused(record, 0, "Never"))
+        unused(record, 0, "Never") shouldBe emptySet()
     }
 
-    @Test
-    fun the_wait_for_the_next_day_ends_at_local_midnight_also_on_the_day_the_clocks_change() {
+    test("the wait for the next day ends at local midnight also on the day the clocks change") {
         val evening =
             LocalDateTime
                 .of(2026, 11, 6, 22, 30)
@@ -98,13 +92,12 @@ class UsageRulesTest {
                 .toInstant()
                 .toEpochMilli()
 
-        assertEquals(90 * 60_000L, millisUntilNextDay(evening, zone))
-        assertEquals((23 * 60 + 30) * 60_000L, millisUntilNextDay(longDay, zone))
-        assertEquals((22 * 60 + 30) * 60_000L, millisUntilNextDay(shortDay, zone))
+        millisUntilNextDay(evening, zone) shouldBe 90 * 60_000L
+        millisUntilNextDay(longDay, zone) shouldBe (23 * 60 + 30) * 60_000L
+        millisUntilNextDay(shortDay, zone) shouldBe (22 * 60 + 30) * 60_000L
     }
 
-    @Test
-    fun the_least_used_order_lists_apps_never_opened_first_then_the_oldest_open_and_breaks_ties_by_label() {
+    test("the least used order lists apps never opened first then the oldest open and breaks ties by label") {
         val day = 24L * 60 * 60 * 1000
         val record =
             OpenedRecord(
@@ -121,15 +114,14 @@ class UsageRulesTest {
 
         val sorted = sortLeastUsed(apps, record, english).map { it.app.label }
 
-        assertEquals(listOf("Alpha", "Zeta", "Oldest", "Tie A", "Tie B", "Recent"), sorted)
+        sorted shouldBe listOf("Alpha", "Zeta", "Oldest", "Tie A", "Tie B", "Recent")
     }
 
-    @Test
-    fun an_app_opened_at_the_very_start_of_the_record_still_follows_the_apps_never_opened() {
+    test("an app opened at the very start of the record still follows the apps never opened") {
         val record = OpenedRecord(times = mapOf(key("Opened") to 1000L), since = 1000L)
 
         val sorted = sortLeastUsed(listOf(app("Opened"), app("Zzz")), record, english)
 
-        assertEquals(listOf("Zzz", "Opened"), sorted.map { it.app.label })
+        sorted.map { it.app.label } shouldBe listOf("Zzz", "Opened")
     }
 }

@@ -1,30 +1,25 @@
 package dev.niltsiar.tvhome.core.model
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.shouldBe
 
-class InputIdTest {
-    @Test
-    fun an_input_value_gives_the_input_id_without_the_prefix_and_trimmed() {
-        assertEquals(
-            "com.mediatek.tvinput/.hdmi.HDMIInputService/HW5",
-            inputIdOf("input:com.mediatek.tvinput/.hdmi.HDMIInputService/HW5"),
-        )
-        assertEquals("HW5", inputIdOf("input: HW5 "))
+val InputIdTest by testSuite {
+    test("an input value gives the input id without the prefix and trimmed") {
+        inputIdOf("input:com.mediatek.tvinput/.hdmi.HDMIInputService/HW5") shouldBe
+            "com.mediatek.tvinput/.hdmi.HDMIInputService/HW5"
+        inputIdOf("input: HW5 ") shouldBe "HW5"
     }
 
-    @Test
-    fun every_other_value_is_no_input() {
-        assertNull(inputIdOf(null))
-        assertNull(inputIdOf("FEATURED_LAUNCH"))
-        assertNull(inputIdOf("INPUT:HW5"))
-        assertNull(inputIdOf("not-input:HW5"))
+    test("every other value is no input") {
+        inputIdOf(null).shouldBeNull()
+        inputIdOf("FEATURED_LAUNCH").shouldBeNull()
+        inputIdOf("INPUT:HW5").shouldBeNull()
+        inputIdOf("not-input:HW5").shouldBeNull()
     }
 
-    @Test
-    fun an_empty_input_id_is_no_input() {
-        assertNull(inputIdOf("input:"))
-        assertNull(inputIdOf("input:   "))
+    test("an empty input id is no input") {
+        inputIdOf("input:").shouldBeNull()
+        inputIdOf("input:   ").shouldBeNull()
     }
 }

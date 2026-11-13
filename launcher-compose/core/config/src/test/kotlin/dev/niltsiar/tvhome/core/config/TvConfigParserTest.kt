@@ -1,114 +1,107 @@
 package dev.niltsiar.tvhome.core.config
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.assertions.withClue
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.shouldBe
 
-class TvConfigParserTest {
+val TvConfigParserTest by testSuite {
     /** What a theme that sets nothing gives: the defaults, with the Java launcher's icon_only_buttons and icon_only_inputs false. */
-    private val applied = TvConfig(iconOnlyButtons = false, iconOnlyInputs = false)
+    val applied = TvConfig(iconOnlyButtons = false, iconOnlyInputs = false)
 
-    @Test
-    fun an_empty_object_keeps_every_default_and_reports_nothing() {
+    test("an empty object keeps every default and reports nothing") {
         val parsed = parseTvConfig("{}")
-        assertEquals(applied, parsed.config)
-        assertTrue(parsed.overlayApplied)
-        assertEquals(emptyList<String>(), parsed.unknownKeys + parsed.unsupportedKeys + parsed.rejectedKeys)
+        parsed.config shouldBe applied
+        parsed.overlayApplied.shouldBeTrue()
+        parsed.unknownKeys + parsed.unsupportedKeys + parsed.rejectedKeys shouldBe emptyList<String>()
     }
 
-    @Test
-    fun defaults_are_the_reference_config_xml_values() {
+    test("defaults are the reference config xml values") {
         val config = TvConfig()
-        assertEquals(
-            listOf("com.netflix.ninja", "com.amazon.amazonvideo.livingroom", "com.google.android.youtube.tv", "in.startv.hotstar"),
-            config.dockApps,
-        )
-        assertEquals(listOf("com.mediatek.wwtv.tvcenter", "com.mitv.gallery"), config.hiddenApps)
-        assertEquals("com.mediatek.wwtv.tvcenter", config.liveTvPackage)
-        assertEquals(
-            listOf(4, 0, 0, 50, 100, 50),
-            listOf(
-                config.columns,
-                config.rowsBelowDock,
-                config.wallpaperDim,
-                config.cinematicArt,
-                config.cinematicScrim,
-                config.clockWallpaperDim,
-            ),
-        )
-        assertEquals(ClockFormat.System, config.clockFormat)
-        assertEquals(WallpaperOrder.Shuffle, config.wallpaperOrder)
-        assertEquals(0xFF000000.toInt(), config.backgroundColor)
-        assertTrue(config.wallpaper && config.fillDock && config.showGreeting && config.tileMenu && config.clockGlow)
-        assertFalse(config.appLibrary || config.cinematicHome || config.singleRow || config.powerOnHomeAlways || config.restoreKeyServices)
-        assertTrue(config.cinematicDots && config.ambientGlow)
-        assertFalse(config.cinematicWhiteFocus || config.glowSnap)
-        assertTrue(config.appGlow)
-        assertTrue(config.dockRow)
-        assertFalse(config.reorderButton)
-        assertFalse(config.appLibrarySelection || config.libraryButton || config.libraryOkOpens || config.libraryLeastUsed)
-        assertEquals(0, config.unusedFadeDays)
-        assertTrue(config.showLibraryPill)
-        assertEquals(emptyList<String>(), config.libraryApps + config.libraryExcludedApps)
-        assertEquals(
-            listOf(null, null, null, null, null, null),
-            listOf(
-                config.sourcePanelService,
-                config.sourcePanelAction,
-                config.sourcePanelExtra,
-                config.inputAction,
-                config.inputUriScheme,
-                config.liveTvAction,
-            ),
-        )
-        assertFalse(
+        config.dockApps shouldBe
+            listOf("com.netflix.ninja", "com.amazon.amazonvideo.livingroom", "com.google.android.youtube.tv", "in.startv.hotstar")
+        config.hiddenApps shouldBe listOf("com.mediatek.wwtv.tvcenter", "com.mitv.gallery")
+        config.liveTvPackage shouldBe "com.mediatek.wwtv.tvcenter"
+        listOf(
+            config.columns,
+            config.rowsBelowDock,
+            config.wallpaperDim,
+            config.cinematicArt,
+            config.cinematicScrim,
+            config.clockWallpaperDim,
+        ) shouldBe listOf(4, 0, 0, 50, 100, 50)
+        config.clockFormat shouldBe ClockFormat.System
+        config.wallpaperOrder shouldBe WallpaperOrder.Shuffle
+        config.backgroundColor shouldBe 0xFF000000.toInt()
+        (config.wallpaper && config.fillDock && config.showGreeting && config.tileMenu && config.clockGlow).shouldBeTrue()
+        (
+            config.appLibrary ||
+                config.cinematicHome ||
+                config.singleRow ||
+                config.powerOnHomeAlways ||
+                config.restoreKeyServices
+        ).shouldBeFalse()
+        (config.cinematicDots && config.ambientGlow).shouldBeTrue()
+        (config.cinematicWhiteFocus || config.glowSnap).shouldBeFalse()
+        config.appGlow.shouldBeTrue()
+        config.dockRow.shouldBeTrue()
+        config.reorderButton.shouldBeFalse()
+        (config.appLibrarySelection || config.libraryButton || config.libraryOkOpens || config.libraryLeastUsed).shouldBeFalse()
+        config.unusedFadeDays shouldBe 0
+        config.showLibraryPill.shouldBeTrue()
+        config.libraryApps + config.libraryExcludedApps shouldBe emptyList<String>()
+        listOf(
+            config.sourcePanelService,
+            config.sourcePanelAction,
+            config.sourcePanelExtra,
+            config.inputAction,
+            config.inputUriScheme,
+            config.liveTvAction,
+        ) shouldBe listOf(null, null, null, null, null, null)
+        (
             config.coocaaSources ||
                 config.inputsConnectedOnly ||
                 config.inputsCecStateOnly ||
                 config.inputArrival ||
                 config.handleViewInputs ||
-                config.bootToLiveTv,
-        )
-        assertEquals(0, config.openOnStartNetworkWait)
-        assertTrue(config.keyFilter)
-        assertFalse(config.gamepadPassthrough || config.consumeVolumeKeys || config.volumePausesFilter)
-        assertFalse(config.homeLongPressHome || config.captureInputKeys)
-        assertFalse(config.backOpensClock || config.powerOnHome || config.homeIgnoreChannelKeys)
-        assertEquals(emptyList<Int>(), config.settingsKeyKeycodes + config.settingsKeyScancodes + config.inputKeyKeycodes)
-        assertEquals(null, config.stockHomeRedirect)
+                config.bootToLiveTv
+        ).shouldBeFalse()
+        config.openOnStartNetworkWait shouldBe 0
+        config.keyFilter.shouldBeTrue()
+        (config.gamepadPassthrough || config.consumeVolumeKeys || config.volumePausesFilter).shouldBeFalse()
+        (config.homeLongPressHome || config.captureInputKeys).shouldBeFalse()
+        (config.backOpensClock || config.powerOnHome || config.homeIgnoreChannelKeys).shouldBeFalse()
+        config.settingsKeyKeycodes + config.settingsKeyScancodes + config.inputKeyKeycodes shouldBe emptyList<Int>()
+        config.stockHomeRedirect shouldBe null
     }
 
-    @Test
-    fun a_byte_order_mark_is_dropped() {
+    test("a byte order mark is dropped") {
         val parsed = parseTvConfig("\uFEFF{\"columns\": 6}")
-        assertEquals(6, parsed.config.columns)
-        assertTrue(parsed.overlayApplied)
+        parsed.config.columns shouldBe 6
+        parsed.overlayApplied.shouldBeTrue()
     }
 
-    @Test
-    fun text_over_64_kb_applies_nothing() {
+    test("text over 64 kb applies nothing") {
         val parsed = parseTvConfig("{\"columns\": 6, \"greeting_name\": \"" + "x".repeat(MAX_CONFIG_BYTES) + "\"}")
-        assertFalse(parsed.overlayApplied)
-        assertEquals(TvConfig(), parsed.config)
+        parsed.overlayApplied.shouldBeFalse()
+        parsed.config shouldBe TvConfig()
     }
 
-    @Test
-    fun text_that_is_not_a_json_object_applies_nothing() {
+    test("text that is not a json object applies nothing") {
         for (text in listOf("", "[1, 2]", "\"columns\"", "{\"columns\": ")) {
             val parsed = parseTvConfig(text)
-            assertFalse(text, parsed.overlayApplied)
-            assertEquals(text, TvConfig(), parsed.config)
+            withClue(text) { parsed.overlayApplied.shouldBeFalse() }
+            withClue(text) { parsed.config shouldBe TvConfig() }
         }
     }
 
-    @Test
-    fun comments_and_trailing_commas_are_accepted_like_the_reference_tokenizer() {
+    test("comments and trailing commas are accepted like the reference tokenizer") {
         val parsed = parseTvConfig("{ // theme\n \"columns\": 6, /* more */ \"rows_below_dock\": 2, }")
-        assertEquals(6 to 2, parsed.config.columns to parsed.config.rowsBelowDock)
+        (parsed.config.columns to parsed.config.rowsBelowDock) shouldBe (6 to 2)
     }
 
-    private val ranged: List<Triple<String, IntRange, (TvConfig) -> Int>> =
+    val ranged: List<Triple<String, IntRange, (TvConfig) -> Int>> =
         listOf(
             Triple("columns", 1..8, { it.columns }),
             Triple("rows_below_dock", 0..3, { it.rowsBelowDock }),
@@ -124,75 +117,66 @@ class TvConfigParserTest {
             Triple("unused_fade_days", 0..3650, { it.unusedFadeDays }),
         )
 
-    @Test
-    fun each_ranged_number_accepts_its_limits_and_rejects_one_step_beyond() {
+    test("each ranged number accepts its limits and rejects one step beyond") {
         for ((key, range, read) in ranged) {
             val default = read(TvConfig())
             for (inside in listOf(range.first, range.last)) {
                 val parsed = parseTvConfig("{\"$key\": $inside}")
-                assertEquals("$key = $inside", inside, read(parsed.config))
-                assertEquals(key, emptyList<String>(), parsed.rejectedKeys)
+                withClue("$key = $inside") { read(parsed.config) shouldBe inside }
+                withClue(key) { parsed.rejectedKeys shouldBe emptyList<String>() }
             }
             for (outside in listOf(range.first - 1, range.last + 1)) {
                 val parsed = parseTvConfig("{\"$key\": $outside}")
-                assertEquals("$key = $outside", default, read(parsed.config))
-                assertEquals(key, listOf(key), parsed.rejectedKeys)
+                withClue("$key = $outside") { read(parsed.config) shouldBe default }
+                withClue(key) { parsed.rejectedKeys shouldBe listOf(key) }
             }
         }
     }
 
-    @Test
-    fun a_value_of_the_wrong_type_keeps_the_default_and_is_rejected() {
+    test("a value of the wrong type keeps the default and is rejected") {
         val parsed =
             parseTvConfig(
                 """{"columns": "6", "fill_dock": "false", "dock_apps": "com.a", "greeting_name": 7,
                    "wifi_label_width": null, "animations": 0, "sky_intensity": 2147483648}""",
             )
-        assertEquals(applied, parsed.config)
-        assertEquals(
-            listOf("columns", "fill_dock", "dock_apps", "greeting_name", "wifi_label_width", "animations", "sky_intensity"),
-            parsed.rejectedKeys,
-        )
+        parsed.config shouldBe applied
+        parsed.rejectedKeys shouldBe
+            listOf("columns", "fill_dock", "dock_apps", "greeting_name", "wifi_label_width", "animations", "sky_intensity")
     }
 
-    @Test
-    fun a_fractional_number_is_cut_off_as_the_reference_does() {
-        assertEquals(4, parseTvConfig("""{"columns": 4.9}""").config.columns)
+    test("a fractional number is cut off as the reference does") {
+        parseTvConfig("""{"columns": 4.9}""").config.columns shouldBe 4
     }
 
-    @Test
-    fun a_keycode_list_with_any_bad_element_is_dropped_whole() {
+    test("a keycode list with any bad element is dropped whole") {
         val bad = parseTvConfig("""{"settings_key_keycodes": [172, 0], "input_key_keycodes": [1, "x"]}""")
-        assertEquals(emptyList<Int>(), bad.config.settingsKeyKeycodes + bad.config.inputKeyKeycodes)
-        assertEquals(listOf("settings_key_keycodes", "input_key_keycodes"), bad.rejectedKeys)
+        bad.config.settingsKeyKeycodes + bad.config.inputKeyKeycodes shouldBe emptyList<Int>()
+        bad.rejectedKeys shouldBe listOf("settings_key_keycodes", "input_key_keycodes")
 
         val good = parseTvConfig("""{"settings_key_keycodes": [172, 1001]}""")
-        assertEquals(listOf(172, 1001), good.config.settingsKeyKeycodes)
+        good.config.settingsKeyKeycodes shouldBe listOf(172, 1001)
     }
 
-    @Test
-    fun capture_input_keys_true_is_read() {
+    test("capture input keys true is read") {
         val parsed = parseTvConfig("""{"capture_input_keys": true}""")
 
-        assertTrue(parsed.config.captureInputKeys)
-        assertEquals(emptyList<String>(), parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys)
+        parsed.config.captureInputKeys.shouldBeTrue()
+        parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys shouldBe emptyList<String>()
     }
 
-    @Test
-    fun home_ignore_channel_keys_is_read_and_a_wrong_type_keeps_the_default() {
+    test("home ignore channel keys is read and a wrong type keeps the default") {
         val on = parseTvConfig("""{"home_ignore_channel_keys": true}""")
-        assertTrue(on.config.homeIgnoreChannelKeys)
-        assertEquals(emptyList<String>(), on.unsupportedKeys + on.unknownKeys + on.rejectedKeys)
+        on.config.homeIgnoreChannelKeys.shouldBeTrue()
+        on.unsupportedKeys + on.unknownKeys + on.rejectedKeys shouldBe emptyList<String>()
 
-        assertFalse(parseTvConfig("""{"home_ignore_channel_keys": false}""").config.homeIgnoreChannelKeys)
-        assertFalse(parseTvConfig("{}").config.homeIgnoreChannelKeys)
+        parseTvConfig("""{"home_ignore_channel_keys": false}""").config.homeIgnoreChannelKeys.shouldBeFalse()
+        parseTvConfig("{}").config.homeIgnoreChannelKeys.shouldBeFalse()
         val wrong = parseTvConfig("""{"home_ignore_channel_keys": "yes"}""")
-        assertFalse(wrong.config.homeIgnoreChannelKeys)
-        assertEquals(listOf("home_ignore_channel_keys"), wrong.rejectedKeys)
+        wrong.config.homeIgnoreChannelKeys.shouldBeFalse()
+        wrong.rejectedKeys shouldBe listOf("home_ignore_channel_keys")
     }
 
-    @Test
-    fun the_remote_key_service_keys_are_read_and_a_wrong_type_keeps_the_default() {
+    test("the remote key service keys are read and a wrong type keeps the default") {
         val parsed =
             parseTvConfig(
                 """{"key_filter": false, "gamepad_passthrough": true, "consume_volume_keys": true, "volume_pauses_filter": true,
@@ -201,276 +185,251 @@ class TvConfigParserTest {
                    "app_keys": ["scan:490:com.wbd.hbomax", "hold:KEYCODE_BUTTON_8:org.xbmc.kodi"]}""",
             )
         val config = parsed.config
-        assertFalse(config.keyFilter)
-        assertTrue(config.gamepadPassthrough && config.consumeVolumeKeys && config.volumePausesFilter)
-        assertTrue(config.homeLongPressHome && config.backOpensClock)
-        assertEquals(listOf(159), config.settingsKeyScancodes)
-        assertEquals("com.google.android.apps.tv.launcherx", config.stockHomeRedirect)
-        assertEquals(listOf("scan:490:com.wbd.hbomax", "hold:KEYCODE_BUTTON_8:org.xbmc.kodi"), config.appKeys)
-        assertEquals(emptyList<String>(), parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys)
+        config.keyFilter.shouldBeFalse()
+        (config.gamepadPassthrough && config.consumeVolumeKeys && config.volumePausesFilter).shouldBeTrue()
+        (config.homeLongPressHome && config.backOpensClock).shouldBeTrue()
+        config.settingsKeyScancodes shouldBe listOf(159)
+        config.stockHomeRedirect shouldBe "com.google.android.apps.tv.launcherx"
+        config.appKeys shouldBe listOf("scan:490:com.wbd.hbomax", "hold:KEYCODE_BUTTON_8:org.xbmc.kodi")
+        parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys shouldBe emptyList<String>()
 
         val wrong = parseTvConfig("""{"key_filter": "no", "consume_volume_keys": 1, "settings_key_scancodes": [0]}""")
-        assertTrue(wrong.config.keyFilter)
-        assertFalse(wrong.config.consumeVolumeKeys)
-        assertEquals(emptyList<Int>(), wrong.config.settingsKeyScancodes)
-        assertEquals(listOf("key_filter", "consume_volume_keys", "settings_key_scancodes"), wrong.rejectedKeys)
+        wrong.config.keyFilter.shouldBeTrue()
+        wrong.config.consumeVolumeKeys.shouldBeFalse()
+        wrong.config.settingsKeyScancodes shouldBe emptyList<Int>()
+        wrong.rejectedKeys shouldBe listOf("key_filter", "consume_volume_keys", "settings_key_scancodes")
     }
 
-    @Test
-    fun settings_key_clear_task_is_off_unless_the_theme_turns_it_on() {
-        assertFalse(parseTvConfig("{}").config.settingsKeyClearTask)
-        assertTrue(parseTvConfig("""{"settings_key_clear_task": true}""").config.settingsKeyClearTask)
-        assertFalse(parseTvConfig("""{"settings_key_clear_task": false}""").config.settingsKeyClearTask)
+    test("settings key clear task is off unless the theme turns it on") {
+        parseTvConfig("{}").config.settingsKeyClearTask.shouldBeFalse()
+        parseTvConfig("""{"settings_key_clear_task": true}""").config.settingsKeyClearTask.shouldBeTrue()
+        parseTvConfig("""{"settings_key_clear_task": false}""").config.settingsKeyClearTask.shouldBeFalse()
 
         val wrong = parseTvConfig("""{"settings_key_clear_task": "yes"}""")
-        assertFalse(wrong.config.settingsKeyClearTask)
-        assertEquals(listOf("settings_key_clear_task"), wrong.rejectedKeys)
+        wrong.config.settingsKeyClearTask.shouldBeFalse()
+        wrong.rejectedKeys shouldBe listOf("settings_key_clear_task")
     }
 
-    @Test
-    fun settings_key_panel_stays_unsupported_because_the_panel_does_not_exist() {
+    test("settings key panel stays unsupported because the panel does not exist") {
         val parsed = parseTvConfig("""{"settings_key_panel": true}""")
-        assertEquals(listOf("settings_key_panel"), parsed.unsupportedKeys)
+        parsed.unsupportedKeys shouldBe listOf("settings_key_panel")
     }
 
-    @Test
-    fun string_lists_trim_their_items_and_skip_non_strings_and_blanks() {
+    test("string lists trim their items and skip non strings and blanks") {
         val parsed = parseTvConfig("""{"dock_apps": [" com.a ", "", 5, "com.b", null]}""")
-        assertEquals(listOf("com.a", "com.b"), parsed.config.dockApps)
-        assertEquals(emptyList<String>(), parsed.rejectedKeys)
+        parsed.config.dockApps shouldBe listOf("com.a", "com.b")
+        parsed.rejectedKeys shouldBe emptyList<String>()
     }
 
-    @Test
-    fun package_maps_keep_well_formed_entries_and_the_last_entry_for_a_package() {
+    test("package maps keep well formed entries and the last entry for a package") {
         val parsed = parseTvConfig("""{"app_labels": ["com.a=Alpha", "nope", "=x", "com.b= ", "com.a = Beta"]}""")
-        assertEquals(mapOf("com.a" to "Beta"), parsed.config.appLabels)
+        parsed.config.appLabels shouldBe (mapOf("com.a" to "Beta"))
     }
 
-    @Test
-    fun top_bar_apps_leave_the_grid() {
+    test("top bar apps leave the grid") {
         val parsed = parseTvConfig("""{"hidden_apps": ["com.a"], "top_bar_apps": ["com.b", "com.a", "com.b"]}""")
-        assertEquals(listOf("com.a", "com.b"), parsed.config.hiddenApps)
-        assertEquals(listOf("com.b", "com.a", "com.b"), parsed.config.topBarApps)
+        parsed.config.hiddenApps shouldBe listOf("com.a", "com.b")
+        parsed.config.topBarApps shouldBe listOf("com.b", "com.a", "com.b")
     }
 
-    @Test
-    fun a_blank_optional_string_clears_the_default_without_a_rejection() {
+    test("a blank optional string clears the default without a rejection") {
         val parsed = parseTvConfig("""{"live_tv_package": "  "}""")
-        assertEquals(null, parsed.config.liveTvPackage)
-        assertEquals(emptyList<String>(), parsed.rejectedKeys)
+        parsed.config.liveTvPackage shouldBe null
+        parsed.rejectedKeys shouldBe emptyList<String>()
     }
 
-    @Test
-    fun the_background_colour_is_forced_opaque() {
-        assertEquals(0xFF112233.toInt(), parseTvConfig("""{"background_color": "#80112233"}""").config.backgroundColor)
-        assertEquals(0xFF112233.toInt(), parseTvConfig("""{"background_color": " #112233 "}""").config.backgroundColor)
-        assertEquals(0xFFFF0000.toInt(), parseTvConfig("""{"background_color": "Red"}""").config.backgroundColor)
+    test("the background colour is forced opaque") {
+        parseTvConfig("""{"background_color": "#80112233"}""").config.backgroundColor shouldBe 0xFF112233.toInt()
+        parseTvConfig("""{"background_color": " #112233 "}""").config.backgroundColor shouldBe 0xFF112233.toInt()
+        parseTvConfig("""{"background_color": "Red"}""").config.backgroundColor shouldBe 0xFFFF0000.toInt()
     }
 
-    @Test
-    fun a_background_colour_that_android_cannot_parse_keeps_black_and_is_rejected() {
+    test("a background colour that android cannot parse keeps black and is rejected") {
         for (text in listOf("#12345", "#GGGGGG", "112233", "notacolour")) {
             val parsed = parseTvConfig("""{"background_color": "$text"}""")
-            assertEquals(text, TvConfig().backgroundColor, parsed.config.backgroundColor)
-            assertEquals(text, listOf("background_color"), parsed.rejectedKeys)
+            withClue(text) { parsed.config.backgroundColor shouldBe TvConfig().backgroundColor }
+            withClue(text) { parsed.rejectedKeys shouldBe listOf("background_color") }
         }
     }
 
-    @Test
-    fun clock_format_and_wallpaper_order_accept_their_names_and_reject_others() {
+    test("clock format and wallpaper order accept their names and reject others") {
         val good = parseTvConfig("""{"clock_format": "24", "wallpaper_order": "sequential"}""")
-        assertEquals(ClockFormat.Hour24, good.config.clockFormat)
-        assertEquals(WallpaperOrder.Sequential, good.config.wallpaperOrder)
+        good.config.clockFormat shouldBe ClockFormat.Hour24
+        good.config.wallpaperOrder shouldBe WallpaperOrder.Sequential
 
         val bad = parseTvConfig("""{"clock_format": "13", "wallpaper_order": "random"}""")
-        assertEquals(applied, bad.config)
-        assertEquals(listOf("clock_format", "wallpaper_order"), bad.rejectedKeys)
+        bad.config shouldBe applied
+        bad.rejectedKeys shouldBe listOf("clock_format", "wallpaper_order")
     }
 
-    @Test
-    fun wallpaper_moods_keep_only_image_names_of_the_three_moods() {
+    test("wallpaper moods keep only image names of the three moods") {
         val parsed =
             parseTvConfig(
                 """{"wallpaper_moods": {"morning": ["a.jpg", "notes.txt", ".hidden.jpg"], "night": ["b.PNG"],
                    "evening": [], "noon": ["c.jpg"]}}""",
             )
-        assertEquals(mapOf(WallpaperMood.Morning to setOf("a.jpg"), WallpaperMood.Night to setOf("b.PNG")), parsed.config.wallpaperMoods)
-        assertEquals(emptyList<String>(), parsed.rejectedKeys)
-        assertEquals(listOf("wallpaper_moods"), parseTvConfig("""{"wallpaper_moods": ["a.jpg"]}""").rejectedKeys)
+        parsed.config.wallpaperMoods shouldBe (mapOf(WallpaperMood.Morning to setOf("a.jpg"), WallpaperMood.Night to setOf("b.PNG")))
+        parsed.rejectedKeys shouldBe emptyList<String>()
+        parseTvConfig("""{"wallpaper_moods": ["a.jpg"]}""").rejectedKeys shouldBe listOf("wallpaper_moods")
     }
 
-    @Test
-    fun dock_title_is_on_unless_a_theme_turns_it_off_and_a_wrong_type_keeps_it_on() {
-        assertTrue(parseTvConfig("{}").config.dockTitle)
-        assertTrue(parseTvConfig("""{"dock_title": true}""").config.dockTitle)
+    test("dock title is on unless a theme turns it off and a wrong type keeps it on") {
+        parseTvConfig("{}").config.dockTitle.shouldBeTrue()
+        parseTvConfig("""{"dock_title": true}""").config.dockTitle.shouldBeTrue()
         val off = parseTvConfig("""{"dock_title": false}""")
-        assertFalse(off.config.dockTitle)
-        assertEquals(emptyList<String>(), off.unsupportedKeys + off.unknownKeys + off.rejectedKeys)
+        off.config.dockTitle.shouldBeFalse()
+        off.unsupportedKeys + off.unknownKeys + off.rejectedKeys shouldBe emptyList<String>()
         val wrong = parseTvConfig("""{"dock_title": "no"}""")
-        assertTrue(wrong.config.dockTitle)
-        assertEquals(listOf("dock_title"), wrong.rejectedKeys)
+        wrong.config.dockTitle.shouldBeTrue()
+        wrong.rejectedKeys shouldBe listOf("dock_title")
     }
 
-    @Test
-    fun keys_the_reference_knows_but_this_launcher_does_not_use_are_unsupported_not_unknown() {
+    test("keys the reference knows but this launcher does not use are unsupported not unknown") {
         val parsed =
             parseTvConfig(
                 """{"columns": 5, "festival": "diwali", "game_day": "x", "nonsense": 1, "dock_titel": true}""",
             )
-        assertEquals(listOf("festival", "game_day"), parsed.unsupportedKeys)
-        assertEquals(listOf("nonsense", "dock_titel"), parsed.unknownKeys)
-        assertEquals(5, parsed.config.columns)
+        parsed.unsupportedKeys shouldBe listOf("festival", "game_day")
+        parsed.unknownKeys shouldBe listOf("nonsense", "dock_titel")
+        parsed.config.columns shouldBe 5
     }
 
-    @Test
-    fun the_cinematic_and_glow_keys_are_read_and_a_wrong_type_keeps_the_default() {
+    test("the cinematic and glow keys are read and a wrong type keeps the default") {
         val parsed =
             parseTvConfig(
                 """{"cinematic_dots": false, "cinematic_white_focus": true, "ambient_glow": false, "glow_snap": true, "app_glow": false}""",
             )
         val config = parsed.config
-        assertFalse(config.cinematicDots || config.ambientGlow)
-        assertTrue(config.cinematicWhiteFocus && config.glowSnap)
-        assertFalse(config.appGlow)
-        assertEquals(emptyList<String>(), parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys)
+        (config.cinematicDots || config.ambientGlow).shouldBeFalse()
+        (config.cinematicWhiteFocus && config.glowSnap).shouldBeTrue()
+        config.appGlow.shouldBeFalse()
+        parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys shouldBe emptyList<String>()
 
         val wrong = parseTvConfig("""{"cinematic_dots": "no", "app_glow": 1}""")
-        assertTrue(wrong.config.cinematicDots)
-        assertTrue(wrong.config.appGlow)
-        assertEquals(listOf("cinematic_dots", "app_glow"), wrong.rejectedKeys)
+        wrong.config.cinematicDots.shouldBeTrue()
+        wrong.config.appGlow.shouldBeTrue()
+        wrong.rejectedKeys shouldBe listOf("cinematic_dots", "app_glow")
     }
 
-    @Test
-    fun header_scrim_is_auto_unless_a_theme_says_off_and_any_other_value_keeps_auto() {
-        assertEquals(HeaderScrim.Auto, parseTvConfig("""{}""").config.headerScrim)
-        assertEquals(HeaderScrim.Auto, parseTvConfig("""{"header_scrim": "auto"}""").config.headerScrim)
+    test("header scrim is auto unless a theme says off and any other value keeps auto") {
+        parseTvConfig("""{}""").config.headerScrim shouldBe HeaderScrim.Auto
+        parseTvConfig("""{"header_scrim": "auto"}""").config.headerScrim shouldBe HeaderScrim.Auto
 
         val off = parseTvConfig("""{"header_scrim": " off "}""")
-        assertEquals(HeaderScrim.Off, off.config.headerScrim)
-        assertEquals(emptyList<String>(), off.rejectedKeys + off.unknownKeys)
+        off.config.headerScrim shouldBe HeaderScrim.Off
+        off.rejectedKeys + off.unknownKeys shouldBe emptyList<String>()
 
         for (bad in listOf("\"strong\"", "false", "0")) {
             val parsed = parseTvConfig("""{"header_scrim": $bad}""")
-            assertEquals(bad, HeaderScrim.Auto, parsed.config.headerScrim)
-            assertEquals(bad, listOf("header_scrim"), parsed.rejectedKeys)
+            withClue(bad) { parsed.config.headerScrim shouldBe HeaderScrim.Auto }
+            withClue(bad) { parsed.rejectedKeys shouldBe listOf("header_scrim") }
         }
     }
 
-    @Test
-    fun grid_scroll_cue_is_on_unless_a_theme_says_false_and_a_value_that_is_not_a_boolean_keeps_it_on() {
-        assertTrue(parseTvConfig("""{}""").config.gridScrollCue)
+    test("grid scroll cue is on unless a theme says false and a value that is not a boolean keeps it on") {
+        parseTvConfig("""{}""").config.gridScrollCue.shouldBeTrue()
 
         val off = parseTvConfig("""{"grid_scroll_cue": false}""")
-        assertFalse(off.config.gridScrollCue)
-        assertEquals(emptyList<String>(), off.rejectedKeys + off.unknownKeys)
+        off.config.gridScrollCue.shouldBeFalse()
+        off.rejectedKeys + off.unknownKeys shouldBe emptyList<String>()
 
         for (bad in listOf("\"false\"", "0")) {
             val parsed = parseTvConfig("""{"grid_scroll_cue": $bad}""")
-            assertTrue(bad, parsed.config.gridScrollCue)
-            assertEquals(bad, listOf("grid_scroll_cue"), parsed.rejectedKeys)
+            withClue(bad) { parsed.config.gridScrollCue.shouldBeTrue() }
+            withClue(bad) { parsed.rejectedKeys shouldBe listOf("grid_scroll_cue") }
         }
     }
 
-    @Test
-    fun glass_style_is_glass_unless_a_theme_says_rim_or_halo_in_any_case_and_any_other_value_keeps_glass() {
-        assertEquals(GlassStyle.Glass, parseTvConfig("""{}""").config.glassStyle)
-        assertEquals(GlassStyle.Glass, parseTvConfig("""{"glass_style": "glass"}""").config.glassStyle)
-        assertEquals(GlassStyle.Rim, parseTvConfig("""{"glass_style": "rim"}""").config.glassStyle)
+    test("glass style is glass unless a theme says rim or halo in any case and any other value keeps glass") {
+        parseTvConfig("""{}""").config.glassStyle shouldBe GlassStyle.Glass
+        parseTvConfig("""{"glass_style": "glass"}""").config.glassStyle shouldBe GlassStyle.Glass
+        parseTvConfig("""{"glass_style": "rim"}""").config.glassStyle shouldBe GlassStyle.Rim
 
         val halo = parseTvConfig("""{"glass_style": " Halo "}""")
-        assertEquals(GlassStyle.Halo, halo.config.glassStyle)
-        assertEquals(emptyList<String>(), halo.rejectedKeys + halo.unknownKeys + halo.unsupportedKeys)
+        halo.config.glassStyle shouldBe GlassStyle.Halo
+        halo.rejectedKeys + halo.unknownKeys + halo.unsupportedKeys shouldBe emptyList<String>()
 
         for (bad in listOf("\"frosted\"", "\"\"", "true", "1")) {
             val parsed = parseTvConfig("""{"glass_style": $bad}""")
-            assertEquals(bad, GlassStyle.Glass, parsed.config.glassStyle)
-            assertEquals(bad, listOf("glass_style"), parsed.rejectedKeys)
+            withClue(bad) { parsed.config.glassStyle shouldBe GlassStyle.Glass }
+            withClue(bad) { parsed.rejectedKeys shouldBe listOf("glass_style") }
         }
     }
 
-    @Test
-    fun dock_opacity_takes_30_to_100_and_anything_else_keeps_the_guarded_default() {
-        assertEquals(30, parseTvConfig("""{"dock_opacity": 30}""").config.dockOpacity)
-        assertEquals(100, parseTvConfig("""{"dock_opacity": 100.9}""").config.dockOpacity)
-        assertEquals(null, parseTvConfig("""{}""").config.dockOpacity)
+    test("dock opacity takes 30 to 100 and anything else keeps the guarded default") {
+        parseTvConfig("""{"dock_opacity": 30}""").config.dockOpacity shouldBe 30
+        parseTvConfig("""{"dock_opacity": 100.9}""").config.dockOpacity shouldBe 100
+        parseTvConfig("""{}""").config.dockOpacity shouldBe null
 
         for (bad in listOf("29", "101", "\"70\"", "true")) {
             val parsed = parseTvConfig("""{"dock_opacity": $bad}""")
-            assertEquals(bad, null, parsed.config.dockOpacity)
-            assertEquals(bad, listOf("dock_opacity"), parsed.rejectedKeys)
+            withClue(bad) { parsed.config.dockOpacity shouldBe null }
+            withClue(bad) { parsed.rejectedKeys shouldBe listOf("dock_opacity") }
         }
     }
 
-    @Test
-    fun icon_only_buttons_is_false_in_a_theme_that_leaves_it_out_and_null_with_no_theme() {
-        assertEquals(false, parseTvConfig("""{"columns": 6}""").config.iconOnlyButtons)
-        assertEquals(false, parseTvConfig("{}").config.iconOnlyButtons)
-        assertEquals(null, parseTvConfig("[1, 2]").config.iconOnlyButtons)
-        assertEquals(null, parseTvConfig("").config.iconOnlyButtons)
-        assertEquals(true, parseTvConfig("""{"icon_only_buttons": true}""").config.iconOnlyButtons)
-        assertEquals(false, parseTvConfig("""{"icon_only_buttons": false}""").config.iconOnlyButtons)
+    test("icon only buttons is false in a theme that leaves it out and null with no theme") {
+        parseTvConfig("""{"columns": 6}""").config.iconOnlyButtons shouldBe false
+        parseTvConfig("{}").config.iconOnlyButtons shouldBe false
+        parseTvConfig("[1, 2]").config.iconOnlyButtons shouldBe null
+        parseTvConfig("").config.iconOnlyButtons shouldBe null
+        parseTvConfig("""{"icon_only_buttons": true}""").config.iconOnlyButtons shouldBe true
+        parseTvConfig("""{"icon_only_buttons": false}""").config.iconOnlyButtons shouldBe false
     }
 
-    @Test
-    fun icon_only_buttons_of_the_wrong_type_is_rejected_and_reads_as_absent() {
+    test("icon only buttons of the wrong type is rejected and reads as absent") {
         val parsed = parseTvConfig("""{"icon_only_buttons": "true"}""")
-        assertEquals(false, parsed.config.iconOnlyButtons)
-        assertEquals(listOf("icon_only_buttons"), parsed.rejectedKeys)
+        parsed.config.iconOnlyButtons shouldBe false
+        parsed.rejectedKeys shouldBe listOf("icon_only_buttons")
     }
 
-    @Test
-    fun icon_only_inputs_is_false_in_a_theme_that_leaves_it_out_and_null_with_no_theme() {
-        assertEquals(false, parseTvConfig("""{"columns": 6}""").config.iconOnlyInputs)
-        assertEquals(false, parseTvConfig("{}").config.iconOnlyInputs)
-        assertEquals(null, parseTvConfig("[1, 2]").config.iconOnlyInputs)
-        assertEquals(null, parseTvConfig("").config.iconOnlyInputs)
-        assertEquals(true, parseTvConfig("""{"icon_only_inputs": true}""").config.iconOnlyInputs)
-        assertEquals(false, parseTvConfig("""{"icon_only_inputs": false}""").config.iconOnlyInputs)
+    test("icon only inputs is false in a theme that leaves it out and null with no theme") {
+        parseTvConfig("""{"columns": 6}""").config.iconOnlyInputs shouldBe false
+        parseTvConfig("{}").config.iconOnlyInputs shouldBe false
+        parseTvConfig("[1, 2]").config.iconOnlyInputs shouldBe null
+        parseTvConfig("").config.iconOnlyInputs shouldBe null
+        parseTvConfig("""{"icon_only_inputs": true}""").config.iconOnlyInputs shouldBe true
+        parseTvConfig("""{"icon_only_inputs": false}""").config.iconOnlyInputs shouldBe false
     }
 
-    @Test
-    fun dock_even_padding_is_false_when_absent_true_when_set_and_rejected_when_not_a_boolean() {
-        assertEquals(false, parseTvConfig("""{"columns": 6}""").config.dockEvenPadding)
-        assertEquals(true, parseTvConfig("""{"dock_even_padding": true}""").config.dockEvenPadding)
-        assertEquals(false, parseTvConfig("""{"dock_even_padding": false}""").config.dockEvenPadding)
+    test("dock even padding is false when absent true when set and rejected when not a boolean") {
+        parseTvConfig("""{"columns": 6}""").config.dockEvenPadding shouldBe false
+        parseTvConfig("""{"dock_even_padding": true}""").config.dockEvenPadding shouldBe true
+        parseTvConfig("""{"dock_even_padding": false}""").config.dockEvenPadding shouldBe false
         val wrong = parseTvConfig("""{"dock_even_padding": "true"}""")
-        assertEquals(false, wrong.config.dockEvenPadding)
-        assertEquals(listOf("dock_even_padding"), wrong.rejectedKeys)
+        wrong.config.dockEvenPadding shouldBe false
+        wrong.rejectedKeys shouldBe listOf("dock_even_padding")
     }
 
-    @Test
-    fun icon_only_inputs_of_the_wrong_type_is_rejected_and_reads_as_false() {
+    test("icon only inputs of the wrong type is rejected and reads as false") {
         val parsed = parseTvConfig("""{"icon_only_inputs": "true"}""")
-        assertEquals(false, parsed.config.iconOnlyInputs)
-        assertEquals(listOf("icon_only_inputs"), parsed.rejectedKeys)
+        parsed.config.iconOnlyInputs shouldBe false
+        parsed.rejectedKeys shouldBe listOf("icon_only_inputs")
     }
 
-    @Test
-    fun the_network_button_keys_are_read_and_a_blank_vpn_app_is_none() {
+    test("the network button keys are read and a blank vpn app is none") {
         val parsed =
             parseTvConfig(
                 """{"icon_only_buttons": true, "wifi_label_width": 120, "wifi_status_color": true,
                    "wifi_status_warnings": true, "vpn_app": " com.vpn.app "}""",
             )
         val config = parsed.config
-        assertTrue(config.wifiStatusColor && config.wifiStatusWarnings)
-        assertEquals(true, config.iconOnlyButtons)
-        assertEquals(120, config.wifiLabelWidth)
-        assertEquals("com.vpn.app", config.vpnApp)
-        assertEquals(emptyList<String>(), parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys)
-        assertEquals(null, parseTvConfig("""{"vpn_app": "  "}""").config.vpnApp)
+        (config.wifiStatusColor && config.wifiStatusWarnings).shouldBeTrue()
+        config.iconOnlyButtons shouldBe true
+        config.wifiLabelWidth shouldBe 120
+        config.vpnApp shouldBe "com.vpn.app"
+        parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys shouldBe emptyList<String>()
+        parseTvConfig("""{"vpn_app": "  "}""").config.vpnApp shouldBe null
     }
 
-    @Test
-    fun latitude_and_longitude_together_set_the_place() {
+    test("latitude and longitude together set the place") {
         val parsed = parseTvConfig("""{"latitude": 40.4168, "longitude": -3.7038}""")
-        assertEquals(Place(40.4168, -3.7038), parsed.config.place)
-        assertEquals(emptyList<String>(), parsed.unknownKeys + parsed.unsupportedKeys + parsed.rejectedKeys)
-        assertEquals(Place(-90.0, 180.0), parseTvConfig("""{"latitude": -90, "longitude": 180}""").config.place)
+        parsed.config.place shouldBe Place(40.4168, -3.7038)
+        parsed.unknownKeys + parsed.unsupportedKeys + parsed.rejectedKeys shouldBe emptyList<String>()
+        parseTvConfig("""{"latitude": -90, "longitude": 180}""").config.place shouldBe Place(-90.0, 180.0)
     }
 
-    @Test
-    fun a_place_needs_both_keys_in_range_as_numbers() {
+    test("a place needs both keys in range as numbers") {
         val cases =
             mapOf(
                 """{"latitude": 40.4}""" to listOf("latitude"),
@@ -482,44 +441,41 @@ class TvConfigParserTest {
             )
         for ((text, rejected) in cases) {
             val parsed = parseTvConfig(text)
-            assertEquals(text, null, parsed.config.place)
-            assertEquals(text, rejected, parsed.rejectedKeys)
+            withClue(text) { parsed.config.place shouldBe null }
+            withClue(text) { parsed.rejectedKeys shouldBe rejected }
         }
     }
 
-    @Test
-    fun the_tile_menu_dock_row_and_reorder_button_keys_are_read() {
+    test("the tile menu dock row and reorder button keys are read") {
         val parsed = parseTvConfig("""{"tile_menu": false, "dock_row": false, "reorder_button": true}""")
-        assertFalse(parsed.config.tileMenu || parsed.config.dockRow)
-        assertTrue(parsed.config.reorderButton)
-        assertEquals(emptyList<String>(), parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys)
+        (parsed.config.tileMenu || parsed.config.dockRow).shouldBeFalse()
+        parsed.config.reorderButton.shouldBeTrue()
+        parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys shouldBe emptyList<String>()
 
         val wrong = parseTvConfig("""{"dock_row": "no", "reorder_button": 1}""")
-        assertTrue(wrong.config.dockRow)
-        assertFalse(wrong.config.reorderButton)
-        assertEquals(listOf("dock_row", "reorder_button"), wrong.rejectedKeys)
+        wrong.config.dockRow.shouldBeTrue()
+        wrong.config.reorderButton.shouldBeFalse()
+        wrong.rejectedKeys shouldBe listOf("dock_row", "reorder_button")
     }
 
-    @Test
-    fun the_app_library_keys_are_read() {
+    test("the app library keys are read") {
         val parsed =
             parseTvConfig(
                 """{"app_library": true, "app_library_selection": true, "library_button": true, "show_library_pill": false,
                     "library_ok_opens": true, "library_apps": ["a.b"], "library_excluded_apps": ["c.d"]}""",
             )
         val config = parsed.config
-        assertTrue(config.appLibrary && config.appLibrarySelection && config.libraryButton && config.libraryOkOpens)
-        assertFalse(config.showLibraryPill)
-        assertEquals(listOf("a.b") to listOf("c.d"), config.libraryApps to config.libraryExcludedApps)
-        assertEquals(emptyList<String>(), parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys)
+        (config.appLibrary && config.appLibrarySelection && config.libraryButton && config.libraryOkOpens).shouldBeTrue()
+        config.showLibraryPill.shouldBeFalse()
+        (config.libraryApps to config.libraryExcludedApps) shouldBe (listOf("a.b") to listOf("c.d"))
+        parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys shouldBe emptyList<String>()
 
         val wrong = parseTvConfig("""{"app_library_selection": "yes", "library_button": 1}""")
-        assertFalse(wrong.config.appLibrarySelection || wrong.config.libraryButton)
-        assertEquals(listOf("app_library_selection", "library_button"), wrong.rejectedKeys)
+        (wrong.config.appLibrarySelection || wrong.config.libraryButton).shouldBeFalse()
+        wrong.rejectedKeys shouldBe listOf("app_library_selection", "library_button")
     }
 
-    @Test
-    fun the_inputs_and_open_on_start_keys_are_read() {
+    test("the inputs and open on start keys are read") {
         val parsed =
             parseTvConfig(
                 """{"source_panel_service": " com.tcl/.Panel ", "source_panel_action": "com.tcl.SHOW", "source_panel_extra": "cmd=100",
@@ -527,50 +483,46 @@ class TvConfigParserTest {
                     "open_on_start_network_wait": 180}""",
             )
         val config = parsed.config
-        assertEquals(
-            Triple("com.tcl/.Panel", "com.tcl.SHOW", "cmd=100"),
-            Triple(config.sourcePanelService, config.sourcePanelAction, config.sourcePanelExtra),
-        )
-        assertTrue(config.coocaaSources && config.inputsConnectedOnly && config.inputsCecStateOnly && config.handleViewInputs)
-        assertEquals(180, config.openOnStartNetworkWait)
-        assertEquals(emptyList<String>(), parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys)
+        Triple(config.sourcePanelService, config.sourcePanelAction, config.sourcePanelExtra) shouldBe
+            Triple("com.tcl/.Panel", "com.tcl.SHOW", "cmd=100")
+        (config.coocaaSources && config.inputsConnectedOnly && config.inputsCecStateOnly && config.handleViewInputs).shouldBeTrue()
+        config.openOnStartNetworkWait shouldBe 180
+        parsed.unsupportedKeys + parsed.unknownKeys + parsed.rejectedKeys shouldBe emptyList<String>()
 
         val wrong = parseTvConfig("""{"coocaa_sources": "yes", "source_panel_service": 5, "open_on_start_network_wait": 601}""")
-        assertFalse(wrong.config.coocaaSources)
-        assertEquals(null, wrong.config.sourcePanelService)
-        assertEquals(0, wrong.config.openOnStartNetworkWait)
-        assertEquals(listOf("coocaa_sources", "source_panel_service", "open_on_start_network_wait"), wrong.rejectedKeys)
+        wrong.config.coocaaSources.shouldBeFalse()
+        wrong.config.sourcePanelService shouldBe null
+        wrong.config.openOnStartNetworkWait shouldBe 0
+        wrong.rejectedKeys shouldBe listOf("coocaa_sources", "source_panel_service", "open_on_start_network_wait")
     }
 
-    @Test
-    fun the_settings_entry_keys_default_off_read_true_and_reject_a_wrong_type() {
+    test("the settings entry keys default off read true and reject a wrong type") {
         val keys = listOf("launcher_settings_button", "open_on_start_choice", "open_on_start_on_wake")
         val flags = { c: TvConfig -> listOf(c.launcherSettingsButton, c.openOnStartChoice, c.openOnStartOnWake) }
-        assertEquals(listOf(false, false, false), flags(parseTvConfig("{}").config))
+        flags(parseTvConfig("{}").config) shouldBe listOf(false, false, false)
 
         val on = parseTvConfig(keys.joinToString(prefix = "{", postfix = "}") { "\"$it\": true" })
-        assertEquals(listOf(true, true, true), flags(on.config))
-        assertEquals(emptyList<String>(), on.unsupportedKeys + on.unknownKeys + on.rejectedKeys)
+        flags(on.config) shouldBe listOf(true, true, true)
+        on.unsupportedKeys + on.unknownKeys + on.rejectedKeys shouldBe emptyList<String>()
 
         val wrong = parseTvConfig(keys.joinToString(prefix = "{", postfix = "}") { "\"$it\": \"yes\"" })
-        assertEquals(listOf(false, false, false), flags(wrong.config))
-        assertEquals(keys, wrong.rejectedKeys)
+        flags(wrong.config) shouldBe listOf(false, false, false)
+        wrong.rejectedKeys shouldBe keys
     }
 
-    @Test
-    fun keys_with_no_reader_in_this_launcher_are_unsupported_and_change_nothing() {
+    test("keys with no reader in this launcher are unsupported and change nothing") {
         val keys = listOf("app_banners", "locale")
         val parsed = parseTvConfig(keys.joinToString(prefix = "{", postfix = "}") { "\"$it\": true" })
 
-        assertEquals(keys, parsed.unsupportedKeys)
-        assertEquals(emptyList<String>(), parsed.unknownKeys + parsed.rejectedKeys)
-        assertEquals(applied, parsed.config)
+        parsed.unsupportedKeys shouldBe keys
+        parsed.unknownKeys + parsed.rejectedKeys shouldBe emptyList<String>()
+        parsed.config shouldBe applied
     }
 
-    private val defaults = applied
+    val defaults = applied
 
     /** key to (JSON value, the config that value alone produces); latitude and longitude set one field, so they share a row. */
-    private val nonDefaults: Map<String, Pair<String, TvConfig>> =
+    val nonDefaults: Map<String, Pair<String, TvConfig>> =
         mapOf(
             "dock_apps" to ("""["com.a"]""" to defaults.copy(dockApps = listOf("com.a"))),
             "fill_dock" to ("false" to defaults.copy(fillDock = false)),
@@ -681,20 +633,19 @@ class TvConfigParserTest {
             "clock_glow" to ("false" to defaults.copy(clockGlow = false)),
         )
 
-    @Test
-    fun every_supported_key_at_a_non_default_value_changes_exactly_its_own_field() {
+    test("every supported key at a non default value changes exactly its own field") {
         for ((key, row) in nonDefaults) {
             val (value, expected) = row
             val json = if (key == "latitude") """{"latitude": 40.4, "longitude": -3.7}""" else """{"$key": $value}"""
             val parsed = parseTvConfig(json)
-            assertEquals(key, expected, parsed.config)
-            assertEquals(key, emptyList<String>(), parsed.unknownKeys + parsed.unsupportedKeys + parsed.rejectedKeys)
+            withClue(key) { parsed.config shouldBe expected }
+            withClue(key) { parsed.unknownKeys + parsed.unsupportedKeys + parsed.rejectedKeys shouldBe emptyList<String>() }
         }
         val fields =
             TvConfig::class.java.declaredFields.count {
                 !java.lang.reflect.Modifier
                     .isStatic(it.modifiers)
             }
-        assertEquals("a TvConfig field has no row", fields, nonDefaults.size)
+        withClue("a TvConfig field has no row") { nonDefaults.size shouldBe fields }
     }
 }
