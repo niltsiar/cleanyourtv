@@ -60,7 +60,8 @@ private val DockShadowDrop = 6.dp
  * lights the rim and the floor. With [outerHairline] a 1 dp black 0.30 line runs round the outside of the panel, so a light
  * panel keeps its edge on a bright picture. [gloss] (read in the draw phase, 0 to 1) scales the sheen and the rim: at less
  * than 1 a white 0.30 line, [TopLineWidth] thick, takes over the rim's top edge as it fades. [shade] (read in the draw phase,
- * 0 to 1) is the alpha of a black layer over the whole panel, content included.
+ * 0 to 1) is the alpha of a black layer over the whole panel, content included. The panel clips its content to [shape]
+ * and marks itself [clipsHalo], so a focused tile's halo inside it ends before that edge.
  */
 @Composable
 public fun DockSurface(
@@ -79,6 +80,7 @@ public fun DockSurface(
             modifier
                 .then(DockShadowElement(shape))
                 .then(if (outerHairline) Modifier.drawBehind { drawOuterHairline(shape) } else Modifier)
+                .clipsHalo()
                 .clip(shape)
                 .glassFrost(glass, dock = true)
                 .drawBehind {

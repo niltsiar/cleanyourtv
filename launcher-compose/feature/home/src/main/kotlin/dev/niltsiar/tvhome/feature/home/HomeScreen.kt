@@ -141,6 +141,7 @@ import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.Spotlight
 import dev.niltsiar.tvhome.core.designsystem.TILE_FOCUSED_SCALE
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.designsystem.clipsHalo
 import dev.niltsiar.tvhome.core.designsystem.holdOk
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.designsystem.ringBlendsWith
@@ -1777,7 +1778,12 @@ private fun Dock(
             CompositionLocalProvider(LocalBringIntoViewSpec provides RevealBringIntoViewSpec) {
                 LazyRow(
                     state = row,
-                    modifier = Modifier.focusRequester(focus).focusRestorer().upToOffer(input, layout),
+                    modifier =
+                        Modifier
+                            .focusRequester(focus)
+                            .focusRestorer()
+                            .upToOffer(input, layout)
+                            .clipsHalo(),
                     contentPadding = PaddingValues(horizontal = padding.side, vertical = padding.vertical),
                     horizontalArrangement = Arrangement.spacedBy(TileGap),
                 ) {

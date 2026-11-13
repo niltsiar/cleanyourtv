@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.addOutline
 import androidx.compose.ui.graphics.drawOutline
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
@@ -56,16 +55,12 @@ private val Gloss = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f
 private const val PLATE_TOP_ALPHA = 0.22f
 private const val PLATE_BOTTOM_ALPHA = 0.06f
 private const val PLATE_STROKE_ALPHA = 0.3f
-private val HaloWidth = 16.dp
-private const val HALO_STEPS = 8
-private const val HALO_UNDER_ALPHA = 0.5f
-private const val HALO_SIDE_ALPHA = 0.25f
 
 /**
  * How a focused [FocusSurface] is lit, from glass_style. [slab] gives it the lit top and, with a [FocusSurface] `plate`, the
  * plate; [glowStrength] scales the colour of its elevation glow, 0 leaving it out. [ringWidth] is the ring's width: a wider
  * ring takes the room from the gap inside it, so its outer edge and [FocusRingReach] stay put. [halo] draws a glow in the
- * ring's colour, [HaloWidth] wide past the keyline, at 0.5 under the surface and 0.25 at its sides and top, fading out.
+ * ring's colour past the keyline ([FocusHaloElement]), which ends before the edge of a [clipsHalo] container.
  * The ring and its keyline are drawn in every style.
  */
 public enum class FocusStyle(
@@ -142,7 +137,8 @@ public fun FocusSurface(
                     this.shape = ScaledShape(shape, 1f + (grownScale - 1f) * focus.value, growthPivot)
                     ambientShadowColor = glowColor
                     spotShadowColor = glowColor
-                }.drawWithContent {
+                }.then(if (halo) FocusHaloElement(focus, grownScale, growthPivot, shape, ring) else Modifier)
+                .drawWithContent {
                     scale(
                         1f + (grownScale - 1f) * focus.value,
                         Offset(
@@ -155,7 +151,6 @@ public fun FocusSurface(
                         val width = style.ringWidth.toPx()
                         val gap = (RingGap + RingWidth).toPx() - width
                         val ringColour = ring?.invoke() ?: Color.White
-                        if (outline != null && halo) drawHalo(outline, ringColour, progress)
                         if (outline != null && plateFill != null) {
                             val behind = outline.grownBy(gap)
                             drawOutline(behind, plateFill, alpha = progress)
@@ -199,34 +194,10 @@ public fun FocusSurface(
 }
 
 /**
- * A halo glow around [outline] in [colour], past the ring's keyline: [HALO_STEPS] bands, each fainter than the one inside it,
- * lit by a gradient that goes from the side alpha to the one under the surface across the ring's reach under its bottom edge.
- */
-private fun DrawScope.drawHalo(
-    outline: Outline,
-    colour: Color,
-    progress: Float,
-) {
-    val reach = FocusRingReach.toPx()
-    val band = HaloWidth.toPx() / HALO_STEPS
-    val light =
-        Brush.verticalGradient(
-            listOf(colour.copy(alpha = HALO_SIDE_ALPHA), colour.copy(alpha = HALO_UNDER_ALPHA)),
-            startY = size.height,
-            endY = size.height + reach,
-        )
-    val stroke = Stroke(band)
-    for (step in 0 until HALO_STEPS) {
-        val fade = (HALO_STEPS - step) / HALO_STEPS.toFloat()
-        drawOutline(outline.grownBy(reach + band * (step + 0.5f)), light, alpha = progress * fade, style = stroke)
-    }
-}
-
-/**
  * This outline pushed out by [delta] on every side, with each corner radius grown by [delta] too, so the new curve is
  * concentric with the old one. A shape that is not a rounded rectangle grows as its bounds, with corners of [delta].
  */
-internal fun Outline.grownBy(delta: Float): Outline =
+internal fun Outline.grownBy(delta: Float): Outline.Rounded =
     when (this) {
         is Outline.Rounded -> {
             val r = roundRect
