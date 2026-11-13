@@ -223,6 +223,55 @@ class KeyServiceTest {
     }
 
     @Test
+    fun an_app_keys_entry_for_a_settings_keycode_opens_its_app_and_not_settings() {
+        installLeanbackApp("com.netflix.ninja")
+        installLeanbackApp("org.xbmc.kodi")
+        service.start(
+            TvConfig(
+                appKeys = listOf("${KeyEvent.KEYCODE_SETTINGS}:com.netflix.ninja", "83:org.xbmc.kodi"),
+                settingsKeyKeycodes = listOf(83),
+            ),
+        )
+
+        assertTrue(tap(KeyEvent.KEYCODE_SETTINGS))
+        assertEquals("com.netflix.ninja", started()?.component?.packageName)
+        assertNull(started())
+
+        device += 1
+        assertTrue(tap(83))
+        assertEquals("org.xbmc.kodi", started()?.component?.packageName)
+        assertNull(started())
+    }
+
+    @Test
+    fun a_button_named_in_settings_key_scancodes_opens_settings_whatever_app_keys_says_for_its_keycode() {
+        installLeanbackApp("com.netflix.ninja")
+        service.start(TvConfig(appKeys = listOf("83:com.netflix.ninja"), settingsKeyScancodes = listOf(159)))
+
+        assertTrue(tap(83, scan = 159))
+
+        assertEquals(Settings.ACTION_SETTINGS, started()?.action)
+        assertNull(started())
+    }
+
+    @Test
+    fun a_hold_entry_alone_on_the_settings_key_leaves_the_tap_to_settings_and_opens_its_app_when_held() {
+        installLeanbackApp("org.xbmc.kodi")
+        service.start(TvConfig(appKeys = listOf("hold:${KeyEvent.KEYCODE_SETTINGS}:org.xbmc.kodi")))
+
+        assertTrue(tap(KeyEvent.KEYCODE_SETTINGS))
+        assertEquals(Settings.ACTION_SETTINGS, started()?.action)
+
+        device += 1
+        service.handleKey(key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_SETTINGS))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(HOLD_MS))
+        service.handleKey(key(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_SETTINGS, at = 1_000 + HOLD_MS + 100))
+
+        assertEquals("org.xbmc.kodi", started()?.component?.packageName)
+        assertNull(started())
+    }
+
+    @Test
     fun the_settings_key_clears_the_settings_task_only_with_settings_key_clear_task() {
         service.start(TvConfig())
         assertTrue(tap(KeyEvent.KEYCODE_SETTINGS))

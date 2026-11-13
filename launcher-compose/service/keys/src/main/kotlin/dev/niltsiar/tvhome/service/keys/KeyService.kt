@@ -259,17 +259,30 @@ public class KeyService : AccessibilityService() {
 
     public override fun onKeyEvent(event: KeyEvent): Boolean = handleKey(event)
 
-    /** The order matters: a volume key, then a scancode entry (more specific than any keycode), the Settings key, keycode entries, the Home keys, the Input button. */
+    /**
+     * The order matters: a volume key, then a scancode entry (more specific than any keycode), keycode entries, the Settings
+     * key, the Home keys, the Input button. A keycode entry with a tap target wins over the Settings keycodes but not over a
+     * button named in settings_key_scancodes; a "hold:" entry alone leaves the tap to Settings and still runs its hold.
+     */
     internal fun handleKey(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) powerOn?.onKeyDown(event.keyCode)
         if (volume?.handle(event) == true) return true
         val launch = launcher?.let { it::launch } ?: return false
         if (handleAppKey(event, keys.scanTap(event.scanCode, frontPackage), keys.holdScancodes[event.scanCode], this, launch)) return true
-        if (isSettingsKey(event)) {
-            if (released(event)) openSettings()
+        val settingsKey = isSettingsKey(event)
+        val tap = keys.keyTap(event.keyCode, frontPackage)
+        val hold = keys.holdKeycodes[event.keyCode]
+        if ((!settingsKey || (tap != null && event.scanCode !in config.settingsKeyScancodes)) &&
+            handleAppKey(event, tap, hold, this, launch)
+        ) {
             return true
         }
-        if (handleAppKey(event, keys.keyTap(event.keyCode, frontPackage), keys.holdKeycodes[event.keyCode], this, launch)) return true
+        if (settingsKey) {
+            handleAppKey(event, null, hold, this, launch)
+            val held = hold != null && event.eventTime - event.downTime >= HOLD_MS
+            if (released(event) && !held) openSettings()
+            return true
+        }
         // home_long_press_home: Android never sees the Home key, so a held press cannot turn into ALL_APPS.
         if (config.homeLongPressHome && event.keyCode == KeyEvent.KEYCODE_HOME) {
             if (released(event)) openHome()
