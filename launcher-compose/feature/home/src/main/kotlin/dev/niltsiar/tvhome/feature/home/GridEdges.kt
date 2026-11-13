@@ -35,6 +35,7 @@ private const val TOP_FADE_RUN = 120f
 private const val SETTLE = 24f
 private const val MASK_STOPS = 32
 private const val SHELF_KEY = "shelf"
+private const val DOCK_KEY = "dock"
 
 /** The least a grid row's tile shows above the bottom fade for the row to draw: a smaller part reads as a rendering fault. */
 internal val GridRowMinVisible = 48.dp
@@ -48,13 +49,14 @@ internal fun settleOf(height: Float): Float = SETTLE * height / FRAME_HEIGHT
  * a fade of [TOP_FADE_RUN] ends [FADE_GAP] above the first fully visible row. A row is an item of the grid with its [low]
  * shift, the dock included; [cutoff] is the line under which a row at the top counts as fully visible. Each fade is a
  * layer the size of its strip, and the top one is only drawn while an item is in it. With [names], a grid item holds the room for its
- * tile's name under the tile.
+ * tile's name under the tile. The dock's item ends [dockBelow] under its panel.
  */
 internal fun Modifier.gridEdges(
     grid: LazyGridState,
     low: () -> Float,
     cutoff: Dp,
     names: Boolean = false,
+    dockBelow: Dp,
 ): Modifier =
     drawWithCache {
         val top = cutoff.toPx()
@@ -89,7 +91,7 @@ internal fun Modifier.gridEdges(
                 if (item.key != SHELF_KEY && itemTop < topEnd && itemTop + item.size.height > topStart) topHasContent = true
             }
 
-            val wanted = bottomFade(info, shift, size.height, GridRowMinVisible.toPx(), names)
+            val wanted = bottomFade(info, shift, size.height, GridRowMinVisible.toPx(), names, dockBelow.toPx())
             val bottomStart = wanted.start
             val bottomMask =
                 cached?.takeIf { it.first == wanted }?.second
@@ -113,7 +115,8 @@ internal fun Modifier.gridEdges(
  * starts [FADE_GAP] under the last row that ends [SETTLE] inside the edge, and moves to the next row's bottom as that row comes
  * to within [SETTLE] of the edge. A row that is not whole but whose tile has [minVisible] above the fade at its lowest place
  * puts it there, so the row draws. A row is whole once its tile ends at the edge: with [names] the room under a grid tile may hang over
- * it, and the fade starts under the tile until the name is within [SETTLE] of coming in.
+ * it, and the fade starts under the tile until the name is within [SETTLE] of coming in. The dock's row ends at its panel,
+ * [dockBelow] pixels above the end of its item.
  */
 internal fun bottomFade(
     info: LazyGridLayoutInfo,
@@ -121,6 +124,7 @@ internal fun bottomFade(
     height: Float,
     minVisible: Float,
     names: Boolean = false,
+    dockBelow: Float = 0f,
 ): BottomMask {
     val unit = height / FRAME_HEIGHT
     val lowest = height * BOTTOM_FADE_LIMIT / FRAME_HEIGHT - (BOTTOM_FADE_RUN + FADE_GAP) * unit
@@ -131,7 +135,7 @@ internal fun bottomFade(
         val item = info.visibleItemsInfo[i]
         if (item.key == SHELF_KEY) continue
         val itemTop = item.offset.y + shift
-        val itemBottom = itemTop + item.size.height
+        val itemBottom = itemTop + item.size.height - if (item.key == DOCK_KEY) dockBelow else 0f
         val isTile = names && item.index >= GRID_ITEMS_BEFORE && item.key != LIBRARY_FOCUS
         val tileBottom = if (isTile) itemTop + item.size.width / TILE_ASPECT else itemBottom
         if (tileBottom <= height) {

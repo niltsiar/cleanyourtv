@@ -139,6 +139,7 @@ import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.designsystem.KeyChip
 import dev.niltsiar.tvhome.core.designsystem.KeyChipHeight
 import dev.niltsiar.tvhome.core.designsystem.OverlayHost
+import dev.niltsiar.tvhome.core.designsystem.ScrollsClearOfEdge
 import dev.niltsiar.tvhome.core.designsystem.Spotlight
 import dev.niltsiar.tvhome.core.designsystem.TILE_FOCUSED_SCALE
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
@@ -228,17 +229,19 @@ private const val NAME_BELOW_RATIO = 1.5f
 
 /**
  * What a tile [tileHeight] dp high adds under its pill, so that the space to what follows (a [TileGap] away) is
- * [NAME_BELOW_RATIO] times its gap, and at least the [roomOver] of a tile as high in the row under it.
+ * [NAME_BELOW_RATIO] times its gap, and, with a grid row under it ([rowUnder]), at least the [roomOver] of a tile as high in
+ * that row.
  */
 internal fun nameBelow(
     tileHeight: Float,
     scale: Float,
     peak: Float = scale,
+    rowUnder: Boolean = true,
 ): Float =
     maxOf(
         0f,
         NAME_BELOW_RATIO * nameGap(tileHeight, scale, peak) - TileGap.value,
-        roomOver(namePivot(tileHeight, scale), scale, peak) - TileGap.value,
+        if (rowUnder) roomOver(namePivot(tileHeight, scale), scale, peak) - TileGap.value else 0f,
     )
 
 /** One line of a tile's name and the padding of its pill. */
@@ -285,28 +288,39 @@ private val DockShrunkSide = 28.dp
 /** From the outer edge of a focused end dock tile's ring to the dock panel's wall, at least. */
 private val DockRingWallClear = 12.dp
 
-/** The dock panel's padding: [side] left and right of the tiles, [vertical] above and below them. */
+/**
+ * The dock panel's padding: [side] left and right of the tiles, [top] above them and [bottom] under them (under their names,
+ * with names). [rowGap] is the room from the panel's bottom edge to the first grid row: a [TileGap], or more for the ring of a
+ * first-row tile at the peak of a pop.
+ */
 @Immutable
 internal data class DockPadding(
     val side: Dp,
-    val vertical: Dp = TileGap,
-)
+    val top: Dp = TileGap,
+    val bottom: Dp = TileGap,
+    val rowGap: Dp = TileGap,
+) {
+    /** The room the dock's grid item has under the panel, so that with the grid's [TileGap] the first row is [rowGap] under it. */
+    val underPanel: Dp get() = rowGap - TileGap
+}
 
 /**
- * The padding of a dock panel whose focused end tile's ring needs [ringSide] to the wall and [vertical] over and under the
- * tiles. A [shrunk] panel (fewer tiles than the row holds) keeps at least [DockShrunkSide]. With [even] the top and bottom
- * take the side's padding, or [vertical] if that is more, and so does the side.
+ * The padding of a dock panel whose focused end tile's ring needs [ringSide] to the wall, [top] over the tiles and [bottom]
+ * under them, [rowGap] over the first grid row. A [shrunk] panel (fewer tiles than the row holds) keeps at least
+ * [DockShrunkSide]. With [even] the top, the bottom and the side all take the largest of the three.
  */
 internal fun dockPadding(
     ringSide: Dp,
     shrunk: Boolean,
     even: Boolean,
-    vertical: Dp = TileGap,
+    top: Dp = TileGap,
+    bottom: Dp = TileGap,
+    rowGap: Dp = TileGap,
 ): DockPadding {
     val side = if (shrunk) maxOf(DockShrunkSide, ringSide) else ringSide
-    if (!even) return DockPadding(side, vertical)
-    val all = maxOf(side, vertical)
-    return DockPadding(all, all)
+    if (!even) return DockPadding(side, top, bottom, rowGap)
+    val all = maxOf(side, top, bottom)
+    return DockPadding(all, all, all, rowGap)
 }
 
 /** The width of a tile of the dock's row, from the [gridWidth] of [columns] tiles and the gaps between them. */
@@ -487,7 +501,17 @@ public fun HomeScreen(
             .graphicsLayer { translationY = titleShift() }
     val band = rememberBandFade(libraryOpen, tileMenuOpen = { currentState.value().menu?.tileKey != null })
     val gridState = rememberLazyGridState()
-    FocusDimEffects(dim, currentState, input, layout, libraryOpen, gridState, shelfBottom - ShelfToFade, dockLook.band)
+    FocusDimEffects(
+        dim,
+        currentState,
+        input,
+        layout,
+        libraryOpen,
+        gridState,
+        shelfBottom - ShelfToFade,
+        dockLook.band,
+        dockPadding.underPanel,
+    )
     val scope = rememberCoroutineScope()
     val edge = remember(dockLook.edgeLight) { if (dockLook.edgeLight) DockEdgeLight(scope) else null }
     if (edge != null) DockEdgeEffect(edge, currentState, input, layout, libraryOpen)
@@ -645,7 +669,7 @@ public fun HomeScreen(
                         bandBottom = shelfBottom - ShelfToFade,
                         onPick = input.actions.onMenuPick,
                         dockTile = menuDockTile,
-                        dockPadding = dockPadding.vertical,
+                        dockPadding = dockPadding.top,
                     )
                 }
             }
@@ -690,12 +714,13 @@ private fun HomeContent(
 ) {
     val density = LocalDensity.current
     // The focused tile rests the panel's top padding inside the dock panel, so at rest the panel's top edge is the shelf's bottom edge.
-    val pivotPx = with(density) { (shelfBottom + dockPadding.vertical).toPx() }
+    val pivotPx = with(density) { (shelfBottom + dockPadding.top).toPx() }
     val pivotSpec = remember(pivotPx, dim) { PivotBringIntoViewSpec(pivotPx, dim::lowPx) }
     val shelfBottomPx = with(density) { shelfBottom.toPx() }
+    val underPanelPx = with(density) { dockPadding.underPanel.toPx() }
     val window = LocalWindowInfo.current.containerSize
     val gridWidth = with(density) { window.width.toDp() } - ScreenMargin * 2
-    val share = gridShare(layout, gridWidth, with(density) { window.height.toDp() }, shelfBottom, dockPadding.vertical)
+    val share = gridShare(layout, gridWidth, with(density) { window.height.toDp() }, shelfBottom, dockPadding)
     val startMargin = gridStart(gridWidth, share)
     val endMargin = ScreenMargin + gridWidth * (1f - share) - (startMargin - ScreenMargin)
     // The pill ends the grid: scrolled to the end it stands whole above the bottom fade, not a bottom margin higher.
@@ -776,12 +801,18 @@ private fun HomeContent(
                                 layout.columns,
                                 (grid.size + layout.columns - 1) / layout.columns,
                                 layout.showNames,
+                                dockPadding.underPanel,
                             )
                         } else {
                             Modifier
                         },
-                    ).gridEdges(gridState, dim::lowPx, cutoff = shelfBottom - ShelfToFade, names = layout.showNames)
-                    .onFocusChanged {
+                    ).gridEdges(
+                        gridState,
+                        dim::lowPx,
+                        cutoff = shelfBottom - ShelfToFade,
+                        names = layout.showNames,
+                        dockBelow = dockPadding.underPanel,
+                    ).onFocusChanged {
                         input.gridFocused = it.hasFocus
                         if (!it.hasFocus) input.travel.reset()
                     }.semantics { testTagsAsResourceId = true },
@@ -810,7 +841,13 @@ private fun HomeContent(
                     onFocus = onFocus,
                     onClick = onClick,
                     onOpenLibrary = onOpenLibrary,
-                    modifier = remember(dim, gridState, shelfBottomPx) { Modifier.dockLayer(dim, gridState, shelfBottomPx) },
+                    modifier =
+                        remember(
+                            dim,
+                            gridState,
+                            shelfBottomPx,
+                            underPanelPx,
+                        ) { Modifier.dockLayer(dim, gridState, shelfBottomPx, underPanelPx) },
                 )
             }
             itemsIndexed(grid, key = { _, app -> app.key }, contentType = { _, _ -> "tile" }) { index, app ->
@@ -1042,7 +1079,12 @@ private fun rememberDockPadding(
     val tileWidth = dockRowTileWidth(with(density) { windowWidth.toDp() } - ScreenMargin * 2, layout.columns)
     val tileHeight = tileWidth.value / TILE_ASPECT
     val pivot = if (layout.showNames) namePivot(tileHeight, scale) else tileHeight / 2f
-    return dockPadding(density.dockRingSide(tileWidth, peak), shrunk, look.evenPadding, roomOver(pivot, scale, peak).dp)
+    val over = roomOver(pivot, scale, peak).dp
+    // With names the pills are under the tiles, and the gap to them already holds the ring.
+    val under = if (layout.showNames) TileGap else roomOver(tileHeight - pivot, scale, peak).dp
+    // A first-row tile is as wide as this one at most, and grows about the same point.
+    val rowGap = if (layout.singleRow) TileGap else over
+    return dockPadding(density.dockRingSide(tileWidth, peak), shrunk, look.evenPadding, over, under, rowGap)
 }
 
 @Composable
@@ -1062,7 +1104,7 @@ private fun rememberFocusDim(
             val width = window.width.toDp()
             val height = window.height.toDp()
             val gridWidth = width - ScreenMargin * 2
-            val share = gridShare(layout, gridWidth, height, shelfBottom, dockPadding.vertical)
+            val share = gridShare(layout, gridWidth, height, shelfBottom, dockPadding)
             val tileWidth = (gridWidth * share - TileGap * (layout.columns - 1)) / layout.columns
             val tileHeight = tileWidth / TILE_ASPECT
             val gridRows = if (layout.singleRow) 0 else (gridCount + layout.columns - 1) / layout.columns
@@ -1075,11 +1117,14 @@ private fun rememberFocusDim(
                         shelfBottom = shelfBottom.value,
                         tileHeight = tileHeight.value,
                         gap = TileGap.value,
-                        dockPadding = dockPadding.vertical.value,
+                        dockTop = dockPadding.top.value,
+                        dockBottom = dockPadding.bottom.value,
+                        rowGap = dockPadding.rowGap.value,
                         gridRows = gridRows,
                         rowsBelowDock = layout.rowsBelowDock,
                         bottomMargin = GridBottom.value,
                         nameRoom = layout.nameRoom(tileHeight.value, scale, peak),
+                        dockNameRoom = layout.nameRoom(tileHeight.value, scale, peak, rowUnder = false),
                     ).dp
                 }
             val start = gridStart(gridWidth, share)
@@ -1093,7 +1138,10 @@ private fun rememberFocusDim(
                     edge,
                     top / height,
                     end,
-                    (top + tileHeight + dockPadding.vertical * 2 + layout.nameRoom(tileHeight.value, scale, peak).dp) / height,
+                    (
+                        top + tileHeight + dockPadding.top + dockPadding.bottom +
+                            layout.nameRoom(tileHeight.value, scale, peak, rowUnder = false).dp
+                    ) / height,
                 ),
                 Rect(
                     ScreenMargin / width,
@@ -1111,14 +1159,14 @@ private fun rememberFocusDim(
 
 /**
  * The share of the grid's width its tiles use, so that [HomeLayout.rowsBelowDock] rows fit under a dock whose panel starts at
- * [shelfBottom] and pads its tiles [dockPadding] above and below. The names under the tiles do not change it.
+ * [shelfBottom] and is padded and spaced from the first row by [dockPadding]. The names under the tiles do not change it.
  */
 internal fun gridShare(
     layout: HomeLayout,
     gridWidth: Dp,
     windowHeight: Dp,
     shelfBottom: Dp,
-    dockPadding: Dp = TileGap,
+    dockPadding: DockPadding = DockPadding(TileGap),
 ): Float {
     if (layout.singleRow) return 1f
     return tileWidthShare(
@@ -1127,7 +1175,9 @@ internal fun gridShare(
         layout.columns,
         layout.rowsBelowDock,
         TileGap.value,
-        dockPadding.value,
+        dockPadding.top.value,
+        dockPadding.bottom.value,
+        dockPadding.rowGap.value,
     )
 }
 
@@ -1137,14 +1187,15 @@ private fun gridStart(
     share: Float,
 ): Dp = ScreenMargin + gridWidth * ((1f - share) / 2f)
 
-/** The room the name of a tile [tileHeight] dp high takes under it, in dp; 0 with the names off. */
+/** The room the name of a tile [tileHeight] dp high takes under it, in dp, with a grid row under it if [rowUnder]; 0 with the names off. */
 private fun HomeLayout.nameRoom(
     tileHeight: Float,
     scale: Float,
     peak: Float,
+    rowUnder: Boolean = true,
 ): Float =
     if (showNames) {
-        nameGap(tileHeight, scale, peak) + (NameLine + NamePillDown * 2).value + nameBelow(tileHeight, scale, peak)
+        nameGap(tileHeight, scale, peak) + (NameLine + NamePillDown * 2).value + nameBelow(tileHeight, scale, peak, rowUnder)
     } else {
         0f
     }
@@ -1186,7 +1237,7 @@ private fun groupLowFor(
  * Runs [dim]: its row follows focus in [ROW_DIM_MS], and its group goes low or up as [groupLowFor] says, in
  * [GROUP_MS], at once without motion. It stays where it is while the App library is open. Its [FocusDim.fold] follows the
  * [grid]'s bottom edge in [ROW_DIM_MS], and its [FocusDim.bar] a top-bar popup in [BAND_IN_MS] and [BAND_OUT_MS], or focus in the top bar
- * in [TOP_BAR_DOCK_MS].
+ * in [TOP_BAR_DOCK_MS]. The dock's grid item ends [dockBelow] under its panel.
  */
 @Composable
 private fun FocusDimEffects(
@@ -1198,6 +1249,7 @@ private fun FocusDimEffects(
     grid: LazyGridState,
     cutoff: Dp,
     dockPanel: Boolean,
+    dockBelow: Dp,
 ) {
     val motion = TvTheme.motion
     val currentLibraryOpen = rememberUpdatedState(libraryOpen)
@@ -1207,6 +1259,7 @@ private fun FocusDimEffects(
             .toFloat()
     val solidTop = with(density) { cutoff.toPx() } + settleOf(windowHeight)
     val minVisible = with(density) { GridRowMinVisible.toPx() }
+    val dockBelowPx = with(density) { dockBelow.toPx() }
     LaunchedEffect(state, input, layout, motion) {
         snapshotFlow { focusRowOf(state.value(), input, layout).toFloat() }
             .collectLatest { dim.row.animateTo(it, motion.tweenSpec(ROW_DIM_MS)) }
@@ -1237,11 +1290,11 @@ private fun FocusDimEffects(
             }
         }
     }
-    LaunchedEffect(state, grid, layout, dim, motion, minVisible) {
+    LaunchedEffect(state, grid, layout, dim, motion, minVisible, dockBelowPx) {
         var first = true
         snapshotFlow {
             val rows = (state.value().grid.size + layout.columns - 1) / layout.columns
-            minOf(dim.hiddenFromRow(grid.layoutInfo, layout.columns, minVisible, layout.showNames), rows).toFloat()
+            minOf(dim.hiddenFromRow(grid.layoutInfo, layout.columns, minVisible, layout.showNames, dockBelowPx), rows).toFloat()
         }.collectLatest { target ->
             if (first) dim.fold.snapTo(target) else dim.fold.animateTo(target, motion.tweenSpec(ROW_DIM_MS))
             first = false
@@ -1316,16 +1369,17 @@ private data class DockDim(
 
 /**
  * The first grid row whose tile shows under [minVisible] pixels (or under its whole height, if that is less) above the end of the
- * bottom fade ([bottomFade]), where nothing is drawn, or [Int.MAX_VALUE].
+ * bottom fade ([bottomFade]), where nothing is drawn, or [Int.MAX_VALUE]. The dock's item ends [dockBelow] pixels under its panel.
  */
 private fun FocusDim.hiddenFromRow(
     info: LazyGridLayoutInfo,
     columns: Int,
     minVisible: Float,
     names: Boolean,
+    dockBelow: Float,
 ): Int {
     val shift = lowPx() - info.viewportStartOffset
-    val end = bottomFade(info, shift, info.viewportSize.height.toFloat(), minVisible, names).end
+    val end = bottomFade(info, shift, info.viewportSize.height.toFloat(), minVisible, names, dockBelow).end
     var first = Int.MAX_VALUE
     for (i in info.visibleItemsInfo.indices) {
         val item = info.visibleItemsInfo[i]
@@ -1369,13 +1423,14 @@ private fun Modifier.gridRowLayer(
 
 /**
  * The dock's layer: hidden by [FocusDim.dockAlpha] with focus in the grid, drawn as far down as [dim]'s group is, and faded
- * out over the [DockFadeOut] before its bottom edge scrolls up to [shelfBottomPx], so a dock scrolled up for the grid leaves nothing in
- * the grid's top fade.
+ * out over the [DockFadeOut] before its panel's bottom edge, [underPanelPx] above the end of its item, scrolls up to
+ * [shelfBottomPx], so a dock scrolled up for the grid leaves nothing in the grid's top fade.
  */
 private fun Modifier.dockLayer(
     dim: FocusDim,
     grid: LazyGridState,
     shelfBottomPx: Float,
+    underPanelPx: Float,
 ): Modifier =
     graphicsLayer {
         compositingStrategy = CompositingStrategy.ModulateAlpha
@@ -1385,7 +1440,7 @@ private fun Modifier.dockLayer(
             if (dock == null) {
                 0f
             } else {
-                val bottom = dock.offset.y - info.viewportStartOffset + dock.size.height + dim.lowPx()
+                val bottom = dock.offset.y - info.viewportStartOffset + dock.size.height - underPanelPx + dim.lowPx()
                 ((bottom - shelfBottomPx) / DockFadeOut.toPx()).coerceIn(0f, 1f)
             }
         alpha = dim.dockAlpha() * shown * dim.bar.value
@@ -1819,10 +1874,22 @@ private fun Dock(
     // is as wide as they are, centred.
     val shrunk = look.shrinks(layout, dock.size)
     val width = if (shrunk) Modifier.wrapContentWidth() else Modifier.fillMaxWidth()
-    DockPanel(glass, look, edge, shade, modifier.outset(TileGap).then(width).testTag("dock")) {
+    DockPanel(
+        glass,
+        look,
+        edge,
+        shade,
+        modifier
+            .padding(bottom = padding.underPanel)
+            .outset(TileGap)
+            .then(width)
+            .testTag("dock"),
+    ) {
         if (layout.singleRow) {
-            // The grid's pivot scroll is vertical; this row scrolls sideways the usual way.
-            CompositionLocalProvider(LocalBringIntoViewSpec provides RevealBringIntoViewSpec) {
+            // The grid's pivot scroll is vertical; this row scrolls sideways until the focused tile's ring is inside it.
+            val ring =
+                with(LocalDensity.current) { ringReach(rowTileWidth.toPx(), TvTheme.motion.focusPeakScale(TILE_FOCUSED_SCALE)).toDp() }
+            ScrollsClearOfEdge(ring) {
                 LazyRow(
                     state = row,
                     modifier =
@@ -1831,7 +1898,7 @@ private fun Dock(
                             .focusRestorer()
                             .upToOffer(input, layout)
                             .clipsHalo(),
-                    contentPadding = PaddingValues(horizontal = padding.side, vertical = padding.vertical),
+                    contentPadding = PaddingValues(start = padding.side, top = padding.top, end = padding.side, bottom = padding.bottom),
                     horizontalArrangement = Arrangement.spacedBy(TileGap),
                 ) {
                     itemsIndexed(dock, key = { _, app -> app.key }) { index, app ->
@@ -1849,6 +1916,7 @@ private fun Dock(
                             reordering = reordering,
                             tileMenu = layout.tileMenu,
                             showName = layout.showNames,
+                            rowUnder = false,
                             edge = edge,
                             glassEdge = look.band && look.glass,
                             modifier =
@@ -1880,7 +1948,7 @@ private fun Dock(
                         .focusRestorer()
                         .focusGroup()
                         .upToOffer(input, layout)
-                        .padding(horizontal = padding.side, vertical = padding.vertical),
+                        .padding(start = padding.side, top = padding.top, end = padding.side, bottom = padding.bottom),
                 horizontalArrangement = Arrangement.spacedBy(TileGap),
             ) {
                 dock.forEachIndexed { index, app ->
@@ -1906,6 +1974,7 @@ private fun Dock(
                             reordering = reordering,
                             tileMenu = layout.tileMenu,
                             showName = layout.showNames,
+                            rowUnder = false,
                             edge = edge,
                             glassEdge = look.band && look.glass,
                             modifier =
@@ -2043,6 +2112,7 @@ private fun AppTile(
     tileMenu: Boolean,
     modifier: Modifier = Modifier,
     showName: Boolean = false,
+    rowUnder: Boolean = true,
     habitMark: Boolean = true,
     fadeUnused: Boolean = false,
     edge: DockEdgeLight? = null,
@@ -2059,7 +2129,7 @@ private fun AppTile(
         val pivot: (
             Float,
         ) -> Float = remember(density, scale) { { height -> with(density) { namePivot(height.toDp().value, scale).dp.toPx() } } }
-        NameUnder(app, scale, peak, marked) {
+        NameUnder(app, scale, peak, rowUnder, marked) {
             AppTile(
                 app,
                 accent,
@@ -2184,13 +2254,14 @@ private fun AppTile(
 /**
  * [tile] with [app]'s name under it, on one line, on a pill as wide as the text and no wider than the tile, which looks the same
  * with focus or without, but for a cut name, which scrolls while the tile has focus. The pill is [nameGap] under the tile and
- * does not move with focus.
+ * does not move with focus. The room under the pill is [nameBelow]'s, [rowUnder] saying whether a grid row follows.
  */
 @Composable
 private fun NameUnder(
     app: AppEntry,
     scale: Float,
     peak: Float,
+    rowUnder: Boolean,
     modifier: Modifier = Modifier,
     tile: @Composable () -> Unit,
 ) {
@@ -2207,7 +2278,7 @@ private fun NameUnder(
         val name = measurables[1].measure(Constraints(maxWidth = art.width))
         val tileHeight = art.height.toDp().value
         val gap = nameGap(tileHeight, scale, peak).dp.roundToPx()
-        val ringRoom = ceil((roomOver(namePivot(tileHeight, scale), scale, peak) - TileGap.value).dp.toPx()).toInt()
+        val ringRoom = if (rowUnder) ceil((roomOver(namePivot(tileHeight, scale), scale, peak) - TileGap.value).dp.toPx()).toInt() else 0
         // In whole pixels, so that rounding the two apart cannot leave the space under the pill short of its ratio.
         val below = maxOf(0, ceil(NAME_BELOW_RATIO * gap).toInt() - TileGap.roundToPx(), ringRoom)
         layout(art.width, art.height + gap + name.height + below) {

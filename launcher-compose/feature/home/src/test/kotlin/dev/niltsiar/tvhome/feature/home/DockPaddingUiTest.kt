@@ -228,6 +228,65 @@ class DockPaddingUiTest {
         assertEquals(24f, sides.bottom, 0.6f)
     }
 
+    /** The room from the bottom of the first dock tile's name pill to the panel's rim, and the gap from the tile to the pill. */
+    private fun underPills(): Pair<Float, Float> {
+        val tile = dockTile(1)
+        val name = compose.onNode(hasTestTag("name:pkg.1") and hasAnyAncestor(hasTestTag("dock"))).getBoundsInRoot()
+        return (dock().bottom - name.bottom).value - 2f to (name.top - tile.bottom).value - 2f
+    }
+
+    private fun assertGapOrOneAndAHalfUnderPills(motion: Motion) {
+        showHome(TvConfig(columns = 2, alwaysShowNames = true), motion = motion)
+        for (columns in 2..7) {
+            switchTo(TvConfig(columns = columns, alwaysShowNames = true))
+            val (under, gap) = underPills()
+
+            assertEquals("$columns columns", maxOf(24f, 1.5f * gap), under, 0.6f)
+        }
+    }
+
+    @Test
+    @Config(qualifiers = TALL)
+    fun with_focus_overshoot_a_named_docks_room_under_its_pills_is_a_gap_or_one_and_a_half_times_the_pills_gap() {
+        assertGapOrOneAndAHalfUnderPills(Motion(focusOvershoot = true))
+    }
+
+    @Test
+    @Config(qualifiers = TALL)
+    fun without_focus_overshoot_a_named_docks_room_under_its_pills_is_a_gap_or_one_and_a_half_times_the_pills_gap() {
+        assertGapOrOneAndAHalfUnderPills(Motion())
+    }
+
+    /** The first grid row's tile in a dock of [columns] tiles. */
+    private fun rowOneTile(columns: Int): DpRect = compose.onNodeWithTag("tile:pkg.${columns + 1}").getBoundsInRoot()
+
+    private val rowOneConfigs = (2..4).map { TvConfig(columns = it, alwaysShowNames = true) } + TvConfig(columns = 2)
+
+    @Test
+    @Config(qualifiers = TALL)
+    fun with_focus_overshoot_a_first_row_tiles_ring_at_the_peak_keeps_4_dp_under_the_dock_panel() {
+        showHome(rowOneConfigs.first(), motion = Motion(focusOvershoot = true))
+        for (config in rowOneConfigs) {
+            switchTo(config)
+            val tile = rowOneTile(config.columns)
+            val ring = peakRing((tile.bottom - tile.top).value, config.alwaysShowNames)
+            val room = (tile.top - dock().bottom).value
+
+            assertTrue("$config: $room dp under the panel over a ring of ${ring.over}", room >= ring.over + 4f - HALF_PIXEL)
+        }
+    }
+
+    @Test
+    @Config(qualifiers = TALL)
+    fun without_focus_overshoot_the_first_row_is_a_gap_under_the_dock_panel() {
+        showHome(rowOneConfigs.first())
+        for (config in rowOneConfigs) {
+            switchTo(config)
+
+            assertEquals("$config", 24f, (rowOneTile(config.columns).top - dock().bottom).value, 0.6f)
+        }
+    }
+
     @Test
     fun even_padding_gives_the_top_and_bottom_the_sides_padding_when_that_is_more_than_a_gap() {
         showHome(SixColumns.copy(dockEvenPadding = true))
@@ -290,3 +349,6 @@ class DockPaddingUiTest {
 
 /** The layout places in whole pixels; at xhdpi rounding moves an edge by up to half of one, in dp. */
 private const val HALF_PIXEL = 0.25f
+
+/** A window tall enough for a dock of two named tiles and the first grid row under it. */
+private const val TALL = "w960dp-h1080dp-xhdpi"

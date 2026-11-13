@@ -43,7 +43,7 @@ class HomeLayoutTest {
 
     @Test
     fun a_dock_panel_padded_more_than_a_gap_shrinks_the_tiles_further_so_the_rows_still_fit() {
-        val padded = tileWidthShare(gridWidth, height, columns = 6, rowsBelowDock = 3, gap = gap, dockPadding = 15f)
+        val padded = tileWidthShare(gridWidth, height, columns = 6, rowsBelowDock = 3, gap = gap, dockTop = 15f, dockBottom = 15f)
 
         assertTrue(padded < tileWidthShare(gridWidth, height, columns = 6, rowsBelowDock = 3, gap = gap))
         assertEquals(height, needed(padded, rows = 3, dockPadding = 15f), 0.5f)
@@ -97,7 +97,8 @@ class HomeLayoutTest {
                 shelfBottom = 245f,
                 tileHeight = 70f,
                 gap = 24f,
-                dockPadding = dockPadding,
+                dockTop = dockPadding,
+                dockBottom = dockPadding,
                 gridRows = 3,
                 rowsBelowDock = 1,
             )

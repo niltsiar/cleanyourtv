@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.grid.LazyGridLayoutInfo
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.designsystem.ScrollCuePillHeight
 import dev.niltsiar.tvhome.core.designsystem.drawScrollDownCue
@@ -28,11 +29,24 @@ internal fun Modifier.moreCue(
     columns: Int,
     rows: Int,
     names: Boolean,
+    dockBelow: Dp,
 ): Modifier =
     drawWithContent {
         drawContent()
         val room = (ScrollCuePillHeight + MoreCueClear).toPx()
-        val cue = moreCuePlace(grid.layoutInfo, low(), fold(), size.height, columns, rows, GridRowMinVisible.toPx(), names, room)
+        val cue =
+            moreCuePlace(
+                grid.layoutInfo,
+                low(),
+                fold(),
+                size.height,
+                columns,
+                rows,
+                GridRowMinVisible.toPx(),
+                names,
+                room,
+                dockBelow.toPx(),
+            )
         if (cue != null && cue.alpha > 0f) {
             drawScrollDownCue(
                 cue.centre,
@@ -65,9 +79,10 @@ internal fun moreCuePlace(
     minVisible: Float,
     names: Boolean,
     room: Float,
+    dockBelow: Float = 0f,
 ): MoreCuePlace? {
     val shift = low - info.viewportStartOffset
-    val end = bottomFade(info, shift, height, minVisible, names).end
+    val end = bottomFade(info, shift, height, minVisible, names, dockBelow).end
     var lastRow = -1
     var lastBottom = 0f
     var tileBottom = 0f

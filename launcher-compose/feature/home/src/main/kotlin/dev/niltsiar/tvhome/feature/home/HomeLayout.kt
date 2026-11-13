@@ -54,8 +54,9 @@ internal const val TILE_ASPECT = 16f / 9f
 
 /**
  * The share of the grid's [gridWidth] that its tiles may use so that the dock and [rowsBelowDock] rows below it fit
- * in [availableHeight] (all in dp, [gap] between tiles, [dockPadding] above and below the dock's tiles). 1 when they fit at full
- * width or [rowsBelowDock] is 0; never under 0.85, so tiles stay a recognisable size and the extra rows scroll.
+ * in [availableHeight] (all in dp, [gap] between tiles, [dockTop] above the dock's tiles and [dockBottom] under them, [rowGap]
+ * between the dock panel and the first row). 1 when they fit at full width or [rowsBelowDock] is 0; never under 0.85, so
+ * tiles stay a recognisable size and the extra rows scroll.
  */
 internal fun tileWidthShare(
     gridWidth: Float,
@@ -63,12 +64,14 @@ internal fun tileWidthShare(
     columns: Int,
     rowsBelowDock: Int,
     gap: Float,
-    dockPadding: Float = gap,
+    dockTop: Float = gap,
+    dockBottom: Float = gap,
+    rowGap: Float = gap,
 ): Float {
     if (rowsBelowDock <= 0 || columns <= 0 || gridWidth <= 0f || availableHeight <= 0f) return 1f
     // The height of the dock panel (a tile and its padding) plus the rows is linear in the grid width; solve for the width.
     val rows = rowsBelowDock
-    val tilesWidth = (availableHeight - 2 * dockPadding - rows * gap) * TILE_ASPECT * columns
+    val tilesWidth = (availableHeight - dockTop - dockBottom - rowGap - (rows - 1) * gap) * TILE_ASPECT * columns
     val fitting = (tilesWidth + (columns + 1) * gap + rows * (columns - 1) * gap) / (rows + 1)
     return (fitting / gridWidth).coerceIn(MIN_TILE_SHARE, 1f)
 }
@@ -79,22 +82,27 @@ internal const val DOCK_LOWERING = 120f
 /**
  * How much of [DOCK_LOWERING] dock focus uses, in dp: all of it for the peek of the first row ([rowsBelowDock] 0), and
  * with [rowsBelowDock] full rows to show (at most the [gridRows] there are) only what is left of the screen under the
- * last of them and [bottomMargin]. [shelfBottom] is where the dock panel starts; the dock panel is a tile and a [dockPadding]
- * above and below it, and a row is a [gap] and a tile; the dock panel and each row also hold [nameRoom] for a tile's name.
+ * last of them and [bottomMargin]. [shelfBottom] is where the dock panel starts; the dock panel is a tile with [dockTop] above
+ * it and [dockBottom] under it, the first row is [rowGap] under the panel, and a row is a [gap] and a tile. Each row holds
+ * [nameRoom] for a tile's name, and the dock panel [dockNameRoom].
  */
 internal fun dockLowering(
     windowHeight: Float,
     shelfBottom: Float,
     tileHeight: Float,
     gap: Float,
-    dockPadding: Float = gap,
+    dockTop: Float = gap,
+    dockBottom: Float = gap,
+    rowGap: Float = gap,
     gridRows: Int,
     rowsBelowDock: Int,
     bottomMargin: Float = 48f,
     nameRoom: Float = 0f,
+    dockNameRoom: Float = nameRoom,
 ): Float {
     val rows = minOf(rowsBelowDock, gridRows).coerceAtLeast(0)
-    val lastBottom = shelfBottom + tileHeight + nameRoom + 2 * dockPadding + rows * (gap + tileHeight + nameRoom)
+    val dockBottomEdge = shelfBottom + dockTop + tileHeight + dockNameRoom + dockBottom
+    val lastBottom = if (rows == 0) dockBottomEdge else dockBottomEdge + rowGap - gap + rows * (gap + tileHeight + nameRoom)
     return (windowHeight - bottomMargin - lastBottom).coerceIn(0f, DOCK_LOWERING)
 }
 
