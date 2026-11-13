@@ -36,7 +36,8 @@ public object ServiceRepair {
         try {
             val resolver = context.contentResolver
             val current = Settings.Secure.getString(resolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
-            val plan = repairPlan(current, recorded(context).map { ComponentName(context.packageName, it) }) ?: return
+            val switch = Settings.Secure.getInt(resolver, Settings.Secure.ACCESSIBILITY_ENABLED, -1)
+            val plan = repairPlan(current, recorded(context).map { ComponentName(context.packageName, it) }, switch) ?: return
             Thread({ runRepair(resolver, current, plan) { Thread.sleep(it) } }, "ServiceRepair").start()
         } catch (_: RuntimeException) {
             // The setting is the system's; a refusal leaves the service off, as before.
@@ -52,14 +53,19 @@ internal data class RepairPlan(
     val with: String,
 )
 
-/** Null when nothing is recorded or every recorded service is on the list already. */
+/**
+ * Null when nothing is recorded, or every recorded service is on the list already and [accessibilityEnabled] is not 0.
+ * Hisense songshan's standby kill leaves the list naming the service and drops only the switch to 0, with the service
+ * marked crashed (#3404), so a confirmed 0 needs the cycle too; an absent or unreadable switch (-1) does not.
+ */
 internal fun repairPlan(
     enabledList: String?,
     recorded: Collection<ComponentName>,
+    accessibilityEnabled: Int,
 ): RepairPlan? {
     if (recorded.isEmpty()) return null
     val enabled = enabledList.orEmpty().split(":").mapNotNull(ComponentName::unflattenFromString)
-    if (recorded.all { it in enabled }) return null
+    if (recorded.all { it in enabled } && accessibilityEnabled != 0) return null
     val others = enabled.filter { it !in recorded }.map { it.flattenToShortString() }
     return RepairPlan(
         without = others.joinToString(":"),

@@ -31,27 +31,44 @@ class ServiceRepairTest {
 
     @Test
     fun a_recorded_service_missing_from_the_list_is_added_after_the_others() {
-        val plan = repairPlan(OTHER, listOf(keyService))
+        val plan = repairPlan(OTHER, listOf(keyService), 1)
 
         assertEquals(RepairPlan(without = OTHER, with = "$OTHER:$KEYS"), plan)
     }
 
     @Test
     fun an_empty_or_absent_list_after_a_force_stop_rebuilds_to_the_recorded_service_alone() {
-        assertEquals(RepairPlan(without = "", with = KEYS), repairPlan("", listOf(keyService)))
-        assertEquals(RepairPlan(without = "", with = KEYS), repairPlan(null, listOf(keyService)))
+        assertEquals(RepairPlan(without = "", with = KEYS), repairPlan("", listOf(keyService), 1))
+        assertEquals(RepairPlan(without = "", with = KEYS), repairPlan(null, listOf(keyService), 1))
     }
 
     @Test
-    fun nothing_is_rebuilt_when_no_service_is_recorded_or_every_recorded_one_is_listed() {
-        assertNull(repairPlan("", emptyList()))
-        assertNull(repairPlan("$OTHER:$KEYS", listOf(keyService)))
-        assertNull(repairPlan("dev.niltsiar.tvhome/dev.niltsiar.tvhome.service.keys.KeyService", listOf(keyService)))
+    fun nothing_is_rebuilt_when_no_service_is_recorded_or_every_recorded_one_is_listed_and_the_switch_is_not_0() {
+        assertNull(repairPlan("", emptyList(), 0))
+        for (switch in listOf(1, -1)) {
+            assertNull(repairPlan("$OTHER:$KEYS", listOf(keyService), switch))
+            assertNull(repairPlan("dev.niltsiar.tvhome/dev.niltsiar.tvhome.service.keys.KeyService", listOf(keyService), switch))
+        }
+    }
+
+    @Test
+    fun a_listed_service_is_cycled_when_the_switch_reads_0_and_the_cycle_turns_accessibility_on() {
+        setEnabled("$KEYS:$OTHER")
+        Settings.Secure.putInt(resolver, Settings.Secure.ACCESSIBILITY_ENABLED, 0)
+        val plan = checkNotNull(repairPlan("$KEYS:$OTHER", listOf(keyService), 0))
+        val seen = mutableListOf<String?>()
+
+        runRepair(resolver, "$KEYS:$OTHER", plan) { seen += enabled() }
+
+        assertEquals(RepairPlan(without = OTHER, with = "$OTHER:$KEYS"), plan)
+        assertEquals(listOf("$OTHER:$KEYS", OTHER), seen)
+        assertEquals("$OTHER:$KEYS", enabled())
+        assertEquals(1, Settings.Secure.getInt(resolver, Settings.Secure.ACCESSIBILITY_ENABLED))
     }
 
     @Test
     fun the_cycle_writes_with_without_with_a_second_apart_and_turns_accessibility_on() {
-        val plan = checkNotNull(repairPlan(OTHER, listOf(keyService)))
+        val plan = checkNotNull(repairPlan(OTHER, listOf(keyService), 1))
         setEnabled(OTHER)
         val seen = mutableListOf<String?>()
         val pauses = mutableListOf<Long>()
@@ -69,7 +86,7 @@ class ServiceRepairTest {
 
     @Test
     fun a_list_changed_during_a_pause_stops_the_cycle_and_is_left_as_it_is() {
-        val plan = checkNotNull(repairPlan(OTHER, listOf(keyService)))
+        val plan = checkNotNull(repairPlan(OTHER, listOf(keyService), 1))
         setEnabled(OTHER)
         Settings.Secure.putInt(resolver, Settings.Secure.ACCESSIBILITY_ENABLED, 0)
         var pauses = 0
@@ -86,7 +103,7 @@ class ServiceRepairTest {
 
     @Test
     fun a_list_changed_before_the_first_write_is_not_overwritten() {
-        val plan = checkNotNull(repairPlan(OTHER, listOf(keyService)))
+        val plan = checkNotNull(repairPlan(OTHER, listOf(keyService), 1))
         setEnabled("com.third.app/.Service")
 
         runRepair(resolver, OTHER, plan) { error("no pause expected") }
