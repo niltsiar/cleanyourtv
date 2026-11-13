@@ -20,6 +20,7 @@ import dev.niltsiar.tvhome.core.config.ThemeDirectory
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.LauncherIntents
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -61,6 +62,12 @@ class KeyServiceTest {
             },
         )
         service = Robolectric.setupService(KeyService::class.java)
+    }
+
+    // PowerMenu is static: a service left bound outlives this test's context, and a later GuardKeep call unregisters its receivers there.
+    @After
+    fun tearDown() {
+        service.onDestroy()
     }
 
     private fun installLeanbackApp(packageName: String) {
