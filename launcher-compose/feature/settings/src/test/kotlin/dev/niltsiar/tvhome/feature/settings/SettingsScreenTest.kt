@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
@@ -23,6 +24,9 @@ import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -45,9 +49,12 @@ import dev.niltsiar.tvhome.core.model.PublishedChannel
 import dev.niltsiar.tvhome.core.model.ShelfChannel
 import dev.niltsiar.tvhome.core.model.ShelfPublisher
 import dev.niltsiar.tvhome.core.model.WallpaperPicture
+import io.kotest.assertions.withClue
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.comparables.shouldBeGreaterThan
+import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
 import io.kotest.matchers.comparables.shouldBeLessThan
+import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
 import org.junit.rules.ExternalResource
@@ -505,6 +512,64 @@ class SettingsScreenTestContent :
                 shelfRow.assertTextEquals("Shelf sources", "2")
             }
 
+            val shelfOpen = { state: SettingsUiState -> state.shelfPicker != null }
+            val startOpen = { state: SettingsUiState -> state.picker != null }
+            val wallpaperOpen = { state: SettingsUiState -> state.wallpaperPicker != null }
+            val pickerReturns =
+                listOf(
+                    PickerReturn(
+                        "back from the shelf sources picker without a tick",
+                        "settings:shelf_sources",
+                        false,
+                        shelfOpen,
+                    ) { back() },
+                    PickerReturn("back from the shelf sources picker after a tick", "settings:shelf_sources", false, shelfOpen) {
+                        press(Key.DirectionCenter)
+                        waitUntilIdle { settings.state.shelfSources == OptionLabel.Text("1") }
+                        compose.waitForIdle()
+                        back()
+                    },
+                    PickerReturn("back from the open on start picker", "settings:open_on_start", true, startOpen) { back() },
+                    PickerReturn("a pick in the open on start picker", "settings:open_on_start", true, startOpen) {
+                        press(Key.DirectionDown)
+                        press(Key.DirectionCenter)
+                        waitUntilIdle { settings.state.picker == null && settings.state.openOnStart == OptionLabel.Text("App 01") }
+                        compose.waitForIdle()
+                    },
+                    PickerReturn("back from the wallpaper picker", "settings:wallpaper", true, wallpaperOpen) { back() },
+                    PickerReturn("a pick in the wallpaper picker", "settings:wallpaper", true, wallpaperOpen) {
+                        repeat(3) { press(Key.DirectionDown) }
+                        press(Key.DirectionCenter)
+                        waitUntilIdle { settings.wallpaperChoice == "dawn.jpg" && settings.state.wallpaperPicker == null }
+                        compose.waitForIdle()
+                    },
+                )
+            for (case in pickerReturns) {
+                test("${case.name} leaves focus on the row where it was in the scrolled list") {
+                    showEveryPickerRow()
+                    val row = compose.onNodeWithTag(case.row)
+                    if (case.fromBelow) repeat(rowCount() + 6) { press(Key.DirectionDown) }
+                    moveTo(case.row, if (case.fromBelow) Key.DirectionUp else Key.DirectionDown)
+                    val before = row.getUnclippedBoundsInRoot()
+                    withClue("the list is scrolled") { scrolled() shouldBeGreaterThan 0f }
+
+                    press(Key.DirectionCenter)
+                    waitUntilIdle { case.open(settings.state) }
+                    compose.waitForIdle()
+                    case.close(this)
+
+                    compose.onAllNodesWithTag("settings:picker").fetchSemanticsNodes().size shouldBe 0
+                    row.assertIsFocused()
+                    val list = compose.onNodeWithTag("settings:list").getBoundsInRoot()
+                    val after = row.getUnclippedBoundsInRoot()
+                    withClue("the row $after lies in the list $list") {
+                        after.top shouldBeGreaterThanOrEqualTo list.top
+                        after.bottom shouldBeLessThanOrEqualTo list.bottom
+                    }
+                    withClue("the row stays where it was: $before, now $after") { after.top shouldBe before.top }
+                }
+            }
+
             test("the wallpaper row sits between clock and animations") {
                 showWallpaperRow()
 
@@ -922,7 +987,48 @@ private class SettingsScreenFixture : JUnit4RulesContext() {
     }
 
     fun SettingsHarness.storeWallpaper(value: String) = runBlocking { repository.set(Choices.WallpaperChoice, value) }
+
+    /** How far the list is scrolled. */
+    fun scrolled(): Float =
+        compose
+            .onNodeWithTag("settings:list")
+            .fetchSemanticsNode()
+            .config[SemanticsProperties.VerticalScrollAxisRange]
+            .value()
+
+    /** The page with the Wallpaper, Open on start and Shelf sources rows, none of them chosen. */
+    fun showEveryPickerRow() {
+        show(EVERY_PICKER, wallpapers = pictures, shelfPublishers = listOf(ShelfPublisher("com.plezy", "Plezy", 20, emptyList())))
+        waitUntilIdle { settings.state.let { it.wallpaper != null && it.openOnStart != null && it.shelfSources != null } }
+        compose.waitForIdle()
+    }
+
+    /** [key] until the row tagged [tag] has focus. */
+    fun moveTo(
+        tag: String,
+        key: Key,
+    ) {
+        repeat(rowCount() + 6) {
+            if (compose.onAllNodes(hasTestTag(tag) and isFocused()).fetchSemanticsNodes().isNotEmpty()) return
+            press(key)
+        }
+        compose.onNodeWithTag(tag).assertIsFocused()
+    }
 }
+
+/**
+ * A way out of a picker: its row, reached [fromBelow] or from above so that the list is scrolled, when its picker is [open],
+ * and how the test [close]s it.
+ */
+private class PickerReturn(
+    val name: String,
+    val row: String,
+    val fromBelow: Boolean,
+    val open: (SettingsUiState) -> Boolean,
+    val close: SettingsScreenFixture.() -> Unit,
+)
+
+private const val EVERY_PICKER = """{"app_shelf": true, "open_on_start_choice": true}"""
 
 private const val WITH_CHOICE = """{"open_on_start_choice": true}"""
 private val pictures = listOf(WallpaperPicture("wallpaper.jpg", single = true), WallpaperPicture("dusk.jpg"), WallpaperPicture("dawn.jpg"))

@@ -288,6 +288,7 @@ public fun SettingsScreen(
             returnTo?.let {
                 withFrameNanos { }
                 currentStops.getValue(it).entry.requestFocus()
+                returnTo = null
             }
         }
     }
@@ -300,8 +301,11 @@ public fun SettingsScreen(
                 modifier
                     .fillMaxSize()
                     .testTag("settings")
-                    .focusProperties { exit = { FocusRequester.Cancel } }
-                    .focusGroup(),
+                    .focusProperties {
+                        exit = { FocusRequester.Cancel }
+                        // A closing picker drops focus back into this group; entering on the first row would scroll the list to it.
+                        enter = { returnTo?.let { currentStops.getValue(it).entry } ?: FocusRequester.Default }
+                    }.focusGroup(),
             contentAlignment = Alignment.Center,
         ) {
             OverlaySurface(
