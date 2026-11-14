@@ -208,8 +208,6 @@ class ShelfReaderTestContent :
                         NOW - 2 * DAY,
                         WatchNextPrograms.COLUMN_SEASON_DISPLAY_NUMBER to "2",
                         WatchNextPrograms.COLUMN_EPISODE_DISPLAY_NUMBER to "4",
-                        WatchNextPrograms.COLUMN_EPISODE_TITLE to "Woe's Hollow",
-                        WatchNextPrograms.COLUMN_SHORT_DESCRIPTION to "The team goes outdoors.",
                     )
                 tick(PLEZY)
 
@@ -221,8 +219,6 @@ class ShelfReaderTestContent :
                             kind = ShelfKind.Continue,
                             seasonNumber = "2",
                             episodeNumber = "4",
-                            episodeTitle = "Woe's Hollow",
-                            description = "The team goes outdoors.",
                             positionMs = 600_000,
                             durationMs = 3_000_000,
                             posterUri = "content://$PLEZY.systemshelf/art/Severance",
@@ -260,7 +256,7 @@ class ShelfReaderTestContent :
                 provider.queries shouldBe listOf(Uri.parse("content://android.media.tv/watch_next_program?package=$PLEZY"))
             }
 
-            test("a ticked channel gives its programs by weight with the channel, and nothing else of the app is read") {
+            test("a ticked channel gives its programs by weight, and nothing else of the app is read") {
                 smartTube()
                 provider.watchNext += watchNext(SMARTTUBE, "not ticked")
                 tick(channelSource(SMARTTUBE, "history"))
@@ -269,7 +265,6 @@ class ShelfReaderTestContent :
 
                 items.map { it.title } shouldBe listOf("newest", "middle", "older")
                 items.map { it.kind }.distinct() shouldBe listOf(ShelfKind.Preview)
-                items.map { it.channel }.distinct() shouldBe listOf(ShelfChannel("history", "Historial"))
                 items.first().posterUri shouldBe "https://i.ytimg.com/vi/newest/hqdefault.jpg"
                 provider.queries shouldBe
                     listOf(
@@ -283,7 +278,7 @@ class ShelfReaderTestContent :
                 provider.programs += video(7, "Arrival", weight = 0, pkg = JELLYFIN)
                 tick(channelSource(JELLYFIN, "7"))
 
-                items(JELLYFIN).map { it.channel } shouldBe listOf(ShelfChannel("7", "Latest"))
+                titles(JELLYFIN) shouldBe listOf("Arrival")
             }
 
             test("a watch next row the person removed in the stock home, browsable 0, is dropped") {

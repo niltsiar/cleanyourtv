@@ -24,8 +24,8 @@ public data class ShelfChannel(
 
 /**
  * One item an app publishes in the TV provider, as the shelf shows it. [positionMs] and [durationMs] are null when the app
- * gives none. [intentUri] opens the item and goes through `shelfIntent` before use. [lastEngagementMs] is null for preview
- * programs, which have no such time. [channel] is the preview channel the item is in, null for a Watch Next row.
+ * gives none. [intentUri] opens the item and goes through `startShelfItem`. [lastEngagementMs] is null for preview programs,
+ * which have no such time.
  */
 @Immutable
 public data class ShelfItem(
@@ -34,14 +34,11 @@ public data class ShelfItem(
     val kind: ShelfKind,
     val seasonNumber: String? = null,
     val episodeNumber: String? = null,
-    val episodeTitle: String? = null,
-    val description: String? = null,
     val positionMs: Long? = null,
     val durationMs: Long? = null,
     val posterUri: String? = null,
     val intentUri: String? = null,
     val lastEngagementMs: Long? = null,
-    val channel: ShelfChannel? = null,
 )
 
 /** A preview channel of a [ShelfPublisher] and how many programs it holds. */
@@ -68,3 +65,15 @@ public fun channelSource(
     packageName: String,
     channelKey: String,
 ): String = "$packageName/$channelKey"
+
+/** An app_shelf_sources entry read back: the [packageName] it ticks, and the [channelKey] it names, null for Watch Next. */
+public data class ShelfSource(
+    val packageName: String,
+    val channelKey: String?,
+)
+
+/** Reads an entry that [watchNextSource] or [channelSource] built. A package name has no slash; a channel key may. */
+public fun shelfSourceOf(entry: String): ShelfSource {
+    val slash = entry.indexOf('/')
+    return if (slash < 0) ShelfSource(entry, null) else ShelfSource(entry.substring(0, slash), entry.substring(slash + 1))
+}

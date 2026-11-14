@@ -15,7 +15,7 @@ import dev.niltsiar.tvhome.core.model.ShelfChannel
 import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.core.model.ShelfKind
 import dev.niltsiar.tvhome.core.model.ShelfPublisher
-import dev.niltsiar.tvhome.core.model.watchNextSource
+import dev.niltsiar.tvhome.core.model.shelfSourceOf
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
@@ -57,9 +57,9 @@ public class ShelfReader(
     public suspend fun items(packageName: String): List<ShelfItem> {
         val current = config.value
         if (!current.appShelf || !hasAccess()) return emptyList()
-        val watchNext = watchNextSource(packageName) in current.appShelfSources
-        val prefix = "$packageName/"
-        val channelKeys = current.appShelfSources.filter { it.startsWith(prefix) }.mapTo(HashSet()) { it.removePrefix(prefix) }
+        val ticked = current.appShelfSources.map(::shelfSourceOf).filter { it.packageName == packageName }
+        val watchNext = ticked.any { it.channelKey == null }
+        val channelKeys = ticked.mapNotNullTo(HashSet()) { it.channelKey }
         return withContext(io) {
             val rows = ArrayList<ShelfRow>()
             if (watchNext) rows += watchNextRows(packageName)
@@ -100,7 +100,7 @@ public class ShelfReader(
         forEachRow(WatchNextPrograms.CONTENT_URI.ofPackage(pkg), null) { row ->
             // The stock home sets browsable to 0 on a row the person removed there.
             if (row.long(WatchNextPrograms.COLUMN_BROWSABLE) == 0L) return@forEachRow
-            row.shelfRow(pkg, row.watchNextKind(), null)?.let { rows += it }
+            row.shelfRow(pkg, row.watchNextKind())?.let { rows += it }
         }
         return rows.sortedByDescending { it.item.lastEngagementMs ?: Long.MIN_VALUE }
     }
@@ -109,14 +109,14 @@ public class ShelfReader(
         pkg: String,
         keys: Set<String>,
     ): List<ShelfRow> {
-        val ticked = ArrayList<Pair<Long, ShelfChannel>>()
+        val ticked = ArrayList<Long>()
         forEachRow(previewChannels(pkg), null) { row ->
-            row.previewChannel()?.takeIf { it.second.key in keys }?.let { ticked += it }
+            row.previewChannel()?.takeIf { it.second.key in keys }?.let { ticked += it.first }
         }
-        return ticked.flatMap { (id, channel) ->
+        return ticked.flatMap { id ->
             val rows = ArrayList<Pair<ShelfRow, Long>>()
             forEachRow(TvContract.buildPreviewProgramsUriForChannel(id).ofPackage(pkg), null) { row ->
-                row.shelfRow(pkg, ShelfKind.Preview, channel)?.let { rows += it to (row.long(PreviewPrograms.COLUMN_WEIGHT) ?: 0L) }
+                row.shelfRow(pkg, ShelfKind.Preview)?.let { rows += it to (row.long(PreviewPrograms.COLUMN_WEIGHT) ?: 0L) }
             }
             rows.sortedByDescending { it.second }.map { it.first }
         }
@@ -176,7 +176,6 @@ private fun Cursor.watchNextKind(): ShelfKind =
 private fun Cursor.shelfRow(
     pkg: String,
     kind: ShelfKind,
-    channel: ShelfChannel?,
 ): ShelfRow? {
     val title = string(WatchNextPrograms.COLUMN_TITLE)?.trim()?.takeIf { it.isNotEmpty() } ?: return null
     val item =
@@ -186,14 +185,11 @@ private fun Cursor.shelfRow(
             kind = if (long(WatchNextPrograms.COLUMN_LIVE) == 1L) ShelfKind.Live else kind,
             seasonNumber = string(WatchNextPrograms.COLUMN_SEASON_DISPLAY_NUMBER),
             episodeNumber = string(WatchNextPrograms.COLUMN_EPISODE_DISPLAY_NUMBER),
-            episodeTitle = string(WatchNextPrograms.COLUMN_EPISODE_TITLE),
-            description = string(WatchNextPrograms.COLUMN_SHORT_DESCRIPTION),
             positionMs = long(WatchNextPrograms.COLUMN_LAST_PLAYBACK_POSITION_MILLIS)?.takeIf { it > 0 },
             durationMs = long(WatchNextPrograms.COLUMN_DURATION_MILLIS)?.takeIf { it > 0 },
             posterUri = string(WatchNextPrograms.COLUMN_POSTER_ART_URI) ?: string(WatchNextPrograms.COLUMN_THUMBNAIL_URI),
             intentUri = string(WatchNextPrograms.COLUMN_INTENT_URI),
             lastEngagementMs = long(WatchNextPrograms.COLUMN_LAST_ENGAGEMENT_TIME_UTC_MILLIS)?.takeIf { it > 0 },
-            channel = channel,
         )
     return ShelfRow(item, long(WatchNextPrograms.COLUMN_TYPE)?.toInt(), string(COLUMN_SERIES_ID) ?: title)
 }
