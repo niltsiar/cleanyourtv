@@ -51,7 +51,7 @@ These come from a Sony Bravia, with the launcher's English text.
 
 | Home | App library |
 |---|---|
-| ![Home at rest: the dock with the first tile focused and its name above the dock](screenshots/home.jpg) | ![The App library page with every installed app, one focused](screenshots/library.jpg) |
+| ![Home at rest: the dock with YouTube focused and its name above the dock](screenshots/home.jpg) | ![The app grid under the dock, with Google Play Store focused and its name above](screenshots/library.jpg) |
 
 | Tile menu | Launcher settings |
 |---|---|
