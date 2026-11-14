@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 
 /**
  * One option the person sets on the TV. A stored value wins over the theme's until a different theme is pushed.
@@ -46,6 +47,7 @@ private const val DOCK_OPACITY_AUTO = 0
 
 internal val OpenOnStartKey = stringPreferencesKey("open_on_start")
 internal val WallpaperChoiceKey = stringPreferencesKey("wallpaper_choice")
+internal val AppShelfSourcesKey = stringSetPreferencesKey("app_shelf_sources")
 
 /** Every [Choice]. */
 public object Choices {
@@ -100,6 +102,13 @@ public object Choices {
     public val PressFeedback: Choice<Boolean> = boolChoice("press_feedback") { copy(pressFeedback = it) }
     public val HabitHint: Choice<Boolean> = boolChoice("habit_hint") { copy(habitHint = it) }
     public val InputArrival: Choice<Boolean> = boolChoice("input_arrival") { copy(inputArrival = it) }
+    public val AppShelf: Choice<Boolean> = boolChoice("app_shelf") { copy(appShelf = it) }
+
+    /** The ticked shelf sources; a stored empty set ticks none, whatever the theme lists. [ConfigRepository.toggleShelfSource] changes it. */
+    public val AppShelfSources: Choice<Set<String>> =
+        Choice(AppShelfSourcesKey, { prefs, value -> prefs[AppShelfSourcesKey] = value }) { config, prefs ->
+            prefs.stored(AppShelfSourcesKey)?.let { config.copy(appShelfSources = it.sorted()) } ?: config
+        }
 
     internal val all: List<Choice<*>> =
         listOf(
@@ -125,6 +134,8 @@ public object Choices {
             PressFeedback,
             HabitHint,
             InputArrival,
+            AppShelf,
+            AppShelfSources,
         )
 
     /** The choices a pushed theme resets: all but open on start. */

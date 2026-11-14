@@ -8,6 +8,7 @@ import dev.niltsiar.tvhome.core.config.ConfigRepository
 import dev.niltsiar.tvhome.core.config.ThemeDirectory
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
+import dev.niltsiar.tvhome.core.model.ShelfPublisher
 import dev.niltsiar.tvhome.core.model.WallpaperPicture
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -24,6 +25,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.robolectric.shadows.ShadowEnvironment
 import java.io.File
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.EmptyCoroutineContext
 
 /**
@@ -37,6 +39,8 @@ import kotlin.coroutines.EmptyCoroutineContext
  * calling thread as the app does: a list that came back at once would be stored while the first composition applies, and
  * Molecule's immediate recompositions on the UI thread would stall. [awaitApplied] waits for a wallpaper pick that was stored,
  * [awaitSaveFailed] for a write the store refused. The pickers show [art], and Home shows [themeDefault] for the theme default.
+ * The shelf picker lists [shelfPublishers], each listing counted in [shelfListings], and [shelfAccess] says whether Home holds
+ * READ_TV_LISTINGS; [awaitAskedShelfAccess] and [awaitNoShelfSources] wait for the effects that report them.
  */
 internal class SettingsHarness(
     private val app: Application,
@@ -47,6 +51,8 @@ internal class SettingsHarness(
     wallpapers: List<WallpaperPicture> = emptyList(),
     art: PickerArt = PickerArt(),
     themeDefault: WallpaperPicture? = null,
+    shelfPublishers: List<ShelfPublisher> = emptyList(),
+    shelfAccess: () -> Boolean = { false },
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val presenterScope = if (uiThread) CoroutineScope(SupervisorJob() + Dispatchers.Main) else scope
@@ -55,6 +61,9 @@ internal class SettingsHarness(
     val skippedAt = CopyOnWriteArrayList<String?>()
     private val applied = Channel<Unit>(Channel.UNLIMITED)
     private val failed = Channel<Unit>(Channel.UNLIMITED)
+    private val askedShelfAccess = Channel<Unit>(Channel.UNLIMITED)
+    private val noShelfSources = Channel<Unit>(Channel.UNLIMITED)
+    val shelfListings = AtomicInteger()
 
     init {
         ShadowEnvironment.setExternalStorageState(Environment.MEDIA_MOUNTED)
@@ -70,6 +79,11 @@ internal class SettingsHarness(
                 { withContext(Dispatchers.Default) { wallpapers } },
                 art,
                 { withContext(Dispatchers.Default) { themeDefault } },
+                {
+                    shelfListings.incrementAndGet()
+                    withContext(Dispatchers.Default) { shelfPublishers }
+                },
+                shelfAccess,
             )
         viewModel = MoleculeSettingsViewModel(repository, sources, presenterScope, RecompositionMode.Immediate, EmptyCoroutineContext)
         scope.launch {
@@ -77,6 +91,8 @@ internal class SettingsHarness(
                 when (it) {
                     SettingsEffect.WallpaperApplied -> applied.trySend(Unit)
                     SettingsEffect.SaveFailed -> failed.trySend(Unit)
+                    SettingsEffect.AskShelfAccess -> askedShelfAccess.trySend(Unit)
+                    SettingsEffect.NoShelfSources -> noShelfSources.trySend(Unit)
                 }
             }
         }
@@ -102,6 +118,15 @@ internal class SettingsHarness(
 
     /** Waits for the next write the store refused. */
     fun awaitSaveFailed() = runBlocking { withTimeout(30_000) { failed.receive() } }
+
+    /** Waits for the next request for READ_TV_LISTINGS. */
+    fun awaitAskedShelfAccess() = runBlocking { withTimeout(30_000) { askedShelfAccess.receive() } }
+
+    /** True when no request for READ_TV_LISTINGS comes within a short wait. */
+    fun noShelfAccessAsked(): Boolean = runBlocking { withTimeoutOrNull(300) { askedShelfAccess.receive() } == null }
+
+    /** Waits for the report that the shelf picker has nothing to list. */
+    fun awaitNoShelfSources() = runBlocking { withTimeout(30_000) { noShelfSources.receive() } }
 
     /** True when the theme still decides after a short wait: no stored choice turned [SettingsUiState.followsTheme] off. */
     fun staysFollowingTheme(): Boolean = runBlocking { withTimeoutOrNull(500) { viewModel.uiState.first { !it.followsTheme } } == null }

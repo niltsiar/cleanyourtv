@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">Tapeta změněna</string>
   <string name="wallpaper_theme_default">Podle motivu</string>
   <string name="wallpaper_theme_picture">Obrázek motivu</string>
+  <string name="settings_app_shelf">Polička aplikace</string>
+  <string name="settings_shelf_sources">Zdroje poličky</string>
+  <string name="settings_shelf_no_access">Bez přístupu</string>
+  <string name="settings_shelf_none">Žádné</string>
+  <string name="settings_shelf_watch_next">Pokračovat ve sledování · %1$d</string>
+  <string name="settings_shelf_nothing">Žádná aplikace nesdílí položky</string>
 </resources>

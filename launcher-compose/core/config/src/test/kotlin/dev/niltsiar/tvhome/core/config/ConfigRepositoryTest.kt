@@ -151,7 +151,10 @@ class ConfigRepositoryTestContent :
                 repo.choose(Choices.DockOpacity, 30)
                 repo.choose(Choices.TimeFormat, ClockFormat.Hour12)
                 repo.choose(Choices.Animations, false)
-                awaitConfig(repo) { it.clockFormat == ClockFormat.Hour12 && it.dockOpacity == 30 && it.rowsBelowDock == 3 }
+                awaitConfig(repo) {
+                    it.columns == 7 && it.rowsBelowDock == 3 && it.dockOpacity == 30 && it.clockFormat == ClockFormat.Hour12 &&
+                        !it.animations
+                }
                 repo.config.value shouldBe
                     theme.copy(columns = 7, rowsBelowDock = 3, dockOpacity = 30, clockFormat = ClockFormat.Hour12, animations = false)
 
@@ -184,6 +187,8 @@ class ConfigRepositoryTestContent :
                 repo.choose(Choices.FocusOvershoot, true)
                 repo.choose(Choices.PressFeedback, true)
                 repo.choose(Choices.HabitHint, true)
+                repo.choose(Choices.AppShelf, true)
+                repo.choose(Choices.AppShelfSources, setOf("com.b/7", "com.a"))
                 repo.choose(Choices.InputArrival, true)
                 awaitConfig(repo) { it.inputArrival }
 
@@ -204,7 +209,31 @@ class ConfigRepositoryTestContent :
                         pressFeedback = true,
                         habitHint = true,
                         inputArrival = true,
+                        appShelf = true,
+                        appShelfSources = listOf("com.a", "com.b/7"),
                     )
+            }
+
+            test("a shelf source toggles from the theme's list, toggles in quick succession all count, and an empty set wins") {
+                val theme = pushTheme("""{"app_shelf_sources": ["com.a"]}""")
+                val repo = repository()
+
+                runBlocking {
+                    repo.toggleShelfSource("com.b/7")
+                    repo.toggleShelfSource("com.a")
+                    repo.toggleShelfSource("com.c")
+                }
+                awaitConfig(repo) { it.appShelfSources == listOf("com.b/7", "com.c") }
+
+                runBlocking {
+                    repo.toggleShelfSource("com.b/7")
+                    repo.toggleShelfSource("com.c")
+                }
+                awaitConfig(repo) { it.appShelfSources.isEmpty() }
+                awaitFollowsTheme(repo, false)
+
+                runBlocking { repo.followTheme() }
+                awaitConfig(repo) { it == theme }
             }
 
             test("auto dock opacity overrides a number in the theme and a number overrides auto") {

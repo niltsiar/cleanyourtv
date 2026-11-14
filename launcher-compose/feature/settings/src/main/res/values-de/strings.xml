@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">Hintergrundbild geändert</string>
   <string name="wallpaper_theme_default">Standard des Designs</string>
   <string name="wallpaper_theme_picture">Bild des Designs</string>
+  <string name="settings_app_shelf">App-Regal</string>
+  <string name="settings_shelf_sources">Regalquellen</string>
+  <string name="settings_shelf_no_access">Kein Zugriff</string>
+  <string name="settings_shelf_none">Keine</string>
+  <string name="settings_shelf_watch_next">Weiterschauen · %1$d</string>
+  <string name="settings_shelf_nothing">Keine App teilt Inhalte</string>
 </resources>

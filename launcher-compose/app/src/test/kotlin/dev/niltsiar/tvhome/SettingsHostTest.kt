@@ -20,11 +20,13 @@ import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.ThemeDirectory
+import dev.niltsiar.tvhome.data.shelf.READ_TV_LISTINGS
 import dev.niltsiar.tvhome.feature.settings.MoleculeSettingsViewModel
 import io.kotest.assertions.withClue
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.shouldBe
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowEnvironment
 import org.robolectric.shadows.ShadowToast
 import java.io.File
@@ -51,6 +53,7 @@ class SettingsHostTestContent :
 
                 private val graph get() = (compose.activity.application as TvHomeApplication).graph
                 lateinit var viewModel: MoleculeSettingsViewModel
+                var shelfAccessAsked = 0
 
                 fun exists(tag: String) = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
 
@@ -81,6 +84,7 @@ class SettingsHostTestContent :
                             onChooseDefaultHome = {},
                             onOpenTvSettings = { false },
                             onReorder = {},
+                            onAskShelfAccess = { shelfAccessAsked++ },
                         )
                     }
                     compose.waitUntil(30_000) { viewModel.uiState.value.wallpaper != null }
@@ -111,6 +115,26 @@ class SettingsHostTestContent :
 
                 noticeSays("Not available on this TV")
                 ShadowToast.shownToastCount() shouldBe 0
+            }
+
+            test("the shelf sources picker without read tv listings asks for it and tells nothing in the page") {
+                show()
+
+                viewModel.actions.onOpenShelfPicker()
+                compose.waitUntil(30_000) { shelfAccessAsked == 1 }
+
+                exists("settings:notice").shouldBeFalse()
+            }
+
+            test("the shelf sources picker with nothing to list says so in the page and asks for nothing") {
+                shadowOf(compose.activity.application).grantPermissions(READ_TV_LISTINGS)
+                show()
+
+                viewModel.actions.onOpenShelfPicker()
+                compose.waitUntil(30_000) { exists("settings:notice") }
+
+                noticeSays("No app shares items to show")
+                shelfAccessAsked shouldBe 0
             }
         }
     })

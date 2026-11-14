@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">Fon rasmi oʻzgartirildi</string>
   <string name="wallpaper_theme_default">Mavzu boʻyicha</string>
   <string name="wallpaper_theme_picture">Mavzu rasmi</string>
+  <string name="settings_app_shelf">Ilova javoni</string>
+  <string name="settings_shelf_sources">Javon manbalari</string>
+  <string name="settings_shelf_no_access">Ruxsat yoʻq</string>
+  <string name="settings_shelf_none">Yoʻq</string>
+  <string name="settings_shelf_watch_next">Tomoshani davom ettirish · %1$d</string>
+  <string name="settings_shelf_nothing">Hech bir ilova element ulashmaydi</string>
 </resources>

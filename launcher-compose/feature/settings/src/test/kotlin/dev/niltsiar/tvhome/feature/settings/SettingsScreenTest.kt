@@ -41,6 +41,9 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
+import dev.niltsiar.tvhome.core.model.PublishedChannel
+import dev.niltsiar.tvhome.core.model.ShelfChannel
+import dev.niltsiar.tvhome.core.model.ShelfPublisher
 import dev.niltsiar.tvhome.core.model.WallpaperPicture
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.comparables.shouldBeGreaterThan
@@ -452,6 +455,56 @@ class SettingsScreenTestContent :
                 settings.skippedAt shouldBe emptyList<String?>()
             }
 
+            test("the shelf sources row follows app shelf, its picker ticks the chosen sources and ok ticks one more without closing") {
+                show(
+                    """{"app_shelf": true, "app_shelf_sources": ["org.smarttube.stable/history"]}""",
+                    shelfPublishers =
+                        listOf(
+                            ShelfPublisher("com.plezy", "Plezy", 20, emptyList()),
+                            ShelfPublisher(
+                                "org.smarttube.stable",
+                                "SmartTube",
+                                0,
+                                listOf(PublishedChannel(ShelfChannel("history", "Historial"), 12)),
+                            ),
+                        ),
+                )
+                val shelfRow = compose.onNodeWithTag("settings:shelf_sources")
+                goTo(SettingsRowId.AppShelf)
+                press(Key.DirectionDown)
+                shelfRow.assertIsFocused()
+                shelfRow.assertTextEquals("Shelf sources", "1")
+
+                press(Key.DirectionCenter)
+                waitUntilIdle { settings.state.shelfPicker != null }
+                compose.waitForIdle()
+
+                compose.onNodeWithTag("settings:picker:title").assertTextEquals("Shelf sources")
+                entry(0).assertIsFocused()
+                entry(0).assertTextEquals("Plezy", "Watch Next \u00B7 20")
+                entry(0).assertIsNotSelected()
+                entry(1).assertTextEquals("Historial", "SmartTube \u00B7 12")
+                entry(1).assertIsSelected()
+
+                press(Key.DirectionCenter)
+                waitUntilIdle {
+                    settings.state.shelfPicker
+                        ?.ticked
+                        ?.size == 2
+                }
+                compose.waitForIdle()
+
+                entry(0).assertIsSelected()
+                entry(0).assertIsFocused()
+                entry(1).assertIsSelected()
+                settings.config.appShelfSources shouldBe listOf("com.plezy", "org.smarttube.stable/history")
+
+                back()
+                compose.onAllNodesWithTag("settings:picker").fetchSemanticsNodes().size shouldBe 0
+                shelfRow.assertIsFocused()
+                shelfRow.assertTextEquals("Shelf sources", "2")
+            }
+
             test("the wallpaper row sits between clock and animations") {
                 showWallpaperRow()
 
@@ -742,6 +795,7 @@ private class SettingsScreenFixture : JUnit4RulesContext() {
         theme: String = "{}",
         apps: List<OpenOnStartApp> = installed,
         wallpapers: List<WallpaperPicture> = emptyList(),
+        shelfPublishers: List<ShelfPublisher> = emptyList(),
     ) {
         settings =
             SettingsHarness(
@@ -750,6 +804,8 @@ private class SettingsScreenFixture : JUnit4RulesContext() {
                 uiThread = true,
                 apps = apps,
                 wallpapers = wallpapers,
+                shelfPublishers = shelfPublishers,
+                shelfAccess = { true },
             )
         leaveTouchMode()
         compose.setContent {

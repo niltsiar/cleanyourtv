@@ -27,6 +27,9 @@
     <uses-permission
         android:name="android.permission.WRITE_SECURE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
+    <!-- The app shelf (app_shelf) reads the TV provider's Watch Next rows and preview channels. A runtime permission:
+         Launcher settings asks for it when the option is turned on. -->
+    <uses-permission android:name="android.permission.READ_TV_LISTINGS" />
     <!-- YaOS (Yandex TV OS): HDMI, AV and the tuner all play in com.yandex.tv.live, whose activities require
          this permission (protection level normal, so it is granted at install). Ignored on other TVs. -->
     <uses-permission android:name="yandex.tv.permission.ACCESS_TV_SOURCE" />

@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">Bakgrunnsbildet er endret</string>
   <string name="wallpaper_theme_default">Temaets standard</string>
   <string name="wallpaper_theme_picture">Temaets bilde</string>
+  <string name="settings_app_shelf">Apphylle</string>
+  <string name="settings_shelf_sources">Hyllekilder</string>
+  <string name="settings_shelf_no_access">Ingen tilgang</string>
+  <string name="settings_shelf_none">Ingen</string>
+  <string name="settings_shelf_watch_next">Se videre · %1$d</string>
+  <string name="settings_shelf_nothing">Ingen apper deler noe å vise</string>
 </resources>

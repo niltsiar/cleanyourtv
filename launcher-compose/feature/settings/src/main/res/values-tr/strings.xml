@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">Duvar kağıdı değiştirildi</string>
   <string name="wallpaper_theme_default">Tema varsayılanı</string>
   <string name="wallpaper_theme_picture">Tema görseli</string>
+  <string name="settings_app_shelf">Uygulama rafı</string>
+  <string name="settings_shelf_sources">Raf kaynakları</string>
+  <string name="settings_shelf_no_access">Erişim yok</string>
+  <string name="settings_shelf_none">Hiçbiri</string>
+  <string name="settings_shelf_watch_next">İzlemeye devam et · %1$d</string>
+  <string name="settings_shelf_nothing">Hiçbir uygulama öğe paylaşmıyor</string>
 </resources>

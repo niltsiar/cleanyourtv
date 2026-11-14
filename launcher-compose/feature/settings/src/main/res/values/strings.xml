@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">Wallpaper changed</string>
   <string name="wallpaper_theme_default">Theme default</string>
   <string name="wallpaper_theme_picture">Theme picture</string>
+  <string name="settings_app_shelf">App shelf</string>
+  <string name="settings_shelf_sources">Shelf sources</string>
+  <string name="settings_shelf_no_access">No access</string>
+  <string name="settings_shelf_none">None</string>
+  <string name="settings_shelf_watch_next">Watch Next · %1$d</string>
+  <string name="settings_shelf_nothing">No app shares items to show</string>
 </resources>

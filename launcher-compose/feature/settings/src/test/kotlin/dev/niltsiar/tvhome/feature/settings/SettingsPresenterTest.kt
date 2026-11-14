@@ -89,6 +89,7 @@ class SettingsPresenterTestContent :
                         RowSpec(SettingsRowId.ShowGreeting, onOff) { it.showGreeting },
                         RowSpec(SettingsRowId.DateBelowClock, onOff) { it.dateBelowClock },
                         RowSpec(SettingsRowId.MoveToMenu, onOff) { it.moveToMenu },
+                        RowSpec(SettingsRowId.AppShelf, onOff) { it.appShelf },
                         RowSpec(SettingsRowId.AppLibrary, onOff) { it.appLibrary },
                         RowSpec(SettingsRowId.LibraryLeastUsed, onOff) { it.libraryLeastUsed },
                         RowSpec(SettingsRowId.UnusedFadeDays, listOf(0, 30, 60, 90)) { it.unusedFadeDays },
@@ -164,6 +165,7 @@ class SettingsPresenterTestContent :
                             SettingsRowId.ShowGreeting,
                             SettingsRowId.DateBelowClock,
                             SettingsRowId.MoveToMenu,
+                            SettingsRowId.AppShelf,
                         ),
                         listOf(SettingsRowId.AppLibrary, SettingsRowId.LibraryLeastUsed, SettingsRowId.UnusedFadeDays),
                         listOf(SettingsRowId.HomeIdleClockMinutes, SettingsRowId.BackOpensClock, SettingsRowId.ClockWallpaper),
@@ -600,7 +602,8 @@ private val pictures = listOf(WallpaperPicture("wallpaper.jpg", single = true), 
 /** Every key at the last option of its row, so the first pick of each row differs from what the theme holds. */
 private const val LAST_OPTIONS =
     """{"columns": 7, "rows_below_dock": 3, "dock_opacity": 30, "clock_format": "24", "animations": false,
-    "always_show_names": false, "show_greeting": false, "date_below_clock": false, "move_to_menu": false, "app_library": false,
+    "always_show_names": false, "show_greeting": false, "date_below_clock": false, "move_to_menu": false, "app_shelf": false,
+    "app_library": false,
     "library_least_used": false, "unused_fade_days": 90, "home_idle_clock_minutes": 60, "back_opens_clock": false,
     "clock_wallpaper": false, "reduced_motion": false, "focus_overshoot": false, "press_feedback": false, "habit_hint": false,
     "input_arrival": false}"""

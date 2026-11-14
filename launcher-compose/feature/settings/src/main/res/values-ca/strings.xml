@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">Fons de pantalla canviat</string>
   <string name="wallpaper_theme_default">El del tema</string>
   <string name="wallpaper_theme_picture">Imatge del tema</string>
+  <string name="settings_app_shelf">Prestatge de l\'app</string>
+  <string name="settings_shelf_sources">Fonts del prestatge</string>
+  <string name="settings_shelf_no_access">Sense accés</string>
+  <string name="settings_shelf_none">Cap</string>
+  <string name="settings_shelf_watch_next">Continua mirant · %1$d</string>
+  <string name="settings_shelf_nothing">Cap app no comparteix elements</string>
 </resources>

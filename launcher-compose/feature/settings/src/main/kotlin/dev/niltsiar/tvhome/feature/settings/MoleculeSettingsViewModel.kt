@@ -27,6 +27,11 @@ public class SettingsActions(
     public val onOpenWallpaperPicker: () -> Unit = {},
     /** The entry at an index of the wallpaper picker was picked; 0 is Theme default. */
     public val onPickWallpaper: (Int) -> Unit = {},
+    public val onOpenShelfPicker: () -> Unit = {},
+    /** The entry at an index of the shelf sources picker was ticked or unticked. */
+    public val onToggleShelfSource: (Int) -> Unit = {},
+    /** The request for READ_TV_LISTINGS was answered, granted or not. */
+    public val onShelfAccessAnswered: () -> Unit = {},
 )
 
 /** Hosts [settingsPresenter] with Molecule: an event Flow in, a StateFlow out. */
@@ -60,5 +65,8 @@ public class MoleculeSettingsViewModel(
             onPickStartApp = { events.trySend(SettingsEvent.PickStartApp(it)) },
             onOpenWallpaperPicker = { events.trySend(SettingsEvent.OpenWallpaperPicker) },
             onPickWallpaper = { events.trySend(SettingsEvent.PickWallpaper(it)) },
+            onOpenShelfPicker = { events.trySend(SettingsEvent.OpenShelfPicker) },
+            onToggleShelfSource = { events.trySend(SettingsEvent.ToggleShelfSource(it)) },
+            onShelfAccessAnswered = { events.trySend(SettingsEvent.ShelfAccessAnswered) },
         )
 }

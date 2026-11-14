@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">Pozadina je promenjena</string>
   <string name="wallpaper_theme_default">Podrazumevano iz teme</string>
   <string name="wallpaper_theme_picture">Slika teme</string>
+  <string name="settings_app_shelf">Polica aplikacije</string>
+  <string name="settings_shelf_sources">Izvori police</string>
+  <string name="settings_shelf_no_access">Nema pristupa</string>
+  <string name="settings_shelf_none">Nijedan</string>
+  <string name="settings_shelf_watch_next">Nastavi gledanje · %1$d</string>
+  <string name="settings_shelf_nothing">Nijedna aplikacija ne deli stavke</string>
 </resources>

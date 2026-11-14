@@ -7,9 +7,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContract
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import dev.niltsiar.tvhome.data.shelf.READ_TV_LISTINGS
 import dev.niltsiar.tvhome.feature.settings.MoleculeSettingsViewModel
 
 /** Opens [SettingsActivity] and answers whether it ended with the Reorder row, which asks Home to start reorder mode. */
@@ -35,6 +37,8 @@ class SettingsActivity : ComponentActivity() {
     private val viewModel: MoleculeSettingsViewModel by viewModels {
         viewModelFactory { initializer { MoleculeSettingsViewModel(graph.configRepository, graph.settingsSources) } }
     }
+    private val shelfAccess =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { viewModel.actions.onShelfAccessAnswered() }
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(launcherContext(newBase))
@@ -50,6 +54,7 @@ class SettingsActivity : ComponentActivity() {
                 onChooseDefaultHome = ::chooseDefaultHome,
                 onOpenTvSettings = { graph.systemSettings.openSettings() },
                 onReorder = ::reorder,
+                onAskShelfAccess = { shelfAccess.launch(READ_TV_LISTINGS) },
             )
         }
     }

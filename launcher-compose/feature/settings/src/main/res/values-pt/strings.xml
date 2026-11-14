@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">Papel de parede alterado</string>
   <string name="wallpaper_theme_default">Padrão do tema</string>
   <string name="wallpaper_theme_picture">Imagem do tema</string>
+  <string name="settings_app_shelf">Prateleira do app</string>
+  <string name="settings_shelf_sources">Fontes da prateleira</string>
+  <string name="settings_shelf_no_access">Sem acesso</string>
+  <string name="settings_shelf_none">Nenhuma</string>
+  <string name="settings_shelf_watch_next">Continuar assistindo · %1$d</string>
+  <string name="settings_shelf_nothing">Nenhum app compartilha itens</string>
 </resources>

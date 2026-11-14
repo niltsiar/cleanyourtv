@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">Fond d\'écran modifié</string>
   <string name="wallpaper_theme_default">Par défaut du thème</string>
   <string name="wallpaper_theme_picture">Image du thème</string>
+  <string name="settings_app_shelf">Étagère de l\'appli</string>
+  <string name="settings_shelf_sources">Sources de l\'étagère</string>
+  <string name="settings_shelf_no_access">Pas d\'accès</string>
+  <string name="settings_shelf_none">Aucune</string>
+  <string name="settings_shelf_watch_next">Reprendre · %1$d</string>
+  <string name="settings_shelf_nothing">Aucune appli ne partage de contenu</string>
 </resources>

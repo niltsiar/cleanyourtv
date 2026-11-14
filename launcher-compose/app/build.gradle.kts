@@ -62,6 +62,7 @@ dependencies {
     implementation(project(":service:keys"))
     implementation(project(":data:apps"))
     implementation(project(":data:inputs"))
+    implementation(project(":data:shelf"))
     implementation(project(":data:system"))
     implementation(project(":data:wallpaper"))
     implementation(libs.androidx.activity.compose)

@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">Đã đổi hình nền</string>
   <string name="wallpaper_theme_default">Theo theme</string>
   <string name="wallpaper_theme_picture">Ảnh của theme</string>
+  <string name="settings_app_shelf">Kệ ứng dụng</string>
+  <string name="settings_shelf_sources">Nguồn của kệ</string>
+  <string name="settings_shelf_no_access">Không có quyền</string>
+  <string name="settings_shelf_none">Không có</string>
+  <string name="settings_shelf_watch_next">Xem tiếp · %1$d</string>
+  <string name="settings_shelf_nothing">Không ứng dụng nào chia sẻ mục</string>
 </resources>

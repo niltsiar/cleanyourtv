@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">ওয়ালপেপার বদলানো হয়েছে</string>
   <string name="wallpaper_theme_default">থিমের ডিফল্ট</string>
   <string name="wallpaper_theme_picture">থিমের ছবি</string>
+  <string name="settings_app_shelf">অ্যাপ শেলফ</string>
+  <string name="settings_shelf_sources">শেলফের উৎস</string>
+  <string name="settings_shelf_no_access">অ্যাক্সেস নেই</string>
+  <string name="settings_shelf_none">কোনোটি নয়</string>
+  <string name="settings_shelf_watch_next">দেখা চালিয়ে যান · %1$d</string>
+  <string name="settings_shelf_nothing">কোনো অ্যাপ দেখানোর মতো কিছু শেয়ার করে না</string>
 </resources>

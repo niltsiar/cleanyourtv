@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">تم تغيير الخلفية</string>
   <string name="wallpaper_theme_default">افتراضي السمة</string>
   <string name="wallpaper_theme_picture">صورة السمة</string>
+  <string name="settings_app_shelf">رف التطبيق</string>
+  <string name="settings_shelf_sources">مصادر الرف</string>
+  <string name="settings_shelf_no_access">لا يوجد إذن</string>
+  <string name="settings_shelf_none">لا شيء</string>
+  <string name="settings_shelf_watch_next">متابعة المشاهدة · %1$d</string>
+  <string name="settings_shelf_nothing">لا يوجد تطبيق يشارك عناصر لعرضها</string>
 </resources>

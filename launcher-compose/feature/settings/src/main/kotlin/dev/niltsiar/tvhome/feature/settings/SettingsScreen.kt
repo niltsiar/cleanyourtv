@@ -132,6 +132,7 @@ private val NoticeHeight = 36.dp
 private const val WALLPAPER_STOP = "wallpaper"
 private val NoPickerArt = PickerArt()
 private const val OPEN_ON_START_STOP = "open_on_start"
+private const val SHELF_SOURCES_STOP = "shelf_sources"
 
 /** One thing the list shows, top to bottom. The [Focusable] ones are what Up and Down move between, in this order. */
 private sealed interface PageItem {
@@ -166,6 +167,12 @@ private data class OpenOnStartItem(
     override val stop = OPEN_ON_START_STOP
 }
 
+private data class ShelfSourcesItem(
+    val value: OptionLabel,
+) : Focusable {
+    override val stop = SHELF_SOURCES_STOP
+}
+
 private data object FollowThemeItem : Focusable {
     override val stop = "follow_theme"
 }
@@ -178,7 +185,10 @@ private data object TvSettingsItem : Focusable {
     override val stop = "tv_settings"
 }
 
-/** Java's order: the Wallpaper row follows the Clock row, the Open on start row follows the first section's rows. */
+/**
+ * Java's order: the Wallpaper row follows the Clock row, the Open on start row follows the first section's rows. The Shelf
+ * sources row follows the App shelf row.
+ */
 private fun pageItems(ui: SettingsUiState): List<PageItem> =
     buildList {
         if (ui.reorder) add(ReorderItem)
@@ -187,6 +197,7 @@ private fun pageItems(ui: SettingsUiState): List<PageItem> =
             for (row in section.rows) {
                 add(SettingItem(row))
                 if (row.id == SettingsRowId.ClockFormat) ui.wallpaper?.let { add(WallpaperItem(it)) }
+                if (row.id == SettingsRowId.AppShelf) ui.shelfSources?.let { add(ShelfSourcesItem(it)) }
             }
             if (position == 0) ui.openOnStart?.let { add(OpenOnStartItem(it)) }
         }
@@ -264,6 +275,8 @@ public fun SettingsScreen(
             OPEN_ON_START_STOP
         } else if (ui.wallpaperPicker != null) {
             WALLPAPER_STOP
+        } else if (ui.shelfPicker != null) {
+            SHELF_SOURCES_STOP
         } else {
             null
         }
@@ -364,6 +377,17 @@ public fun SettingsScreen(
                                         )
                                     }
 
+                                    is ShelfSourcesItem -> {
+                                        ActionRow(
+                                            label = stringResource(R.string.settings_shelf_sources),
+                                            value = item.value.text(),
+                                            selected = false,
+                                            onClick = actions.onOpenShelfPicker,
+                                            tag = "settings:shelf_sources",
+                                            stop = stops.getValue(item.stop),
+                                        )
+                                    }
+
                                     is FollowThemeItem -> {
                                         ActionRow(
                                             label = stringResource(R.string.settings_follow_theme),
@@ -422,10 +446,34 @@ public fun SettingsScreen(
                         actions.onClosePicker,
                     )
                 }
+                ui.shelfPicker?.let { picker ->
+                    val ticked =
+                        remember(picker) { picker.entries.indices.filterTo(HashSet()) { picker.entries[it].source in picker.ticked } }
+                    PickerPanel(
+                        R.string.settings_shelf_sources,
+                        shelfPickerEntries(picker.entries),
+                        0,
+                        art.app,
+                        actions.onToggleShelfSource,
+                        actions.onClosePicker,
+                        ticked,
+                    )
+                }
             }
         }
     }
 }
+
+/** Each source with the art of its app: an app's Watch Next rows by the app's name, a channel by its own, with the app's name under it. */
+@Composable
+private fun shelfPickerEntries(entries: List<ShelfSourceEntry>): List<PickerEntry<String>> =
+    entries.map {
+        if (it.channel == null) {
+            PickerEntry(OptionLabel.Text(it.appLabel), stringResource(R.string.settings_shelf_watch_next, it.items), it.packageName)
+        } else {
+            PickerEntry(OptionLabel.Text(it.channel), "${it.appLabel} \u00B7 ${it.items}", it.packageName)
+        }
+    }
 
 /** The settings panel's entrance: it rises, grows and fades in with a spring, at once with animations off. */
 @Composable

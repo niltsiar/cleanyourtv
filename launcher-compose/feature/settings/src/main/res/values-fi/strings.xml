@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">Taustakuva vaihdettu</string>
   <string name="wallpaper_theme_default">Teeman oletus</string>
   <string name="wallpaper_theme_picture">Teeman kuva</string>
+  <string name="settings_app_shelf">Sovellushylly</string>
+  <string name="settings_shelf_sources">Hyllyn lähteet</string>
+  <string name="settings_shelf_no_access">Ei käyttöoikeutta</string>
+  <string name="settings_shelf_none">Ei mitään</string>
+  <string name="settings_shelf_watch_next">Jatka katsomista · %1$d</string>
+  <string name="settings_shelf_nothing">Mikään sovellus ei jaa kohteita</string>
 </resources>

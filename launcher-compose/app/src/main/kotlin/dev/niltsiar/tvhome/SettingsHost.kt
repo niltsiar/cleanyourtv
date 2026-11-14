@@ -15,7 +15,8 @@ import dev.niltsiar.tvhome.feature.settings.R as SettingsR
 
 /**
  * Launcher settings in the TV theme of the config, which the choices on this screen change as they are made. A refused
- * write, a stored wallpaper and TV settings that [onOpenTvSettings] could not open are told in the page's notice.
+ * write, a stored wallpaper, an empty shelf sources list and TV settings that [onOpenTvSettings] could not open are told in
+ * the page's notice. [onAskShelfAccess] asks for READ_TV_LISTINGS when the app shelf needs it.
  */
 @Composable
 internal fun SettingsHost(
@@ -24,6 +25,7 @@ internal fun SettingsHost(
     onChooseDefaultHome: () -> Unit,
     onOpenTvSettings: () -> Boolean,
     onReorder: () -> Unit,
+    onAskShelfAccess: () -> Unit,
 ) {
     val notice = remember { PageNotice() }
     LaunchedEffect(viewModel) {
@@ -31,6 +33,8 @@ internal fun SettingsHost(
             when (effect) {
                 SettingsEffect.SaveFailed -> notice.show(SettingsR.string.settings_save_failed)
                 SettingsEffect.WallpaperApplied -> notice.show(SettingsR.string.wallpaper_applied)
+                SettingsEffect.AskShelfAccess -> onAskShelfAccess()
+                SettingsEffect.NoShelfSources -> notice.show(SettingsR.string.settings_shelf_nothing)
             }
         }
     }

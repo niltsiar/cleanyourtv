@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">Imagem de fundo alterada</string>
   <string name="wallpaper_theme_default">Predefinição do tema</string>
   <string name="wallpaper_theme_picture">Imagem do tema</string>
+  <string name="settings_app_shelf">Prateleira da app</string>
+  <string name="settings_shelf_sources">Fontes da prateleira</string>
+  <string name="settings_shelf_no_access">Sem acesso</string>
+  <string name="settings_shelf_none">Nenhuma</string>
+  <string name="settings_shelf_watch_next">Continuar a ver · %1$d</string>
+  <string name="settings_shelf_nothing">Nenhuma app partilha itens</string>
 </resources>

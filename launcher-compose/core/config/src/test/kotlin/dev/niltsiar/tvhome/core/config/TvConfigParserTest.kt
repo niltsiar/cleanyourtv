@@ -636,6 +636,8 @@ val TvConfigParserTest by testSuite {
             "inputs_cec_state_only" to ("true" to defaults.copy(inputsCecStateOnly = true)),
             "input_arrival" to ("true" to defaults.copy(inputArrival = true)),
             "habit_hint" to ("true" to defaults.copy(habitHint = true)),
+            "app_shelf" to ("true" to defaults.copy(appShelf = true)),
+            "app_shelf_sources" to ("""["com.a", "com.b/7", "com.a"]""" to defaults.copy(appShelfSources = listOf("com.a", "com.b/7"))),
             "press_feedback" to ("true" to defaults.copy(pressFeedback = true)),
             "unused_fade_days" to ("60" to defaults.copy(unusedFadeDays = 60)),
             "handle_view_inputs" to ("true" to defaults.copy(handleViewInputs = true)),

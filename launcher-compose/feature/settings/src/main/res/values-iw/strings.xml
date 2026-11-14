@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">הטפט שונה</string>
   <string name="wallpaper_theme_default">ברירת המחדל של ערכת הנושא</string>
   <string name="wallpaper_theme_picture">התמונה של ערכת הנושא</string>
+  <string name="settings_app_shelf">מדף האפליקציה</string>
+  <string name="settings_shelf_sources">מקורות המדף</string>
+  <string name="settings_shelf_no_access">אין גישה</string>
+  <string name="settings_shelf_none">ללא</string>
+  <string name="settings_shelf_watch_next">להמשיך לצפות · %1$d</string>
+  <string name="settings_shelf_nothing">אף אפליקציה לא משתפת פריטים</string>
 </resources>

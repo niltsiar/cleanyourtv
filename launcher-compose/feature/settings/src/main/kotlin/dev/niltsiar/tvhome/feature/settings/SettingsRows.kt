@@ -8,7 +8,10 @@ import dev.niltsiar.tvhome.core.config.ClockFormat
 import dev.niltsiar.tvhome.core.config.ConfigRepository
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
+import dev.niltsiar.tvhome.core.model.ShelfPublisher
 import dev.niltsiar.tvhome.core.model.WallpaperPicture
+import dev.niltsiar.tvhome.core.model.channelSource
+import dev.niltsiar.tvhome.core.model.watchNextSource
 import java.util.Locale
 
 internal class Option<T>(
@@ -97,6 +100,7 @@ internal val settingsGroups: List<Group> =
                     onOff(SettingsRowId.ShowGreeting, R.string.settings_greeting, Choices.ShowGreeting) { it.showGreeting },
                     onOff(SettingsRowId.DateBelowClock, R.string.settings_date_below, Choices.DateBelowClock) { it.dateBelowClock },
                     onOff(SettingsRowId.MoveToMenu, R.string.settings_move_to_menu, Choices.MoveToMenu) { it.moveToMenu },
+                    onOff(SettingsRowId.AppShelf, R.string.settings_app_shelf, Choices.AppShelf) { it.appShelf },
                 ),
         ),
         Group(
@@ -152,6 +156,45 @@ internal fun settingsSections(config: TvConfig): List<SettingsSection> =
                 it.row(config)
             },
         )
+    }
+
+/** True when the option at [option] of the [row] turns its setting on: the App shelf row's first option is On. */
+internal fun turnsShelfOn(
+    row: SettingsRowId,
+    option: Int,
+): Boolean = row == SettingsRowId.AppShelf && option == 0
+
+/** The value of the Shelf sources row; null while app_shelf is off, when the row is not there. */
+internal fun shelfSourcesLabel(
+    config: TvConfig,
+    access: Boolean,
+): OptionLabel? =
+    when {
+        !config.appShelf -> null
+        !access -> res(R.string.settings_shelf_no_access)
+        config.appShelfSources.isEmpty() -> res(R.string.settings_shelf_none)
+        else -> text(config.appShelfSources.size)
+    }
+
+/** The shelf picker's entries: for each app by label, its Watch Next rows when it has any, then each of its preview channels. */
+internal fun shelfEntries(publishers: List<ShelfPublisher>): List<ShelfSourceEntry> =
+    publishers.flatMap { app ->
+        val watchNext =
+            if (app.watchNext > 0) {
+                listOf(ShelfSourceEntry(watchNextSource(app.packageName), app.packageName, app.label, null, app.watchNext))
+            } else {
+                emptyList()
+            }
+        watchNext +
+            app.channels.map {
+                ShelfSourceEntry(
+                    channelSource(app.packageName, it.channel.key),
+                    app.packageName,
+                    app.label,
+                    it.channel.name.ifBlank { app.label },
+                    it.programs,
+                )
+            }
     }
 
 /** The picker over [apps], with the entry of the [pick]ed package selected, or Off when it is not among them. */

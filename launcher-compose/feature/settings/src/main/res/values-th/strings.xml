@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">เปลี่ยนวอลเปเปอร์แล้ว</string>
   <string name="wallpaper_theme_default">ค่าเริ่มต้นของธีม</string>
   <string name="wallpaper_theme_picture">รูปภาพของธีม</string>
+  <string name="settings_app_shelf">ชั้นแอป</string>
+  <string name="settings_shelf_sources">แหล่งของชั้น</string>
+  <string name="settings_shelf_no_access">ไม่มีสิทธิ์เข้าถึง</string>
+  <string name="settings_shelf_none">ไม่มี</string>
+  <string name="settings_shelf_watch_next">ดูต่อ · %1$d</string>
+  <string name="settings_shelf_nothing">ไม่มีแอปที่แชร์รายการ</string>
 </resources>

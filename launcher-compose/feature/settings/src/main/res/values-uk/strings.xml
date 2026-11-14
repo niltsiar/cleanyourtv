@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">Шпалери змінено</string>
   <string name="wallpaper_theme_default">Як у темі</string>
   <string name="wallpaper_theme_picture">Зображення теми</string>
+  <string name="settings_app_shelf">Полиця застосунку</string>
+  <string name="settings_shelf_sources">Джерела полиці</string>
+  <string name="settings_shelf_no_access">Немає доступу</string>
+  <string name="settings_shelf_none">Немає</string>
+  <string name="settings_shelf_watch_next">Продовжити перегляд · %1$d</string>
+  <string name="settings_shelf_nothing">Жоден застосунок не ділиться матеріалами</string>
 </resources>

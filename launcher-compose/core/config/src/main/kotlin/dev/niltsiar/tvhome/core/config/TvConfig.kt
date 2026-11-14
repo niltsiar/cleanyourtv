@@ -188,6 +188,13 @@ public data class TvConfig(
     val inputArrival: Boolean = false,
     /** A quiet mark on the app the household usually opens at this time of day; Home keeps a log of its launches for it. */
     val habitHint: Boolean = false,
+    /** With focus on a dock app, Home shows that app's own items from the TV provider; needs READ_TV_LISTINGS. */
+    val appShelf: Boolean = false,
+    /**
+     * With [appShelf]: the sources the shelf reads, "<package>" for an app's Watch Next rows and "<package>/<channel key>" for
+     * one of its preview channels, the key being the channel's internal_provider_id or, without one, its row id.
+     */
+    val appShelfSources: List<String> = emptyList(),
     /** OK on an app tile dips it and brightens its ring; a slow start says the app is opening and takes no second OK. */
     val pressFeedback: Boolean = false,
     /** Days, 0 to 3650: a grid tile whose app Home has not opened for more than this many days is drawn faded; 0 fades none. */

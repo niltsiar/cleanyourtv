@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">Обои изменены</string>
   <string name="wallpaper_theme_default">Как в теме</string>
   <string name="wallpaper_theme_picture">Изображение темы</string>
+  <string name="settings_app_shelf">Полка приложения</string>
+  <string name="settings_shelf_sources">Источники полки</string>
+  <string name="settings_shelf_no_access">Нет доступа</string>
+  <string name="settings_shelf_none">Нет</string>
+  <string name="settings_shelf_watch_next">Продолжить просмотр · %1$d</string>
+  <string name="settings_shelf_nothing">Ни одно приложение не делится материалами</string>
 </resources>

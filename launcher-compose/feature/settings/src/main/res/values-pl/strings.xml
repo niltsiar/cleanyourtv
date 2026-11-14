@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">Zmieniono tapetę</string>
   <string name="wallpaper_theme_default">Domyślna z motywu</string>
   <string name="wallpaper_theme_picture">Obraz z motywu</string>
+  <string name="settings_app_shelf">Półka aplikacji</string>
+  <string name="settings_shelf_sources">Źródła półki</string>
+  <string name="settings_shelf_no_access">Brak dostępu</string>
+  <string name="settings_shelf_none">Brak</string>
+  <string name="settings_shelf_watch_next">Oglądaj dalej · %1$d</string>
+  <string name="settings_shelf_nothing">Żadna aplikacja nie udostępnia elementów</string>
 </resources>

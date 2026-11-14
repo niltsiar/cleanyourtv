@@ -12,6 +12,7 @@ import dev.niltsiar.tvhome.data.apps.PackageManagerAppsProvider
 import dev.niltsiar.tvhome.data.inputs.InputLauncher
 import dev.niltsiar.tvhome.data.inputs.InputsProvider
 import dev.niltsiar.tvhome.data.inputs.OpenOnStart
+import dev.niltsiar.tvhome.data.shelf.ShelfReader
 import dev.niltsiar.tvhome.data.system.MinuteClock
 import dev.niltsiar.tvhome.data.system.NetworkMonitor
 import dev.niltsiar.tvhome.data.system.SystemSettings
@@ -136,11 +137,19 @@ interface AppGraph {
 
     @Provides
     @SingleIn(AppScope::class)
+    fun provideShelfReader(
+        application: Application,
+        repository: ConfigRepository,
+    ): ShelfReader = ShelfReader(application, repository.config)
+
+    @Provides
+    @SingleIn(AppScope::class)
     fun provideSettingsSources(
         application: Application,
         openOnStart: OpenOnStart,
         appsProvider: PackageManagerAppsProvider,
         wallpaperProvider: WallpaperProvider,
+        shelfReader: ShelfReader,
     ): SettingsSources {
         val pictures = WallpaperPictures(ThemeDirectory(application))
         return SettingsSources(
@@ -149,6 +158,8 @@ interface AppGraph {
             pictures::pictures,
             PickerArt(pictures::thumbnail, appsProvider::art),
             { wallpaperProvider.themeDefault() },
+            shelfReader::publishers,
+            shelfReader::hasAccess,
         )
     }
 

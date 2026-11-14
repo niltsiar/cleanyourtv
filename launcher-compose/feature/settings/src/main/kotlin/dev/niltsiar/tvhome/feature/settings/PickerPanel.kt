@@ -98,7 +98,8 @@ private class ArtCache<K : Any>(
 /**
  * A picker over the page, titled [title], listing [entries], each with a 96 x 54 dp slot on its start side for its [art], which
  * loads at that size while the row is shown and draws when it arrives, or its swatch. Focus starts on the entry at [selected]
- * and cannot leave the panel; OK on an entry runs [onPick] with its index, and Back runs [onClose].
+ * and cannot leave the panel; OK on an entry runs [onPick] with its index, and Back runs [onClose]. The entry at [selected] has
+ * the check mark, or with [ticked] every entry at an index in it.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -109,6 +110,7 @@ internal fun <K : Any> BoxScope.PickerPanel(
     art: suspend (K, Int, Int) -> ImageBitmap?,
     onPick: (Int) -> Unit,
     onClose: () -> Unit,
+    ticked: Set<Int>? = null,
 ) {
     BackHandler(onBack = onClose)
     val reveal = rememberReveal()
@@ -157,7 +159,7 @@ internal fun <K : Any> BoxScope.PickerPanel(
                 itemsIndexed(entries) { index, entry ->
                     ActionRow(
                         label = entry.label.text(),
-                        selected = index == selected,
+                        selected = ticked?.contains(index) ?: (index == selected),
                         onClick = { onPick(index) },
                         tag = "picker:$index",
                         stop = if (index == selected) stop else null,

@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">Achtergrond gewijzigd</string>
   <string name="wallpaper_theme_default">Standaard van het thema</string>
   <string name="wallpaper_theme_picture">Afbeelding van het thema</string>
+  <string name="settings_app_shelf">App-plank</string>
+  <string name="settings_shelf_sources">Bronnen van de plank</string>
+  <string name="settings_shelf_no_access">Geen toegang</string>
+  <string name="settings_shelf_none">Geen</string>
+  <string name="settings_shelf_watch_next">Verder kijken · %1$d</string>
+  <string name="settings_shelf_nothing">Geen app deelt items</string>
 </resources>

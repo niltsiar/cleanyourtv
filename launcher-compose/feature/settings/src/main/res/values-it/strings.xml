@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">Sfondo cambiato</string>
   <string name="wallpaper_theme_default">Predefinito del tema</string>
   <string name="wallpaper_theme_picture">Immagine del tema</string>
+  <string name="settings_app_shelf">Scaffale dell\'app</string>
+  <string name="settings_shelf_sources">Fonti dello scaffale</string>
+  <string name="settings_shelf_no_access">Nessun accesso</string>
+  <string name="settings_shelf_none">Nessuna</string>
+  <string name="settings_shelf_watch_next">Continua a guardare · %1$d</string>
+  <string name="settings_shelf_nothing">Nessuna app condivide contenuti</string>
 </resources>

@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">Wallpaper diubah</string>
   <string name="wallpaper_theme_default">Bawaan tema</string>
   <string name="wallpaper_theme_picture">Gambar tema</string>
+  <string name="settings_app_shelf">Rak aplikasi</string>
+  <string name="settings_shelf_sources">Sumber rak</string>
+  <string name="settings_shelf_no_access">Tanpa akses</string>
+  <string name="settings_shelf_none">Tidak ada</string>
+  <string name="settings_shelf_watch_next">Lanjutkan menonton · %1$d</string>
+  <string name="settings_shelf_nothing">Tidak ada aplikasi yang membagikan item</string>
 </resources>

@@ -45,4 +45,10 @@
   <string name="wallpaper_applied">Fondu camudáu</string>
   <string name="wallpaper_theme_default">Predetermináu del tema</string>
   <string name="wallpaper_theme_picture">Imaxe del tema</string>
+  <string name="settings_app_shelf">Estante de l\'aplicación</string>
+  <string name="settings_shelf_sources">Fontes del estante</string>
+  <string name="settings_shelf_no_access">Ensin accesu</string>
+  <string name="settings_shelf_none">Nenguna</string>
+  <string name="settings_shelf_watch_next">Siguir viendo · %1$d</string>
+  <string name="settings_shelf_nothing">Nenguna aplicación comparte elementos</string>
 </resources>

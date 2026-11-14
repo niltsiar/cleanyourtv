@@ -54,6 +54,9 @@ public class ConfigRepository(
     private val state: MutableStateFlow<TvConfig>
 
     private val store = CompletableDeferred<DataStore<Preferences>>()
+
+    /** The theme the store's choices overlay; set before [store] completes. */
+    private lateinit var theme: TvConfig
     private val unlockReceiver = AtomicReference<BroadcastReceiver?>()
 
     private val following = MutableStateFlow(true)
@@ -98,6 +101,17 @@ public class ConfigRepository(
         store.await().edit { it.remove(choice.key) }
     }
 
+    /**
+     * Ticks [source] in [Choices.AppShelfSources], or unticks it when ticked. While no set is stored, the theme's list is the
+     * one changed. The read and the write are one edit, so toggles in quick succession all count.
+     */
+    public suspend fun toggleShelfSource(source: String) {
+        store.await().edit { prefs ->
+            val ticked = prefs.stored(AppShelfSourcesKey) ?: theme.appShelfSources.toSet()
+            prefs[AppShelfSourcesKey] = if (source in ticked) ticked - source else ticked + source
+        }
+    }
+
     /** "Follow theme": removes every stored choice, open on start too. */
     public suspend fun followTheme() {
         store.await().edit { prefs -> Choices.all.forEach { prefs.remove(it.key) } }
@@ -109,6 +123,7 @@ public class ConfigRepository(
                 corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
                 scope = CoroutineScope(scope.coroutineContext + Dispatchers.IO),
             ) { context.preferencesDataStoreFile("launcher_settings") }
+        this.theme = theme
         store.complete(opened)
         val signature = themes.signature().takeIf { themes.mounted }
         try {
