@@ -64,4 +64,11 @@
   <string name="opening_app">פותח את %1$s&#8230;</string>
   <string name="launcher_settings">הגדרות מסך הבית</string>
   <string name="launcher_settings_summary">פריסה, שעון ותנועה</string>
+  <string name="shelf_season_episode">עונה %1$s פרק %2$s</string>
+  <string name="shelf_episode">פרק %1$s</string>
+  <plurals name="shelf_minutes_left">
+    <item quantity="one">נותרו %1$d דק׳</item>
+    <item quantity="two">נותרו %1$d דק׳</item>
+    <item quantity="other">נותרו %1$d דק׳</item>
+  </plurals>
 </resources>

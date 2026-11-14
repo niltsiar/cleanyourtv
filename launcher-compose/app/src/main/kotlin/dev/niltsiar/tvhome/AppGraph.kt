@@ -12,6 +12,7 @@ import dev.niltsiar.tvhome.data.apps.PackageManagerAppsProvider
 import dev.niltsiar.tvhome.data.inputs.InputLauncher
 import dev.niltsiar.tvhome.data.inputs.InputsProvider
 import dev.niltsiar.tvhome.data.inputs.OpenOnStart
+import dev.niltsiar.tvhome.data.shelf.ShelfPosters
 import dev.niltsiar.tvhome.data.shelf.ShelfReader
 import dev.niltsiar.tvhome.data.system.MinuteClock
 import dev.niltsiar.tvhome.data.system.NetworkMonitor
@@ -144,6 +145,10 @@ interface AppGraph {
 
     @Provides
     @SingleIn(AppScope::class)
+    fun provideShelfPosters(application: Application): ShelfPosters = ShelfPosters(application)
+
+    @Provides
+    @SingleIn(AppScope::class)
     fun provideSettingsSources(
         application: Application,
         openOnStart: OpenOnStart,
@@ -204,6 +209,8 @@ interface AppGraph {
         libraryCatalog: LibraryCatalog,
         inputsProvider: InputsProvider,
         focusMemory: FocusMemory,
+        shelfReader: ShelfReader,
+        shelfPosters: ShelfPosters,
     ): HomeSources =
         HomeSources(
             apps = appsProvider.apps,
@@ -224,6 +231,8 @@ interface AppGraph {
             inputs = inputsProvider.menu,
             focusMemory = focusMemory,
             libraryCount = libraryCatalog.counts,
+            shelfItems = shelfReader::items,
+            shelfPoster = shelfPosters::poster,
         )
 
     @Provides

@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import app.cash.molecule.RecompositionMode
 import app.cash.molecule.launchMolecule
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.model.ShelfItem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -63,6 +64,19 @@ public class MoleculeHomeViewModel(
 
     public fun onClick(key: String) {
         events.trySend(HomeEvent.Click(key))
+    }
+
+    /** OK on a card of the app shelf of the dock tile [key]. */
+    public fun onOpenShelfItem(
+        key: String,
+        item: ShelfItem,
+    ) {
+        events.trySend(HomeEvent.OpenShelfItem(key, item))
+    }
+
+    /** Whether the layout on screen has [room] for the app shelf's cards. */
+    public fun onShelfRoom(room: Boolean) {
+        events.trySend(HomeEvent.ShelfRoom(room))
     }
 
     /** The host started no app for the tile [key]: the launch failed, or the tile switched input instead. */

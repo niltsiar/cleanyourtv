@@ -13,6 +13,8 @@ import dev.niltsiar.tvhome.core.model.InputArrival
 import dev.niltsiar.tvhome.core.model.InputRow
 import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.core.model.InputsMenu
+import dev.niltsiar.tvhome.core.model.ShelfItem
+import kotlinx.coroutines.delay
 
 /** A saved order, applied over the list [base] it was made from until the app list changes (the next load reads the file). */
 internal class SavedOrder(
@@ -34,6 +36,9 @@ internal data class Launch(
     val token: Int,
     val says: Boolean = false,
 )
+
+/** How long a dock tile holds focus before Home reads its app shelf, so moving along the dock reads nothing. */
+internal const val SHELF_HOLD_MS = 600L
 
 /** The Launcher settings page closed and Home has yet to apply what it changed; [reorder] asks for reorder mode next. */
 internal data class SettingsReturn(
@@ -123,6 +128,51 @@ internal class HomeInteraction(
 
     fun launchEnded(token: Int) {
         if (launch?.token == token) launch = null
+    }
+
+    /** The app shelf on screen: the focused dock tile's, once [followShelf] has read it. */
+    var appShelf by mutableStateOf<AppShelf?>(null)
+        private set
+
+    /** The items read per package, for the app_shelf_sources in [cachedSources]. Home coming to the front drops them. */
+    private val shelfCache = HashMap<String, List<ShelfItem>>()
+    private var cachedSources: List<String>? = null
+
+    /** Counts Home coming to the front, so the shelf on screen is read again then. */
+    var shelfReads by mutableIntStateOf(0)
+        private set
+
+    /** Whether the layout on screen has room for the cards; until the screen says, it is taken to have. */
+    private var shelfRoom by mutableStateOf(true)
+
+    /** The dock tile [key] when app_shelf is on, the layout has room and the tile's app has app_shelf_sources ticked, else null. */
+    fun shelfTile(key: String?): AppEntry? {
+        if (!config.value.appShelf || !shelfRoom) return null
+        val tile = shown.dock.firstOrNull { it.key == key } ?: return null
+        val prefix = "${tile.packageName}/"
+        return tile.takeIf { _ -> config.value.appShelfSources.any { it == tile.packageName || it.startsWith(prefix) } }
+    }
+
+    /**
+     * Shows the app shelf of [tile], or none for null. A tile other than the one shown first holds focus for [SHELF_HOLD_MS];
+     * the one shown is read again at once.
+     */
+    suspend fun followShelf(tile: AppEntry?) {
+        if (tile == null) {
+            appShelf = null
+            return
+        }
+        if (appShelf?.key != tile.key) {
+            appShelf = null
+            delay(SHELF_HOLD_MS)
+        }
+        val ticked = config.value.appShelfSources
+        if (ticked != cachedSources) {
+            shelfCache.clear()
+            cachedSources = ticked
+        }
+        val items = shelfCache.getOrPut(tile.packageName) { sources.shelfItems(tile.packageName) }
+        appShelf = if (items.isEmpty()) null else AppShelf(tile.key, items)
     }
 
     /** Set when the Launcher settings page closes, cleared once the presenter has applied the config and [settingsReturned] ran. */
@@ -224,6 +274,8 @@ internal class HomeInteraction(
 
             HomeEvent.Started -> {
                 showing = true
+                shelfCache.clear()
+                shelfReads++
             }
 
             is HomeEvent.SettingsClosed -> {
@@ -237,6 +289,14 @@ internal class HomeInteraction(
 
             is HomeEvent.Click -> {
                 click(event.key)
+            }
+
+            is HomeEvent.OpenShelfItem -> {
+                openShelfItem(event.key, event.item)
+            }
+
+            is HomeEvent.ShelfRoom -> {
+                shelfRoom = event.room
             }
 
             is HomeEvent.AppNotStarted -> {
@@ -266,6 +326,19 @@ internal class HomeInteraction(
         }
         val app = tile ?: topBarApps.firstOrNull { it.key == key }
         if (app != null) effect(HomeEffect.LaunchApp(app))
+    }
+
+    /** A card of the app shelf of the dock tile [key] opens its item; with press_feedback it waits out a press as a tile does. */
+    private fun openShelfItem(
+        key: String,
+        item: ShelfItem,
+    ) {
+        val tile = list.apps.firstOrNull { it.key == key } ?: return
+        if (config.value.pressFeedback) {
+            if (launch != null) return
+            launch = Launch(tile.key, tile.label, ++launches)
+        }
+        effect(HomeEffect.OpenShelfItem(tile, item))
     }
 
     fun topBarAppsLoaded(loaded: List<AppEntry>) {

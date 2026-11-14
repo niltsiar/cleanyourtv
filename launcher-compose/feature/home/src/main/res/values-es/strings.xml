@@ -64,4 +64,11 @@
   <string name="opening_app">Abriendo %1$s&#8230;</string>
   <string name="launcher_settings">Ajustes del lanzador</string>
   <string name="launcher_settings_summary">Diseño, reloj y movimiento</string>
+  <string name="shelf_season_episode">T%1$s E%2$s</string>
+  <string name="shelf_episode">E%1$s</string>
+  <plurals name="shelf_minutes_left">
+    <item quantity="one">Queda %1$d min</item>
+    <item quantity="many">Quedan %1$d min</item>
+    <item quantity="other">Quedan %1$d min</item>
+  </plurals>
 </resources>

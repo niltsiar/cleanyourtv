@@ -8,6 +8,8 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
+        // TestBalloon does not read @GraphicsMode; ShelfPostersTest decodes real pictures.
+        unitTests.all { it.systemProperty("robolectric.graphicsMode", "NATIVE") }
     }
 }
 

@@ -56,4 +56,9 @@
   <string name="opening_app">กำลังเปิด %1$s&#8230;</string>
   <string name="launcher_settings">การตั้งค่าหน้าหลัก</string>
   <string name="launcher_settings_summary">เลย์เอาต์ นาฬิกา และการเคลื่อนไหว</string>
+  <string name="shelf_season_episode">ซีซัน %1$s ตอน %2$s</string>
+  <string name="shelf_episode">ตอน %1$s</string>
+  <plurals name="shelf_minutes_left">
+    <item quantity="other">เหลือ %1$d นาที</item>
+  </plurals>
 </resources>

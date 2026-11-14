@@ -17,6 +17,7 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.InputTarget
+import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.feature.home.HomeEffect
 import dev.niltsiar.tvhome.feature.home.HomeScreen
 import dev.niltsiar.tvhome.feature.home.MoleculeHomeViewModel
@@ -35,13 +36,14 @@ internal data class SettingsClosing(
 )
 
 /**
- * Home state comes from the Molecule-hosted presenter. [onLaunchApp] opens a Home tile and says whether an app started.
- * [overlays] go in Home's overlay host.
+ * Home state comes from the Molecule-hosted presenter. [onLaunchApp] opens a Home tile and [onOpenShelfItem] an item of a dock
+ * tile's app shelf, and each says whether an app started. [overlays] go in Home's overlay host.
  */
 @Composable
 internal fun HomeHost(
     graph: AppGraph,
     onLaunchApp: (AppEntry) -> Boolean,
+    onOpenShelfItem: (AppEntry, ShelfItem) -> Boolean,
     onOpenSettings: () -> Unit,
     onOpenNetwork: () -> Unit,
     onOpenWifiSettings: () -> Unit,
@@ -70,6 +72,7 @@ internal fun HomeHost(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is HomeEffect.LaunchApp -> if (!onLaunchApp(effect.app)) viewModel.onAppNotStarted(effect.app.key)
+                is HomeEffect.OpenShelfItem -> if (!onOpenShelfItem(effect.app, effect.item)) viewModel.onAppNotStarted(effect.app.key)
                 HomeEffect.OpenSettings -> onOpenSettings()
                 HomeEffect.OpenNetwork -> onOpenNetwork()
                 HomeEffect.OpenWifiSettings -> onOpenWifiSettings()
@@ -115,6 +118,9 @@ internal fun HomeHost(
         libraryOpen = libraryOpen,
         onOpenLibrary = onOpenLibrary,
         inputsRequests = inputsRequests,
+        onOpenShelfItem = viewModel::onOpenShelfItem,
+        shelfPoster = graph.homeSources.shelfPoster,
+        onShelfRoom = viewModel::onShelfRoom,
         overlays = overlays,
     )
 }

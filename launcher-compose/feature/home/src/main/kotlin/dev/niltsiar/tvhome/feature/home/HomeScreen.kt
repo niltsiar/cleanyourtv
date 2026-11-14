@@ -159,6 +159,7 @@ import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.OpenedAt
+import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.coroutineScope
@@ -351,8 +352,11 @@ private val HeroAscent = 36.sp
 private val ChipHeight = KeyChipHeight
 private val CinematicShelfHeight = CinematicTextHeight + TitleToShelfBottom
 
-/** A 48 sp title line (its ascent and descent), then the meta line or the key chips. */
-private val ShelfHeight = 52.dp + MetaGap + ChipHeight + TitleToShelfBottom
+/** A 48 sp title line: its ascent and descent. */
+private val HeroTitleLine = 52.dp
+
+/** The title line, then the meta line or the key chips. */
+private val ShelfHeight = HeroTitleLine + MetaGap + ChipHeight + TitleToShelfBottom
 
 /** The alpha of the grid rows with focus on the library pill: the grid is not a ghost above it. */
 private const val LAST_ROW_PILL_ALPHA = 0.85f
@@ -403,6 +407,9 @@ internal const val GRID_ITEMS_BEFORE = 2
  * [OverlayHost] over everything else on Home. The tile a menu acts on stays undimmed under it, and so does the top-bar button
  * that opened the Settings menu or the input list. While the library is open
  * every layer of Home above the wallpaper fades out, so only the wallpaper and the library's scrim are behind its panel.
+ * With app_shelf, the focused dock tile's [HomeUiState.appShelf] shows as cards between the title and the dock ([AppShelfCards]),
+ * which [onOpenShelfItem] opens and whose posters [shelfPoster] decodes; the title block rises to make room, and a layout without
+ * room for cards of [ShelfCardMinHeight] shows none and says so through [onShelfRoom], so nothing is read for it.
  */
 @Composable
 public fun HomeScreen(
@@ -426,6 +433,9 @@ public fun HomeScreen(
     libraryOpen: () -> Boolean = { false },
     onOpenLibrary: () -> Unit = {},
     inputsRequests: () -> Int = { 0 },
+    onOpenShelfItem: (String, ShelfItem) -> Unit = { _, _ -> },
+    shelfPoster: suspend (String, Int, Int) -> ImageBitmap? = { _, _, _ -> null },
+    onShelfRoom: (Boolean) -> Unit = {},
     overlays: @Composable () -> Unit = {},
 ) {
     val dockFocus = remember { FocusRequester() }
@@ -486,7 +496,24 @@ public fun HomeScreen(
     }
     val reordering = { state().reorder != null }
     val backdrop = rememberCinematicBackdrop(shelfLayout, shelf = { state().shelf }, heroArt = heroArt, reordering = reordering)
-    val titleShift: GraphicsLayerScope.() -> Float = { dim.titleShiftPx(TitleGridDrop.toPx()) }
+    val cards = remember { ShelfCardsState() }
+    val density = LocalDensity.current
+    val titleLine = if (shelfLayout.cinematic) CinematicTitleLine else HeroTitleLine
+    val lift = with(density) { dim.loweringPx.toDp() }
+    val peak = TvTheme.motion.focusPeakScale(TILE_FOCUSED_SCALE)
+    val cardBand = remember(shelfHeight, titleLine, lift, peak) { shelfBand(shelfHeight - titleLine - MetaGap - MetaSlot, lift, peak) }
+    val currentLibraryOpen = rememberUpdatedState(libraryOpen)
+    val shelfVisible =
+        remember(cardBand) {
+            derivedStateOf {
+                cardBand != null &&
+                    shelfOnScreen(currentState.value(), input, cards, currentLibraryOpen.value())
+            }
+        }
+    val currentShelfRoom = rememberUpdatedState(onShelfRoom)
+    LaunchedEffect(cardBand != null) { currentShelfRoom.value(cardBand != null) }
+    val rise = cardBand?.rise ?: 0.dp
+    val titleShift: GraphicsLayerScope.() -> Float = { dim.titleShiftPx(TitleGridDrop.toPx()) - rise.toPx() * cards.alpha.value }
     val heroSource by remember(state, layout.dockTitle) {
         derivedStateOf { heroSource(layout.dockTitle, state().reorder?.hint, input.pillFocused, input.headerControl(state())) }
     }
@@ -589,7 +616,24 @@ public fun HomeScreen(
                 homePresses,
                 libraryOpen,
                 onOpenLibrary,
+                shelfUp = remember(cards, shelfVisible) { { cards.first.takeIf { shelfVisible.value } } },
             )
+            if (cardBand != null) {
+                AppShelfCards(
+                    cards = cards,
+                    band = cardBand,
+                    shelf = { state().appShelf },
+                    visible = shelfVisible,
+                    app = { key -> state().dock.firstOrNull { it.key == key } },
+                    ring = { shelfLayout.ringColour(it.accent, inDock = true, edge = it.edge) },
+                    shelfBottom = shelfBottom,
+                    groupShift = dim::lowPx,
+                    poster = shelfPoster,
+                    layout = layout,
+                    input = input,
+                    onOpen = onOpenShelfItem,
+                )
+            }
             if (shelfLayout.cinematic) {
                 CinematicShelf(
                     shelf = { state().takeIf { it.reorder == null && !input.pillFocused && input.headerControl(it) == null }?.shelf },
@@ -599,6 +643,8 @@ public fun HomeScreen(
                     detailAlpha = { band.detail.value },
                     pill = scrimLit,
                     extent = shelfExtent,
+                    card = cards::focusedItem,
+                    cardsShown = { cards.alpha.value },
                 )
             }
             HeroTitle(
@@ -610,6 +656,7 @@ public fun HomeScreen(
                 shelfModifier,
                 pill = scrimLit,
                 extent = bandExtent,
+                card = cards::focusedItem,
             )
             WallpaperCaption(
                 caption = { state().wallpaper.caption },
@@ -714,6 +761,7 @@ private fun HomeContent(
     homePresses: () -> Int,
     libraryOpen: () -> Boolean,
     onOpenLibrary: () -> Unit,
+    shelfUp: () -> FocusRequester?,
 ) {
     val density = LocalDensity.current
     // The focused tile rests the panel's top padding inside the dock panel, so at rest the panel's top edge is the shelf's bottom edge.
@@ -844,6 +892,7 @@ private fun HomeContent(
                     onFocus = onFocus,
                     onClick = onClick,
                     onOpenLibrary = onOpenLibrary,
+                    up = remember(shelfUp) { Modifier.focusProperties { shelfUp()?.let { up = it } } },
                     modifier =
                         remember(
                             dim,
@@ -943,6 +992,21 @@ private suspend fun focusOn(
     withFrameNanos { }
     withFrameNanos { }
     input.focus(target)
+}
+
+/**
+ * Whether the app shelf's cards show: the shelf is the focused tile's, focus is on that dock tile or one of the cards, and no
+ * menu, input list, mode or library is open.
+ */
+private fun shelfOnScreen(
+    state: HomeUiState,
+    input: HomeInput,
+    cards: ShelfCardsState,
+    libraryOpen: Boolean,
+): Boolean {
+    val shelf = state.appShelf ?: return false
+    if (shelf.key != state.focusedKey || state.reorder != null || state.menu != null || state.inputsOpen || libraryOpen) return false
+    return cards.focused >= 0 || (input.gridFocused && !input.pillFocused && state.dock.any { it.key == shelf.key })
 }
 
 /** The focus target the open overlay hangs from, or null while none is open. */
@@ -1053,6 +1117,9 @@ private class FocusDim(
 
     /** How far down the group is drawn now, in pixels. */
     fun lowPx(): Float = low.value * lowering.value
+
+    /** How far down the group is drawn in dock focus, in pixels. */
+    val loweringPx: Float get() = lowering.value
 
     /**
      * How far down the hero block is drawn now: with the group, and [drop] more while it is up. With nothing to lower
@@ -1594,13 +1661,16 @@ private data class HeroLine(
     val quick: Boolean = false,
     /** The title names a chrome control (a top-bar button or the library pill), which gets a smaller title than an app. */
     val chrome: Boolean = false,
+    /** The app shelf card with focus, which the line describes in place of [opened]. */
+    val card: ShelfItem? = null,
 )
 
 /**
  * The band over the grid: the focused tile's name and when Home last opened it; on the library pill the library's
  * name and size; in reorder mode the name of the tile that moves, in edit-dock mode the mode's name, and the keys. A new
  * line cross-fades with the old one as the cinematic shelf's does ([TitleSlots]). The meta line keeps its slot when empty, so the title stands where the
- * [cinematic] shelf's does. It draws at the [band]'s fades.
+ * [cinematic] shelf's does. It draws at the [band]'s fades. Without the cinematic shelf, the line describes the app shelf
+ * [card] that has focus.
  */
 @Composable
 private fun HeroTitle(
@@ -1612,8 +1682,10 @@ private fun HeroTitle(
     modifier: Modifier = Modifier,
     pill: () -> Boolean = { false },
     extent: TitleExtent = TitleExtent(),
+    card: () -> ShelfItem? = { null },
 ) {
     val count by remember(state) { derivedStateOf { state().libraryCount } }
+    val focusedCard by remember(card, cinematic) { derivedStateOf { if (cinematic) null else card() } }
     val inputs by remember(state) {
         derivedStateOf {
             state().let { home ->
@@ -1662,11 +1734,11 @@ private fun HeroTitle(
             }
 
             HeroSource.Tile -> {
-                tile
+                tile.copy(card = focusedCard)
             }
 
             HeroSource.Quiet -> {
-                HeroLine("")
+                HeroLine("", card = focusedCard)
             }
         }
     val animated = TvTheme.motion.animated
@@ -1681,7 +1753,7 @@ private fun HeroTitle(
             animated,
             rise,
             // A new time for the same tile, as the clock moves on, replaces the old one without a cross-fade.
-            key = { it.copy(opened = null, never = false, usual = false, opening = null) },
+            key = { it.copy(opened = null, never = false, usual = false, opening = null, card = null) },
             inMillis = { from, to -> if (from.quick || to.quick) LIBRARY_SWAP_MS else CINEMATIC_MS },
             extent = extent,
         ) { shown, live ->
@@ -1709,6 +1781,7 @@ private fun HeroTitle(
                                 when {
                                     !live -> AnnotatedString("")
                                     shown.opening != null -> AnnotatedString(stringResource(R.string.opening_app, shown.opening))
+                                    shown.card != null -> AnnotatedString(shelfLine(shown.card))
                                     opened != null || shown.usual || shown.never -> lastOpenedLine(opened, shown.usual, shown.never)
                                     else -> AnnotatedString(shown.meta)
                                 }
@@ -1882,6 +1955,7 @@ private fun Dock(
     onClick: (String) -> Unit,
     onOpenLibrary: () -> Unit,
     modifier: Modifier = Modifier,
+    up: Modifier = Modifier,
 ) {
     // One gap wider on each side than the grid. The padding inside leaves a focused end tile's ring DockRingWallClear from
     // the wall, so the tiles are a little narrower than the grid's columns. With fewer tiles than the row holds the panel
@@ -1911,6 +1985,7 @@ private fun Dock(
                             .focusRequester(focus)
                             .focusRestorer()
                             .upToOffer(input, layout)
+                            .then(up)
                             .clipsHalo(),
                     contentPadding = PaddingValues(start = padding.side, top = padding.top, end = padding.side, bottom = padding.bottom),
                     horizontalArrangement = Arrangement.spacedBy(TileGap),
@@ -1963,6 +2038,7 @@ private fun Dock(
                         .focusRestorer()
                         .focusGroup()
                         .upToOffer(input, layout)
+                        .then(up)
                         .padding(start = padding.side, top = padding.top, end = padding.side, bottom = padding.bottom),
                 horizontalArrangement = Arrangement.spacedBy(TileGap),
             ) {
@@ -2009,7 +2085,7 @@ private fun Dock(
 }
 
 /** With input_arrival, Up from a dock tile goes to the Inputs button while it offers a device. Read when focus moves. */
-private fun Modifier.upToOffer(
+internal fun Modifier.upToOffer(
     input: HomeInput,
     layout: HomeLayout,
 ): Modifier =

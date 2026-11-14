@@ -56,4 +56,10 @@
   <string name="opening_app">Åbner %1$s&#8230;</string>
   <string name="launcher_settings">Launcher-indstillinger</string>
   <string name="launcher_settings_summary">Layout, ur og bevægelse</string>
+  <string name="shelf_season_episode">S%1$s E%2$s</string>
+  <string name="shelf_episode">E%1$s</string>
+  <plurals name="shelf_minutes_left">
+    <item quantity="one">%1$d min tilbage</item>
+    <item quantity="other">%1$d min tilbage</item>
+  </plurals>
 </resources>

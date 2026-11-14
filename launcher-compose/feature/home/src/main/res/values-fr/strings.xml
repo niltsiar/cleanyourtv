@@ -63,4 +63,11 @@
   <string name="opening_app">Ouverture de %1$s&#8230;</string>
   <string name="launcher_settings">Paramètres du lanceur</string>
   <string name="launcher_settings_summary">Disposition, horloge et animations</string>
+  <string name="shelf_season_episode">S%1$s É%2$s</string>
+  <string name="shelf_episode">É%1$s</string>
+  <plurals name="shelf_minutes_left">
+    <item quantity="one">%1$d min restante</item>
+    <item quantity="many">%1$d min restantes</item>
+    <item quantity="other">%1$d min restantes</item>
+  </plurals>
 </resources>

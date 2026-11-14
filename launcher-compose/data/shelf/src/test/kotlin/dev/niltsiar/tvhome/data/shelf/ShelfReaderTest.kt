@@ -286,6 +286,15 @@ class ShelfReaderTestContent :
                 items(JELLYFIN).map { it.channel } shouldBe listOf(ShelfChannel("7", "Latest"))
             }
 
+            test("a watch next row the person removed in the stock home, browsable 0, is dropped") {
+                provider.watchNext += plezy("Severance", NOW - DAY, WatchNextPrograms.COLUMN_BROWSABLE to 0)
+                provider.watchNext += plezy("Andor", NOW - 2 * DAY, WatchNextPrograms.COLUMN_BROWSABLE to 1)
+                provider.watchNext += plezy("Silo", NOW - 3 * DAY)
+                tick(PLEZY)
+
+                titles(PLEZY) shouldBe listOf("Andor", "Silo")
+            }
+
             test("live programs are dropped") {
                 provider.watchNext += episode("live", type = WatchNextPrograms.TYPE_CLIP, live = 1)
                 provider.watchNext += episode("recorded", type = WatchNextPrograms.TYPE_CLIP, live = 0)

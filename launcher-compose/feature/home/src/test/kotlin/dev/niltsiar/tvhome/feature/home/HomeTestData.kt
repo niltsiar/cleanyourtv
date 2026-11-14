@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsNodeInteraction
@@ -19,6 +20,7 @@ import dev.niltsiar.tvhome.core.model.InputRow
 import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkState
+import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,6 +62,8 @@ internal fun sources(
     habit: suspend () -> String? = { null },
     openedSince: Flow<Long?> = flowOf(null),
     timeMillis: () -> Long = System::currentTimeMillis,
+    shelfItems: suspend (String) -> List<ShelfItem> = { emptyList() },
+    shelfPoster: suspend (String, Int, Int) -> ImageBitmap? = { _, _, _ -> null },
 ) = HomeSources(
     apps,
     clock,
@@ -79,6 +83,8 @@ internal fun sources(
     habit = habit,
     openedSince = openedSince,
     timeMillis = timeMillis,
+    shelfItems = shelfItems,
+    shelfPoster = shelfPoster,
 )
 
 internal fun port(

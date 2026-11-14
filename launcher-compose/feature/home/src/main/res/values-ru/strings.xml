@@ -65,4 +65,12 @@
   <string name="opening_app">Открывается %1$s&#8230;</string>
   <string name="launcher_settings">Настройки главного экрана</string>
   <string name="launcher_settings_summary">Макет, часы и движение</string>
+  <string name="shelf_season_episode">%1$s сезон, %2$s серия</string>
+  <string name="shelf_episode">%1$s серия</string>
+  <plurals name="shelf_minutes_left">
+    <item quantity="one">Осталась %1$d мин</item>
+    <item quantity="few">Осталось %1$d мин</item>
+    <item quantity="many">Осталось %1$d мин</item>
+    <item quantity="other">Осталось %1$d мин</item>
+  </plurals>
 </resources>

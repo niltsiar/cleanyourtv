@@ -11,6 +11,7 @@ import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.OpenedAt
+import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -35,6 +36,7 @@ import java.util.Locale
  * [focusedUsual] whether the focused app is it. [faded] holds the keys of the grid tiles drawn faded (unused_fade_days).
  * [awaitingApps] is true until the first app list arrives: the dock is empty then, and focus waits for it.
  * [opening] is the app a press on its tile is opening while Home still shows (press_feedback), null otherwise.
+ * [appShelf] is the app shelf of the focused dock tile (app_shelf), null while it has none or has not held focus long enough.
  * [config] is the config this state was made with. The layouts are read from it, so they always match the split of [dock] and
  * [grid].
  */
@@ -66,7 +68,15 @@ public data class HomeUiState(
     val faded: Set<String> = emptySet(),
     val awaitingApps: Boolean = false,
     val opening: Opening? = null,
+    val appShelf: AppShelf? = null,
     val config: TvConfig = TvConfig(),
+)
+
+/** The items the app of the dock tile [key] publishes (app_shelf), which Home shows as cards between the title and the dock. */
+@Immutable
+public data class AppShelf(
+    val key: String,
+    val items: List<ShelfItem>,
 )
 
 /**
@@ -121,6 +131,12 @@ public data class Shelf(
 public sealed interface HomeEffect {
     public data class LaunchApp(
         val app: AppEntry,
+    ) : HomeEffect
+
+    /** OK on a card of the app shelf of [app]'s dock tile: open [item]. */
+    public data class OpenShelfItem(
+        val app: AppEntry,
+        val item: ShelfItem,
     ) : HomeEffect
 
     /** The Settings button was pressed: open the TV's system settings. */
@@ -206,6 +222,10 @@ public class HomeSources(
     public val openedSince: Flow<Long?> = flowOf(null),
     /** The time, for the day unused_fade_days counts from and for the wait until the next midnight. */
     public val timeMillis: () -> Long = System::currentTimeMillis,
+    /** The items of a package's app shelf (app_shelf). Runs off the main thread. */
+    public val shelfItems: suspend (String) -> List<ShelfItem> = { emptyList() },
+    /** A shelf item's poster at a URI, decoded to cover a card of the given width and height in pixels; null when it has none. */
+    public val shelfPoster: suspend (String, Int, Int) -> ImageBitmap? = { _, _, _ -> null },
 )
 
 internal sealed interface HomeEvent {
@@ -215,6 +235,17 @@ internal sealed interface HomeEvent {
 
     data class Click(
         val key: String,
+    ) : HomeEvent
+
+    /** OK on a card of the app shelf of the dock tile [key]. */
+    data class OpenShelfItem(
+        val key: String,
+        val item: ShelfItem,
+    ) : HomeEvent
+
+    /** Whether the layout on screen has [room] for the app shelf's cards. */
+    data class ShelfRoom(
+        val room: Boolean,
     ) : HomeEvent
 
     data object OpenSettings : HomeEvent
@@ -344,6 +375,7 @@ internal fun homeUiState(
     faded: Set<String> = emptySet(),
     awaitingApps: Boolean = false,
     opening: Opening? = null,
+    appShelf: AppShelf? = null,
     config: TvConfig = TvConfig(),
 ): HomeUiState {
     val focused = apps.all.firstOrNull { it.key == focusedKey } ?: apps.all.firstOrNull()
@@ -381,6 +413,7 @@ internal fun homeUiState(
         faded = faded,
         awaitingApps = awaitingApps,
         opening = opening,
+        appShelf = appShelf,
         config = config,
     )
 }

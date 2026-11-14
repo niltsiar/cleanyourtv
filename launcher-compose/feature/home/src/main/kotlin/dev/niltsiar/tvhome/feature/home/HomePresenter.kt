@@ -110,6 +110,10 @@ internal fun homePresenter(
             }
         }
     }
+    val shelfTile = interaction.shelfTile(interaction.focusedKey)
+    LaunchedEffect(interaction, shelfTile?.key, current.appShelfSources, interaction.shelfReads, showing) {
+        if (showing) interaction.followShelf(shelfTile)
+    }
     var today by remember { mutableStateOf<LocalDate?>(null) }
     LaunchedEffect(interaction, showing, current.unusedFadeDays > 0) {
         if (current.unusedFadeDays > 0 && showing) {
@@ -160,6 +164,7 @@ internal fun homePresenter(
         faded = faded,
         awaitingApps = interaction.awaitingApps,
         opening = remember(launch) { launch?.let { Opening(it.label, it.says) } },
+        appShelf = interaction.appShelf,
         config = current,
     )
 }

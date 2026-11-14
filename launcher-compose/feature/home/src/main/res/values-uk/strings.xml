@@ -65,4 +65,12 @@
   <string name="opening_app">Відкривається %1$s&#8230;</string>
   <string name="launcher_settings">Налаштування лаунчера</string>
   <string name="launcher_settings_summary">Макет, годинник і рух</string>
+  <string name="shelf_season_episode">%1$s сезон, %2$s серія</string>
+  <string name="shelf_episode">%1$s серія</string>
+  <plurals name="shelf_minutes_left">
+    <item quantity="one">Лишилася %1$d хв</item>
+    <item quantity="few">Лишилося %1$d хв</item>
+    <item quantity="many">Лишилося %1$d хв</item>
+    <item quantity="other">Лишилося %1$d хв</item>
+  </plurals>
 </resources>

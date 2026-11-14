@@ -68,4 +68,14 @@
   <string name="opening_app">جارٍ فتح %1$s&#8230;</string>
   <string name="launcher_settings">إعدادات المشغّل</string>
   <string name="launcher_settings_summary">التخطيط والساعة والحركة</string>
+  <string name="shelf_season_episode">الموسم %1$s الحلقة %2$s</string>
+  <string name="shelf_episode">الحلقة %1$s</string>
+  <plurals name="shelf_minutes_left">
+    <item quantity="zero">بقي %1$d د</item>
+    <item quantity="one">بقي %1$d د</item>
+    <item quantity="two">بقي %1$d د</item>
+    <item quantity="few">بقي %1$d د</item>
+    <item quantity="many">بقي %1$d د</item>
+    <item quantity="other">بقي %1$d د</item>
+  </plurals>
 </resources>

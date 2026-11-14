@@ -63,4 +63,11 @@
   <string name="opening_app">Abrindo %1$s&#8230;</string>
   <string name="launcher_settings">Configurações do launcher</string>
   <string name="launcher_settings_summary">Layout, relógio e movimento</string>
+  <string name="shelf_season_episode">T%1$s E%2$s</string>
+  <string name="shelf_episode">E%1$s</string>
+  <plurals name="shelf_minutes_left">
+    <item quantity="one">Falta %1$d min</item>
+    <item quantity="many">Faltam %1$d min</item>
+    <item quantity="other">Faltam %1$d min</item>
+  </plurals>
 </resources>

@@ -26,8 +26,10 @@ import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.InputTarget
+import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.core.model.startActivitySafely
 import dev.niltsiar.tvhome.data.apps.LaunchResult
+import dev.niltsiar.tvhome.data.shelf.shelfIntent
 import dev.niltsiar.tvhome.feature.library.MoleculeLibraryViewModel
 import dev.niltsiar.tvhome.service.keys.PowerMenu
 import dev.niltsiar.tvhome.service.keys.ServiceRepair
@@ -113,6 +115,7 @@ class MainActivity : ComponentActivity() {
                 HomeHost(
                     graph = graph,
                     onLaunchApp = ::launchApp,
+                    onOpenShelfItem = ::openShelfItem,
                     onOpenSettings = ::openSettings,
                     onOpenNetwork = ::openNetwork,
                     onOpenWifiSettings = ::openWifiSettings,
@@ -274,6 +277,16 @@ class MainActivity : ComponentActivity() {
                 true
             }
         }
+
+    /** Opens an item of the app shelf of [app]'s dock tile; true when an app started. */
+    private fun openShelfItem(
+        app: AppEntry,
+        item: ShelfItem,
+    ): Boolean {
+        val started = shelfIntent(item)?.let(::startActivitySafely) == true
+        if (started) graph.appLauncher.openedTile(app) else cantOpen(app.label)
+        return started
+    }
 
     /**
      * handle_view_inputs: switch InputsRequestActivity, the VIEW_INPUTS handler, on or off. It is disabled in the

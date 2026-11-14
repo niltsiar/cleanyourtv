@@ -49,9 +49,10 @@ public class ShelfReader(
     public fun hasAccess(): Boolean = context.checkSelfPermission(READ_TV_LISTINGS) == PackageManager.PERMISSION_GRANTED
 
     /**
-     * The shelf of [packageName] from its ticked app_shelf_sources: its Watch Next rows by last engagement, newest first, then
-     * the programs of each ticked preview channel in the provider's channel order, each channel's by weight, after the noise
-     * rules of [shelf]. Empty when no source of the package is ticked.
+     * The shelf of [packageName] from its ticked app_shelf_sources: its browsable Watch Next rows by last engagement, newest
+     * first, then the programs of each ticked preview channel in the provider's channel order, each channel's by weight, after
+     * the noise rules of [shelf]. Empty when no source of the package is ticked. A ticked preview channel is read whether it
+     * is browsable or not.
      */
     public suspend fun items(packageName: String): List<ShelfItem> {
         val current = config.value
@@ -97,6 +98,8 @@ public class ShelfReader(
     private fun watchNextRows(pkg: String): List<ShelfRow> {
         val rows = ArrayList<ShelfRow>()
         forEachRow(WatchNextPrograms.CONTENT_URI.ofPackage(pkg), null) { row ->
+            // The stock home sets browsable to 0 on a row the person removed there.
+            if (row.long(WatchNextPrograms.COLUMN_BROWSABLE) == 0L) return@forEachRow
             row.shelfRow(pkg, row.watchNextKind(), null)?.let { rows += it }
         }
         return rows.sortedByDescending { it.item.lastEngagementMs ?: Long.MIN_VALUE }

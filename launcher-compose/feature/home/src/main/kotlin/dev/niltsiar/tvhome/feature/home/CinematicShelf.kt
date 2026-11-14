@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.OpenedAt
+import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.core.model.describeLastOpened
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -88,8 +89,11 @@ private val DotSize = 8.dp
 /** Under the title line: the meta line and the dots. */
 internal val ShelfDetailHeight = MetaGap + MetaSlot + DotsGap + DotSize
 
-/** The cinematic title line (its ascent and descent at the default font scale) and [ShelfDetailHeight]. */
-internal val CinematicTextHeight = 66.dp + ShelfDetailHeight
+/** The cinematic title line: its ascent and descent at the default font scale. */
+internal val CinematicTitleLine = 66.dp
+
+/** The cinematic title line and [ShelfDetailHeight]. */
+internal val CinematicTextHeight = CinematicTitleLine + ShelfDetailHeight
 private val TitleShadow = Color.Black.copy(alpha = 0.55f)
 private val SubtitleShadow = Color.Black.copy(alpha = 0.75f)
 private val SubtitlePillColor = Color.Black.copy(alpha = 0.45f)
@@ -126,7 +130,8 @@ private class HeldShelf {
  * name and time cross-fade with the old ones ([TitleSlots]); the dots stay and only their long dot slides. The name
  * draws at [titleAlpha], the time and the dots at [detailAlpha]. Every animated value is read in a layer, placement or
  * draw lambda. The time sits on a pill while [pill] says so, and [extent] gets the width of the text block, as drawn: it follows
- * the swap of the names and the fade of the shelf.
+ * the swap of the names and the fade of the shelf. While an app shelf [card] has focus the line says what it is, and the dots
+ * fade out as the app shelf's cards fade in ([cardsShown]).
  */
 @Composable
 internal fun CinematicShelf(
@@ -137,8 +142,11 @@ internal fun CinematicShelf(
     detailAlpha: () -> Float = { 1f },
     pill: () -> Boolean = { false },
     extent: TitleExtent = TitleExtent(),
+    card: () -> ShelfItem? = { null },
+    cardsShown: () -> Float = { 0f },
 ) {
     val current by remember(shelf) { derivedStateOf(shelf) }
+    val focusedCard by remember(card) { derivedStateOf(card) }
     val held = remember { HeldShelf() }
     current?.let { held.shelf = it }
     val visible = current != null
@@ -179,10 +187,12 @@ internal fun CinematicShelf(
                                 .lineBetween(TitleAscent, TitleDescent)
                                 .drawnAt(titleAlpha),
                     )
+                    val item = focusedCard
                     val meta =
                         when {
                             !live -> AnnotatedString("")
                             app.opening != null -> AnnotatedString(stringResource(R.string.opening_app, app.opening))
+                            item != null -> AnnotatedString(shelfLine(item))
                             else -> lastOpenedLine(app.lastOpened, app.usual, app.neverOpened)
                         }
                     BasicText(
@@ -204,7 +214,7 @@ internal fun CinematicShelf(
                     position = shown.position,
                     count = shown.count,
                     animated = layout.animated,
-                    modifier = Modifier.padding(top = DotsGap).drawnAt(detailAlpha),
+                    modifier = Modifier.padding(top = DotsGap).drawnAt { detailAlpha() * (1f - cardsShown()) },
                 )
             } else {
                 Spacer(Modifier.height(DotsGap + DotSize))

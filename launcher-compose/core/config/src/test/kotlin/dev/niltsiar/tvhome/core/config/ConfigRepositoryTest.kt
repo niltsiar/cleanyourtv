@@ -163,10 +163,13 @@ class ConfigRepositoryTestContent :
                 repo.choose(Choices.RowsBelowDock, 4)
                 repo.choose(Choices.DockOpacity, 29)
                 awaitConfig(repo) { it.columns == 5 && it.rowsBelowDock == 1 && it.dockOpacity == 80 }
+                // A valid choice after each one out of range shows the store has taken both.
                 repo.choose(Choices.Columns, 8)
-                awaitConfig(repo) { it.columns == 5 }
+                repo.choose(Choices.RowsBelowDock, 2)
+                awaitConfig(repo) { it.rowsBelowDock == 2 }.columns shouldBe 5
                 repo.choose(Choices.DockOpacity, 101)
-                awaitConfig(repo) { it.dockOpacity == 80 }
+                repo.choose(Choices.RowsBelowDock, 0)
+                awaitConfig(repo) { it.rowsBelowDock == 0 }.dockOpacity shouldBe 80
             }
 
             test("the options added here overlay the theme") {

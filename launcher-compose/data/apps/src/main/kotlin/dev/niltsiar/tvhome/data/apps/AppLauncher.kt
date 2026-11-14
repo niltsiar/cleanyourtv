@@ -50,9 +50,14 @@ public class AppLauncher(
     public fun open(app: AppEntry): LaunchResult {
         inputId(app)?.let { return LaunchResult.SwitchInput(InputTarget.TvInput(it)) }
         if (!launch(app)) return LaunchResult.CantOpen
+        openedTile(app)
+        return LaunchResult.Opened
+    }
+
+    /** Notes a Home tile whose app the launcher started another way, such as an item of its app shelf, as [open] notes it. */
+    public fun openedTile(app: AppEntry) {
         if (records) lastOpened.record(app.key)
         launchLog.record(app.packageName)
-        return LaunchResult.Opened
     }
 
     /** Opens an app from the App library, which ignores launch_actions. True when the system accepted the launch. */

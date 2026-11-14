@@ -62,4 +62,10 @@
   <string name="opening_app">Opening %1$s&#8230;</string>
   <string name="launcher_settings">Launcher settings</string>
   <string name="launcher_settings_summary">Layout, clock and motion</string>
+  <string name="shelf_season_episode">S%1$s E%2$s</string>
+  <string name="shelf_episode">E%1$s</string>
+  <plurals name="shelf_minutes_left">
+    <item quantity="one">%1$d min left</item>
+    <item quantity="other">%1$d min left</item>
+  </plurals>
 </resources>
