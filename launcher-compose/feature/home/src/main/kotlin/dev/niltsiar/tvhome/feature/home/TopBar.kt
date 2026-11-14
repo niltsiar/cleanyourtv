@@ -52,7 +52,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.isUnspecified
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.FirstBaseline
+import androidx.compose.ui.layout.HorizontalAlignmentLine
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
@@ -77,6 +81,7 @@ import dev.niltsiar.tvhome.core.model.InputRow
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
 import kotlinx.coroutines.flow.collectLatest
+import kotlin.math.min
 
 private const val ICON_VIEWPORT = 24f
 private const val INPUTS_ARROW_ENTRY = 7f
@@ -98,6 +103,15 @@ private const val DATE_INK_ALPHA = 0.88f
 private val NetworkIconRise = 6.dp
 private val DigitRise = 10.dp
 private val ClockPillPadding = 24.dp
+private val GreetingGap = 20.dp
+private val ClockBaselineTop = 29.dp
+private val DateBaselineTop = 47.dp
+
+/**
+ * The baseline of the clock's digits. [FirstBaseline] reaches the clock's parent through each digit's layer, which
+ * adds the rise offset of its first measure, so each digit sets this line outside the layer.
+ */
+private val DigitBaseline = HorizontalAlignmentLine(::min)
 private val OnlineGreen = Color(0xFF34C759)
 private val NoInternetOrange = Color(0xFFFF9F0A)
 private val OfflineRed = Color(0xFFFF453A)
@@ -108,7 +122,7 @@ private val OfflineRed = Color(0xFFFF453A)
  * the icon, capping the button at that many dp. [labelsAtRest] (the theme's icon_only_buttons false) keeps the network
  * name too, capped at 180 dp when [wifiLabelWidth] is 0, and gives the Settings button its label at rest.
  * [inputsLabelAtRest] (the theme's icon_only_inputs false) does the same for the Inputs button.
- * [wifiStatusColor] tints the icon by the connection ([wifiStatusWarnings] adds orange and red). [vpnApp] says a VPN app is set, so a VPN that is down is worth a badge. [dateBelowClock] stacks the date under the clock.
+ * [wifiStatusColor] tints the icon by the connection ([wifiStatusWarnings] adds orange and red). [vpnApp] says a VPN app is set, so a VPN that is down is worth a badge. [dateBelowClock] puts the greeting beside the clock and the date under them.
  * [reorderButton] adds a button that turns reorder mode on and off, [libraryButton] one that opens the App library.
  * [launcherSettings] (the theme's launcher_settings_button) turns the Settings button into the Launcher settings button.
  * [animated] is false with animations off or reduced_motion.
@@ -364,36 +378,68 @@ internal fun ClockPill(
         shape = CircleShape,
         shadow = ChromeShadow.Pill,
     ) {
-        val typography = TvTheme.typography
-        val clockStyle =
-            remember(typography, dateBelowClock) { if (dateBelowClock) typography.clock.copy(fontSize = 28.sp) else typography.clock }
         val dateInk = TvTheme.colors.onSurface.copy(alpha = DATE_INK_ALPHA)
-        val dateStyle =
-            remember(typography, dateBelowClock, dateInk) {
-                typography.date.copy(color = dateInk, fontSize = if (dateBelowClock) 14.sp else typography.date.fontSize)
-            }
-        val divider = TvTheme.colors.onSurface.copy(alpha = DIVIDER_ALPHA)
-        Row(
-            modifier = Modifier.fillMaxHeight().padding(horizontal = ClockPillPadding),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            if (dateBelowClock) {
-                Column(verticalArrangement = Arrangement.Center) {
-                    ClockTime(state, clockStyle)
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        DateText(state, dateStyle)
-                        GreetingText(state)
-                    }
-                }
-            } else {
-                ClockTime(state, clockStyle)
-                Spacer(Modifier.width(1.dp).height(24.dp).drawBehind { drawRect(divider) })
-                Column(verticalArrangement = Arrangement.Center) {
-                    GreetingText(state)
-                    DateText(state, dateStyle)
-                }
-            }
+        if (dateBelowClock) {
+            DateBelowClock(state, dateInk)
+        } else {
+            DateBesideClock(state, dateInk)
+        }
+    }
+}
+
+@Composable
+private fun DateBesideClock(
+    state: () -> HomeUiState,
+    dateInk: Color,
+) {
+    val typography = TvTheme.typography
+    val dateStyle = remember(typography, dateInk) { typography.date.copy(color = dateInk) }
+    val divider = TvTheme.colors.onSurface.copy(alpha = DIVIDER_ALPHA)
+    Row(
+        modifier = Modifier.fillMaxHeight().padding(horizontal = ClockPillPadding),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        ClockTime(state, typography.clock)
+        Spacer(Modifier.width(1.dp).height(24.dp).drawBehind { drawRect(divider) })
+        Column(verticalArrangement = Arrangement.Center) {
+            GreetingText(state)
+            DateText(state, dateStyle)
+        }
+    }
+}
+
+/**
+ * The clock and the greeting on the first line, the greeting at the end, and the date alone on the second. Both lines
+ * sit on fixed baselines, so the pill keeps the height it has with the date beside the clock.
+ */
+@Composable
+private fun DateBelowClock(
+    state: () -> HomeUiState,
+    dateInk: Color,
+) {
+    val typography = TvTheme.typography
+    val dateStyle = remember(typography, dateInk) { typography.dateCompact.copy(color = dateInk) }
+    Layout(
+        content = {
+            ClockTime(state, typography.clockCompact)
+            DateText(state, dateStyle)
+            GreetingText(state)
+        },
+        modifier = Modifier.padding(horizontal = ClockPillPadding),
+    ) { measurables, constraints ->
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val clock = measurables[0].measure(loose)
+        val date = measurables[1].measure(loose)
+        val gap = GreetingGap.roundToPx()
+        val greeting = measurables.getOrNull(2)?.measure(loose.copy(maxWidth = (loose.maxWidth - clock.width - gap).coerceAtLeast(0)))
+        val firstLine = clock.width + (greeting?.let { gap + it.width } ?: 0)
+        val width = maxOf(firstLine, date.width).coerceIn(constraints.minWidth, constraints.maxWidth)
+        val clockBaseline = ClockBaselineTop.roundToPx()
+        layout(width, constraints.maxHeight) {
+            clock.placeRelative(0, clockBaseline - clock[DigitBaseline])
+            greeting?.placeRelative(width - greeting.width, clockBaseline - greeting[FirstBaseline])
+            date.placeRelative(0, DateBaselineTop.roundToPx() - date[FirstBaseline])
         }
     }
 }
@@ -438,11 +484,15 @@ private fun ClockDigit(
         text = if (blank) "0" else char.toString(),
         style = style,
         modifier =
-            Modifier.graphicsLayer {
-                compositingStrategy = CompositingStrategy.ModulateAlpha
-                alpha = if (blank) 0f else reveal.value.coerceIn(0f, 1f)
-                translationY = (1f - reveal.value) * DigitRise.toPx()
-            },
+            Modifier
+                .layout { measurable, constraints ->
+                    val digit = measurable.measure(constraints)
+                    layout(digit.width, digit.height, mapOf(DigitBaseline to digit[FirstBaseline])) { digit.place(0, 0) }
+                }.graphicsLayer {
+                    compositingStrategy = CompositingStrategy.ModulateAlpha
+                    alpha = if (blank) 0f else reveal.value.coerceIn(0f, 1f)
+                    translationY = (1f - reveal.value) * DigitRise.toPx()
+                },
     )
 }
 

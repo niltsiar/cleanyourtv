@@ -29,7 +29,9 @@ public class TvColors(
 @Immutable
 public class TvTypography(
     public val clock: TextStyle,
+    public val clockCompact: TextStyle,
     public val date: TextStyle,
+    public val dateCompact: TextStyle,
     public val amPm: TextStyle,
     public val greeting: TextStyle,
     public val pillLabel: TextStyle,
@@ -133,7 +135,9 @@ private fun googleSansFlex(
 
 private fun typographyFor(colors: TvColors): TvTypography {
     val clockSize = 32.sp
+    val clockCompactSize = 28.sp
     val dateSize = 18.sp
+    val dateCompactSize = 16.sp
     val amPmSize = 14.sp
     val greetingSize = 13.sp
     val pillLabelSize = 16.sp
@@ -158,12 +162,27 @@ private fun typographyFor(colors: TvColors): TvTypography {
                 fontFamily = googleSansFlex(FontWeight.Light, clockSize, width = 125f, roundness = 100f),
                 fontFeatureSettings = "tnum",
             ),
+        clockCompact =
+            TextStyle(
+                color = colors.onSurface,
+                fontSize = clockCompactSize,
+                fontWeight = FontWeight.Light,
+                fontFamily = googleSansFlex(FontWeight.Light, clockCompactSize, width = 125f, roundness = 100f),
+                fontFeatureSettings = "tnum",
+            ),
         date =
             TextStyle(
                 color = colors.onSurfaceMuted,
                 fontSize = dateSize,
                 fontWeight = FontWeight.Medium,
                 fontFamily = googleSansFlex(FontWeight.Medium, dateSize, width = 100f, roundness = 0f),
+            ),
+        dateCompact =
+            TextStyle(
+                color = colors.onSurfaceMuted,
+                fontSize = dateCompactSize,
+                fontWeight = FontWeight.Medium,
+                fontFamily = googleSansFlex(FontWeight.Medium, dateCompactSize, width = 100f, roundness = 0f),
             ),
         amPm =
             TextStyle(
