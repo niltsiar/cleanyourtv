@@ -480,15 +480,15 @@ class SettingsScreenTestContent :
                 goTo(SettingsRowId.AppShelf)
                 press(Key.DirectionDown)
                 shelfRow.assertIsFocused()
-                shelfRow.assertTextEquals("Shelf sources", "1")
+                shelfRow.assertTextEquals("Apps and channels", "1")
 
                 press(Key.DirectionCenter)
                 waitUntilIdle { settings.state.shelfPicker != null }
                 compose.waitForIdle()
 
-                compose.onNodeWithTag("settings:picker:title").assertTextEquals("Shelf sources")
+                compose.onNodeWithTag("settings:picker:title").assertTextEquals("Apps and channels")
                 entry(0).assertIsFocused()
-                entry(0).assertTextEquals("Plezy", "Watch Next \u00B7 20")
+                entry(0).assertTextEquals("Plezy", "Continue watching \u00B7 20")
                 entry(0).assertIsNotSelected()
                 entry(1).assertTextEquals("Historial", "SmartTube \u00B7 12")
                 entry(1).assertIsSelected()
@@ -509,7 +509,7 @@ class SettingsScreenTestContent :
                 back()
                 compose.onAllNodesWithTag("settings:picker").fetchSemanticsNodes().size shouldBe 0
                 shelfRow.assertIsFocused()
-                shelfRow.assertTextEquals("Shelf sources", "2")
+                shelfRow.assertTextEquals("Apps and channels", "2")
             }
 
             val shelfOpen = { state: SettingsUiState -> state.shelfPicker != null }
