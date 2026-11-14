@@ -31,11 +31,15 @@ internal data class DockCounts(
     val fillDock: Boolean,
 )
 
-/** A tile press that is opening the app of [key], named [label]; [says] once the line under the title says so. Each press has its own [token]. */
+/**
+ * A tile press that is opening the app of [key], named [label]; [says] once the line under the title says so. Each press has its
+ * own [token]. [openedBefore] is the last-opened record from just before the press, which the line keeps while the app opens.
+ */
 internal data class Launch(
     val key: String,
     val label: String,
     val token: Int,
+    val openedBefore: Map<String, Long>,
     val says: Boolean = false,
 )
 
@@ -55,6 +59,7 @@ internal data class SettingsReturn(
 internal class HomeInteraction(
     private val sources: HomeSources,
     private val config: State<TvConfig>,
+    private val lastOpened: State<Map<String, Long>>,
     private val effect: (HomeEffect) -> Unit,
 ) {
     private val layout by derivedStateOf { config.value.homeLayout() }
@@ -323,28 +328,35 @@ internal class HomeInteraction(
         }
     }
 
-    /** With press_feedback a tile press waits out the one before it; a top-bar app opens as before. */
+    /** A tile press opens its app as [startLaunch] says; a top-bar app opens as before. */
     private fun click(key: String) {
         val tile = list.apps.firstOrNull { it.key == key }
-        if (tile != null && config.value.pressFeedback) {
-            if (launch != null) return
-            launch = Launch(tile.key, tile.label, ++launches)
+        if (tile != null) {
+            startLaunch(tile, HomeEffect.LaunchApp(tile))
+        } else {
+            topBarApps.firstOrNull { it.key == key }?.let { effect(HomeEffect.LaunchApp(it)) }
         }
-        val app = tile ?: topBarApps.firstOrNull { it.key == key }
-        if (app != null) effect(HomeEffect.LaunchApp(app))
     }
 
-    /** A card of the app shelf of the dock tile [key] opens its item; with press_feedback it waits out a press as a tile does. */
+    /** A card of the app shelf of the dock tile [key] opens its item as a press on that tile would. */
     private fun openShelfItem(
         key: String,
         item: ShelfItem,
     ) {
         val tile = list.apps.firstOrNull { it.key == key } ?: return
+        startLaunch(tile, HomeEffect.OpenShelfItem(tile, item))
+    }
+
+    /** Sends [open] for [tile]; with press_feedback a press waits out the one before it and becomes [launch]. */
+    private fun startLaunch(
+        tile: AppEntry,
+        open: HomeEffect,
+    ) {
         if (config.value.pressFeedback) {
             if (launch != null) return
-            launch = Launch(tile.key, tile.label, ++launches)
+            launch = Launch(tile.key, tile.label, ++launches, lastOpened.value)
         }
-        effect(HomeEffect.OpenShelfItem(tile, item))
+        effect(open)
     }
 
     fun topBarAppsLoaded(loaded: List<AppEntry>) {

@@ -63,7 +63,8 @@ internal fun homePresenter(
 ): HomeUiState {
     val currentOnEffect by rememberUpdatedState(onEffect)
     val applied = remember(config) { mutableStateOf(config.value) }
-    val interaction = remember(sources, config) { HomeInteraction(sources, applied) { currentOnEffect(it) } }
+    val recorded = sources.lastOpened.collectAsState(NoOpened)
+    val interaction = remember(sources, config) { HomeInteraction(sources, applied, recorded) { currentOnEffect(it) } }
     val showing = interaction.showing
     LaunchedEffect(config, showing) { if (showing) config.collect { applied.value = it } }
     val returning = interaction.settingsReturn
@@ -79,17 +80,7 @@ internal fun homePresenter(
     LaunchedEffect(interaction) { sources.apps.collect { interaction.listLoaded(it) } }
     LaunchedEffect(interaction) { sources.topBarApps.collect(interaction::topBarAppsLoaded) }
     LaunchedEffect(interaction) { sources.inputs.collect(interaction::inputsLoaded) }
-    val recorded = sources.lastOpened.collectAsState(NoOpened)
-    var openedAtPress by remember { mutableStateOf(NoOpened) }
-    LaunchedEffect(events) {
-        events.collect { event ->
-            // The launch a press starts records the app as opened before Home recomposes, so take the record from before it.
-            val shown = recorded.value
-            val before = interaction.launch?.token
-            interaction.handle(event)
-            interaction.launch?.let { if (it.token != before) openedAtPress = shown }
-        }
-    }
+    LaunchedEffect(events) { events.collect(interaction::handle) }
     val arriving = interaction.arriving
     LaunchedEffect(interaction, arriving) {
         if (arriving != null) {
@@ -163,7 +154,7 @@ internal fun homePresenter(
         interaction.topBarApps,
         wallpaper,
         cinematic = current.cinematicHome,
-        lastOpened = if (launch != null) openedAtPress else lastOpened,
+        lastOpened = launch?.openedBefore ?: lastOpened,
         menu = interaction.menu,
         reorder = remember(session, shown) { session?.view { key -> shown.all.firstOrNull { it.key == key }?.label } },
         focusRequest = interaction.focusRequest,
