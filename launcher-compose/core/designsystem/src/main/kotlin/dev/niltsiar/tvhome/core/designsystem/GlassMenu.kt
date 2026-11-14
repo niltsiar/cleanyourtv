@@ -87,14 +87,16 @@ public class BesideAnchor(
 )
 
 /**
- * An overlay panel of [rows] hanging from [anchor] (in the root's coordinates): below it, or above when it would not fit,
- * from its left edge, or from its right edge when [alignEnd]; or [beside] it. Each row is [rowHeight] tall, shows the
- * string [label] gives and carries the test tag [rowTag]; the panel's own tag is `menu`, [padding] inside its edge, and
- * the rows' corners are concentric with the panel's. It rises and fades in with a spring and takes focus on its first
- * row, and never goes above [topLimit]; focus cannot leave it. A [title] is a header row over the rows, tagged
- * `menu:title`. A row for which [dividerBefore] is true, and that is not the first, has a [MenuDivider] above it. A row
- * for which [warn] is true draws its text in coral (dark red on the light surface) until it has focus, and the line above it is white 0.18. [above],
- * [anchorGap], [columnGap] and [edgeMargin] are [GlassDropdown]'s.
+ * An overlay panel of [rows] hanging from [anchor] (in the root's coordinates): below it, or above when it would not
+ * fit, from its left edge, or from its right edge when [alignEnd]; from the other edge when the panel would pass
+ * [edgeMargin] from the side of the screen it grows towards and the other edge keeps it inside; or [beside] it. Each
+ * row is [rowHeight] tall, shows the string [label] gives and carries the test tag [rowTag]; the panel's own tag is
+ * `menu`, [padding] inside its edge, and the rows' corners are concentric with the panel's. It rises and fades in with
+ * a spring and takes focus on its first row, and never goes above [topLimit]; focus cannot leave it. A [title] is a
+ * header row over the rows, tagged `menu:title`. A row for which [dividerBefore] is true, and that is not the first,
+ * has a [MenuDivider] above it. A row for which [warn] is true draws its text in coral (dark red on the light surface)
+ * until it has focus, and the line above it is white 0.18. [above], [anchorGap], [columnGap] and [edgeMargin] are
+ * [GlassDropdown]'s.
  */
 @Composable
 public fun <T> GlassMenu(
@@ -153,9 +155,9 @@ public fun <T> GlassMenu(
  * fades its content over [EdgeFade] at an edge with more content past it, and a focused child scrolls clear of that fade.
  * With [childHeights], the heights of [content]'s children, such a panel ends between two children rather than through
  * one; a [MenuDivider] counts with the child under it, so that the panel never ends on a divider. With [columnGap] the
- * anchor is one column of a grid whose columns are [columnGap] apart: the panel is a whole number of
- * columns wide, plus the gaps between them, and starts at the anchor's left edge, or ends [edgeMargin] from the screen's
- * right side when it would pass that; [beside] it, [BesideAnchor.gap] should be [columnGap] so that the
+ * anchor is one column of a grid whose columns are [columnGap] apart: the panel is a whole number of columns wide, plus
+ * the gaps between them, and starts at the anchor's left edge, or ends at the anchor's right edge when it would pass
+ * [edgeMargin] from the screen's right side; [beside] it, [BesideAnchor.gap] should be [columnGap] so that the
  * panel starts on the next column and ends on the one before.
  */
 @OptIn(ExperimentalComposeUiApi::class)
@@ -311,9 +313,11 @@ internal fun dropdownTop(
 }
 
 /**
- * Where a panel [panelWidth] wide starts horizontally for an anchor spanning [anchorLeft] to [anchorRight]: its left edge on
- * the anchor's left edge, or with [alignEnd] its right edge on the anchor's right edge, moved no further than [margin] from
- * either side of a container [containerWidth] wide.
+ * Where a panel [panelWidth] wide starts horizontally for an anchor spanning [anchorLeft] to [anchorRight] in a container
+ * [containerWidth] wide: its left edge on the anchor's left edge, or its right edge on the anchor's right edge when it
+ * would pass [margin] from the container's right side there. With [alignEnd], its right edge on the anchor's right edge,
+ * or its left edge on the anchor's left edge when it would pass [margin] from the left side there. A panel that passes
+ * the margin either way starts where [alignEnd] says, moved no further than [margin] from either side.
  */
 internal fun dropdownLeft(
     anchorLeft: Int,
@@ -322,7 +326,17 @@ internal fun dropdownLeft(
     containerWidth: Int,
     margin: Int,
     alignEnd: Boolean,
-): Int = (if (alignEnd) anchorRight - panelWidth else anchorLeft).coerceIn(margin, maxOf(margin, containerWidth - panelWidth - margin))
+): Int {
+    val last = containerWidth - panelWidth - margin
+    val fromRight = anchorRight - panelWidth
+    val x =
+        if (alignEnd) {
+            if (fromRight < margin && anchorLeft <= last) anchorLeft else fromRight
+        } else {
+            if (anchorLeft > last && fromRight >= margin) fromRight else anchorLeft
+        }
+    return x.coerceIn(margin, maxOf(margin, last))
+}
 
 /**
  * The width of the fewest columns, each [column] wide with [gap] between them, that hold [content]: at least one column,

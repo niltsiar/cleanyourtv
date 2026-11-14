@@ -42,6 +42,7 @@ import dev.niltsiar.tvhome.core.model.InputRow
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import io.kotest.assertions.withClue
 import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
 import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
@@ -49,12 +50,6 @@ import io.kotest.matchers.floats.plusOrMinus
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-import org.robolectric.annotation.GraphicsMode
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -335,6 +330,39 @@ class HomeMenuUiTestContent :
                 menu.right shouldBe (boundsOf("tile:pkg.11").right plusOrMinus 1f)
             }
 
+            test("the menu of the last tile of the dock ends at its tiles right edge") {
+                showHome()
+                repeat(5) { press(Key.DirectionRight) }
+                compose.onNodeWithTag("tile:pkg.6").assertIsFocused()
+                val tile = boundsOf("tile:pkg.6")
+
+                holdOk()
+
+                val menu = boundsOf("menu")
+                assertWholeTiles(menu, tile)
+                menu.right shouldBe (tile.right plusOrMinus 1f)
+            }
+
+            test("the menu of a dock tile with no room for it to the right ends at its tiles right edge") {
+                showHome(apps = NineApps.map { if (it.key == "pkg.5") it.copy(label = "A dock app with a much longer name") else it })
+                repeat(4) { press(Key.DirectionRight) }
+                compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
+                val tile = boundsOf("tile:pkg.5")
+
+                holdOk()
+
+                val menu = boundsOf("menu")
+                val screenRight =
+                    compose
+                        .onRoot()
+                        .fetchSemanticsNode()
+                        .boundsInRoot.right
+                val room = screenRight - with(compose.density) { ScreenMargin.toPx() } - tile.left
+                withClue("menu $menu, room $room") { menu.width shouldBeGreaterThan room }
+                assertWholeTiles(menu, tile)
+                menu.right shouldBe (tile.right plusOrMinus 1f)
+            }
+
             test("the reorder hint sits clear of every tile and inside the screen") {
                 showHome(apps = (1..40).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") })
 
@@ -464,36 +492,6 @@ class HomeMenuUiH360TestContent :
             }
         }
     })
-
-/**
- * Holds in the legacy graphics mode only: with the native canvas's text metrics this menu is two tiles wide and ends 40 dp
- * from the screen's right side, 3 dp past the tile.
- */
-@RunWith(RobolectricTestRunner::class)
-@GraphicsMode(GraphicsMode.Mode.LEGACY)
-@Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
-class HomeMenuLastDockTileTest {
-    private val fixture = HomeMenuUiTestFixture()
-
-    @get:Rule
-    val compose = fixture.compose
-
-    @Test
-    fun the_menu_of_the_last_tile_of_the_dock_ends_at_its_tiles_right_edge() {
-        with(fixture) {
-            showHome()
-            repeat(5) { press(Key.DirectionRight) }
-            compose.onNodeWithTag("tile:pkg.6").assertIsFocused()
-            val tile = boundsOf("tile:pkg.6")
-
-            holdOk()
-
-            val menu = boundsOf("menu")
-            assertWholeTiles(menu, tile)
-            menu.right shouldBe (tile.right plusOrMinus 1f)
-        }
-    }
-}
 
 private class HomeMenuUiTestFixture : JUnit4RulesContext() {
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
