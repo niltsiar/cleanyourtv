@@ -1,8 +1,9 @@
 # Unit tests with TestBalloon and Kotest assertions
 
 Local unit tests (`testDebugUnitTest`) use [TestBalloon](https://infix-de.github.io/testBalloon/) suites with
-[Kotest assertions](https://kotest.io/docs/assertions/assertions.html). JUnit 4 classes in the same module keep running
-beside the suites, so a module moves one class at a time.
+[Kotest assertions](https://kotest.io/docs/assertions/assertions.html), as [ADR 0004](adr/0004-unit-tests-on-testballoon.md)
+decides. A JUnit test in a module's `src/test` fails the build: `checkNoJUnitTests` runs before every unit test task and
+names the files.
 
 ## Turn it on in a module
 
@@ -255,7 +256,7 @@ a matcher that names the values, such as `shouldContain` or `shouldBeLessThan`.
 
 ## Running and filtering
 
-`./gradlew :app:testDebugUnitTest` runs the suites and the JUnit classes together. `--tests` selects suites and tests
+`./gradlew :app:testDebugUnitTest` runs the module's suites. `--tests` selects suites and tests
 by their path, with `↘` between the levels. The Robolectric suite's name is one of the levels:
 
 ```shell
@@ -265,8 +266,8 @@ by their path, with `↘` between the levels. The Robolectric suite's name is on
 ./gradlew :app:testDebugUnitTest --tests ';dev.niltsiar.tvhome.ClockActivityTest;*'
 ```
 
-A pattern that starts with a character other than a letter uses that character as the separator. A JUnit class name
-still selects that class alone. The configuration cache is reused across runs, filtered ones included.
+A pattern that starts with a character other than a letter uses that character as the separator. The configuration
+cache is reused across runs, filtered ones included.
 
 ## What to expect in the results
 
@@ -277,9 +278,6 @@ still selects that class alone. The configuration cache is reused across runs, f
 - A module that applies the plugin but has no suite yet reports one extra test, `TestBalloonJUnit4`, in
   `TEST-Gradle-Test-Run-<module>-testDebugUnitTest.xml`. Apply the plugin in the same change as the module's first
   suite.
-- While a module has Robolectric tests in both forms, the JUnit runner and TestBalloon each start their own Robolectric
-  sandbox. In `app`, with three classes moved, `testDebugUnitTest` took about 5 s longer (median of 3 runs: 38 s against
-  33 s).
 - TestBalloon shows a `.` in a test name as `·`: `a lightness of 0.65` is reported as `a lightness of 0·65`.
 - The Android Studio run gutter on a suite needs the TestBalloon plugin for IntelliJ. Status icons in the gutter do not
   show for Android tests, and "Rerun Failed Tests" is not supported.
