@@ -3,536 +3,533 @@ package dev.niltsiar.tvhome.feature.library
 import app.cash.molecule.RecompositionMode
 import app.cash.molecule.moleculeFlow
 import app.cash.turbine.test
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testScope
+import de.infix.testBalloon.framework.core.testSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.OpenedAt
 import dev.niltsiar.tvhome.core.model.OpenedRecord
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.test.runCurrent
-import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
 import java.util.Locale
 
-class LibraryPresenterTest {
-    private val events = Channel<LibraryEvent>(Channel.UNLIMITED)
-    private val effects = Channel<LibraryEffect>(Channel.UNLIMITED)
+val LibraryPresenterTest by testSuite(testConfig = TestConfig.testScope(isEnabled = true)) {
+    testFixture {
+        object {
+            val events = Channel<LibraryEvent>(Channel.UNLIMITED)
+            val effects = Channel<LibraryEffect>(Channel.UNLIMITED)
 
-    private val catalogue =
-        listOf(
-            libraryApp("Zeta"),
-            libraryApp("Home", onHome = true),
-            libraryApp("Alpha"),
-            libraryApp("Fresh", installedAt = NOW - DAY),
-            libraryApp("Beta"),
-        )
-
-    private fun presenter(
-        library: FakeLibrary,
-        config: TvConfig = TvConfig(appLibrary = true),
-    ): Flow<LibraryUiState> =
-        moleculeFlow(RecompositionMode.Immediate) {
-            libraryPresenter(events.receiveAsFlow(), library.sources, config, effects::trySend, Locale.ENGLISH)
-        }
-
-    private fun LibraryUiState.labels() = cards.map { it.app.label }
-
-    @Test
-    fun nothing_shows_until_the_library_is_asked_to_open_and_its_catalogue_loaded() =
-        runTest {
-            val library = FakeLibrary(catalogue).apply { gate = CompletableDeferred() }
-            presenter(library).test {
-                assertEquals(LibraryUiState(), awaitItem())
-                events.send(LibraryEvent.Open)
-                val opening = awaitMatching { it.open }
-                assertFalse(opening.shown)
-                assertEquals(emptyList<LibraryCard>(), opening.cards)
-
-                library.gate?.complete(Unit)
-                val shown = awaitMatching { it.shown }
-
-                assertEquals(listOf("Fresh", "Alpha", "Beta", "Zeta", "Home"), shown.labels())
-                assertEquals(listOf(true, false, false, false, false), shown.cards.map { it.recent })
-                assertEquals(listOf(false, false, false, false, true), shown.cards.map { it.onHome })
-                assertEquals(key("Fresh"), shown.focusedKey)
-                assertEquals(key("Fresh"), shown.focusRequest?.key)
-                cancelAndIgnoreRemainingEvents()
-            }
-        }
-
-    @Test
-    fun a_package_change_while_the_catalogue_loads_still_shows_the_panel_once() =
-        runTest {
-            val library = FakeLibrary(catalogue).apply { gate = CompletableDeferred() }
-            presenter(library).test {
-                events.send(LibraryEvent.Open)
-                awaitMatching { it.open }
-                runCurrent()
-                library.apps = catalogue + libraryApp("Gamma")
-                library.changes.emit(1)
-                runCurrent()
-                library.gate?.complete(Unit)
-
-                val first = awaitMatching { it.shown }
-                library.apps = catalogue
-                library.changes.emit(2)
-                val later = awaitMatching { it.cards.size == 5 }
-
-                assertEquals(6, first.cards.size)
-                assertTrue(later.shown)
-                cancelAndIgnoreRemainingEvents()
-            }
-        }
-
-    @Test
-    fun a_refresh_after_the_panel_shows_keeps_focus_on_the_same_app_and_the_menu_closes() =
-        runTest {
-            val library = FakeLibrary(catalogue)
-            library.appInfoFor = setOf("pkg.Beta")
-            presenter(library).test {
-                events.send(LibraryEvent.Open)
-                awaitMatching { it.shown }
-                events.send(LibraryEvent.Focus(key("Beta")))
-                events.send(LibraryEvent.Hold(key("Beta")))
-                awaitMatching { it.menu != null }
-                runCurrent()
-
-                library.apps = catalogue + libraryApp("Aaa")
-                library.changes.emit(1)
-                val refreshed = awaitMatching { it.cards.size == 6 }
-
-                assertEquals(null, refreshed.menu)
-                assertEquals(key("Beta"), refreshed.focusedKey)
-                assertEquals(key("Beta"), refreshed.focusRequest?.key)
-                cancelAndIgnoreRemainingEvents()
-            }
-        }
-
-    @Test
-    fun ok_opens_an_app_on_home_and_closes_the_library() =
-        runTest {
-            val library = FakeLibrary(catalogue)
-            presenter(library).test {
-                events.send(LibraryEvent.Open)
-                awaitMatching { it.shown }
-
-                events.send(LibraryEvent.Click(key("Home")))
-                val closed = awaitMatching { !it.open }
-
-                assertEquals(LibraryEffect.LaunchApp(catalogue[1].app), effects.receive())
-                assertEquals(emptyList<LibraryCard>(), closed.cards)
-                assertEquals(1, library.released)
-                assertEquals(emptyList<Pair<String, Boolean>>(), library.saved)
-                cancelAndIgnoreRemainingEvents()
-            }
-        }
-
-    @Test
-    fun ok_on_an_app_not_on_home_adds_it_and_focus_moves_to_the_next_app_that_is_not() =
-        runTest {
-            val library = FakeLibrary(catalogue)
-            presenter(library).test {
-                events.send(LibraryEvent.Open)
-                awaitMatching { it.shown }
-                events.send(LibraryEvent.Focus(key("Alpha")))
-
-                events.send(LibraryEvent.Click(key("Alpha")))
-                val added = awaitMatching { it.cards.firstOrNull { card -> card.app.label == "Alpha" }?.onHome == true }
-
-                assertEquals(listOf("pkg.Alpha" to true), library.saved)
-                assertEquals(listOf("Fresh", "Beta", "Zeta", "Alpha", "Home"), added.labels())
-                assertEquals(key("Beta"), added.focusedKey)
-                assertEquals(key("Beta"), added.focusRequest?.key)
-                assertEquals(true, effects.tryReceive().isFailure)
-                cancelAndIgnoreRemainingEvents()
-            }
-        }
-
-    @Test
-    fun a_choice_that_was_not_saved_says_so_and_leaves_the_apps_as_they_were() =
-        runTest {
-            val library = FakeLibrary(catalogue).apply { saveWorks = false }
-            presenter(library).test {
-                events.send(LibraryEvent.Open)
-                val shown = awaitMatching { it.shown }
-
-                events.send(LibraryEvent.Click(key("Fresh")))
-
-                assertEquals(LibraryEffect.SaveFailed, effects.receive())
-                val after = awaitMatching { it.focusRequest?.token != shown.focusRequest?.token }
-                assertEquals(listOf("pkg.Fresh" to true), library.saved)
-                assertEquals(shown.cards, after.cards)
-                assertEquals(key("Fresh"), after.focusRequest?.key)
-                cancelAndIgnoreRemainingEvents()
-            }
-        }
-
-    @Test
-    fun library_ok_opens_makes_ok_open_every_app() =
-        runTest {
-            val library = FakeLibrary(catalogue)
-            presenter(library, TvConfig(appLibrary = true, libraryOkOpens = true)).test {
-                events.send(LibraryEvent.Open)
-                val shown = awaitMatching { it.shown }
-                assertEquals(LibraryHint.Open, shown.hint)
-
-                events.send(LibraryEvent.Click(key("Zeta")))
-
-                assertEquals(LibraryEffect.LaunchApp(catalogue[0].app), effects.receive())
-                assertEquals(emptyList<Pair<String, Boolean>>(), library.saved)
-                cancelAndIgnoreRemainingEvents()
-            }
-        }
-
-    @Test
-    fun selection_mode_lists_apps_by_label_toggles_with_ok_in_place_and_has_no_menu() =
-        runTest {
-            val library = FakeLibrary(catalogue)
-            presenter(library, TvConfig(appLibrary = true, appLibrarySelection = true, libraryOkOpens = true)).test {
-                events.send(LibraryEvent.Open)
-                val shown = awaitMatching { it.shown }
-                assertEquals(listOf("Alpha", "Beta", "Fresh", "Home", "Zeta"), shown.labels())
-                assertEquals(listOf(false, false, false, false, false), shown.cards.map { it.recent })
-                assertEquals(LibraryHint.SelectAdd, shown.hint)
-
-                events.send(LibraryEvent.Focus(key("Home")))
-                events.send(LibraryEvent.Hold(key("Home")))
-                events.send(LibraryEvent.Click(key("Home")))
-                val removed = awaitMatching { it.cards.firstOrNull { card -> card.app.label == "Home" }?.onHome == false }
-
-                assertEquals(listOf("pkg.Home" to false), library.saved)
-                assertEquals(null, removed.menu)
-                assertEquals(listOf("Alpha", "Beta", "Fresh", "Home", "Zeta"), removed.labels())
-                assertEquals(key("Home"), removed.focusedKey)
-                assertEquals(key("Home"), removed.focusRequest?.key)
-                assertEquals(LibraryHint.SelectAdd, removed.hint)
-                assertEquals(true, effects.tryReceive().isFailure)
-                cancelAndIgnoreRemainingEvents()
-            }
-        }
-
-    @Test
-    fun selection_mode_keeps_focus_and_every_card_in_place_when_it_adds_an_app() =
-        runTest {
-            val library = FakeLibrary(catalogue)
-            presenter(library, TvConfig(appLibrary = true, appLibrarySelection = true)).test {
-                events.send(LibraryEvent.Open)
-                awaitMatching { it.shown }
-
-                events.send(LibraryEvent.Click(key("Zeta")))
-                val added = awaitMatching { it.cards.firstOrNull { card -> card.app.label == "Zeta" }?.onHome == true }
-
-                assertEquals(listOf("Alpha", "Beta", "Fresh", "Home", "Zeta"), added.labels())
-                assertEquals(key("Zeta"), added.focusRequest?.key)
-                cancelAndIgnoreRemainingEvents()
-            }
-        }
-
-    @Test
-    fun a_held_ok_opens_a_menu_by_whether_the_app_is_on_home_and_whether_the_tv_has_an_info_page() =
-        runTest {
-            val library = FakeLibrary(catalogue).apply { appInfoFor = setOf("pkg.Home") }
-            presenter(library).test {
-                events.send(LibraryEvent.Open)
-                awaitMatching { it.shown }
-
-                events.send(LibraryEvent.Hold(key("Home")))
-                assertEquals(
-                    LibraryMenu(key("Home"), listOf(LibraryRow.Open, LibraryRow.RemoveFromHome, LibraryRow.AppInfo)),
-                    awaitMatching { it.menu != null }.menu,
+            val catalogue =
+                listOf(
+                    libraryApp("Zeta"),
+                    libraryApp("Home", onHome = true),
+                    libraryApp("Alpha"),
+                    libraryApp("Fresh", installedAt = NOW - DAY),
+                    libraryApp("Beta"),
                 )
-                events.send(LibraryEvent.Back)
-                awaitMatching { it.menu == null }
 
-                events.send(LibraryEvent.Hold(key("Alpha")))
-                assertEquals(
-                    LibraryMenu(key("Alpha"), listOf(LibraryRow.Open, LibraryRow.AddToHome)),
-                    awaitMatching { it.menu != null }.menu,
+            fun presenter(
+                library: FakeLibrary,
+                config: TvConfig = TvConfig(appLibrary = true),
+            ): Flow<LibraryUiState> =
+                moleculeFlow(RecompositionMode.Immediate) {
+                    libraryPresenter(events.receiveAsFlow(), library.sources, config, effects::trySend, Locale.ENGLISH)
+                }
+
+            fun LibraryUiState.labels() = cards.map { it.app.label }
+
+            val leastUsed = TvConfig(appLibrary = true, libraryLeastUsed = true)
+
+            /** Fresh and Home were opened, Beta and Alpha never; the record began 90 days ago. */
+            fun opened() =
+                OpenedRecord(
+                    times = mapOf(key("Home") to NOW - 2 * DAY, key("Fresh") to NOW - 30 * DAY),
+                    since = NOW - 90 * DAY,
                 )
-                cancelAndIgnoreRemainingEvents()
+        }
+    } asContextForEach {
+        test("nothing shows until the library is asked to open and its catalogue loaded") {
+            with(it.testScope) {
+                val library = FakeLibrary(catalogue).apply { gate = CompletableDeferred() }
+                presenter(library).test {
+                    awaitItem() shouldBe LibraryUiState()
+                    events.send(LibraryEvent.Open)
+                    val opening = awaitMatching { it.open }
+                    opening.shown.shouldBeFalse()
+                    opening.cards shouldBe emptyList<LibraryCard>()
+
+                    library.gate?.complete(Unit)
+                    val shown = awaitMatching { it.shown }
+
+                    shown.labels() shouldBe listOf("Fresh", "Alpha", "Beta", "Zeta", "Home")
+                    shown.cards.map { it.recent } shouldBe listOf(true, false, false, false, false)
+                    shown.cards.map { it.onHome } shouldBe listOf(false, false, false, false, true)
+                    shown.focusedKey shouldBe key("Fresh")
+                    shown.focusRequest?.key shouldBe key("Fresh")
+                    cancelAndIgnoreRemainingEvents()
+                }
             }
         }
 
-    @Test
-    fun back_closes_the_menu_and_asks_for_focus_on_its_card_then_the_next_back_closes_the_library() =
-        runTest {
-            val library = FakeLibrary(catalogue)
-            presenter(library).test {
-                events.send(LibraryEvent.Open)
-                awaitMatching { it.shown }
-                events.send(LibraryEvent.Hold(key("Beta")))
-                awaitMatching { it.menu != null }
+        test("a package change while the catalogue loads still shows the panel once") {
+            with(it.testScope) {
+                val library = FakeLibrary(catalogue).apply { gate = CompletableDeferred() }
+                presenter(library).test {
+                    events.send(LibraryEvent.Open)
+                    awaitMatching { it.open }
+                    runCurrent()
+                    library.apps = catalogue + libraryApp("Gamma")
+                    library.changes.emit(1)
+                    runCurrent()
+                    library.gate?.complete(Unit)
 
-                events.send(LibraryEvent.Back)
-                val menuClosed = awaitMatching { it.menu == null }
-                assertTrue(menuClosed.open)
-                assertEquals(key("Beta"), menuClosed.focusRequest?.key)
+                    val first = awaitMatching { it.shown }
+                    library.apps = catalogue
+                    library.changes.emit(2)
+                    val later = awaitMatching { it.cards.size == 5 }
 
-                events.send(LibraryEvent.Back)
-                assertFalse(awaitMatching { !it.open }.shown)
-                cancelAndIgnoreRemainingEvents()
+                    first.cards.size shouldBe 6
+                    later.shown.shouldBeTrue()
+                    cancelAndIgnoreRemainingEvents()
+                }
             }
         }
 
-    @Test
-    fun the_menu_rows_open_the_app_change_its_shortcut_or_open_its_info_page() =
-        runTest {
-            val library = FakeLibrary(catalogue).apply { appInfoFor = setOf("pkg.Alpha") }
-            presenter(library).test {
-                events.send(LibraryEvent.Open)
-                awaitMatching { it.shown }
+        test("a refresh after the panel shows keeps focus on the same app and the menu closes") {
+            with(it.testScope) {
+                val library = FakeLibrary(catalogue)
+                library.appInfoFor = setOf("pkg.Beta")
+                presenter(library).test {
+                    events.send(LibraryEvent.Open)
+                    awaitMatching { it.shown }
+                    events.send(LibraryEvent.Focus(key("Beta")))
+                    events.send(LibraryEvent.Hold(key("Beta")))
+                    awaitMatching { it.menu != null }
+                    runCurrent()
 
-                events.send(LibraryEvent.Hold(key("Alpha")))
-                awaitMatching { it.menu != null }
-                events.send(LibraryEvent.Pick(LibraryRow.AddToHome))
-                awaitMatching { it.cards.firstOrNull { card -> card.app.label == "Alpha" }?.onHome == true }
-                assertEquals(listOf("pkg.Alpha" to true), library.saved)
+                    library.apps = catalogue + libraryApp("Aaa")
+                    library.changes.emit(1)
+                    val refreshed = awaitMatching { it.cards.size == 6 }
 
-                events.send(LibraryEvent.Hold(key("Alpha")))
-                awaitMatching { it.menu != null }
-                events.send(LibraryEvent.Pick(LibraryRow.RemoveFromHome))
-                awaitMatching { it.cards.firstOrNull { card -> card.app.label == "Alpha" }?.onHome == false }
-                assertEquals(listOf("pkg.Alpha" to true, "pkg.Alpha" to false), library.saved)
-
-                events.send(LibraryEvent.Hold(key("Alpha")))
-                awaitMatching { it.menu != null }
-                events.send(LibraryEvent.Pick(LibraryRow.AppInfo))
-                awaitMatching { !it.open }
-                assertEquals(LibraryEffect.OpenAppInfo("pkg.Alpha"), effects.receive())
-                cancelAndIgnoreRemainingEvents()
+                    refreshed.menu shouldBe null
+                    refreshed.focusedKey shouldBe key("Beta")
+                    refreshed.focusRequest?.key shouldBe key("Beta")
+                    cancelAndIgnoreRemainingEvents()
+                }
             }
         }
 
-    @Test
-    fun closing_and_opening_again_loads_the_catalogue_again_and_shows_the_panel_again() =
-        runTest {
-            val library = FakeLibrary(catalogue)
-            presenter(library).test {
-                events.send(LibraryEvent.Open)
-                awaitMatching { it.shown }
-                events.send(LibraryEvent.Close)
-                assertFalse(awaitMatching { !it.open }.shown)
+        test("ok opens an app on home and closes the library") {
+            with(it.testScope) {
+                val library = FakeLibrary(catalogue)
+                presenter(library).test {
+                    events.send(LibraryEvent.Open)
+                    awaitMatching { it.shown }
 
-                events.send(LibraryEvent.Open)
-                val again = awaitMatching { it.shown }
+                    events.send(LibraryEvent.Click(key("Home")))
+                    val closed = awaitMatching { !it.open }
 
-                assertEquals(2, library.loads)
-                assertEquals(5, again.cards.size)
-                cancelAndIgnoreRemainingEvents()
+                    effects.receive() shouldBe LibraryEffect.LaunchApp(catalogue[1].app)
+                    closed.cards shouldBe emptyList<LibraryCard>()
+                    library.released shouldBe 1
+                    library.saved shouldBe (emptyList<Pair<String, Boolean>>())
+                    cancelAndIgnoreRemainingEvents()
+                }
             }
         }
 
-    @Test
-    fun an_empty_catalogue_still_shows_the_panel_with_no_focus() =
-        runTest {
-            val library = FakeLibrary(emptyList())
-            presenter(library).test {
-                events.send(LibraryEvent.Open)
+        test("ok on an app not on home adds it and focus moves to the next app that is not") {
+            with(it.testScope) {
+                val library = FakeLibrary(catalogue)
+                presenter(library).test {
+                    events.send(LibraryEvent.Open)
+                    awaitMatching { it.shown }
+                    events.send(LibraryEvent.Focus(key("Alpha")))
 
-                val shown = awaitMatching { it.shown }
+                    events.send(LibraryEvent.Click(key("Alpha")))
+                    val added = awaitMatching { it.cards.firstOrNull { card -> card.app.label == "Alpha" }?.onHome == true }
 
-                assertEquals(emptyList<LibraryCard>(), shown.cards)
-                assertEquals(null, shown.focusRequest)
-                cancelAndIgnoreRemainingEvents()
+                    library.saved shouldBe listOf("pkg.Alpha" to true)
+                    added.labels() shouldBe listOf("Fresh", "Beta", "Zeta", "Alpha", "Home")
+                    added.focusedKey shouldBe key("Beta")
+                    added.focusRequest?.key shouldBe key("Beta")
+                    effects.tryReceive().isFailure shouldBe true
+                    cancelAndIgnoreRemainingEvents()
+                }
             }
         }
 
-    private val leastUsed = TvConfig(appLibrary = true, libraryLeastUsed = true)
+        test("a choice that was not saved says so and leaves the apps as they were") {
+            with(it.testScope) {
+                val library = FakeLibrary(catalogue).apply { saveWorks = false }
+                presenter(library).test {
+                    events.send(LibraryEvent.Open)
+                    val shown = awaitMatching { it.shown }
 
-    /** Fresh and Home were opened, Beta and Alpha never; the record began 90 days ago. */
-    private fun opened() =
-        OpenedRecord(
-            times = mapOf(key("Home") to NOW - 2 * DAY, key("Fresh") to NOW - 30 * DAY),
-            since = NOW - 90 * DAY,
-        )
+                    events.send(LibraryEvent.Click(key("Fresh")))
 
-    @Test
-    fun the_least_used_order_lists_apps_never_opened_first_then_the_oldest_open_with_ties_by_label() =
-        runTest {
-            val library = FakeLibrary(catalogue).apply { record = opened() }
-            presenter(library, leastUsed).test {
-                events.send(LibraryEvent.Open)
-                val usual = awaitMatching { it.shown }
-                assertEquals(LibraryOrder.Usual, usual.order)
-                assertEquals(listOf("Fresh", "Alpha", "Beta", "Zeta", "Home"), usual.labels())
-
-                events.send(LibraryEvent.ToggleOrder)
-                val least = awaitMatching { it.order == LibraryOrder.LeastUsed }
-
-                assertEquals(listOf("Alpha", "Beta", "Zeta", "Fresh", "Home"), least.labels())
-                cancelAndIgnoreRemainingEvents()
+                    effects.receive() shouldBe LibraryEffect.SaveFailed
+                    val after = awaitMatching { it.focusRequest?.token != shown.focusRequest?.token }
+                    library.saved shouldBe listOf("pkg.Fresh" to true)
+                    after.cards shouldBe shown.cards
+                    after.focusRequest?.key shouldBe key("Fresh")
+                    cancelAndIgnoreRemainingEvents()
+                }
             }
         }
 
-    @Test
-    fun in_the_least_used_order_a_card_says_when_its_app_was_opened_or_that_it_never_was() =
-        runTest {
-            val library = FakeLibrary(catalogue).apply { record = opened() }
-            presenter(library, leastUsed).test {
-                events.send(LibraryEvent.Open)
-                val usual = awaitMatching { it.shown }
-                assertEquals(List(5) { null }, usual.cards.map { it.opened })
+        test("library ok opens makes ok open every app") {
+            with(it.testScope) {
+                val library = FakeLibrary(catalogue)
+                presenter(library, TvConfig(appLibrary = true, libraryOkOpens = true)).test {
+                    events.send(LibraryEvent.Open)
+                    val shown = awaitMatching { it.shown }
+                    shown.hint shouldBe LibraryHint.Open
 
-                events.send(LibraryEvent.ToggleOrder)
-                val least = awaitMatching { it.order == LibraryOrder.LeastUsed }
+                    events.send(LibraryEvent.Click(key("Zeta")))
 
-                assertEquals(
-                    listOf(
-                        CardOpened(null),
-                        CardOpened(null),
-                        CardOpened(null),
-                        CardOpened(OpenedAt(NOW - 30 * DAY, NOW, hour24 = true)),
-                        CardOpened(OpenedAt(NOW - 2 * DAY, NOW, hour24 = true)),
-                    ),
-                    least.cards.map { it.opened },
-                )
-                cancelAndIgnoreRemainingEvents()
+                    effects.receive() shouldBe LibraryEffect.LaunchApp(catalogue[0].app)
+                    library.saved shouldBe (emptyList<Pair<String, Boolean>>())
+                    cancelAndIgnoreRemainingEvents()
+                }
             }
         }
 
-    @Test
-    fun when_no_app_of_the_catalogue_has_an_open_time_the_least_used_order_says_so_and_no_card_has_an_opened_line() =
-        runTest {
-            val gone = OpenedRecord(times = mapOf(key("Gone") to NOW - DAY), since = NOW - 90 * DAY)
-            val library = FakeLibrary(catalogue).apply { record = gone }
-            presenter(library, leastUsed).test {
-                events.send(LibraryEvent.Open)
-                assertFalse(awaitMatching { it.shown }.noUsageYet)
+        test("selection mode lists apps by label toggles with ok in place and has no menu") {
+            with(it.testScope) {
+                val library = FakeLibrary(catalogue)
+                presenter(library, TvConfig(appLibrary = true, appLibrarySelection = true, libraryOkOpens = true)).test {
+                    events.send(LibraryEvent.Open)
+                    val shown = awaitMatching { it.shown }
+                    shown.labels() shouldBe listOf("Alpha", "Beta", "Fresh", "Home", "Zeta")
+                    shown.cards.map { it.recent } shouldBe listOf(false, false, false, false, false)
+                    shown.hint shouldBe LibraryHint.SelectAdd
 
-                events.send(LibraryEvent.ToggleOrder)
-                val least = awaitMatching { it.order == LibraryOrder.LeastUsed }
+                    events.send(LibraryEvent.Focus(key("Home")))
+                    events.send(LibraryEvent.Hold(key("Home")))
+                    events.send(LibraryEvent.Click(key("Home")))
+                    val removed = awaitMatching { it.cards.firstOrNull { card -> card.app.label == "Home" }?.onHome == false }
 
-                assertTrue(least.noUsageYet)
-                assertEquals(List(5) { null }, least.cards.map { it.opened })
-                cancelAndIgnoreRemainingEvents()
+                    library.saved shouldBe listOf("pkg.Home" to false)
+                    removed.menu shouldBe null
+                    removed.labels() shouldBe listOf("Alpha", "Beta", "Fresh", "Home", "Zeta")
+                    removed.focusedKey shouldBe key("Home")
+                    removed.focusRequest?.key shouldBe key("Home")
+                    removed.hint shouldBe LibraryHint.SelectAdd
+                    effects.tryReceive().isFailure shouldBe true
+                    cancelAndIgnoreRemainingEvents()
+                }
             }
         }
 
-    @Test
-    fun one_open_time_among_the_catalogue_keeps_the_opened_lines_and_the_header_quiet() =
-        runTest {
-            val library = FakeLibrary(catalogue).apply { record = opened() }
-            presenter(library, leastUsed).test {
-                events.send(LibraryEvent.Open)
-                awaitMatching { it.shown }
+        test("selection mode keeps focus and every card in place when it adds an app") {
+            with(it.testScope) {
+                val library = FakeLibrary(catalogue)
+                presenter(library, TvConfig(appLibrary = true, appLibrarySelection = true)).test {
+                    events.send(LibraryEvent.Open)
+                    awaitMatching { it.shown }
 
-                events.send(LibraryEvent.ToggleOrder)
-                val least = awaitMatching { it.order == LibraryOrder.LeastUsed }
+                    events.send(LibraryEvent.Click(key("Zeta")))
+                    val added = awaitMatching { it.cards.firstOrNull { card -> card.app.label == "Zeta" }?.onHome == true }
 
-                assertFalse(least.noUsageYet)
-                assertTrue(least.cards.all { it.opened != null })
-                cancelAndIgnoreRemainingEvents()
+                    added.labels() shouldBe listOf("Alpha", "Beta", "Fresh", "Home", "Zeta")
+                    added.focusRequest?.key shouldBe key("Zeta")
+                    cancelAndIgnoreRemainingEvents()
+                }
             }
         }
 
-    @Test
-    fun the_other_order_keeps_each_cards_status_and_the_usual_order_shows_no_opened_line() =
-        runTest {
-            val library = FakeLibrary(catalogue).apply { record = opened() }
-            presenter(library, leastUsed).test {
-                events.send(LibraryEvent.Open)
-                val usual = awaitMatching { it.shown }
-                events.send(LibraryEvent.ToggleOrder)
-                val least = awaitMatching { it.order == LibraryOrder.LeastUsed }
-                events.send(LibraryEvent.ToggleOrder)
-                val back = awaitMatching { it.order == LibraryOrder.Usual }
+        test("a held ok opens a menu by whether the app is on home and whether the tv has an info page") {
+            with(it.testScope) {
+                val library = FakeLibrary(catalogue).apply { appInfoFor = setOf("pkg.Home") }
+                presenter(library).test {
+                    events.send(LibraryEvent.Open)
+                    awaitMatching { it.shown }
 
-                assertEquals(
-                    usual.cards.associate { it.app.label to (it.onHome to it.recent) },
+                    events.send(LibraryEvent.Hold(key("Home")))
+                    awaitMatching { it.menu != null }.menu shouldBe
+                        LibraryMenu(key("Home"), listOf(LibraryRow.Open, LibraryRow.RemoveFromHome, LibraryRow.AppInfo))
+                    events.send(LibraryEvent.Back)
+                    awaitMatching { it.menu == null }
+
+                    events.send(LibraryEvent.Hold(key("Alpha")))
+                    awaitMatching { it.menu != null }.menu shouldBe
+                        LibraryMenu(key("Alpha"), listOf(LibraryRow.Open, LibraryRow.AddToHome))
+                    cancelAndIgnoreRemainingEvents()
+                }
+            }
+        }
+
+        test("back closes the menu and asks for focus on its card then the next back closes the library") {
+            with(it.testScope) {
+                val library = FakeLibrary(catalogue)
+                presenter(library).test {
+                    events.send(LibraryEvent.Open)
+                    awaitMatching { it.shown }
+                    events.send(LibraryEvent.Hold(key("Beta")))
+                    awaitMatching { it.menu != null }
+
+                    events.send(LibraryEvent.Back)
+                    val menuClosed = awaitMatching { it.menu == null }
+                    menuClosed.open.shouldBeTrue()
+                    menuClosed.focusRequest?.key shouldBe key("Beta")
+
+                    events.send(LibraryEvent.Back)
+                    awaitMatching { !it.open }.shown.shouldBeFalse()
+                    cancelAndIgnoreRemainingEvents()
+                }
+            }
+        }
+
+        test("the menu rows open the app change its shortcut or open its info page") {
+            with(it.testScope) {
+                val library = FakeLibrary(catalogue).apply { appInfoFor = setOf("pkg.Alpha") }
+                presenter(library).test {
+                    events.send(LibraryEvent.Open)
+                    awaitMatching { it.shown }
+
+                    events.send(LibraryEvent.Hold(key("Alpha")))
+                    awaitMatching { it.menu != null }
+                    events.send(LibraryEvent.Pick(LibraryRow.AddToHome))
+                    awaitMatching { it.cards.firstOrNull { card -> card.app.label == "Alpha" }?.onHome == true }
+                    library.saved shouldBe listOf("pkg.Alpha" to true)
+
+                    events.send(LibraryEvent.Hold(key("Alpha")))
+                    awaitMatching { it.menu != null }
+                    events.send(LibraryEvent.Pick(LibraryRow.RemoveFromHome))
+                    awaitMatching { it.cards.firstOrNull { card -> card.app.label == "Alpha" }?.onHome == false }
+                    library.saved shouldBe listOf("pkg.Alpha" to true, "pkg.Alpha" to false)
+
+                    events.send(LibraryEvent.Hold(key("Alpha")))
+                    awaitMatching { it.menu != null }
+                    events.send(LibraryEvent.Pick(LibraryRow.AppInfo))
+                    awaitMatching { !it.open }
+                    effects.receive() shouldBe LibraryEffect.OpenAppInfo("pkg.Alpha")
+                    cancelAndIgnoreRemainingEvents()
+                }
+            }
+        }
+
+        test("closing and opening again loads the catalogue again and shows the panel again") {
+            with(it.testScope) {
+                val library = FakeLibrary(catalogue)
+                presenter(library).test {
+                    events.send(LibraryEvent.Open)
+                    awaitMatching { it.shown }
+                    events.send(LibraryEvent.Close)
+                    awaitMatching { !it.open }.shown.shouldBeFalse()
+
+                    events.send(LibraryEvent.Open)
+                    val again = awaitMatching { it.shown }
+
+                    library.loads shouldBe 2
+                    again.cards.size shouldBe 5
+                    cancelAndIgnoreRemainingEvents()
+                }
+            }
+        }
+
+        test("an empty catalogue still shows the panel with no focus") {
+            with(it.testScope) {
+                val library = FakeLibrary(emptyList())
+                presenter(library).test {
+                    events.send(LibraryEvent.Open)
+
+                    val shown = awaitMatching { it.shown }
+
+                    shown.cards shouldBe emptyList<LibraryCard>()
+                    shown.focusRequest shouldBe null
+                    cancelAndIgnoreRemainingEvents()
+                }
+            }
+        }
+
+        test("the least used order lists apps never opened first then the oldest open with ties by label") {
+            with(it.testScope) {
+                val library = FakeLibrary(catalogue).apply { record = opened() }
+                presenter(library, leastUsed).test {
+                    events.send(LibraryEvent.Open)
+                    val usual = awaitMatching { it.shown }
+                    usual.order shouldBe LibraryOrder.Usual
+                    usual.labels() shouldBe listOf("Fresh", "Alpha", "Beta", "Zeta", "Home")
+
+                    events.send(LibraryEvent.ToggleOrder)
+                    val least = awaitMatching { it.order == LibraryOrder.LeastUsed }
+
+                    least.labels() shouldBe listOf("Alpha", "Beta", "Zeta", "Fresh", "Home")
+                    cancelAndIgnoreRemainingEvents()
+                }
+            }
+        }
+
+        test("in the least used order a card says when its app was opened or that it never was") {
+            with(it.testScope) {
+                val library = FakeLibrary(catalogue).apply { record = opened() }
+                presenter(library, leastUsed).test {
+                    events.send(LibraryEvent.Open)
+                    val usual = awaitMatching { it.shown }
+                    usual.cards.map { it.opened } shouldBe List(5) { null }
+
+                    events.send(LibraryEvent.ToggleOrder)
+                    val least = awaitMatching { it.order == LibraryOrder.LeastUsed }
+
+                    least.cards.map { it.opened } shouldBe
+                        listOf(
+                            CardOpened(null),
+                            CardOpened(null),
+                            CardOpened(null),
+                            CardOpened(OpenedAt(NOW - 30 * DAY, NOW, hour24 = true)),
+                            CardOpened(OpenedAt(NOW - 2 * DAY, NOW, hour24 = true)),
+                        )
+                    cancelAndIgnoreRemainingEvents()
+                }
+            }
+        }
+
+        test("when no app of the catalogue has an open time the least used order says so and no card has an opened line") {
+            with(it.testScope) {
+                val gone = OpenedRecord(times = mapOf(key("Gone") to NOW - DAY), since = NOW - 90 * DAY)
+                val library = FakeLibrary(catalogue).apply { record = gone }
+                presenter(library, leastUsed).test {
+                    events.send(LibraryEvent.Open)
+                    awaitMatching { it.shown }.noUsageYet.shouldBeFalse()
+
+                    events.send(LibraryEvent.ToggleOrder)
+                    val least = awaitMatching { it.order == LibraryOrder.LeastUsed }
+
+                    least.noUsageYet.shouldBeTrue()
+                    least.cards.map { it.opened } shouldBe List(5) { null }
+                    cancelAndIgnoreRemainingEvents()
+                }
+            }
+        }
+
+        test("one open time among the catalogue keeps the opened lines and the header quiet") {
+            with(it.testScope) {
+                val library = FakeLibrary(catalogue).apply { record = opened() }
+                presenter(library, leastUsed).test {
+                    events.send(LibraryEvent.Open)
+                    awaitMatching { it.shown }
+
+                    events.send(LibraryEvent.ToggleOrder)
+                    val least = awaitMatching { it.order == LibraryOrder.LeastUsed }
+
+                    least.noUsageYet.shouldBeFalse()
+                    least.cards.all { it.opened != null }.shouldBeTrue()
+                    cancelAndIgnoreRemainingEvents()
+                }
+            }
+        }
+
+        test("the other order keeps each cards status and the usual order shows no opened line") {
+            with(it.testScope) {
+                val library = FakeLibrary(catalogue).apply { record = opened() }
+                presenter(library, leastUsed).test {
+                    events.send(LibraryEvent.Open)
+                    val usual = awaitMatching { it.shown }
+                    events.send(LibraryEvent.ToggleOrder)
+                    val least = awaitMatching { it.order == LibraryOrder.LeastUsed }
+                    events.send(LibraryEvent.ToggleOrder)
+                    val back = awaitMatching { it.order == LibraryOrder.Usual }
+
                     least.cards.associate {
                         it.app.label to
                             (it.onHome to it.recent)
-                    },
-                )
-                assertEquals(usual.cards, back.cards)
-                cancelAndIgnoreRemainingEvents()
+                    } shouldBe usual.cards.associate { it.app.label to (it.onHome to it.recent) }
+                    back.cards shouldBe usual.cards
+                    cancelAndIgnoreRemainingEvents()
+                }
             }
         }
 
-    @Test
-    fun switching_the_order_keeps_focus_on_the_same_app_and_asks_the_grid_to_scroll_to_it_again() =
-        runTest {
-            val library = FakeLibrary(catalogue).apply { record = opened() }
-            presenter(library, leastUsed).test {
-                events.send(LibraryEvent.Open)
-                awaitMatching { it.shown }
-                events.send(LibraryEvent.Focus(key("Zeta")))
-                val before = awaitMatching { it.focusedKey == key("Zeta") }
+        test("switching the order keeps focus on the same app and asks the grid to scroll to it again") {
+            with(it.testScope) {
+                val library = FakeLibrary(catalogue).apply { record = opened() }
+                presenter(library, leastUsed).test {
+                    events.send(LibraryEvent.Open)
+                    awaitMatching { it.shown }
+                    events.send(LibraryEvent.Focus(key("Zeta")))
+                    val before = awaitMatching { it.focusedKey == key("Zeta") }
 
-                events.send(LibraryEvent.ToggleOrder)
-                val least = awaitMatching { it.order == LibraryOrder.LeastUsed }
+                    events.send(LibraryEvent.ToggleOrder)
+                    val least = awaitMatching { it.order == LibraryOrder.LeastUsed }
 
-                assertEquals(key("Zeta"), least.focusedKey)
-                assertEquals(key("Zeta"), least.focusRequest?.key)
-                assertTrue(least.focusRequest!!.token != before.focusRequest?.token)
-                cancelAndIgnoreRemainingEvents()
+                    least.focusedKey shouldBe key("Zeta")
+                    least.focusRequest?.key shouldBe key("Zeta")
+                    least.focusRequest!!.token shouldNotBe before.focusRequest?.token
+                    cancelAndIgnoreRemainingEvents()
+                }
             }
         }
 
-    @Test
-    fun a_package_change_while_the_least_used_order_is_on_keeps_that_order_and_closing_resets_it() =
-        runTest {
-            val library = FakeLibrary(catalogue).apply { record = opened() }
-            presenter(library, leastUsed).test {
-                events.send(LibraryEvent.Open)
-                awaitMatching { it.shown }
-                events.send(LibraryEvent.ToggleOrder)
-                awaitMatching { it.order == LibraryOrder.LeastUsed }
-                runCurrent()
+        test("a package change while the least used order is on keeps that order and closing resets it") {
+            with(it.testScope) {
+                val library = FakeLibrary(catalogue).apply { record = opened() }
+                presenter(library, leastUsed).test {
+                    events.send(LibraryEvent.Open)
+                    awaitMatching { it.shown }
+                    events.send(LibraryEvent.ToggleOrder)
+                    awaitMatching { it.order == LibraryOrder.LeastUsed }
+                    runCurrent()
 
-                library.apps = catalogue + libraryApp("Aaa")
-                library.changes.emit(1)
-                val refreshed = awaitMatching { it.cards.size == 6 }
-                assertEquals(LibraryOrder.LeastUsed, refreshed.order)
-                assertEquals("Aaa", refreshed.labels().first())
+                    library.apps = catalogue + libraryApp("Aaa")
+                    library.changes.emit(1)
+                    val refreshed = awaitMatching { it.cards.size == 6 }
+                    refreshed.order shouldBe LibraryOrder.LeastUsed
+                    refreshed.labels().first() shouldBe "Aaa"
 
-                events.send(LibraryEvent.Close)
-                awaitMatching { !it.open }
-                events.send(LibraryEvent.Open)
-                assertEquals(LibraryOrder.Usual, awaitMatching { it.shown }.order)
-                cancelAndIgnoreRemainingEvents()
+                    events.send(LibraryEvent.Close)
+                    awaitMatching { !it.open }
+                    events.send(LibraryEvent.Open)
+                    awaitMatching { it.shown }.order shouldBe LibraryOrder.Usual
+                    cancelAndIgnoreRemainingEvents()
+                }
             }
         }
 
-    @Test
-    fun the_order_does_not_switch_while_a_card_menu_is_open() =
-        runTest {
-            val library = FakeLibrary(catalogue).apply { record = opened() }
-            presenter(library, leastUsed).test {
-                events.send(LibraryEvent.Open)
-                awaitMatching { it.shown }
-                events.send(LibraryEvent.Hold(key("Beta")))
-                awaitMatching { it.menu != null }
+        test("the order does not switch while a card menu is open") {
+            with(it.testScope) {
+                val library = FakeLibrary(catalogue).apply { record = opened() }
+                presenter(library, leastUsed).test {
+                    events.send(LibraryEvent.Open)
+                    awaitMatching { it.shown }
+                    events.send(LibraryEvent.Hold(key("Beta")))
+                    awaitMatching { it.menu != null }
 
-                events.send(LibraryEvent.ToggleOrder)
-                events.send(LibraryEvent.Back)
-                val closed = awaitMatching { it.menu == null }
+                    events.send(LibraryEvent.ToggleOrder)
+                    events.send(LibraryEvent.Back)
+                    val closed = awaitMatching { it.menu == null }
 
-                assertEquals(LibraryOrder.Usual, closed.order)
-                cancelAndIgnoreRemainingEvents()
+                    closed.order shouldBe LibraryOrder.Usual
+                    cancelAndIgnoreRemainingEvents()
+                }
             }
         }
 
-    @Test
-    fun with_library_least_used_off_the_order_event_changes_nothing_and_the_record_is_never_read() =
-        runTest {
-            val library = FakeLibrary(catalogue).apply { record = opened() }
-            presenter(library).test {
-                events.send(LibraryEvent.Open)
-                val shown = awaitMatching { it.shown }
+        test("with library least used off the order event changes nothing and the record is never read") {
+            with(it.testScope) {
+                val library = FakeLibrary(catalogue).apply { record = opened() }
+                presenter(library).test {
+                    events.send(LibraryEvent.Open)
+                    val shown = awaitMatching { it.shown }
 
-                events.send(LibraryEvent.ToggleOrder)
-                events.send(LibraryEvent.Focus(key("Beta")))
-                val later = awaitMatching { it.focusedKey == key("Beta") }
+                    events.send(LibraryEvent.ToggleOrder)
+                    events.send(LibraryEvent.Focus(key("Beta")))
+                    val later = awaitMatching { it.focusedKey == key("Beta") }
 
-                assertEquals(shown.cards, later.cards)
-                assertEquals(LibraryOrder.Usual, later.order)
-                assertEquals(0, library.recordReads)
-                cancelAndIgnoreRemainingEvents()
+                    later.cards shouldBe shown.cards
+                    later.order shouldBe LibraryOrder.Usual
+                    library.recordReads shouldBe 0
+                    cancelAndIgnoreRemainingEvents()
+                }
             }
         }
+    }
 }

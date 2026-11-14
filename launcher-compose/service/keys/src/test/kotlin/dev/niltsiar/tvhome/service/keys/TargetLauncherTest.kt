@@ -7,116 +7,131 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.content.IntentFilter
 import android.media.tv.TvContract
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectric
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.data.apps.AppLauncher
 import dev.niltsiar.tvhome.data.apps.LastOpened
 import dev.niltsiar.tvhome.data.apps.LaunchLog
 import dev.niltsiar.tvhome.data.system.SystemSettings
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
-import org.robolectric.annotation.Config
 import java.io.File
 
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [31])
-class TargetLauncherTest {
-    private val app: Application = RuntimeEnvironment.getApplication()
-    private val hdmi = "com.tv.live/.HdmiInput/HW5"
-
-    private val record = MutableStateFlow(TvConfig(cinematicHome = true))
-    private val lastOpened = LastOpened(app, record, Dispatchers.Unconfined)
-    private val appLauncher =
-        AppLauncher(app, record, lastOpened, LaunchLog(File(app.filesDir, "launch_log.txt"), record, Dispatchers.Unconfined))
-
-    private fun launcher(
-        liveTvPackage: String? = null,
-        context: Context = app,
-    ) = TargetLauncher(context, SystemSettings(app), performGlobal = { false }, liveTvPackage = liveTvPackage, opened = appLauncher)
-
-    private fun installTvApp(pkg: String) {
-        val component = ComponentName(pkg, "$pkg.Main")
-        shadowOf(app.packageManager).addActivityIfNotPresent(component)
-        shadowOf(app.packageManager).addIntentFilterForActivity(
-            component,
-            IntentFilter(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER) },
-        )
-    }
-
-    private fun installChannelViewer(pkg: String) {
-        val component = ComponentName(pkg, "$pkg.Channel")
-        shadowOf(app.packageManager).addActivityIfNotPresent(component)
-        shadowOf(app.packageManager).addIntentFilterForActivity(
-            component,
-            IntentFilter(Intent.ACTION_VIEW).apply {
-                addCategory(Intent.CATEGORY_DEFAULT)
-                addDataScheme("content")
-                addDataAuthority(TvContract.AUTHORITY, null)
-                addDataType("vnd.android.cursor.item/channel")
+val TargetLauncherTest by testSuite {
+    robolectricTestSuite<TargetLauncherTestContent>(
+        "sdk 31",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
             },
-        )
-    }
+    )
+}
 
-    @Test
-    fun an_input_key_asks_the_live_tv_app_first() {
-        launcher("com.tv.live").launch("input:$hdmi")
+class TargetLauncherTestContent :
+    RobolectricTestSuiteContent({
+        testFixture {
+            object {
+                val app: Application = RuntimeEnvironment.getApplication()
+                val hdmi = "com.tv.live/.HdmiInput/HW5"
 
-        val first = shadowOf(app).nextStartedActivity
-        assertEquals("com.tv.live", first.`package`)
-        assertEquals(TvContract.buildChannelUriForPassthroughInput(hdmi), first.data)
-        assertNull(shadowOf(app).nextStartedActivity)
-    }
+                val record = MutableStateFlow(TvConfig(cinematicHome = true))
+                val lastOpened = LastOpened(app, record, Dispatchers.Unconfined)
+                val appLauncher =
+                    AppLauncher(app, record, lastOpened, LaunchLog(File(app.filesDir, "launch_log.txt"), record, Dispatchers.Unconfined))
 
-    @Test
-    fun an_input_key_falls_back_to_the_plain_intent_when_the_live_tv_app_cannot_start_it() {
-        shadowOf(app).checkActivities(true)
-        installChannelViewer("com.files")
+                fun launcher(
+                    liveTvPackage: String? = null,
+                    context: Context = app,
+                ) = TargetLauncher(
+                    context,
+                    SystemSettings(app),
+                    performGlobal = { false },
+                    liveTvPackage = liveTvPackage,
+                    opened = appLauncher,
+                )
 
-        launcher("com.tv.live").launch("input:$hdmi")
+                fun installTvApp(pkg: String) {
+                    val component = ComponentName(pkg, "$pkg.Main")
+                    shadowOf(app.packageManager).addActivityIfNotPresent(component)
+                    shadowOf(app.packageManager).addIntentFilterForActivity(
+                        component,
+                        IntentFilter(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER) },
+                    )
+                }
 
-        val started = shadowOf(app).nextStartedActivity
-        assertNull(started.`package`)
-        assertEquals(TvContract.buildChannelUriForPassthroughInput(hdmi), started.data)
-        assertNull(shadowOf(app).nextStartedActivity)
-    }
+                fun installChannelViewer(pkg: String) {
+                    val component = ComponentName(pkg, "$pkg.Channel")
+                    shadowOf(app.packageManager).addActivityIfNotPresent(component)
+                    shadowOf(app.packageManager).addIntentFilterForActivity(
+                        component,
+                        IntentFilter(Intent.ACTION_VIEW).apply {
+                            addCategory(Intent.CATEGORY_DEFAULT)
+                            addDataScheme("content")
+                            addDataAuthority(TvContract.AUTHORITY, null)
+                            addDataType("vnd.android.cursor.item/channel")
+                        },
+                    )
+                }
+            }
+        } asContextForEach {
+            test("an input key asks the live tv app first") {
+                launcher("com.tv.live").launch("input:$hdmi")
 
-    @Test
-    fun an_input_key_sends_only_the_plain_intent_without_a_live_tv_package() {
-        for (unset in listOf(null, "", "  ")) {
-            launcher(unset).launch("input:$hdmi")
-
-            assertNull(shadowOf(app).nextStartedActivity.`package`)
-            assertNull(shadowOf(app).nextStartedActivity)
-        }
-    }
-
-    @Test
-    fun an_app_the_system_refuses_to_start_is_not_noted() {
-        installTvApp("com.netflix.ninja")
-        val refusing =
-            object : ContextWrapper(app) {
-                override fun startActivity(intent: Intent) = throw SecurityException("needs a permission")
+                val first = shadowOf(app).nextStartedActivity
+                first.`package` shouldBe "com.tv.live"
+                first.data shouldBe TvContract.buildChannelUriForPassthroughInput(hdmi)
+                shadowOf(app).nextStartedActivity.shouldBeNull()
             }
 
-        launcher(context = refusing).launch("com.netflix.ninja")
-        assertEquals(emptyMap<String, Long>(), lastOpened.times.value)
+            test("an input key falls back to the plain intent when the live tv app cannot start it") {
+                shadowOf(app).checkActivities(true)
+                installChannelViewer("com.files")
 
-        launcher().launch("com.netflix.ninja")
-        assertEquals(setOf("com.netflix.ninja/.Main"), lastOpened.times.value.keys)
-    }
+                launcher("com.tv.live").launch("input:$hdmi")
 
-    @Test
-    fun an_activity_target_that_started_is_noted_under_its_component() {
-        installTvApp("com.netflix.ninja")
+                val started = shadowOf(app).nextStartedActivity
+                started.`package`.shouldBeNull()
+                started.data shouldBe TvContract.buildChannelUriForPassthroughInput(hdmi)
+                shadowOf(app).nextStartedActivity.shouldBeNull()
+            }
 
-        launcher().launch("com.netflix.ninja/.Main")
+            test("an input key sends only the plain intent without a live tv package") {
+                for (unset in listOf(null, "", "  ")) {
+                    launcher(unset).launch("input:$hdmi")
 
-        assertEquals(setOf("com.netflix.ninja/.Main"), lastOpened.times.value.keys)
-    }
-}
+                    shadowOf(app).nextStartedActivity.`package`.shouldBeNull()
+                    shadowOf(app).nextStartedActivity.shouldBeNull()
+                }
+            }
+
+            test("an app the system refuses to start is not noted") {
+                installTvApp("com.netflix.ninja")
+                val refusing =
+                    object : ContextWrapper(app) {
+                        override fun startActivity(intent: Intent) = throw SecurityException("needs a permission")
+                    }
+
+                launcher(context = refusing).launch("com.netflix.ninja")
+                lastOpened.times.value shouldBe (emptyMap<String, Long>())
+
+                launcher().launch("com.netflix.ninja")
+                lastOpened.times.value.keys shouldBe setOf("com.netflix.ninja/.Main")
+            }
+
+            test("an activity target that started is noted under its component") {
+                installTvApp("com.netflix.ninja")
+
+                launcher().launch("com.netflix.ninja/.Main")
+
+                lastOpened.times.value.keys shouldBe setOf("com.netflix.ninja/.Main")
+            }
+        }
+    })

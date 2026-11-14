@@ -1,12 +1,12 @@
 package dev.niltsiar.tvhome.service.keys
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.shouldBe
 
-class PressesTest {
+val PressesTest by testSuite {
     /** Presses on a timer the test moves, and the targets they open. */
-    private class Remote {
+    class Remote {
         val timer = FakeTimer()
         val opened = mutableListOf<String>()
         val presses = Presses(timer)
@@ -37,8 +37,7 @@ class PressesTest {
         fun holdTimeout() = timer.advance(HOLD_MS)
     }
 
-    @Test
-    fun chorded_keys_keep_their_own_hold() {
+    test("chorded keys keep their own hold") {
         val remote = Remote()
         remote.down("1:190:0", 1000, "a.hold")
         remote.down("1:191:0", 1100, "b.hold")
@@ -46,11 +45,10 @@ class PressesTest {
         remote.up("1:190:0", 1200, 1100, "a.tap", "a.hold")
         remote.holdTimeout()
         remote.up("1:191:0", 1700, 1100, "b.tap", "b.hold")
-        assertEquals(listOf("a.tap", "b.hold"), remote.opened)
+        remote.opened shouldBe listOf("a.tap", "b.hold")
     }
 
-    @Test
-    fun holds_on_two_devices_stay_apart() {
+    test("holds on two devices stay apart") {
         val remote = Remote()
         remote.down("1:190:0", 1000, "hold")
         remote.holdTimeout()
@@ -58,11 +56,10 @@ class PressesTest {
         remote.holdTimeout()
         remote.up("1:190:0", 1800, 1000, "tap", "hold")
         remote.up("2:190:0", 1900, 1000, "tap", "hold")
-        assertEquals(listOf("hold", "hold"), remote.opened)
+        remote.opened shouldBe listOf("hold", "hold")
     }
 
-    @Test
-    fun two_owners_answer_each_press_once() {
+    test("two owners answer each press once") {
         val remote = Remote()
         // A tap, each event delivered to both owners.
         remote.down("1:190:0", 1000, "hold")
@@ -75,54 +72,49 @@ class PressesTest {
         remote.down("1:190:0", 2000, "hold")
         remote.up("1:190:0", 2800, 2000, "tap", "hold")
         remote.up("1:190:0", 2800, 2000, "tap", "hold")
-        assertEquals(listOf("tap", "hold"), remote.opened)
-        assertEquals(0, remote.timer.pending)
+        remote.opened shouldBe listOf("tap", "hold")
+        remote.timer.pending shouldBe 0
     }
 
-    @Test
-    fun a_canceled_up_opens_nothing_and_drops_the_hold() {
+    test("a canceled up opens nothing and drops the hold") {
         val remote = Remote()
         remote.down("1:190:0", 1000, "hold")
         remote.up("1:190:0", 1200, 1000, "tap", "hold", canceled = true)
         remote.holdTimeout()
-        assertTrue(remote.opened.isEmpty())
+        remote.opened.shouldBeEmpty()
     }
 
-    @Test
-    fun an_owner_that_leaves_before_the_hold_cancels_it() {
+    test("an owner that leaves before the hold cancels it") {
         val remote = Remote()
         remote.down("home", "1:190:0", 1000, "hold")
         remote.presses.release("home")
         remote.presses.release("home") // onUnbind, then onDestroy
         remote.holdTimeout()
-        assertTrue(remote.opened.isEmpty())
-        assertEquals(0, remote.timer.pending)
+        remote.opened.shouldBeEmpty()
+        remote.timer.pending shouldBe 0
     }
 
-    @Test
-    fun losing_one_owner_leaves_the_hold_with_the_other() {
+    test("losing one owner leaves the hold with the other") {
         val remote = Remote()
         remote.down("home", "1:190:0", 1000, "hold")
         remote.down("input", "1:190:0", 1000, "hold")
         remote.presses.release("home")
         remote.holdTimeout()
         remote.up("1:190:0", 1800, 1000, "tap", "hold")
-        assertEquals(listOf("input: hold"), remote.opened)
+        remote.opened shouldBe listOf("input: hold")
     }
 
-    @Test
-    fun losing_one_owner_keeps_the_others_tap() {
+    test("losing one owner keeps the others tap") {
         val remote = Remote()
         remote.down("home", "1:190:0", 1000, "hold")
         remote.down("input", "1:190:0", 1000, "hold")
         remote.presses.release("input")
         remote.up("1:190:0", 1200, 1000, "tap", "hold")
         remote.holdTimeout()
-        assertEquals(listOf("tap"), remote.opened)
+        remote.opened shouldBe listOf("tap")
     }
 
-    @Test
-    fun an_up_after_the_hold_was_released_opens_nothing_and_the_next_press_is_answered() {
+    test("an up after the hold was released opens nothing and the next press is answered") {
         val remote = Remote()
         remote.down("home", "1:190:0", 1000, "hold")
         remote.presses.release("home")
@@ -130,33 +122,30 @@ class PressesTest {
         remote.holdTimeout()
         remote.down("home", "1:190:0", 2000, "hold")
         remote.up("1:190:0", 2100, 2000, "tap", "hold")
-        assertEquals(listOf("tap"), remote.opened)
+        remote.opened shouldBe listOf("tap")
     }
 
-    @Test
-    fun releasing_an_owner_leaves_another_buttons_hold_alone() {
+    test("releasing an owner leaves another buttons hold alone") {
         val remote = Remote()
         remote.down("home", "1:190:0", 1000, "a.hold")
         remote.down("input", "1:191:0", 1100, "b.hold")
         remote.presses.release("home")
         remote.holdTimeout()
-        assertEquals(listOf("input: b.hold"), remote.opened)
+        remote.opened shouldBe listOf("input: b.hold")
     }
 
-    @Test
-    fun an_up_without_its_down_uses_the_events_down_time() {
+    test("an up without its down uses the events down time") {
         val remote = Remote()
         remote.up("1:190:0", 1100, 1000, "tap", "hold")
         remote.up("1:191:0", 1700, 1000, "tap", "hold")
-        assertEquals(listOf("tap", "hold"), remote.opened)
+        remote.opened shouldBe listOf("tap", "hold")
     }
 
-    @Test
-    fun a_key_with_only_a_hold_entry_does_nothing_on_a_tap() {
+    test("a key with only a hold entry does nothing on a tap") {
         val remote = Remote()
         remote.down("1:190:0", 1000, "hold")
         remote.up("1:190:0", 1100, 1000, null, "hold")
-        assertTrue(remote.opened.isEmpty())
-        assertEquals(0, remote.timer.pending)
+        remote.opened.shouldBeEmpty()
+        remote.timer.pending shouldBe 0
     }
 }

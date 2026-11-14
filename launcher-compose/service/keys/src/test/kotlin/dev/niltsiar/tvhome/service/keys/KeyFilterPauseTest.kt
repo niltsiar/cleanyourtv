@@ -7,18 +7,18 @@ import android.content.Intent
 import android.media.AudioManager
 import android.os.Looper
 import android.view.KeyEvent
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectric
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Test
-import org.junit.runner.RunWith
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.shouldBe
 import org.robolectric.Robolectric
-import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
-import org.robolectric.annotation.Config
 import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
 import org.robolectric.shadow.api.Shadow
@@ -57,82 +57,100 @@ class ShadowVolumeSteps : ShadowAudioManager() {
     }
 }
 
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [31], application = ConfigApplication::class, shadows = [ShadowKeptServiceInfo::class, ShadowVolumeSteps::class])
-class KeyFilterPauseTest {
-    private val app: Application = RuntimeEnvironment.getApplication()
-    private lateinit var service: KeyService
+/**
+ * TestBalloon sets a sandbox's shadows once, and suites with the same instrumentation share one sandbox, so the shadows
+ * above would follow the suite set up last. A portable class of this suite's own gives it a sandbox of its own.
+ */
+private object OwnSandbox
 
-    @Before
-    fun setUp() {
-        SharedPresses.reset()
-        service = Robolectric.setupService(KeyService::class.java)
-        service.serviceInfo = AccessibilityServiceInfo().apply { flags = FILTER }
-    }
-
-    private fun filtering() = service.serviceInfo.flags and FILTER != 0
-
-    private fun idleFor(ms: Long) = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ms))
-
-    private fun volumeChanged() {
-        app.sendBroadcast(Intent(VOLUME_CHANGED))
-        shadowOf(Looper.getMainLooper()).idle()
-    }
-
-    private fun watchingVolume() = shadowOf(app).registeredReceivers.any { it.intentFilter.hasAction(VOLUME_CHANGED) }
-
-    private fun steps() = Shadow.extract<ShadowVolumeSteps>(service.getSystemService(AudioManager::class.java)).steps
-
-    @Test
-    fun with_volume_pauses_filter_filtering_stops_until_4_s_after_the_last_volume_change() {
-        service.start(TvConfig(volumePausesFilter = true))
-        assertTrue(filtering())
-
-        volumeChanged()
-        assertFalse(filtering())
-        idleFor(3_000)
-        volumeChanged()
-        idleFor(VOLUME_PAUSE_MS - 1)
-        assertFalse(filtering())
-        idleFor(1)
-
-        assertTrue(filtering())
-    }
-
-    @Test
-    fun a_new_config_during_a_volume_pause_turns_filtering_back_on() {
-        service.start(TvConfig(volumePausesFilter = true))
-        volumeChanged()
-        assertFalse(filtering())
-
-        service.start(TvConfig())
-
-        assertTrue(filtering())
-    }
-
-    @Test
-    fun no_volume_change_is_watched_without_volume_pauses_filter_or_without_key_filter() {
-        service.start(TvConfig())
-        assertFalse(watchingVolume())
-
-        service.start(TvConfig(keyFilter = false, volumePausesFilter = true))
-        assertFalse(watchingVolume())
-        volumeChanged()
-        idleFor(VOLUME_PAUSE_MS)
-
-        assertFalse(filtering())
-    }
-
-    @Test
-    fun a_held_volume_key_stops_repeating_when_key_filtering_drops() {
-        service.start(TvConfig(consumeVolumeKeys = true, volumePausesFilter = true))
-        service.handleKey(KeyEvent(1_000, 1_000, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_VOLUME_UP, 0))
-        idleFor(VOLUME_REPEAT_DELAY_MS + VOLUME_REPEAT_INTERVAL_MS)
-        assertEquals(listOf(AudioManager.ADJUST_RAISE, AudioManager.ADJUST_RAISE), steps())
-
-        volumeChanged()
-        idleFor(1_000)
-
-        assertEquals(2, steps().size)
-    }
+val KeyFilterPauseTest by testSuite {
+    robolectricTestSuite<KeyFilterPauseTestContent>(
+        "sdk 31",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                application = ConfigApplication::class
+                shadows += ShadowKeptServiceInfo::class
+                shadows += ShadowVolumeSteps::class
+                portableClasses += OwnSandbox::class
+            },
+    )
 }
+
+class KeyFilterPauseTestContent :
+    RobolectricTestSuiteContent({
+        testFixture {
+            object {
+                val app: Application = RuntimeEnvironment.getApplication()
+                lateinit var service: KeyService
+
+                fun filtering() = service.serviceInfo.flags and FILTER != 0
+
+                fun idleFor(ms: Long) = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ms))
+
+                fun volumeChanged() {
+                    app.sendBroadcast(Intent(VOLUME_CHANGED))
+                    shadowOf(Looper.getMainLooper()).idle()
+                }
+
+                fun watchingVolume() = shadowOf(app).registeredReceivers.any { it.intentFilter.hasAction(VOLUME_CHANGED) }
+
+                fun steps() = Shadow.extract<ShadowVolumeSteps>(service.getSystemService(AudioManager::class.java)).steps
+
+                init {
+                    SharedPresses.reset()
+                    service = Robolectric.setupService(KeyService::class.java)
+                    service.serviceInfo = AccessibilityServiceInfo().apply { flags = FILTER }
+                }
+            }
+        } asContextForEach {
+            test("with volume pauses filter filtering stops until 4 s after the last volume change") {
+                service.start(TvConfig(volumePausesFilter = true))
+                filtering().shouldBeTrue()
+
+                volumeChanged()
+                filtering().shouldBeFalse()
+                idleFor(3_000)
+                volumeChanged()
+                idleFor(VOLUME_PAUSE_MS - 1)
+                filtering().shouldBeFalse()
+                idleFor(1)
+
+                filtering().shouldBeTrue()
+            }
+
+            test("a new config during a volume pause turns filtering back on") {
+                service.start(TvConfig(volumePausesFilter = true))
+                volumeChanged()
+                filtering().shouldBeFalse()
+
+                service.start(TvConfig())
+
+                filtering().shouldBeTrue()
+            }
+
+            test("no volume change is watched without volume pauses filter or without key filter") {
+                service.start(TvConfig())
+                watchingVolume().shouldBeFalse()
+
+                service.start(TvConfig(keyFilter = false, volumePausesFilter = true))
+                watchingVolume().shouldBeFalse()
+                volumeChanged()
+                idleFor(VOLUME_PAUSE_MS)
+
+                filtering().shouldBeFalse()
+            }
+
+            test("a held volume key stops repeating when key filtering drops") {
+                service.start(TvConfig(consumeVolumeKeys = true, volumePausesFilter = true))
+                service.handleKey(KeyEvent(1_000, 1_000, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_VOLUME_UP, 0))
+                idleFor(VOLUME_REPEAT_DELAY_MS + VOLUME_REPEAT_INTERVAL_MS)
+                steps() shouldBe listOf(AudioManager.ADJUST_RAISE, AudioManager.ADJUST_RAISE)
+
+                volumeChanged()
+                idleFor(1_000)
+
+                steps().size shouldBe 2
+            }
+        }
+    })

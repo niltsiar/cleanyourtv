@@ -37,17 +37,24 @@ through the JUnit 4 runner on Android host tests.
 | `@Test fun the_thing_happens()` | `test("the thing happens") { ... }` |
 | `private fun helper()` in the class | a local `fun helper()` inside the suite lambda |
 | `@get:Rule val rule = ...`, `lateinit var` fields | a `testFixture { object : JUnit4RulesContext() { ... } } asContextForEach { ... }`; without rules, a plain `object { ... }` |
+| a field that holds state a test changes, such as `val config = MutableStateFlow(...)`, a `Channel` or a fake | a property of the fixture object: a `val` in the suite lambda is one object for every test |
 | `@Before` | the fixture object's `init` block; when it needs the rules running, the innermost link of a `RuleChain` (below) |
-| `@After` | `closeWith { ... }` on the fixture: it runs after a failing test too |
+| `@After` | `closeWith { ... }` on the fixture: it runs after a failing test too. When it ran inside the rules, `after()` of the innermost `RuleChain` link |
 | a field each test gets new, such as `val hold = OkHold()` | `testFixture { OkHold() } asParameterForEach { test("...") { hold -> ... } }` |
 | a JUnit rule in a plain JVM class, such as `TemporaryFolder` | the same `JUnit4RulesContext` fixture, without Robolectric |
-| a class nested in the test class | a local class at the top of the suite or content lambda |
+| a class nested in the test class | a local class at the top of the suite or content lambda; a private class in the file when a fixture class or a second content class uses it. A fixture `object` cannot declare a class |
 | `@RunWith(RobolectricTestRunner::class)` and `@Config(...)` | `robolectricTestSuite<FooTestContent>(name, testConfig = TestConfig.robolectric { ... })` |
-| `@Config(...)` on one test | a second `robolectricTestSuite` with its own content class and settings |
+| `@Config(...)` on one test | a second `robolectricTestSuite` with its own content class and settings. Both content classes take their fixture from one `private class FooFixture : JUnit4RulesContext()` in the file (`SettingsScreenTest.kt` in `feature/settings`) |
+| `@Config(qualifiers = "+night")` on one test | the class's qualifiers with `night` added in Android's order: `w960dp-h540dp-xhdpi` becomes `w960dp-h540dp-night-xhdpi` (`LibraryOverlayLookUiTest.kt` in `feature/library`) |
+| `assumeTrue(...)` / `assumeFalse(...)` | TestBalloon reports a failed assumption as a failure. Decide in the content lambda, before the tests register, and pass `testConfig = TestConfig.disable()` to the tests to skip; the results count them as skipped (`SettingsPresenterTest.kt`) |
+| a subclass that runs the same tests with one value changed | a loop over plain `testSuite` groups in one content class, with the value in each test name so names stay unique (`LibraryRecompositionTest.kt` in `feature/library`) |
 | `fun the_thing() = runTest { ... }` | see [Coroutine tests](#coroutine-tests) |
 | `fun the_thing() = runBlocking { ... }` | `test("the thing") { runBlocking { ... } }`, so the body keeps its own event loop on the test thread |
 
 The test name keeps the words of the old method name, with spaces in place of underscores.
+
+`spotlessApply` (ktlint) rejects a KDoc above a `test(...)` call: make it a `/* */` comment. It does not remove unused
+imports, so remove the JUnit ones by hand.
 
 ### Plain JVM
 
@@ -97,6 +104,26 @@ top-level functions in the file when two content classes share them (`LastOpened
 suites do not nest: put plain `testSuite` groups inside the content class instead. A `@Config` without `sdk` maps to
 `robolectricTestSuite` without `testConfig`.
 
+The content lambda runs in the sandbox while the tests register. If it reads a top-level `val` of its file there, the
+file's class initializes again in the sandbox, registers its suite a second time, and the module fails with
+`cannot register as a top-level suite inside TestSuite(...)`. Compute such a value in the content lambda. A `const val`,
+and a top-level `val` that only test bodies or fixture functions read, are safe.
+
+Suites with the same instrumentation share one sandbox, and TestBalloon sets a sandbox's shadows once, so the
+`shadows +=` of one suite can apply to another suite or be missing from its own. A suite with shadows of its own adds a
+private object of the file to `portableClasses`, which gives it a sandbox of its own (`KeyFilterPauseTest.kt` in
+`service/keys`):
+
+```kotlin
+private object OwnSandbox
+
+TestConfig.robolectric {
+    sdk = 31
+    shadows += ShadowVolumeSteps::class
+    portableClasses += OwnSandbox::class
+}
+```
+
 Robolectric reads no annotation on the content class: TestBalloon passes it `RobolectricTestSuiteContent`, so
 `@GraphicsMode` has no effect, and `TestConfig.robolectric` has no graphics mode. A module whose tests need the native
 canvas sets it for its test task, as `core/designsystem` does:
@@ -107,6 +134,19 @@ android {
         unitTests.all { it.systemProperty("robolectric.graphicsMode", "NATIVE") }
     }
 }
+```
+
+The property applies to every suite of the module. The native mode starts the window in touch mode, where Compose gives
+nothing key focus, so a test that ran in the legacy mode and checks key focus leaves touch mode before `setContent`
+(`SettingsScreenTest.kt` in `feature/settings`). With `createComposeRule()`, use
+`createAndroidComposeRule<ComponentActivity>()` to reach the window.
+
+```kotlin
+compose.runOnUiThread {
+    compose.activity.window.decorView
+        .requestFocusFromTouch()
+}
+compose.setContent { /* ... */ }
 ```
 
 ### Compose UI

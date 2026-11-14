@@ -1,100 +1,15 @@
 package dev.niltsiar.tvhome.service.keys
 
 import android.view.KeyEvent
+import de.infix.testBalloon.framework.core.testSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.shouldBe
 
-class PowerOnHomeTest {
-    private val soon = 45_000L
-    private val tv = "com.mediatek.wwtv.tvcenter"
-
-    @Test
-    fun a_tap_is_a_short_press_and_a_hold_past_the_timeout_is_not() {
-        assertTrue(isShortPress(1_000, 1_120, 400))
-        assertFalse(isShortPress(1_000, 1_400, 400))
-        assertFalse(isShortPress(1_000, 3_000, 400))
-    }
-
-    @Test
-    fun the_first_bind_of_a_new_boot_probes() {
-        assertTrue(firstBindAfterBoot(12, 11, soon))
-        assertTrue(firstBindAfterBoot(1, -1, soon))
-    }
-
-    @Test
-    fun a_rebind_in_the_same_boot_a_late_bind_or_no_boot_count_does_not() {
-        assertFalse(firstBindAfterBoot(12, 12, soon))
-        assertFalse(firstBindAfterBoot(12, 11, BOOT_WINDOW_MS))
-        assertFalse(firstBindAfterBoot(-1, -1, soon))
-    }
-
-    @Test
-    fun live_tv_before_any_key_goes_home() {
-        assertTrue(powerOnRedirect(tv, tv, soon, BOOT_WINDOW_MS))
-    }
-
-    @Test
-    fun other_apps_and_inputs_are_left_alone() {
-        assertFalse(powerOnRedirect(tv, "com.netflix.ninja", soon, BOOT_WINDOW_MS))
-        assertFalse(powerOnRedirect(tv, null, soon, BOOT_WINDOW_MS))
-        assertFalse(powerOnRedirect("", tv, soon, BOOT_WINDOW_MS))
-    }
-
-    @Test
-    fun after_a_key_or_the_window_live_tv_stays() {
-        assertFalse(powerOnRedirect(tv, tv, soon, 0))
-        assertFalse(powerOnRedirect(tv, tv, BOOT_WINDOW_MS, BOOT_WINDOW_MS))
-    }
-
-    @Test
-    fun still_armed_until_the_window_ends() {
-        assertTrue(stillArmed(soon, soon + SCREEN_ON_WINDOW_MS))
-        assertFalse(stillArmed(soon, 0))
-    }
-
-    @Test
-    fun boot_to_live_tv_switches_the_power_on_keys_off() {
-        val both = TvConfig(powerOnHome = true, powerOnHomeAlways = true)
-        assertEquals(PowerOnPlan(tv, always = true), powerOnPlan(both, null))
-        assertEquals(PowerOnPlan("", always = false), powerOnPlan(both.copy(bootToLiveTv = true), null))
-        assertFalse(powerOnPlan(TvConfig(), null).enabled)
-        assertFalse(powerOnPlan(both.copy(liveTvPackage = null, powerOnHomeAlways = false), null).enabled)
-    }
-
-    private val picking = TvConfig(openOnStartChoice = true)
-
-    @Test
-    fun live_tv_picked_as_the_open_on_start_app_is_not_sent_home() {
-        val config = picking.copy(powerOnHome = true)
-        assertEquals(PowerOnPlan("", always = false), powerOnPlan(config, tv))
-    }
-
-    @Test
-    fun another_app_picked_leaves_the_live_tv_redirect() {
-        val config = picking.copy(powerOnHome = true)
-        assertEquals(PowerOnPlan(tv, always = false), powerOnPlan(config, "com.netflix.ninja"))
-    }
-
-    @Test
-    fun any_pick_turns_power_on_home_always_off_and_no_pick_leaves_it_on() {
-        val config = picking.copy(powerOnHomeAlways = true)
-        assertEquals(PowerOnPlan("", always = false), powerOnPlan(config, "com.netflix.ninja"))
-        assertEquals(PowerOnPlan("", always = false), powerOnPlan(config, tv))
-        assertEquals(PowerOnPlan("", always = true), powerOnPlan(config, null))
-    }
-
-    @Test
-    fun a_stored_pick_is_ignored_while_open_on_start_choice_is_off() {
-        val config = TvConfig(openOnStartChoice = false, powerOnHome = true, powerOnHomeAlways = true)
-        assertEquals(PowerOnPlan(tv, always = true), powerOnPlan(config, tv))
-        assertEquals(PowerOnPlan(tv, always = true), powerOnPlan(config, "com.netflix.ninja"))
-    }
-
+val PowerOnHomeTest by testSuite {
     /** The unit on a clock and a timer that move together. */
-    private class Rig(
+    class Rig(
         plan: PowerOnPlan,
         bootedMs: Long,
     ) {
@@ -103,67 +18,134 @@ class PowerOnHomeTest {
         val power = PowerOnHome(plan, { bootedMs + timer.now }, timer) { homes += timer.now }
     }
 
-    @Test
-    fun always_opens_home_800_ms_after_the_screen_comes_on() {
+    val soon = 45_000L
+    val tv = "com.mediatek.wwtv.tvcenter"
+
+    val picking = TvConfig(openOnStartChoice = true)
+
+    test("a tap is a short press and a hold past the timeout is not") {
+        isShortPress(1_000, 1_120, 400).shouldBeTrue()
+        isShortPress(1_000, 1_400, 400).shouldBeFalse()
+        isShortPress(1_000, 3_000, 400).shouldBeFalse()
+    }
+
+    test("the first bind of a new boot probes") {
+        firstBindAfterBoot(12, 11, soon).shouldBeTrue()
+        firstBindAfterBoot(1, -1, soon).shouldBeTrue()
+    }
+
+    test("a rebind in the same boot a late bind or no boot count does not") {
+        firstBindAfterBoot(12, 12, soon).shouldBeFalse()
+        firstBindAfterBoot(12, 11, BOOT_WINDOW_MS).shouldBeFalse()
+        firstBindAfterBoot(-1, -1, soon).shouldBeFalse()
+    }
+
+    test("live tv before any key goes home") {
+        powerOnRedirect(tv, tv, soon, BOOT_WINDOW_MS).shouldBeTrue()
+    }
+
+    test("other apps and inputs are left alone") {
+        powerOnRedirect(tv, "com.netflix.ninja", soon, BOOT_WINDOW_MS).shouldBeFalse()
+        powerOnRedirect(tv, null, soon, BOOT_WINDOW_MS).shouldBeFalse()
+        powerOnRedirect("", tv, soon, BOOT_WINDOW_MS).shouldBeFalse()
+    }
+
+    test("after a key or the window live tv stays") {
+        powerOnRedirect(tv, tv, soon, 0).shouldBeFalse()
+        powerOnRedirect(tv, tv, BOOT_WINDOW_MS, BOOT_WINDOW_MS).shouldBeFalse()
+    }
+
+    test("still armed until the window ends") {
+        stillArmed(soon, soon + SCREEN_ON_WINDOW_MS).shouldBeTrue()
+        stillArmed(soon, 0).shouldBeFalse()
+    }
+
+    test("boot to live tv switches the power on keys off") {
+        val both = TvConfig(powerOnHome = true, powerOnHomeAlways = true)
+        powerOnPlan(both, null) shouldBe PowerOnPlan(tv, always = true)
+        powerOnPlan(both.copy(bootToLiveTv = true), null) shouldBe PowerOnPlan("", always = false)
+        powerOnPlan(TvConfig(), null).enabled.shouldBeFalse()
+        powerOnPlan(both.copy(liveTvPackage = null, powerOnHomeAlways = false), null).enabled.shouldBeFalse()
+    }
+
+    test("live tv picked as the open on start app is not sent home") {
+        val config = picking.copy(powerOnHome = true)
+        powerOnPlan(config, tv) shouldBe PowerOnPlan("", always = false)
+    }
+
+    test("another app picked leaves the live tv redirect") {
+        val config = picking.copy(powerOnHome = true)
+        powerOnPlan(config, "com.netflix.ninja") shouldBe PowerOnPlan(tv, always = false)
+    }
+
+    test("any pick turns power on home always off and no pick leaves it on") {
+        val config = picking.copy(powerOnHomeAlways = true)
+        powerOnPlan(config, "com.netflix.ninja") shouldBe PowerOnPlan("", always = false)
+        powerOnPlan(config, tv) shouldBe PowerOnPlan("", always = false)
+        powerOnPlan(config, null) shouldBe PowerOnPlan("", always = true)
+    }
+
+    test("a stored pick is ignored while open on start choice is off") {
+        val config = TvConfig(openOnStartChoice = false, powerOnHome = true, powerOnHomeAlways = true)
+        powerOnPlan(config, tv) shouldBe PowerOnPlan(tv, always = true)
+        powerOnPlan(config, "com.netflix.ninja") shouldBe PowerOnPlan(tv, always = true)
+    }
+
+    test("always opens home 800 ms after the screen comes on") {
         val rig = Rig(PowerOnPlan("", always = true), bootedMs = 10 * 60_000L)
         rig.power.armAtBind()
-        assertEquals(0, rig.timer.pending) // bound long after boot: nothing to do until the screen turns on
+        rig.timer.pending shouldBe 0 // bound long after boot: nothing to do until the screen turns on
 
         rig.power.onScreenOn()
         rig.timer.advance(POWER_ON_ALWAYS_DELAY_MS - 1)
-        assertEquals(emptyList<Long>(), rig.homes)
+        rig.homes shouldBe emptyList<Long>()
         rig.timer.advance(1)
-        assertEquals(listOf(POWER_ON_ALWAYS_DELAY_MS), rig.homes)
+        rig.homes shouldBe listOf(POWER_ON_ALWAYS_DELAY_MS)
     }
 
-    @Test
-    fun a_key_pressed_before_the_delay_keeps_home_from_opening() {
+    test("a key pressed before the delay keeps home from opening") {
         val rig = Rig(PowerOnPlan("", always = true), bootedMs = 10 * 60_000L)
         rig.power.onScreenOn()
         rig.timer.advance(300)
         rig.power.onKeyDown(KeyEvent.KEYCODE_DPAD_CENTER)
         rig.timer.advance(POWER_ON_ALWAYS_DELAY_MS)
-        assertEquals(emptyList<Long>(), rig.homes)
+        rig.homes shouldBe emptyList<Long>()
     }
 
-    @Test
-    fun the_power_and_wake_keys_do_not_count_as_a_key() {
+    test("the power and wake keys do not count as a key") {
         val rig = Rig(PowerOnPlan("", always = true), bootedMs = 10 * 60_000L)
         rig.power.onScreenOn()
         rig.power.onKeyDown(KeyEvent.KEYCODE_POWER)
         rig.power.onKeyDown(KeyEvent.KEYCODE_WAKEUP)
         rig.timer.advance(POWER_ON_ALWAYS_DELAY_MS)
-        assertEquals(1, rig.homes.size)
+        rig.homes.size shouldBe 1
     }
 
-    @Test
-    fun a_bind_during_the_boot_opens_home_too() {
+    test("a bind during the boot opens home too") {
         val rig = Rig(PowerOnPlan("", always = true), bootedMs = 30_000L)
         rig.power.armAtBind()
         rig.timer.advance(POWER_ON_ALWAYS_DELAY_MS)
-        assertEquals(1, rig.homes.size)
+        rig.homes.size shouldBe 1
     }
 
-    @Test
-    fun without_always_the_screen_coming_on_opens_nothing_by_itself() {
+    test("without always the screen coming on opens nothing by itself") {
         val rig = Rig(PowerOnPlan(tv, always = false), bootedMs = 10 * 60_000L)
         rig.power.onScreenOn()
         rig.timer.advance(POWER_ON_ALWAYS_DELAY_MS * 10)
-        assertEquals(emptyList<Long>(), rig.homes)
+        rig.homes shouldBe emptyList<Long>()
     }
 
-    @Test
-    fun live_tv_is_sent_home_for_60_seconds_after_the_screen_comes_on_until_a_key() {
+    test("live tv is sent home for 60 seconds after the screen comes on until a key") {
         val rig = Rig(PowerOnPlan(tv, always = false), bootedMs = 10 * 60_000L)
         rig.power.onScreenOn()
         rig.timer.advance(SCREEN_ON_WINDOW_MS - 1)
-        assertTrue(rig.power.redirects(tv))
-        assertFalse(rig.power.redirects("com.netflix.ninja"))
+        rig.power.redirects(tv).shouldBeTrue()
+        rig.power.redirects("com.netflix.ninja").shouldBeFalse()
         rig.power.onKeyDown(KeyEvent.KEYCODE_DPAD_DOWN)
-        assertFalse(rig.power.redirects(tv))
+        rig.power.redirects(tv).shouldBeFalse()
 
         rig.power.onScreenOn()
         rig.timer.advance(SCREEN_ON_WINDOW_MS)
-        assertFalse(rig.power.redirects(tv))
+        rig.power.redirects(tv).shouldBeFalse()
     }
 }

@@ -1,28 +1,24 @@
 package dev.niltsiar.tvhome.service.keys
 
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
 
-class GamepadPassthroughTest {
+val GamepadPassthroughTest by testSuite {
     // Sources as dumpsys input reports them on a TCL G07.
-    @Test
-    fun an_xbox_controller_is_a_gamepad() {
-        assertTrue(isGamepad(0x01000511))
+    test("an xbox controller is a gamepad") {
+        isGamepad(0x01000511).shouldBeTrue()
     }
 
-    @Test
-    fun the_voice_remote_with_a_joystick_is_not() {
-        assertFalse(isGamepad(0x01000311))
+    test("the voice remote with a joystick is not") {
+        isGamepad(0x01000311).shouldBeFalse()
     }
 
-    @Test
-    fun the_virtual_search_keyboard_is_not() {
-        assertFalse(isGamepad(0x00000701))
+    test("the virtual search keyboard is not") {
+        isGamepad(0x00000701).shouldBeFalse()
     }
 
-    @Test
-    fun a_keypad_is_not() {
-        assertFalse(isGamepad(0x00000101))
+    test("a keypad is not") {
+        isGamepad(0x00000101).shouldBeFalse()
     }
 }

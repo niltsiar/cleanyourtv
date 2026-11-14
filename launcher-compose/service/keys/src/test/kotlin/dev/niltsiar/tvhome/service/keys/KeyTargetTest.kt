@@ -1,61 +1,55 @@
 package dev.niltsiar.tvhome.service.keys
 
 import android.accessibilityservice.AccessibilityService
+import de.infix.testBalloon.framework.core.testSuite
 import dev.niltsiar.tvhome.core.model.inputIdOf
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import io.kotest.assertions.withClue
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.shouldBe
 
-class KeyTargetTest {
-    private val hdmi = "com.tcl.tvinput/.passthroughinput.TvPassThroughService/HW1413743104"
+val KeyTargetTest by testSuite {
+    val hdmi = "com.tcl.tvinput/.passthroughinput.TvPassThroughService/HW1413743104"
 
-    @Test
-    fun every_action_word_is_an_action_and_nothing_else_is() {
+    test("every action word is an action and nothing else is") {
         for (word in listOf("back", "home", "recents", "mute", "sleep", "screensaver", "settings", "wifi", "library", "ignore")) {
-            assertEquals(word, KeyTarget.Action(ActionWord.entries.single { it.word == word }), parseTarget(word))
+            withClue(word) { parseTarget(word) shouldBe KeyTarget.Action(ActionWord.entries.single { it.word == word }) }
         }
-        assertEquals(KeyTarget.App("Mute"), parseTarget("Mute"))
+        parseTarget("Mute") shouldBe KeyTarget.App("Mute")
     }
 
-    @Test
-    fun targets_are_told_apart_by_their_shape() {
-        assertEquals(KeyTarget.Inputs, parseTarget("inputs"))
-        assertEquals(KeyTarget.Guide("com.vt.tv.tvcenter"), parseTarget("guide:com.vt.tv.tvcenter"))
-        assertEquals(KeyTarget.Input(hdmi), parseTarget("input:$hdmi"))
-        assertEquals(
-            KeyTarget.Activity("io.github.maxhayim.brightness/.QuickActivity"),
-            parseTarget("io.github.maxhayim.brightness/.QuickActivity"),
-        )
-        assertEquals(KeyTarget.App("com.netflix.ninja"), parseTarget("com.netflix.ninja"))
+    test("targets are told apart by their shape") {
+        parseTarget("inputs") shouldBe KeyTarget.Inputs
+        parseTarget("guide:com.vt.tv.tvcenter") shouldBe KeyTarget.Guide("com.vt.tv.tvcenter")
+        parseTarget("input:$hdmi") shouldBe KeyTarget.Input(hdmi)
+        parseTarget("io.github.maxhayim.brightness/.QuickActivity") shouldBe
+            KeyTarget.Activity("io.github.maxhayim.brightness/.QuickActivity")
+        parseTarget("com.netflix.ninja") shouldBe KeyTarget.App("com.netflix.ninja")
     }
 
-    @Test
-    fun an_empty_guide_or_input_id_is_a_plain_package() {
-        assertEquals(KeyTarget.App("guide:"), parseTarget("guide:"))
-        assertEquals(KeyTarget.App("input: "), parseTarget("input: "))
-        assertNull(inputIdOf("input: "))
-        assertNull(inputIdOf("com.netflix.ninja"))
+    test("an empty guide or input id is a plain package") {
+        parseTarget("guide:") shouldBe KeyTarget.App("guide:")
+        parseTarget("input: ") shouldBe KeyTarget.App("input: ")
+        inputIdOf("input: ").shouldBeNull()
+        inputIdOf("com.netflix.ninja").shouldBeNull()
     }
 
-    @Test
-    fun an_input_target_is_not_an_activity() {
+    test("an input target is not an activity") {
         // Its id has slashes, but it must reach the passthrough branch, not ComponentName.unflattenFromString().
-        assertFalse(isActivity("input:$hdmi"))
-        assertTrue(isActivity("io.github.maxhayim.brightness/.QuickActivity"))
-        assertFalse(isActivity("com.netflix.ninja"))
-        assertFalse(isActivity("/.QuickActivity"))
+        isActivity("input:$hdmi").shouldBeFalse()
+        isActivity("io.github.maxhayim.brightness/.QuickActivity").shouldBeTrue()
+        isActivity("com.netflix.ninja").shouldBeFalse()
+        isActivity("/.QuickActivity").shouldBeFalse()
     }
 
-    @Test
-    fun global_actions_and_the_android_9_floor_for_sleep() {
-        assertEquals(AccessibilityService.GLOBAL_ACTION_BACK, globalAction(ActionWord.Back, 26))
-        assertEquals(AccessibilityService.GLOBAL_ACTION_HOME, globalAction(ActionWord.Home, 26))
-        assertEquals(AccessibilityService.GLOBAL_ACTION_RECENTS, globalAction(ActionWord.Recents, 26))
-        assertEquals(AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN, globalAction(ActionWord.Sleep, 28))
+    test("global actions and the android 9 floor for sleep") {
+        globalAction(ActionWord.Back, 26) shouldBe AccessibilityService.GLOBAL_ACTION_BACK
+        globalAction(ActionWord.Home, 26) shouldBe AccessibilityService.GLOBAL_ACTION_HOME
+        globalAction(ActionWord.Recents, 26) shouldBe AccessibilityService.GLOBAL_ACTION_RECENTS
+        globalAction(ActionWord.Sleep, 28) shouldBe AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN
         // No lock-screen action before Android 9: the key is consumed and nothing happens.
-        assertNull(globalAction(ActionWord.Sleep, 27))
-        assertNull(globalAction(ActionWord.Mute, 34))
+        globalAction(ActionWord.Sleep, 27).shouldBeNull()
+        globalAction(ActionWord.Mute, 34).shouldBeNull()
     }
 }

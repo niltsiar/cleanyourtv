@@ -1,17 +1,15 @@
 package dev.niltsiar.tvhome.feature.library
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.shouldBe
 
-class FirstCodePointTest {
-    @Test
-    fun a_letter_outside_the_basic_plane_is_not_split_in_two() {
-        assertEquals("𝐀", "𝐀pple".firstCodePoint())
+val FirstCodePointTest by testSuite {
+    test("a letter outside the basic plane is not split in two") {
+        "𝐀pple".firstCodePoint() shouldBe "𝐀"
     }
 
-    @Test
-    fun an_ordinary_first_letter_and_an_empty_label_work() {
-        assertEquals("N", "Netflix".firstCodePoint())
-        assertEquals("", "".firstCodePoint())
+    test("an ordinary first letter and an empty label work") {
+        "Netflix".firstCodePoint() shouldBe "N"
+        "".firstCodePoint() shouldBe ""
     }
 }

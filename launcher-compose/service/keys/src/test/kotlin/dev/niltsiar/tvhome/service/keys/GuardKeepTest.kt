@@ -8,183 +8,187 @@ import android.os.Looper
 import android.os.PowerManager
 import android.os.UserManager
 import android.provider.Settings
-import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectric
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.shouldBe
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
-import org.robolectric.annotation.Config
 
 private const val KEYS = "dev.niltsiar.tvhome/.service.keys.KeyService"
 private const val OTHER = "com.other.app/.Service"
 private val keyService = ComponentName("dev.niltsiar.tvhome", "dev.niltsiar.tvhome.service.keys.KeyService")
 
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [31])
-class GuardDecisionTest {
-    @Test
-    fun the_standby_exit_needs_both_the_opt_in_and_the_permission() {
-        assertTrue(leavesInStandby(optedIn = true, permitted = true))
-        assertFalse(leavesInStandby(optedIn = true, permitted = false))
-        assertFalse(leavesInStandby(optedIn = false, permitted = true))
-        assertFalse(leavesInStandby(optedIn = false, permitted = false))
-    }
-
-    @Test
-    fun a_wake_request_writes_the_list_with_the_screen_on_and_waits_with_it_off() {
-        assertEquals(WakeStep.PutBack, wakeStep(optedIn = true, permitted = true, interactive = true))
-        assertEquals(WakeStep.WaitForScreenOn, wakeStep(optedIn = true, permitted = true, interactive = false))
-    }
-
-    @Test
-    fun a_wake_request_does_nothing_without_the_opt_in_or_without_the_permission() {
-        assertEquals(WakeStep.Idle, wakeStep(optedIn = false, permitted = true, interactive = true))
-        assertEquals(WakeStep.Idle, wakeStep(optedIn = true, permitted = false, interactive = true))
-        assertEquals(WakeStep.Idle, wakeStep(optedIn = true, permitted = false, interactive = false))
-    }
-
-    @Test
-    fun the_service_is_added_once_after_the_other_entries_in_their_order() {
-        assertEquals("$OTHER:com.third.app/.Service:$KEYS", withService("$OTHER:com.third.app/.Service", keyService))
-    }
-
-    @Test
-    fun an_absent_empty_or_null_text_list_becomes_the_service_alone() {
-        assertEquals(KEYS, withService(null, keyService))
-        assertEquals(KEYS, withService("", keyService))
-        assertEquals(KEYS, withService("null", keyService))
-    }
-
-    @Test
-    fun empty_entries_are_dropped_and_the_others_keep_their_text() {
-        assertEquals("$OTHER:$KEYS", withService("$OTHER:", keyService))
-        assertEquals("com.third.app/com.third.app.Service:$KEYS", withService(":com.third.app/com.third.app.Service", keyService))
-    }
-
-    @Test
-    fun a_listed_service_is_not_added_again_in_either_spelling() {
-        assertNull(withService("$OTHER:$KEYS", keyService))
-        assertNull(withService("dev.niltsiar.tvhome/dev.niltsiar.tvhome.service.keys.KeyService", keyService))
-    }
+val GuardDecisionTest by testSuite {
+    robolectricTestSuite<GuardDecisionTestContent>(
+        "sdk 31",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+            },
+    )
 }
 
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [31])
-class GuardKeepTest {
-    private val app: Application = RuntimeEnvironment.getApplication()
-
-    @Before
-    fun setUp() {
-        GuardKeep.reset()
-    }
-
-    @After
-    fun tearDown() {
-        GuardKeep.reset()
-    }
-
-    private val ownKeys = ComponentName(app, KeyService::class.java).flattenToShortString()
-
-    private fun enabled(): String? = Settings.Secure.getString(app.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
-
-    private fun setEnabled(list: String) {
-        Settings.Secure.putString(app.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, list)
-    }
-
-    private fun permit(granted: Boolean) {
-        if (granted) {
-            shadowOf(app).grantPermissions(Manifest.permission.WRITE_SECURE_SETTINGS)
-        } else {
-            shadowOf(app).denyPermissions(Manifest.permission.WRITE_SECURE_SETTINGS)
+class GuardDecisionTestContent :
+    RobolectricTestSuiteContent({
+        test("the standby exit needs both the opt in and the permission") {
+            leavesInStandby(optedIn = true, permitted = true).shouldBeTrue()
+            leavesInStandby(optedIn = true, permitted = false).shouldBeFalse()
+            leavesInStandby(optedIn = false, permitted = true).shouldBeFalse()
+            leavesInStandby(optedIn = false, permitted = false).shouldBeFalse()
         }
-    }
 
-    private fun screen(on: Boolean) = shadowOf(app.getSystemService(PowerManager::class.java)).turnScreenOn(on)
+        test("a wake request writes the list with the screen on and waits with it off") {
+            wakeStep(optedIn = true, permitted = true, interactive = true) shouldBe WakeStep.PutBack
+            wakeStep(optedIn = true, permitted = true, interactive = false) shouldBe WakeStep.WaitForScreenOn
+        }
 
-    private fun watchingScreenOn() = shadowOf(app).registeredReceivers.any { it.intentFilter.hasAction(Intent.ACTION_SCREEN_ON) }
+        test("a wake request does nothing without the opt in or without the permission") {
+            wakeStep(optedIn = false, permitted = true, interactive = true) shouldBe WakeStep.Idle
+            wakeStep(optedIn = true, permitted = false, interactive = true) shouldBe WakeStep.Idle
+            wakeStep(optedIn = true, permitted = false, interactive = false) shouldBe WakeStep.Idle
+        }
 
-    @Test
-    fun the_opt_in_is_off_until_it_is_set_and_reads_off_before_the_unlock() {
-        assertFalse(GuardKeep.offInStandby(app))
+        test("the service is added once after the other entries in their order") {
+            withService("$OTHER:com.third.app/.Service", keyService) shouldBe "$OTHER:com.third.app/.Service:$KEYS"
+        }
 
-        GuardKeep.setOffInStandby(app, true)
-        assertTrue(GuardKeep.offInStandby(app))
+        test("an absent empty or null text list becomes the service alone") {
+            withService(null, keyService) shouldBe KEYS
+            withService("", keyService) shouldBe KEYS
+            withService("null", keyService) shouldBe KEYS
+        }
 
-        shadowOf(app.getSystemService(UserManager::class.java)).setUserUnlocked(false)
-        assertFalse(GuardKeep.offInStandby(app))
-    }
+        test("empty entries are dropped and the others keep their text") {
+            withService("$OTHER:", keyService) shouldBe "$OTHER:$KEYS"
+            withService(":com.third.app/com.third.app.Service", keyService) shouldBe "com.third.app/com.third.app.Service:$KEYS"
+        }
 
-    @Test
-    fun with_the_opt_in_and_the_permission_and_the_screen_on_the_service_joins_the_list_and_accessibility_turns_on() {
-        GuardKeep.setOffInStandby(app, true)
-        permit(true)
-        setEnabled(OTHER)
-        Settings.Secure.putInt(app.contentResolver, Settings.Secure.ACCESSIBILITY_ENABLED, 0)
+        test("a listed service is not added again in either spelling") {
+            withService("$OTHER:$KEYS", keyService).shouldBeNull()
+            withService("dev.niltsiar.tvhome/dev.niltsiar.tvhome.service.keys.KeyService", keyService).shouldBeNull()
+        }
+    })
 
-        GuardKeep.ensureKeyService(app)
-
-        assertEquals("$OTHER:$ownKeys", enabled())
-        assertEquals(1, Settings.Secure.getInt(app.contentResolver, Settings.Secure.ACCESSIBILITY_ENABLED))
-    }
-
-    @Test
-    fun a_service_that_is_listed_already_leaves_the_list_as_it_is() {
-        GuardKeep.setOffInStandby(app, true)
-        permit(true)
-        setEnabled("$ownKeys:$OTHER")
-
-        GuardKeep.ensureKeyService(app)
-
-        assertEquals("$ownKeys:$OTHER", enabled())
-    }
-
-    @Test
-    fun without_the_opt_in_the_list_is_left_alone() {
-        permit(true)
-        setEnabled(OTHER)
-
-        GuardKeep.ensureKeyService(app)
-
-        assertEquals(OTHER, enabled())
-    }
-
-    @Test
-    fun without_the_permission_the_list_is_left_alone_and_no_screen_watch_starts() {
-        GuardKeep.setOffInStandby(app, true)
-        permit(false)
-        setEnabled(OTHER)
-        screen(false)
-
-        GuardKeep.ensureKeyService(app)
-
-        assertEquals(OTHER, enabled())
-        assertFalse(watchingScreenOn())
-    }
-
-    @Test
-    fun with_the_screen_off_the_list_waits_for_the_screen_and_is_written_once_when_it_turns_on() {
-        GuardKeep.setOffInStandby(app, true)
-        permit(true)
-        setEnabled(OTHER)
-        screen(false)
-
-        GuardKeep.ensureKeyService(app)
-        GuardKeep.ensureKeyService(app)
-
-        assertEquals(OTHER, enabled())
-        assertEquals(1, shadowOf(app).registeredReceivers.count { it.intentFilter.hasAction(Intent.ACTION_SCREEN_ON) })
-
-        screen(true)
-        app.sendBroadcast(Intent(Intent.ACTION_SCREEN_ON))
-        shadowOf(Looper.getMainLooper()).idle()
-
-        assertEquals("$OTHER:$ownKeys", enabled())
-        assertFalse(watchingScreenOn())
-    }
+val GuardKeepTest by testSuite {
+    robolectricTestSuite<GuardKeepTestContent>(
+        "sdk 31",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+            },
+    )
 }
+
+class GuardKeepTestContent :
+    RobolectricTestSuiteContent({
+        testFixture {
+            object {
+                val app: Application = RuntimeEnvironment.getApplication()
+
+                val ownKeys = ComponentName(app, KeyService::class.java).flattenToShortString()
+
+                init {
+                    GuardKeep.reset()
+                }
+
+                fun enabled(): String? = Settings.Secure.getString(app.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
+
+                fun setEnabled(list: String) {
+                    Settings.Secure.putString(app.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, list)
+                }
+
+                fun permit(granted: Boolean) {
+                    if (granted) {
+                        shadowOf(app).grantPermissions(Manifest.permission.WRITE_SECURE_SETTINGS)
+                    } else {
+                        shadowOf(app).denyPermissions(Manifest.permission.WRITE_SECURE_SETTINGS)
+                    }
+                }
+
+                fun screen(on: Boolean) = shadowOf(app.getSystemService(PowerManager::class.java)).turnScreenOn(on)
+
+                fun watchingScreenOn() = shadowOf(app).registeredReceivers.any { it.intentFilter.hasAction(Intent.ACTION_SCREEN_ON) }
+            }
+        } closeWith {
+            GuardKeep.reset()
+        } asContextForEach {
+            test("the opt in is off until it is set and reads off before the unlock") {
+                GuardKeep.offInStandby(app).shouldBeFalse()
+
+                GuardKeep.setOffInStandby(app, true)
+                GuardKeep.offInStandby(app).shouldBeTrue()
+
+                shadowOf(app.getSystemService(UserManager::class.java)).setUserUnlocked(false)
+                GuardKeep.offInStandby(app).shouldBeFalse()
+            }
+
+            test("with the opt in and the permission and the screen on the service joins the list and accessibility turns on") {
+                GuardKeep.setOffInStandby(app, true)
+                permit(true)
+                setEnabled(OTHER)
+                Settings.Secure.putInt(app.contentResolver, Settings.Secure.ACCESSIBILITY_ENABLED, 0)
+
+                GuardKeep.ensureKeyService(app)
+
+                enabled() shouldBe "$OTHER:$ownKeys"
+                Settings.Secure.getInt(app.contentResolver, Settings.Secure.ACCESSIBILITY_ENABLED) shouldBe 1
+            }
+
+            test("a service that is listed already leaves the list as it is") {
+                GuardKeep.setOffInStandby(app, true)
+                permit(true)
+                setEnabled("$ownKeys:$OTHER")
+
+                GuardKeep.ensureKeyService(app)
+
+                enabled() shouldBe "$ownKeys:$OTHER"
+            }
+
+            test("without the opt in the list is left alone") {
+                permit(true)
+                setEnabled(OTHER)
+
+                GuardKeep.ensureKeyService(app)
+
+                enabled() shouldBe OTHER
+            }
+
+            test("without the permission the list is left alone and no screen watch starts") {
+                GuardKeep.setOffInStandby(app, true)
+                permit(false)
+                setEnabled(OTHER)
+                screen(false)
+
+                GuardKeep.ensureKeyService(app)
+
+                enabled() shouldBe OTHER
+                watchingScreenOn().shouldBeFalse()
+            }
+
+            test("with the screen off the list waits for the screen and is written once when it turns on") {
+                GuardKeep.setOffInStandby(app, true)
+                permit(true)
+                setEnabled(OTHER)
+                screen(false)
+
+                GuardKeep.ensureKeyService(app)
+                GuardKeep.ensureKeyService(app)
+
+                enabled() shouldBe OTHER
+                (shadowOf(app).registeredReceivers.count { it.intentFilter.hasAction(Intent.ACTION_SCREEN_ON) }) shouldBe 1
+
+                screen(true)
+                app.sendBroadcast(Intent(Intent.ACTION_SCREEN_ON))
+                shadowOf(Looper.getMainLooper()).idle()
+
+                enabled() shouldBe "$OTHER:$ownKeys"
+                watchingScreenOn().shouldBeFalse()
+            }
+        }
+    })

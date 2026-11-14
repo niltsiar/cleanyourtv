@@ -3,92 +3,102 @@ package dev.niltsiar.tvhome.feature.clock
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertTrue
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
+import de.infix.testBalloon.framework.core.JUnit4RulesContext
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectric
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import io.kotest.assertions.withClue
+import io.kotest.matchers.floats.plusOrMinus
+import io.kotest.matchers.floats.shouldBeGreaterThan
+import io.kotest.matchers.floats.shouldBeLessThan
+import io.kotest.matchers.ranges.shouldBeIn
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import kotlin.random.Random
 
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [31])
-class ClockSceneStateTest {
-    @get:Rule
-    val compose = createAndroidComposeRule<ComponentActivity>()
-
-    private fun play(
-        state: ClockSceneState,
-        cycleGlow: Boolean = true,
-    ) {
-        compose.mainClock.autoAdvance = false
-        compose.setContent { LaunchedEffect(state) { state.run(cycleGlow) } }
-    }
-
-    private fun advance(ms: Long) = compose.mainClock.advanceTimeBy(ms)
-
-    @Test
-    fun the_clock_fades_in_over_1200_ms() {
-        val state = ClockSceneState(Random(3))
-        play(state)
-        advance(FADE_IN_MS / 2L)
-        val fading = state.fade.value
-        assertTrue("fading in, was $fading", fading > 0f && fading < 1f)
-        advance(FADE_IN_MS.toLong())
-        assertEquals(1f, state.fade.value, 0f)
-    }
-
-    @Test
-    fun after_a_minute_it_fades_out_in_900_ms_moves_while_unseen_and_fades_back_in_over_1200_ms() {
-        val state = ClockSceneState(Random(3))
-        play(state)
-        advance(FADE_IN_MS + 100L)
-        val first = state.spot
-
-        advance(MOVE_MS - 200)
-        assertEquals("still in place just before the minute", first, state.spot)
-        assertEquals(1f, state.fade.value, 0f)
-
-        advance(200L + FADE_OUT_MS / 2)
-        assertTrue("fading out", state.fade.value in 0.01f..0.99f)
-        assertEquals("not moved while visible", first, state.spot)
-
-        advance(FADE_OUT_MS.toLong())
-        assertNotEquals("moved once the fade-out ended", first, state.spot)
-        assertTrue(state.fade.value < 1f)
-
-        advance(FADE_IN_MS + 100L)
-        assertEquals(1f, state.fade.value, 0f)
-    }
-
-    @Test
-    fun the_glow_walks_to_the_next_palette_colour_in_16_steps_of_half_a_second() {
-        val state = ClockSceneState(Random(3))
-        val start = state.glow
-        val next = GlowPalette[(GlowPalette.indexOf(start) + 1) % GlowPalette.size]
-        play(state)
-        advance(FADE_IN_MS + MOVE_MS)
-        assertEquals("steps are 500 ms apart: none before the first", start, state.glow)
-
-        advance(GLOW_STEP_MS + 100)
-        val firstStep = state.glow
-        assertNotEquals(start, firstStep)
-        assertNotEquals(next, firstStep)
-
-        advance(GLOW_STEP_MS * GLOW_STEPS)
-        assertEquals(next, state.glow)
-    }
-
-    @Test
-    fun without_the_glow_the_colour_never_changes() {
-        val state = ClockSceneState(Random(3))
-        val start = state.glow
-        play(state, cycleGlow = false)
-
-        advance(MOVE_MS * 3)
-
-        assertEquals(start, state.glow)
-    }
+val ClockSceneStateTest by testSuite {
+    robolectricTestSuite<ClockSceneStateTestContent>("sdk 31", testConfig = TestConfig.robolectric { sdk = 31 })
 }
+
+class ClockSceneStateTestContent :
+    RobolectricTestSuiteContent({
+        testFixture {
+            object : JUnit4RulesContext() {
+                val compose = rule(createAndroidComposeRule<ComponentActivity>())
+
+                fun play(
+                    state: ClockSceneState,
+                    cycleGlow: Boolean = true,
+                ) {
+                    compose.mainClock.autoAdvance = false
+                    compose.setContent { LaunchedEffect(state) { state.run(cycleGlow) } }
+                }
+
+                fun advance(ms: Long) = compose.mainClock.advanceTimeBy(ms)
+            }
+        } asContextForEach {
+            test("the clock fades in over 1200 ms") {
+                val state = ClockSceneState(Random(3))
+                play(state)
+                advance(FADE_IN_MS / 2L)
+                val fading = state.fade.value
+                withClue("fading in, was $fading") {
+                    fading shouldBeGreaterThan 0f
+                    fading shouldBeLessThan 1f
+                }
+                advance(FADE_IN_MS.toLong())
+                state.fade.value shouldBe (1f plusOrMinus 0f)
+            }
+
+            test("after a minute it fades out in 900 ms moves while unseen and fades back in over 1200 ms") {
+                val state = ClockSceneState(Random(3))
+                play(state)
+                advance(FADE_IN_MS + 100L)
+                val first = state.spot
+
+                advance(MOVE_MS - 200)
+                withClue("still in place just before the minute") { state.spot shouldBe first }
+                state.fade.value shouldBe (1f plusOrMinus 0f)
+
+                advance(200L + FADE_OUT_MS / 2)
+                withClue("fading out") { state.fade.value shouldBeIn 0.01f..0.99f }
+                withClue("not moved while visible") { state.spot shouldBe first }
+
+                advance(FADE_OUT_MS.toLong())
+                withClue("moved once the fade-out ended") { state.spot shouldNotBe first }
+                state.fade.value shouldBeLessThan 1f
+
+                advance(FADE_IN_MS + 100L)
+                state.fade.value shouldBe (1f plusOrMinus 0f)
+            }
+
+            test("the glow walks to the next palette colour in 16 steps of half a second") {
+                val state = ClockSceneState(Random(3))
+                val start = state.glow
+                val next = GlowPalette[(GlowPalette.indexOf(start) + 1) % GlowPalette.size]
+                play(state)
+                advance(FADE_IN_MS + MOVE_MS)
+                withClue("steps are 500 ms apart: none before the first") { state.glow shouldBe start }
+
+                advance(GLOW_STEP_MS + 100)
+                val firstStep = state.glow
+                firstStep shouldNotBe start
+                firstStep shouldNotBe next
+
+                advance(GLOW_STEP_MS * GLOW_STEPS)
+                state.glow shouldBe next
+            }
+
+            test("without the glow the colour never changes") {
+                val state = ClockSceneState(Random(3))
+                val start = state.glow
+                play(state, cycleGlow = false)
+
+                advance(MOVE_MS * 3)
+
+                state.glow shouldBe start
+            }
+        }
+    })

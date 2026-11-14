@@ -1,49 +1,45 @@
 package dev.niltsiar.tvhome.feature.library
 
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
 
-class LibraryLoadsTest {
-    @Test
-    fun a_refresh_during_the_opening_still_reveals_once() {
+val LibraryLoadsTest by testSuite {
+    test("a refresh during the opening still reveals once") {
         val loads = LibraryLoads()
         val opening = loads.start(reveal = true)
         val refresh = loads.start(reveal = false)
 
-        assertFalse(loads.isLatest(opening))
-        assertTrue(loads.isLatest(refresh))
-        assertTrue(loads.takeReveal())
-        assertFalse(loads.takeReveal())
+        loads.isLatest(opening).shouldBeFalse()
+        loads.isLatest(refresh).shouldBeTrue()
+        loads.takeReveal().shouldBeTrue()
+        loads.takeReveal().shouldBeFalse()
     }
 
-    @Test
-    fun a_refresh_on_its_own_never_reveals() {
+    test("a refresh on its own never reveals") {
         val loads = LibraryLoads()
 
-        assertTrue(loads.isLatest(loads.start(reveal = false)))
-        assertFalse(loads.takeReveal())
+        loads.isLatest(loads.start(reveal = false)).shouldBeTrue()
+        loads.takeReveal().shouldBeFalse()
     }
 
-    @Test
-    fun an_opening_after_a_refresh_reveals_with_its_own_load() {
+    test("an opening after a refresh reveals with its own load") {
         val loads = LibraryLoads()
         val refresh = loads.start(reveal = false)
         val opening = loads.start(reveal = true)
 
-        assertFalse(loads.isLatest(refresh))
-        assertTrue(loads.isLatest(opening))
-        assertTrue(loads.takeReveal())
+        loads.isLatest(refresh).shouldBeFalse()
+        loads.isLatest(opening).shouldBeTrue()
+        loads.takeReveal().shouldBeTrue()
     }
 
-    @Test
-    fun refreshes_after_the_reveal_do_not_reveal_again() {
+    test("refreshes after the reveal do not reveal again") {
         val loads = LibraryLoads()
         loads.start(reveal = true)
-        assertTrue(loads.takeReveal())
+        loads.takeReveal().shouldBeTrue()
 
         loads.start(reveal = false)
 
-        assertFalse(loads.takeReveal())
+        loads.takeReveal().shouldBeFalse()
     }
 }

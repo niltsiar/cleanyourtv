@@ -1,56 +1,51 @@
 package dev.niltsiar.tvhome.service.keys
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.maps.shouldBeEmpty
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.shouldBe
 
-class AppKeysTest {
+val AppKeysTest by testSuite {
     // Key names resolved by a stand-in: android.view.KeyEvent is not backed by code in JVM tests.
-    private fun keyCode(name: String): Int =
+    fun keyCode(name: String): Int =
         when (name) {
             "KEYCODE_BUTTON_3" -> 190
             "KEYCODE_BUTTON_8" -> 195
             else -> 0
         }
 
-    private fun parse(vararg entries: String) = parseAppKeys(entries.asList(), ::keyCode)
+    fun parse(vararg entries: String) = parseAppKeys(entries.asList(), ::keyCode)
 
-    private fun keysOf(vararg entries: String) = AppKeys(entries.asList(), ::keyCode)
+    fun keysOf(vararg entries: String) = AppKeys(entries.asList(), ::keyCode)
 
-    @Test
-    fun key_names_work_like_numbers() {
+    test("key names work like numbers") {
         val keys = parse("KEYCODE_BUTTON_3:com.google.android.youtube.tv", "KEYCODE_NOT_A_KEY:a.b")
-        assertEquals(mapOf(190 to "com.google.android.youtube.tv"), keys)
+        keys shouldBe mapOf(190 to "com.google.android.youtube.tv")
     }
 
-    @Test
-    fun a_keycode_and_a_package_with_spaces_around_them() {
+    test("a keycode and a package with spaces around them") {
         val keys = parse("190:com.google.android.youtube.tv", " 193 : com.netflix.ninja ")
-        assertEquals(mapOf(190 to "com.google.android.youtube.tv", 193 to "com.netflix.ninja"), keys)
+        keys shouldBe mapOf(190 to "com.google.android.youtube.tv", 193 to "com.netflix.ninja")
     }
 
-    @Test
-    fun bad_entries_are_skipped() {
-        assertTrue(parse("com.google.android.youtube.tv", "youtube:com.google.android.youtube.tv", "190:", "").isEmpty())
-        assertTrue(parseAppKeys(listOf(null)).isEmpty())
+    test("bad entries are skipped") {
+        parse("com.google.android.youtube.tv", "youtube:com.google.android.youtube.tv", "190:", "").shouldBeEmpty()
+        parseAppKeys(listOf(null)).shouldBeEmpty()
     }
 
-    @Test
-    fun the_last_entry_for_a_keycode_wins() {
-        assertEquals("c.d", parse("190:a.b", "190:c.d")[190])
+    test("the last entry for a keycode wins") {
+        parse("190:a.b", "190:c.d")[190] shouldBe "c.d"
     }
 
-    @Test
-    fun scancode_entries_are_read_apart_from_keycode_entries() {
+    test("scancode entries are read apart from keycode entries") {
         val entries = listOf("scan:490:com.wbd.hbomax", " scan : 491 : a.b ", "scan:x:a.b", "scan:12:", "190:c.d", "scan:491:e.f")
-        assertEquals(mapOf(490 to "com.wbd.hbomax", 491 to "e.f"), parseAppScancodes(entries))
-        assertEquals(mapOf(190 to "c.d"), parseAppKeys(entries, ::keyCode))
+        parseAppScancodes(entries) shouldBe mapOf(490 to "com.wbd.hbomax", 491 to "e.f")
+        parseAppKeys(entries, ::keyCode) shouldBe mapOf(190 to "c.d")
     }
 
-    @Test
-    fun hold_entries_get_their_own_maps() {
+    test("hold entries get their own maps") {
         val keys =
             keysOf(
                 "hold:KEYCODE_BUTTON_8:org.xbmc.kodi",
@@ -62,14 +57,13 @@ class AppKeysTest {
                 "hold:scan:491:",
                 "hold:",
             )
-        assertEquals(mapOf(195 to "org.xbmc.kodi", 190 to "a.b"), keys.holdKeycodes)
-        assertEquals(mapOf(490 to "d.e"), keys.holdScancodes)
-        assertEquals(mapOf(190 to "c.d"), keys.keycodes)
-        assertTrue(keys.scancodes.isEmpty())
+        keys.holdKeycodes shouldBe mapOf(195 to "org.xbmc.kodi", 190 to "a.b")
+        keys.holdScancodes shouldBe mapOf(490 to "d.e")
+        keys.keycodes shouldBe mapOf(190 to "c.d")
+        keys.scancodes.shouldBeEmpty()
     }
 
-    @Test
-    fun front_entries_apply_while_the_buttons_own_app_is_in_front() {
+    test("front entries apply while the buttons own app is in front") {
         val keys =
             keysOf(
                 "172:com.vt.tv.tvcenter",
@@ -78,32 +72,30 @@ class AppKeysTest {
                 "front:scan:490:input:a/.B/HW1",
                 "hold:172:a.b",
             )
-        assertTrue(keys.watchesFront)
-        assertEquals("guide:com.vt.tv.tvcenter", keys.keyTap(172, "com.vt.tv.tvcenter"))
-        assertEquals("com.vt.tv.tvcenter", keys.keyTap(172, "com.gathin.tvhome"))
-        assertEquals("com.vt.tv.tvcenter", keys.keyTap(172, ""))
-        assertEquals("input:a/.B/HW1", keys.scanTap(490, "com.wbd.hbomax"))
-        assertEquals("com.wbd.hbomax", keys.scanTap(490, "other"))
-        assertEquals(mapOf(172 to "a.b"), keys.holdKeycodes)
-        assertFalse(keysOf("172:a.b").watchesFront)
+        keys.watchesFront.shouldBeTrue()
+        keys.keyTap(172, "com.vt.tv.tvcenter") shouldBe "guide:com.vt.tv.tvcenter"
+        keys.keyTap(172, "com.gathin.tvhome") shouldBe "com.vt.tv.tvcenter"
+        keys.keyTap(172, "") shouldBe "com.vt.tv.tvcenter"
+        keys.scanTap(490, "com.wbd.hbomax") shouldBe "input:a/.B/HW1"
+        keys.scanTap(490, "other") shouldBe "com.wbd.hbomax"
+        keys.holdKeycodes shouldBe mapOf(172 to "a.b")
+        keysOf("172:a.b").watchesFront.shouldBeFalse()
     }
 
-    @Test
-    fun in_front_matches_the_targets_package_only() {
-        assertTrue(inFront("com.vt.tv.tvcenter", "com.vt.tv.tvcenter"))
-        assertTrue(inFront("io.github.maxhayim.brightness/.QuickActivity", "io.github.maxhayim.brightness"))
-        assertFalse(inFront("com.vt.tv.tvcenter", "com.gathin.tvhome"))
-        assertFalse(inFront("com.vt.tv.tvcenter", ""))
-        assertFalse(inFront(null, "com.vt.tv.tvcenter"))
-        assertFalse(inFront("input:com.vt.source.external/.HdmiInputService/HW2", "com.vt.source.external"))
+    test("in front matches the targets package only") {
+        inFront("com.vt.tv.tvcenter", "com.vt.tv.tvcenter").shouldBeTrue()
+        inFront("io.github.maxhayim.brightness/.QuickActivity", "io.github.maxhayim.brightness").shouldBeTrue()
+        inFront("com.vt.tv.tvcenter", "com.gathin.tvhome").shouldBeFalse()
+        inFront("com.vt.tv.tvcenter", "").shouldBeFalse()
+        inFront(null, "com.vt.tv.tvcenter").shouldBeFalse()
+        inFront("input:com.vt.source.external/.HdmiInputService/HW2", "com.vt.source.external").shouldBeFalse()
     }
 
-    @Test
-    fun hold_time_picks_the_hold_target() {
-        assertEquals("hold.app", tapOrHold("app", "hold.app", HOLD_MS))
-        assertEquals("hold.app", tapOrHold("app", "hold.app", 5000))
-        assertEquals("app", tapOrHold("app", "hold.app", HOLD_MS - 1))
-        assertEquals("app", tapOrHold("app", null, 5000))
-        assertNull(tapOrHold(null, "hold.app", 0))
+    test("hold time picks the hold target") {
+        tapOrHold("app", "hold.app", HOLD_MS) shouldBe "hold.app"
+        tapOrHold("app", "hold.app", 5000) shouldBe "hold.app"
+        tapOrHold("app", "hold.app", HOLD_MS - 1) shouldBe "app"
+        tapOrHold("app", null, 5000) shouldBe "app"
+        tapOrHold(null, "hold.app", 0).shouldBeNull()
     }
 }

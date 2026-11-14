@@ -1,5 +1,6 @@
 plugins {
     id("tvhome.android.library.compose")
+    id("tvhome.android.testballoon")
 }
 
 android {

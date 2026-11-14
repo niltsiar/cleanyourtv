@@ -3,45 +3,57 @@ package dev.niltsiar.tvhome.feature.clock
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.State
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import de.infix.testBalloon.framework.core.JUnit4RulesContext
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectric
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
+import io.kotest.matchers.floats.plusOrMinus
+import io.kotest.matchers.floats.shouldBeLessThan
+import io.kotest.matchers.shouldBe
 
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
-class ColonBreathTest {
-    @get:Rule
-    val compose = createAndroidComposeRule<ComponentActivity>()
-
-    private fun breathAfter(
-        motion: Motion,
-        millis: Long,
-    ): Float {
-        lateinit var breath: State<Float>
-        compose.mainClock.autoAdvance = false
-        compose.setContent { TvTheme(motion = motion) { breath = rememberColonBreath() } }
-        compose.mainClock.advanceTimeBy(millis)
-        return breath.value
-    }
-
-    @Test
-    fun the_colon_dims_and_returns_by_default() {
-        assertTrue(breathAfter(Motion(), millis = 1_800) < 0.5f)
-    }
-
-    @Test
-    fun the_colon_stays_at_full_opacity_with_reduced_motion() {
-        assertEquals(1f, breathAfter(Motion(reducedMotion = true), millis = 1_800), 0f)
-    }
-
-    @Test
-    fun the_colon_stays_at_full_opacity_with_animations_off() {
-        assertEquals(1f, breathAfter(Motion(animations = false), millis = 1_800), 0f)
-    }
+val ColonBreathTest by testSuite {
+    robolectricTestSuite<ColonBreathTestContent>(
+        "sdk 31, 960x540 dp",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "w960dp-h540dp-xhdpi"
+            },
+    )
 }
+
+class ColonBreathTestContent :
+    RobolectricTestSuiteContent({
+        testFixture {
+            object : JUnit4RulesContext() {
+                val compose = rule(createAndroidComposeRule<ComponentActivity>())
+
+                fun breathAfter(
+                    motion: Motion,
+                    millis: Long,
+                ): Float {
+                    lateinit var breath: State<Float>
+                    compose.mainClock.autoAdvance = false
+                    compose.setContent { TvTheme(motion = motion) { breath = rememberColonBreath() } }
+                    compose.mainClock.advanceTimeBy(millis)
+                    return breath.value
+                }
+            }
+        } asContextForEach {
+            test("the colon dims and returns by default") {
+                breathAfter(Motion(), millis = 1_800) shouldBeLessThan 0.5f
+            }
+
+            test("the colon stays at full opacity with reduced motion") {
+                breathAfter(Motion(reducedMotion = true), millis = 1_800) shouldBe (1f plusOrMinus 0f)
+            }
+
+            test("the colon stays at full opacity with animations off") {
+                breathAfter(Motion(animations = false), millis = 1_800) shouldBe (1f plusOrMinus 0f)
+            }
+        }
+    })
