@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.PixelMap
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.layout.FirstBaseline
+import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsFocused
@@ -286,12 +287,86 @@ class SettingsEdgesUiTestContent :
                 }
             }
 
-            test("a heading is 48 dp tall with its baseline 34 dp under its top") {
-                show()
-                val heading = compose.onAllNodesWithTag("settings:heading")[0]
+            test("a heading is 56 dp with the divider 16 dp under its top and its baseline 12 dp over its group's first row") {
+                show(reorder = true)
+                val headings = compose.onAllNodesWithTag("settings:heading")
+                val dividers = compose.onAllNodesWithTag("settings:divider")
+                dividers.fetchSemanticsNodes().size shouldBe groupFirstRows.size
+                for ((at, row) in groupFirstRows.withIndex()) {
+                    val heading = headings[at].getUnclippedBoundsInRoot()
+                    val divider = dividers[at].getUnclippedBoundsInRoot()
+                    val baseline = heading.top + headings[at].getAlignmentLinePosition(FirstBaseline)
+                    withClue("heading over $row: $heading, divider $divider") {
+                        heading.height.value shouldBe (56f plusOrMinus 0.5f)
+                        (divider.top - heading.top).value shouldBe (16f plusOrMinus 0.5f)
+                        divider.height.value shouldBe (1f plusOrMinus 0.1f)
+                        (divider.left - heading.left).value shouldBe (12f plusOrMinus 0.5f)
+                        (heading.right - divider.right).value shouldBe (12f plusOrMinus 0.5f)
+                        (heading.bottom - baseline).value shouldBe (12f plusOrMinus 0.5f)
+                        if (row.startsWith("setting:")) unclipped(row).top.value shouldBe (heading.bottom.value plusOrMinus 0.5f)
+                    }
+                }
+            }
 
-                heading.getUnclippedBoundsInRoot().height.value shouldBe (48f plusOrMinus 0.5f)
-                heading.getAlignmentLinePosition(FirstBaseline).value shouldBe (34f plusOrMinus 0.5f)
+            test("a heading that opens the list has no divider and no divider follows the last row") {
+                show()
+                val headings = compose.onAllNodesWithTag("settings:heading")
+                val dividers = compose.onAllNodesWithTag("settings:divider")
+                val count = headings.fetchSemanticsNodes().size
+                dividers.fetchSemanticsNodes().size shouldBe count - 1
+                for (at in 1 until count) {
+                    val divider = dividers[at - 1].getUnclippedBoundsInRoot()
+                    withClue("divider $at") {
+                        (divider.top - headings[at].getUnclippedBoundsInRoot().top).value shouldBe (16f plusOrMinus 0.5f)
+                        divider.bottom shouldBeLessThan unclipped("settings:tv_settings").top
+                    }
+                }
+            }
+
+            test("a divider stays 38 dp or more over a focused first row with its heading between them and never meets a focused row") {
+                show(reorder = true)
+                val steps = List(26) { Key.DirectionDown } + List(26) { Key.DirectionUp }
+                val firstsSeen = mutableSetOf<String>()
+                for ((index, key) in listOf<Key?>(null).plus(steps).withIndex()) {
+                    if (key != null) press(key)
+                    val (tag, row) = focusedRow()
+                    val nodes = compose.onAllNodesWithTag("settings:divider")
+                    val dividers = nodes.fetchSemanticsNodes().indices.map { nodes[it].getUnclippedBoundsInRoot() }
+                    for (divider in dividers) {
+                        withClue("step $index: $tag at $row, divider at $divider") {
+                            (divider.bottom < row.top || divider.top > row.bottom).shouldBeTrue()
+                        }
+                    }
+                    val group = groupFirstRows.indexOf(tag)
+                    if (group >= 0) {
+                        firstsSeen += tag
+                        val divider = dividers.filter { it.bottom <= row.top }.maxBy { it.bottom }
+                        val heading = compose.onAllNodesWithTag("settings:heading")[group]
+                        val baseline = heading.getUnclippedBoundsInRoot().top + heading.getAlignmentLinePosition(FirstBaseline)
+                        withClue("step $index: $tag at $row, divider at $divider, heading baseline $baseline") {
+                            (row.top - divider.bottom) shouldBeGreaterThanOrEqualTo 38.dp
+                            baseline shouldBeGreaterThan divider.bottom
+                            baseline shouldBeLessThan row.top
+                        }
+                    }
+                }
+                firstsSeen shouldBe groupFirstRows.toSet()
+            }
+
+            test("no row heading or divider moves in the list while focus moves within and across groups") {
+                show(reorder = true)
+                val before = placesInList()
+                val steps = List(26) { Key.DirectionDown } + List(26) { Key.DirectionUp }
+                for ((index, key) in steps.withIndex()) {
+                    press(key)
+                    val now = placesInList()
+                    for ((name, place) in before) {
+                        withClue("step $index, $name") {
+                            now.getValue(name).first.value shouldBe (place.first.value plusOrMinus 0.5f)
+                            now.getValue(name).second.value shouldBe (place.second.value plusOrMinus 0.5f)
+                        }
+                    }
+                }
             }
 
             test("the wallpaper row has its label on the start side and its value and a chevron on the end side") {
@@ -479,6 +554,38 @@ private class SettingsEdgesUiFixture : JUnit4RulesContext() {
 
     fun unclipped(tag: String) = compose.onNodeWithTag(tag).getUnclippedBoundsInRoot()
 
+    /** The tag and bounds of the row that holds focus: a button row itself, or the option row around a focused option. */
+    fun focusedRow(): Pair<String, DpRect> {
+        var node: SemanticsNode? = compose.onNode(isFocused()).fetchSemanticsNode()
+        while (node != null) {
+            val tag = node.config.getOrNull(SemanticsProperties.TestTag)
+            if (tag != null && (tag.startsWith("setting:") || tag.startsWith("settings:"))) return tag to unclipped(tag)
+            node = node.parent
+        }
+        error("no row holds focus")
+    }
+
+    /** Where each row, heading and divider sits in the list's content, its top and its height, whatever the scroll. */
+    fun placesInList(): Map<String, Pair<Dp, Dp>> {
+        val origin = list().top - (scrolled().first / density).dp
+        val rows =
+            settingsSections(TvConfig()).flatMap { it.rows }.map { "setting:${it.id.name}" } +
+                listOf(
+                    "settings:reorder",
+                    "settings:wallpaper",
+                    "settings:open_on_start",
+                    "settings:follow_theme",
+                    "settings:default_home",
+                    "settings:tv_settings",
+                )
+        val places = rows.associateWith { unclipped(it) }.toMutableMap()
+        for (tag in listOf("settings:heading", "settings:divider")) {
+            val nodes = compose.onAllNodesWithTag(tag)
+            for (at in nodes.fetchSemanticsNodes().indices) places["$tag $at"] = nodes[at].getUnclippedBoundsInRoot()
+        }
+        return places.mapValues { (_, bounds) -> (bounds.top - origin) to bounds.height }
+    }
+
     fun centre(tag: String) = unclipped(tag).let { (it.top + it.bottom) / 2 }
 
     /** A text of the row tagged [tag]: a row merges its texts, so the unmerged tree is read. */
@@ -574,4 +681,15 @@ private class SettingsEdgesUiFixture : JUnit4RulesContext() {
 
 /** The cue's middle sits half the 28 dp bottom margin above the bottom of the list's or the picker's box. */
 private val PanelSideHalf = 14.dp
+
+/** The first row of each group that has a heading, top to bottom. */
+private val groupFirstRows =
+    listOf(
+        "setting:Columns",
+        "setting:AlwaysShowNames",
+        "setting:AppLibrary",
+        "setting:HomeIdleClockMinutes",
+        "setting:ReducedMotion",
+        "settings:follow_theme",
+    )
 private val apps = (1..12).map { OpenOnStartApp("App %02d".format(it), "com.app$it") }

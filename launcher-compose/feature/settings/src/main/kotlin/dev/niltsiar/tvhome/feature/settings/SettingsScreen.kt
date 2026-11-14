@@ -102,10 +102,14 @@ private val ChipHeight = 40.dp
 private val ChipMinWidth = 64.dp
 private val ChipPadding = 18.dp
 private val ChipGap = 8.dp
-private val HeadingHeight = 48.dp
+private val HeadingHeight = 56.dp
 
-/** Where a heading's baseline sits from its top: 14 dp over the next row. */
-private val HeadingBaseline = 34.dp
+/** Where a heading's baseline sits from its top: 12 dp over the next row. */
+private val HeadingBaseline = 44.dp
+
+/** The divider between two groups lies this far under the top of the lower group's heading, so a focused row never touches it. */
+private val DividerTop = 16.dp
+private val DividerInset = 12.dp
 private val ValueMaxWidth = 320.dp
 private val ChevronWidth = 10.dp
 private val ChevronHeight = 16.dp
@@ -116,6 +120,7 @@ private const val ROW_FOCUS_MS = 120
 
 private const val LABEL_IDLE_ALPHA = 0.78f
 private const val HEADING_ALPHA = 0.65f
+private const val DIVIDER_ALPHA = 0.12f
 private const val SELECTED_FILL_ALPHA = 0.16f
 private const val SELECTED_RIM_ALPHA = 0.42f
 private const val FOCUSED_ROW_ALPHA = 0.10f
@@ -317,7 +322,7 @@ public fun SettingsScreen(
                                 .verticalScroll(scroll)
                                 .padding(start = PanelSide, end = PanelSide, bottom = PanelSide),
                         ) {
-                            for (item in items) {
+                            for ((index, item) in items.withIndex()) {
                                 when (item) {
                                     is ReorderItem -> {
                                         ActionRow(
@@ -330,7 +335,7 @@ public fun SettingsScreen(
                                     }
 
                                     is PageItem.Heading -> {
-                                        Heading(item.id)
+                                        Heading(item.id, divided = index > 0)
                                     }
 
                                     is SettingItem -> {
@@ -493,26 +498,40 @@ private fun NoticePill(
     }
 }
 
+/** A group's heading, with the divider from the item above it when [divided]. */
 @Composable
 private fun Heading(
     @StringRes id: Int,
+    divided: Boolean,
 ) {
     val typography = TvTheme.typography
     val ink = TvTheme.colors.onSurface
     val style = remember(typography, ink) { typography.chipKey.copy(fontSize = 15.sp, color = ink.copy(alpha = HEADING_ALPHA)) }
-    BasicText(
-        stringResource(id),
-        style = style,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .height(HeadingHeight)
-                .testTag("settings:heading")
-                .paddingFromBaseline(top = HeadingBaseline)
-                .padding(horizontal = RowSide),
-    )
+    Box(Modifier.fillMaxWidth()) {
+        BasicText(
+            stringResource(id),
+            style = style,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(HeadingHeight)
+                    .testTag("settings:heading")
+                    .paddingFromBaseline(top = HeadingBaseline)
+                    .padding(horizontal = RowSide),
+        )
+        if (divided) {
+            Box(
+                Modifier
+                    .padding(top = DividerTop, start = DividerInset, end = DividerInset)
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(ink.copy(alpha = DIVIDER_ALPHA))
+                    .testTag("settings:divider"),
+            )
+        }
+    }
 }
 
 /**
