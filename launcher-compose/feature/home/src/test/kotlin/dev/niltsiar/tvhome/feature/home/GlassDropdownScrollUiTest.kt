@@ -76,16 +76,16 @@ class GlassDropdownScrollUiTestContent :
                 }
             }
 
-            test("the edge with hidden rows hides its first 12 dp and fades over 36 dp and the edge without stays whole") {
+            test("the edge with hidden rows hides its first 12 dp and fades over 52 dp and the edge without stays whole") {
                 show()
 
                 // Row 0 starts 14 dp under the top edge; nothing is hidden above it.
                 assertNear(0, redUnderTop(15.dp), 2)
                 // Rows lie below: hidden in the 12 dp band at the edge, half shown in the middle of the ramp, whole past it.
-                listOf(6.dp, 24.dp, 40.dp).forEach { assertRowAt(panelEdge.bottom - it) }
+                listOf(6.dp, 32.dp, 64.dp).forEach { assertRowAt(panelEdge.bottom - it) }
                 assertNear(through(0f, panelEdge.bottom - 6.dp), redAt(panelEdge.bottom - 6.dp, x = HiddenX), 2)
-                assertNear(through(0.5f, panelEdge.bottom - 24.dp), redAboveBottom(24.dp), 14)
-                assertNear(0, redAboveBottom(40.dp), 2)
+                assertNear(through(0.5f, panelEdge.bottom - 32.dp), redAboveBottom(32.dp), 14)
+                assertNear(0, redAboveBottom(64.dp), 2)
             }
 
             test("at the end of the list the top edge fades and the bottom edge does not") {
@@ -97,9 +97,9 @@ class GlassDropdownScrollUiTestContent :
                 // The last row ends 14 dp over the edge; nothing is hidden below it.
                 assertNear(0, redAboveBottom(15.dp), 2)
                 // Rows lie in the band at the top edge, where they are hidden, and in the middle of the ramp, where they show half.
-                listOf(6.dp, 24.dp).forEach { assertRowAt(panelEdge.top + it) }
+                listOf(6.dp, 32.dp).forEach { assertRowAt(panelEdge.top + it) }
                 assertNear(through(0f, panelEdge.top + 6.dp), redAt(panelEdge.top + 6.dp, x = HiddenX), 2)
-                assertNear(through(0.5f, panelEdge.top + 24.dp), redUnderTop(24.dp), 14)
+                assertNear(through(0.5f, panelEdge.top + 32.dp), redUnderTop(32.dp), 14)
             }
 
             test("a focused row clears the fade at the edge it moved towards") {

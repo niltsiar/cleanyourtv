@@ -23,12 +23,16 @@ import androidx.compose.ui.unit.dp
 /** The band at an edge of a scrolling panel in which [fadeScrolledEdges] hides the content fully, the first part of [EdgeFade]. */
 private val EdgeClear: Dp = 12.dp
 
-/** How far a scrolling panel fades its content out at an edge with more content past it: [EdgeClear], then a 24 dp ramp. */
-public val EdgeFade: Dp = 36.dp
+/** How far a scrolling panel fades its content out at an edge with more content past it: [EdgeClear], then a 40 dp ramp. */
+public val EdgeFade: Dp = 52.dp
+
+/** The straight pieces that draw the eased ramp of [fadeScrolledEdges]: 16 keep each piece within 1/255 of the curve. */
+private const val RAMP_STEPS = 16
 
 /**
  * Fades the content at the top and at the bottom as far as [scroll] has content hidden past that edge. Over [EdgeFade] from
- * the edge, the first [EdgeClear] is hidden and the rest ramps to opaque. Less than [EdgeFade] from an end of the scroll the
+ * the edge, the first [EdgeClear] is hidden and the rest eases in to opaque along a smoothstep, `t * t * (3 - 2 * t)`: half
+ * shown in the middle of the ramp, less than a straight ramp in its first half. Less than [EdgeFade] from an end of the scroll the
  * fade at that edge is weaker in proportion: with a scroll a quarter of [EdgeFade] from its start, the content at the top edge
  * keeps three quarters of its alpha. Put it before the `verticalScroll` it belongs to, so that it fades the viewport.
  */
@@ -41,8 +45,14 @@ public fun Modifier.fadeScrolledEdges(scroll: ScrollState): Modifier =
         val clear = EdgeClear.toPx() / fade
         val mask = Size(size.width, fade)
         // The masks cut the content out (DstOut) as far as they are opaque; the draw's alpha sets how strong a fade is.
-        val top = Brush.verticalGradient(0f to Color.Black, clear to Color.Black, 1f to Color.Transparent, endY = fade)
-        val bottom = Brush.verticalGradient(0f to Color.Transparent, 1f - clear to Color.Black, 1f to Color.Black, endY = fade)
+        val ramp =
+            Array(RAMP_STEPS + 1) { step ->
+                val t = step.toFloat() / RAMP_STEPS
+                (clear + (1f - clear) * t) to Color.Black.copy(alpha = 1f - t * t * (3f - 2f * t))
+            }
+        val top = Brush.verticalGradient(0f to Color.Black, *ramp, endY = fade)
+        val mirrored = Array(ramp.size) { ramp[ramp.lastIndex - it].let { (at, color) -> 1f - at to color } }
+        val bottom = Brush.verticalGradient(*mirrored, 1f to Color.Black, endY = fade)
         onDrawWithContent {
             drawContent()
             val above = (scroll.value / fade).coerceIn(0f, 1f)

@@ -201,7 +201,7 @@ class SettingsEdgesUiTestContent :
                 val chip = bounds("option:ClockFormat:0")
                 val aboveBand = shot.ink(chip.left + 10.dp, chip.top + 10.dp)
                 val inBand = shot.ink(chip.left + 20.dp, chip.top + 37.dp)
-                withClue("the chip must show above the bottom band: $aboveBand") { aboveBand shouldBeGreaterThan 20f }
+                withClue("the chip must show above the bottom band: $aboveBand") { aboveBand shouldBeGreaterThan 10f }
                 withClue("the bottom edge does not fade: $inBand against $aboveBand") { (inBand * 3f) shouldBeLessThan aboveBand }
             }
 
@@ -228,7 +228,7 @@ class SettingsEdgesUiTestContent :
                 val shot = shot()
                 val inBand = shot.ink(chip.left + 14.dp, list.top + 1.dp, surfaceX = list.left + 12.dp)
                 val belowBand = shot.ink(chip.left + 14.dp, list.top + 30.dp, surfaceX = list.left + 12.dp)
-                withClue("the selected chip must show below the band: $belowBand") { belowBand shouldBeGreaterThan 20f }
+                withClue("the selected chip must show below the band: $belowBand") { belowBand shouldBeGreaterThan 10f }
                 withClue("the top edge fades: $inBand against $belowBand") { (inBand * 3f) shouldBeLessThan belowBand }
 
                 withClue("scrolled past the whole fade: $value") { value shouldBeGreaterThanOrEqualTo (EdgeFade.value * density) }
