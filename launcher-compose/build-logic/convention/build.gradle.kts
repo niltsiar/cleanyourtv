@@ -26,6 +26,10 @@ gradlePlugin {
             id = "tvhome.android.application"
             implementationClass = "dev.niltsiar.tvhome.buildlogic.AndroidApplicationConventionPlugin"
         }
+        register("androidApplicationPlain") {
+            id = "tvhome.android.application.plain"
+            implementationClass = "dev.niltsiar.tvhome.buildlogic.AndroidApplicationPlainConventionPlugin"
+        }
         register("androidTest") {
             id = "tvhome.android.test"
             implementationClass = "dev.niltsiar.tvhome.buildlogic.AndroidTestConventionPlugin"

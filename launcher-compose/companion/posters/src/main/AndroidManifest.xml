@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Cleartext is on for the app because a network security config cannot say "private addresses only": the code
+         allows http only for a request with lan=1, whose every address must be private. -->
+    <application
+        android:allowBackup="false"
+        android:icon="@drawable/ic_posters"
+        android:label="@string/app_name"
+        android:usesCleartextTraffic="true">
+
+        <!-- Exported to Home, another package: PosterProvider serves only a caller signed with this app's key. -->
+        <provider
+            android:name=".PosterProvider"
+            android:authorities="dev.niltsiar.tvhome.posters"
+            android:exported="true"
+            tools:ignore="ExportedContentProvider" />
+    </application>
+</manifest>
