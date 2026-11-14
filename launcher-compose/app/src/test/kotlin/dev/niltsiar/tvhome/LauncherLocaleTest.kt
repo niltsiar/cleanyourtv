@@ -1,7 +1,13 @@
 package dev.niltsiar.tvhome
 
 import android.app.Application
+import android.content.res.Configuration
 import android.os.Environment
+import android.os.IBinder
+import android.view.Display
+import android.view.ViewGroup
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -19,6 +25,8 @@ import org.robolectric.Robolectric
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowEnvironment
+import org.robolectric.util.ReflectionHelpers
+import org.robolectric.util.ReflectionHelpers.ClassParameter
 import java.io.File
 import java.util.Locale
 
@@ -52,9 +60,9 @@ class LauncherLocaleTestContent :
                     File(ThemeDirectory(app).dir!!, "config.json").writeText(json)
                 }
 
-                fun showHome() {
+                fun showHome(): MainActivity {
                     shadowOf(app).grantPermissions("${app.packageName}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION")
-                    Robolectric.buildActivity(MainActivity::class.java).setup()
+                    return Robolectric.buildActivity(MainActivity::class.java).setup().get()
                 }
 
                 fun waitForText(text: String) =
@@ -124,6 +132,51 @@ class LauncherLocaleTestContent :
 
                 waitForText("Launcher settings")
                 shows("Paramètres du lanceur") shouldBe false
+            }
+
+            test("the theme language stays in home's compose configuration after night mode changes in place") {
+                writeTheme("""{"locale": "en"}""")
+                // A context with the activity's own token, as a TV gives: Robolectric's default base is the application's.
+                System.setProperty("robolectric.createActivityContexts", "true")
+                val home =
+                    try {
+                        showHome()
+                    } finally {
+                        System.clearProperty("robolectric.createActivityContexts")
+                    }
+                var composeConfig = Configuration()
+                home.addContentView(
+                    ComposeView(home).apply { setContent { composeConfig = LocalConfiguration.current } },
+                    ViewGroup.LayoutParams(1, 1),
+                )
+                compose.waitForIdle()
+                composeConfig.locales[0] shouldBe Locale.ENGLISH
+
+                // ActivityThread's own handlers for a change the activity takes in place, process first, then activity.
+                // Robolectric's configurationChange() would write the TV's locale into the activity's resources itself.
+                val night =
+                    Configuration(app.resources.configuration).apply {
+                        uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or Configuration.UI_MODE_NIGHT_YES
+                    }
+                val thread = RuntimeEnvironment.getActivityThread()
+                ReflectionHelpers.callInstanceMethod<Unit>(
+                    thread,
+                    "handleConfigurationChanged",
+                    ClassParameter.from(Configuration::class.java, night),
+                )
+                val token = ReflectionHelpers.callInstanceMethod<IBinder>(home, "getActivityToken")
+                val record = ReflectionHelpers.getField<Map<IBinder, Any>>(thread, "mActivities").getValue(token)
+                ReflectionHelpers.callInstanceMethod<Unit>(
+                    thread,
+                    "handleActivityConfigurationChanged",
+                    ClassParameter.from(record.javaClass, record),
+                    ClassParameter.from(Configuration::class.java, Configuration()),
+                    ClassParameter.from(Int::class.javaPrimitiveType, Display.INVALID_DISPLAY),
+                )
+                compose.waitForIdle()
+
+                (composeConfig.uiMode and Configuration.UI_MODE_NIGHT_MASK) shouldBe Configuration.UI_MODE_NIGHT_YES
+                composeConfig.locales[0] shouldBe Locale.ENGLISH
             }
         }
     })
