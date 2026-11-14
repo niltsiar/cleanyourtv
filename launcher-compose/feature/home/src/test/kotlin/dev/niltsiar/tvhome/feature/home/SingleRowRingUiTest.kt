@@ -10,34 +10,56 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import de.infix.testBalloon.framework.core.JUnit4RulesContext
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectric
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
+import io.kotest.assertions.withClue
+import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
+import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
 import kotlinx.coroutines.flow.flowOf
-import org.junit.Assert.assertTrue
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-import org.robolectric.annotation.GraphicsMode
 
 /**
  * The single row scrolls a focused tile until its whole ring is inside the row, which clips at the panel's walls. The ring stands
  * a tile's growth and 9 dp, both scaled, past each side of the tile.
  */
-@RunWith(RobolectricTestRunner::class)
-@GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
-class SingleRowRingUiTest {
-    @get:Rule
-    val compose = createAndroidComposeRule<ComponentActivity>()
+val SingleRowRingUiTest by testSuite {
+    robolectricTestSuite<SingleRowRingUiTestContent>(
+        "sdk 31, 960x540 dp",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "w960dp-h540dp-xhdpi"
+            },
+    )
+}
 
-    private val apps = (1..12).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") }
+class SingleRowRingUiTestContent :
+    RobolectricTestSuiteContent({
+        testFixture { SingleRowRingUiTestFixture() } asContextForEach {
+            test("every focused tile of the single row has its whole ring inside the row") {
+                assertRingInsideAcrossTheRowAndBack(Motion(), scale = 1.08f)
+            }
 
-    private fun showHome(motion: Motion) {
+            test("with focus overshoot every focused tile of the single row has its ring at the peak inside the row") {
+                assertRingInsideAcrossTheRowAndBack(Motion(focusOvershoot = true), scale = 1.144f)
+            }
+        }
+    })
+
+private class SingleRowRingUiTestFixture : JUnit4RulesContext() {
+    val compose = rule(createAndroidComposeRule<ComponentActivity>())
+
+    val apps = (1..12).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") }
+
+    fun showHome(motion: Motion) {
         val config = TvConfig(columns = 4, singleRow = true)
         val sources = sources(apps = flowOf(AppList(apps)))
         compose.setContent {
@@ -63,13 +85,13 @@ class SingleRowRingUiTest {
         settle()
     }
 
-    private fun settle() {
+    fun settle() {
         compose.mainClock.advanceTimeBy(1_000)
         compose.waitForIdle()
     }
 
     /** Asserts that the ring of the focused tile [n], at [scale], lies inside the row's walls. */
-    private fun assertRingInside(
+    fun assertRingInside(
         n: Int,
         scale: Float,
         way: String,
@@ -79,14 +101,17 @@ class SingleRowRingUiTest {
         val reach = (tile.right - tile.left).value * (scale - 1f) / 2f + 9f * scale
         val left = tile.left.value - reach
         val right = tile.right.value + reach
-        assertTrue("tile $n $way: ring from $left to $right in a row from ${row.left} to ${row.right}", left >= row.left.value - HALF_PIXEL)
-        assertTrue(
-            "tile $n $way: ring from $left to $right in a row from ${row.left} to ${row.right}",
-            right <= row.right.value + HALF_PIXEL,
-        )
+        withClue("tile $n $way: ring from $left to $right in a row from ${row.left} to ${row.right}") {
+            left shouldBeGreaterThanOrEqualTo
+                row.left.value - HALF_PIXEL
+        }
+        withClue("tile $n $way: ring from $left to $right in a row from ${row.left} to ${row.right}") {
+            right shouldBeLessThanOrEqualTo
+                row.right.value + HALF_PIXEL
+        }
     }
 
-    private fun assertRingInsideAcrossTheRowAndBack(
+    fun assertRingInsideAcrossTheRowAndBack(
         motion: Motion,
         scale: Float,
     ) {
@@ -102,16 +127,6 @@ class SingleRowRingUiTest {
             settle()
             assertRingInside(n, scale, "moving left")
         }
-    }
-
-    @Test
-    fun every_focused_tile_of_the_single_row_has_its_whole_ring_inside_the_row() {
-        assertRingInsideAcrossTheRowAndBack(Motion(), scale = 1.08f)
-    }
-
-    @Test
-    fun with_focus_overshoot_every_focused_tile_of_the_single_row_has_its_ring_at_the_peak_inside_the_row() {
-        assertRingInsideAcrossTheRowAndBack(Motion(focusOvershoot = true), scale = 1.144f)
     }
 }
 

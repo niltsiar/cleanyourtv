@@ -1,69 +1,43 @@
 package dev.niltsiar.tvhome.feature.home
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.shouldBe
 
-class TileMenuRowsTest {
-    @Test
-    fun a_grid_tile_offers_add_to_dock_then_move_then_app_info() {
-        assertEquals(
-            listOf(MenuRow.AddToDock, MenuRow.Move, MenuRow.AppInfo),
-            tileMenuRows(dockRow = true, inDock = false, appInfo = true),
-        )
+val TileMenuRowsTest by testSuite {
+    test("a grid tile offers add to dock then move then app info") {
+        tileMenuRows(dockRow = true, inDock = false, appInfo = true) shouldBe listOf(MenuRow.AddToDock, MenuRow.Move, MenuRow.AppInfo)
     }
 
-    @Test
-    fun a_dock_tile_offers_replace_in_dock_in_the_same_place() {
-        assertEquals(
-            listOf(MenuRow.ReplaceInDock, MenuRow.Move, MenuRow.AppInfo),
-            tileMenuRows(dockRow = true, inDock = true, appInfo = true),
-        )
+    test("a dock tile offers replace in dock in the same place") {
+        tileMenuRows(dockRow = true, inDock = true, appInfo = true) shouldBe listOf(MenuRow.ReplaceInDock, MenuRow.Move, MenuRow.AppInfo)
     }
 
-    @Test
-    fun without_dock_row_there_is_no_dock_row_in_the_menu() {
-        assertEquals(listOf(MenuRow.Move, MenuRow.AppInfo), tileMenuRows(dockRow = false, inDock = true, appInfo = true))
+    test("without dock row there is no dock row in the menu") {
+        tileMenuRows(dockRow = false, inDock = true, appInfo = true) shouldBe listOf(MenuRow.Move, MenuRow.AppInfo)
     }
 
-    @Test
-    fun a_tv_without_an_app_info_page_gets_no_app_info_row() {
-        assertEquals(listOf(MenuRow.AddToDock, MenuRow.Move), tileMenuRows(dockRow = true, inDock = false, appInfo = false))
+    test("a tv without an app info page gets no app info row") {
+        tileMenuRows(dockRow = true, inDock = false, appInfo = false) shouldBe listOf(MenuRow.AddToDock, MenuRow.Move)
     }
 
-    @Test
-    fun the_app_library_adds_remove_from_home_between_move_and_app_info() {
-        assertEquals(
-            listOf(MenuRow.ReplaceInDock, MenuRow.Move, MenuRow.RemoveFromHome, MenuRow.AppInfo),
-            tileMenuRows(dockRow = true, inDock = true, appInfo = true, library = true),
-        )
-        assertEquals(
-            listOf(MenuRow.Move, MenuRow.RemoveFromHome),
-            tileMenuRows(dockRow = false, inDock = false, appInfo = false, library = true),
-        )
+    test("the app library adds remove from home between move and app info") {
+        tileMenuRows(dockRow = true, inDock = true, appInfo = true, library = true) shouldBe
+            listOf(MenuRow.ReplaceInDock, MenuRow.Move, MenuRow.RemoveFromHome, MenuRow.AppInfo)
+        tileMenuRows(dockRow = false, inDock = false, appInfo = false, library = true) shouldBe listOf(MenuRow.Move, MenuRow.RemoveFromHome)
     }
 
-    @Test
-    fun the_settings_menu_offers_launcher_settings_first_then_native_settings_edit_dock_and_reorder() {
-        assertEquals(
-            listOf(MenuRow.LauncherSettings, MenuRow.NativeSettings, MenuRow.EditDock, MenuRow.Reorder),
-            settingsMenuRows(dockRow = true, nativeSettings = true),
-        )
-        assertEquals(
-            listOf(MenuRow.LauncherSettings, MenuRow.EditDock, MenuRow.Reorder),
-            settingsMenuRows(dockRow = true, nativeSettings = false),
-        )
-        assertEquals(listOf(MenuRow.LauncherSettings, MenuRow.Reorder), settingsMenuRows(dockRow = false, nativeSettings = false))
+    test("the settings menu offers launcher settings first then native settings edit dock and reorder") {
+        settingsMenuRows(dockRow = true, nativeSettings = true) shouldBe
+            listOf(MenuRow.LauncherSettings, MenuRow.NativeSettings, MenuRow.EditDock, MenuRow.Reorder)
+        settingsMenuRows(dockRow = true, nativeSettings = false) shouldBe
+            listOf(MenuRow.LauncherSettings, MenuRow.EditDock, MenuRow.Reorder)
+        settingsMenuRows(dockRow = false, nativeSettings = false) shouldBe listOf(MenuRow.LauncherSettings, MenuRow.Reorder)
     }
 
-    @Test
-    fun restart_comes_last_and_only_while_the_key_service_is_bound() {
-        assertEquals(
-            listOf(MenuRow.LauncherSettings, MenuRow.EditDock, MenuRow.Reorder, MenuRow.PowerMenu),
-            settingsMenuRows(dockRow = true, nativeSettings = false, powerMenu = true),
-        )
-        assertEquals(
-            listOf(MenuRow.LauncherSettings, MenuRow.Reorder),
-            settingsMenuRows(dockRow = false, nativeSettings = false, powerMenu = false),
-        )
+    test("restart comes last and only while the key service is bound") {
+        settingsMenuRows(dockRow = true, nativeSettings = false, powerMenu = true) shouldBe
+            listOf(MenuRow.LauncherSettings, MenuRow.EditDock, MenuRow.Reorder, MenuRow.PowerMenu)
+        settingsMenuRows(dockRow = false, nativeSettings = false, powerMenu = false) shouldBe
+            listOf(MenuRow.LauncherSettings, MenuRow.Reorder)
     }
 }

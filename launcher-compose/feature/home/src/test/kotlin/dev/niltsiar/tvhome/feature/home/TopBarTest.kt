@@ -1,10 +1,11 @@
 package dev.niltsiar.tvhome.feature.home
 
+import androidx.activity.ComponentActivity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getBoundsInRoot
-import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -14,6 +15,12 @@ import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
+import de.infix.testBalloon.framework.core.JUnit4RulesContext
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectric
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.config.parseTvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
@@ -21,14 +28,9 @@ import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-import org.robolectric.annotation.GraphicsMode
+import io.kotest.assertions.withClue
+import io.kotest.matchers.comparables.shouldBeGreaterThan
+import io.kotest.matchers.shouldBe
 import java.util.Locale
 
 private val Plain = Color.White
@@ -38,45 +40,213 @@ private val Red = Color(0xFFFF453A)
 private val Wifi = NetworkState(NetworkLink.Wifi, ssid = "Home", validated = true)
 private val LongWifi = Wifi.copy(ssid = "guest network ".repeat(40))
 
-class NetworkTintTest {
-    private fun tint(
+val NetworkTintTest by testSuite {
+    fun tint(
         network: NetworkState,
         colour: Boolean = true,
         warnings: Boolean = false,
     ) = networkTint(network, TopBarLayout(wifiStatusColor = colour, wifiStatusWarnings = warnings), Plain)
 
-    @Test
-    fun the_icon_keeps_its_colour_unless_wifi_status_color_is_on() {
-        assertEquals(Plain, tint(Wifi, colour = false, warnings = true))
+    test("the icon keeps its colour unless wifi status color is on") {
+        tint(Wifi, colour = false, warnings = true) shouldBe Plain
     }
 
-    @Test
-    fun online_is_green_and_offline_stays_plain_without_warnings() {
-        assertEquals(Green, tint(Wifi.copy(validated = false)))
-        assertEquals(Plain, tint(NetworkState()))
+    test("online is green and offline stays plain without warnings") {
+        tint(Wifi.copy(validated = false)) shouldBe Green
+        tint(NetworkState()) shouldBe Plain
     }
 
-    @Test
-    fun warnings_make_a_captive_portal_orange_and_offline_red() {
-        assertEquals(Orange, tint(Wifi.copy(validated = false), warnings = true))
-        assertEquals(Green, tint(Wifi, warnings = true))
-        assertEquals(Red, tint(NetworkState(), warnings = true))
+    test("warnings make a captive portal orange and offline red") {
+        tint(Wifi.copy(validated = false), warnings = true) shouldBe Orange
+        tint(Wifi, warnings = true) shouldBe Green
+        tint(NetworkState(), warnings = true) shouldBe Red
     }
 }
 
-@RunWith(RobolectricTestRunner::class)
-@GraphicsMode(GraphicsMode.Mode.LEGACY)
-@Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
-class TopBarTest {
-    @get:Rule
-    val compose = createComposeRule()
+val TopBarTest by testSuite {
+    robolectricTestSuite<TopBarTestContent>(
+        "sdk 31, 960x540 dp",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "w960dp-h540dp-xhdpi"
+            },
+    )
+}
 
-    private var settingsOpened = 0
-    private var networkOpened = 0
-    private var wifiSettingsOpened = 0
-    private var clicked: String? = null
+class TopBarTestContent :
+    RobolectricTestSuiteContent({
+        testFixture { TopBarTestFixture() } asContextForEach {
+            test("the settings and network buttons report their clicks") {
+                show()
 
-    private fun show(
+                compose.onNodeWithContentDescription("Settings").performClick()
+                compose.onNodeWithContentDescription("Home").performClick()
+
+                (settingsOpened to networkOpened) shouldBe (1 to 1)
+            }
+
+            test("holding ok on the network button opens wifi settings and not what a press opens") {
+                show()
+
+                pressOkOnNetworkButton(holdMillis = 600)
+
+                (networkOpened to wifiSettingsOpened) shouldBe (0 to 1)
+            }
+
+            test("a short ok on the network button still opens what it opened before") {
+                show()
+
+                pressOkOnNetworkButton(holdMillis = 100)
+
+                (networkOpened to wifiSettingsOpened) shouldBe (1 to 0)
+            }
+
+            test("the network button is a round icon at rest and grows into its pill while focused") {
+                show()
+                compose.onNodeWithText("Home").assertDoesNotExist()
+                compose.onNodeWithContentDescription("Home").assertIsDisplayed()
+                val rest = compose.onNodeWithContentDescription("Home").getBoundsInRoot()
+                rest.height shouldBe rest.width
+
+                compose.onNodeWithContentDescription("Home").requestFocus()
+                compose.mainClock.advanceTimeBy(1_000)
+
+                val grown = compose.onNodeWithContentDescription("Home").getBoundsInRoot().width
+                withClue("rest ${rest.width}, focused $grown") { grown shouldBeGreaterThan rest.width + 20.dp }
+            }
+
+            test("a wifi label width keeps the network name beside the icon at rest") {
+                show(TvConfig(columns = 6, wifiLabelWidth = 120))
+                compose.onNodeWithText("Home").assertIsDisplayed()
+            }
+
+            test("icon only buttons true leaves the network button an icon at rest") {
+                show(TvConfig(columns = 6, iconOnlyButtons = true))
+                compose.onNodeWithText("Home").assertDoesNotExist()
+            }
+
+            test("icon only buttons true with a wifi label width keeps the network name at rest") {
+                show(TvConfig(columns = 6, iconOnlyButtons = true, wifiLabelWidth = 120))
+                compose.onNodeWithText("Home").assertIsDisplayed()
+            }
+
+            test("icon only buttons false shows the network name at rest") {
+                show(TvConfig(columns = 6, iconOnlyButtons = false))
+                compose.onNodeWithText("Home").assertIsDisplayed()
+            }
+
+            test("icon only buttons false shows the settings label at rest") {
+                show(TvConfig(columns = 6, iconOnlyButtons = false))
+                compose.onNodeWithText("Settings").assertIsDisplayed()
+                compose.onNodeWithContentDescription("Settings").performClick()
+                settingsOpened shouldBe 1
+            }
+
+            test("launcher settings button names the settings button launcher settings and its tap is reported") {
+                show(TvConfig(columns = 6, launcherSettingsButton = true))
+                compose.onNodeWithContentDescription("Settings").assertDoesNotExist()
+                compose.onNodeWithContentDescription("Launcher settings").performClick()
+                settingsOpened shouldBe 1
+            }
+
+            test("launcher settings button with icon only buttons false shows the launcher settings label at rest") {
+                show(TvConfig(columns = 6, iconOnlyButtons = false, launcherSettingsButton = true))
+                compose.onNodeWithText("Launcher settings").assertIsDisplayed()
+                compose.onNodeWithText("Settings").assertDoesNotExist()
+            }
+
+            test("the settings button is a round icon at rest with no theme") {
+                show(TvConfig(columns = 6))
+                compose.onNodeWithText("Settings").assertDoesNotExist()
+                val rest = compose.onNodeWithContentDescription("Settings").getBoundsInRoot()
+                rest.height shouldBe rest.width
+            }
+
+            test("icon only buttons true leaves the settings button a round icon at rest") {
+                show(TvConfig(columns = 6, iconOnlyButtons = true))
+                compose.onNodeWithText("Settings").assertDoesNotExist()
+                val rest = compose.onNodeWithContentDescription("Settings").getBoundsInRoot()
+                rest.height shouldBe rest.width
+            }
+
+            test("the inputs button is a round icon at rest with no theme") {
+                show(TvConfig(columns = 6), inputs = FourPorts)
+                compose.onNodeWithText("Inputs").assertDoesNotExist()
+                val rest = compose.onNodeWithContentDescription("Inputs").getBoundsInRoot()
+                rest.height shouldBe rest.width
+            }
+
+            test("icon only inputs true leaves the inputs button a round icon at rest") {
+                show(TvConfig(columns = 6, iconOnlyInputs = true), inputs = FourPorts)
+                compose.onNodeWithText("Inputs").assertDoesNotExist()
+                val rest = compose.onNodeWithContentDescription("Inputs").getBoundsInRoot()
+                rest.height shouldBe rest.width
+            }
+
+            test("icon only inputs false keeps the inputs label at rest") {
+                show(TvConfig(columns = 6, iconOnlyInputs = false), inputs = FourPorts)
+                compose.onNodeWithText("Inputs").assertIsDisplayed()
+                val rest = compose.onNodeWithContentDescription("Inputs").getBoundsInRoot()
+                rest.width shouldBeGreaterThan rest.height
+            }
+
+            test("a theme that leaves icon only inputs out keeps the inputs label at rest") {
+                show(parseTvConfig("""{"columns": 6}""").config, inputs = FourPorts)
+                compose.onNodeWithText("Inputs").assertIsDisplayed()
+            }
+
+            test("icon only buttons true leaves the inputs label at rest") {
+                show(parseTvConfig("""{"columns": 6, "icon_only_buttons": true}""").config, inputs = FourPorts)
+                compose.onNodeWithText("Inputs").assertIsDisplayed()
+            }
+
+            test("a theme that leaves icon only buttons out shows the network and settings labels at rest") {
+                show(parseTvConfig("""{"columns": 6}""").config)
+                compose.onNodeWithText("Home").assertIsDisplayed()
+                compose.onNodeWithText("Settings").assertIsDisplayed()
+            }
+
+            test("icon only buttons false caps a long network name at 180 dp") {
+                show(TvConfig(columns = 6, iconOnlyButtons = false), network = LongWifi)
+                compose.onNodeWithContentDescription(LongWifi.ssid!!).getBoundsInRoot().width shouldBe 180.dp
+            }
+
+            test("icon only buttons false with a wifi label width caps the network name at that width") {
+                show(TvConfig(columns = 6, iconOnlyButtons = false, wifiLabelWidth = 120), network = LongWifi)
+                compose.onNodeWithContentDescription(LongWifi.ssid!!).getBoundsInRoot().width shouldBe 120.dp
+            }
+
+            test("show network pill false and show inputs pill false remove those buttons") {
+                show(TvConfig(columns = 6, showNetworkPill = false, showInputsPill = false))
+
+                compose.onNodeWithContentDescription("Home").assertDoesNotExist()
+                compose.onNodeWithContentDescription("Inputs").assertDoesNotExist()
+                compose.onNodeWithContentDescription("Settings").assertIsDisplayed()
+            }
+
+            test("a top bar app has a button that clicks with its key") {
+                show(topBarApps = listOf(AppEntry(key = "com.chat/.Main", packageName = "com.chat", label = "Chat")))
+
+                compose.onNodeWithContentDescription("Chat").performClick()
+
+                clicked shouldBe "com.chat/.Main"
+            }
+        }
+    })
+
+private class TopBarTestFixture : JUnit4RulesContext() {
+    val compose = rule(createAndroidComposeRule<ComponentActivity>())
+
+    var settingsOpened = 0
+
+    var networkOpened = 0
+
+    var wifiSettingsOpened = 0
+
+    var clicked: String? = null
+
+    fun show(
         config: TvConfig = SixColumns,
         network: NetworkState = Wifi,
         topBarApps: List<AppEntry> = emptyList(),
@@ -92,6 +262,11 @@ class TopBarTest {
                 topBarApps = topBarApps,
                 inputs = inputs,
             )
+        // A TV has no touch screen; the native graphics mode starts in touch mode, where nothing takes key focus.
+        compose.runOnUiThread {
+            compose.activity.window.decorView
+                .requestFocusFromTouch()
+        }
         compose.setContent {
             TvTheme {
                 HomeScreen(
@@ -109,191 +284,12 @@ class TopBarTest {
         compose.waitForIdle()
     }
 
-    @Test
-    fun the_settings_and_network_buttons_report_their_clicks() {
-        show()
-
-        compose.onNodeWithContentDescription("Settings").performClick()
-        compose.onNodeWithContentDescription("Home").performClick()
-
-        assertEquals(1 to 1, settingsOpened to networkOpened)
-    }
-
-    private fun pressOkOnNetworkButton(holdMillis: Long) {
+    fun pressOkOnNetworkButton(holdMillis: Long) {
         compose.onNodeWithContentDescription("Home").requestFocus()
         compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
         compose.mainClock.advanceTimeBy(holdMillis)
         compose.waitForIdle()
         compose.onRoot().performKeyInput { keyUp(Key.DirectionCenter) }
         compose.waitForIdle()
-    }
-
-    @Test
-    fun holding_ok_on_the_network_button_opens_wifi_settings_and_not_what_a_press_opens() {
-        show()
-
-        pressOkOnNetworkButton(holdMillis = 600)
-
-        assertEquals(0 to 1, networkOpened to wifiSettingsOpened)
-    }
-
-    @Test
-    fun a_short_ok_on_the_network_button_still_opens_what_it_opened_before() {
-        show()
-
-        pressOkOnNetworkButton(holdMillis = 100)
-
-        assertEquals(1 to 0, networkOpened to wifiSettingsOpened)
-    }
-
-    @Test
-    fun the_network_button_is_a_round_icon_at_rest_and_grows_into_its_pill_while_focused() {
-        show()
-        compose.onNodeWithText("Home").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Home").assertIsDisplayed()
-        val rest = compose.onNodeWithContentDescription("Home").getBoundsInRoot()
-        assertEquals(rest.width, rest.height)
-
-        compose.onNodeWithContentDescription("Home").requestFocus()
-        compose.mainClock.advanceTimeBy(1_000)
-
-        val grown = compose.onNodeWithContentDescription("Home").getBoundsInRoot().width
-        assertTrue("rest ${rest.width}, focused $grown", grown > rest.width + 20.dp)
-    }
-
-    @Test
-    fun a_wifi_label_width_keeps_the_network_name_beside_the_icon_at_rest() {
-        show(TvConfig(columns = 6, wifiLabelWidth = 120))
-        compose.onNodeWithText("Home").assertIsDisplayed()
-    }
-
-    @Test
-    fun icon_only_buttons_true_leaves_the_network_button_an_icon_at_rest() {
-        show(TvConfig(columns = 6, iconOnlyButtons = true))
-        compose.onNodeWithText("Home").assertDoesNotExist()
-    }
-
-    @Test
-    fun icon_only_buttons_true_with_a_wifi_label_width_keeps_the_network_name_at_rest() {
-        show(TvConfig(columns = 6, iconOnlyButtons = true, wifiLabelWidth = 120))
-        compose.onNodeWithText("Home").assertIsDisplayed()
-    }
-
-    @Test
-    fun icon_only_buttons_false_shows_the_network_name_at_rest() {
-        show(TvConfig(columns = 6, iconOnlyButtons = false))
-        compose.onNodeWithText("Home").assertIsDisplayed()
-    }
-
-    @Test
-    fun icon_only_buttons_false_shows_the_settings_label_at_rest() {
-        show(TvConfig(columns = 6, iconOnlyButtons = false))
-        compose.onNodeWithText("Settings").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Settings").performClick()
-        assertEquals(1, settingsOpened)
-    }
-
-    @Test
-    fun launcher_settings_button_names_the_settings_button_launcher_settings_and_its_tap_is_reported() {
-        show(TvConfig(columns = 6, launcherSettingsButton = true))
-        compose.onNodeWithContentDescription("Settings").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Launcher settings").performClick()
-        assertEquals(1, settingsOpened)
-    }
-
-    @Test
-    fun launcher_settings_button_with_icon_only_buttons_false_shows_the_launcher_settings_label_at_rest() {
-        show(TvConfig(columns = 6, iconOnlyButtons = false, launcherSettingsButton = true))
-        compose.onNodeWithText("Launcher settings").assertIsDisplayed()
-        compose.onNodeWithText("Settings").assertDoesNotExist()
-    }
-
-    @Test
-    fun the_settings_button_is_a_round_icon_at_rest_with_no_theme() {
-        show(TvConfig(columns = 6))
-        compose.onNodeWithText("Settings").assertDoesNotExist()
-        val rest = compose.onNodeWithContentDescription("Settings").getBoundsInRoot()
-        assertEquals(rest.width, rest.height)
-    }
-
-    @Test
-    fun icon_only_buttons_true_leaves_the_settings_button_a_round_icon_at_rest() {
-        show(TvConfig(columns = 6, iconOnlyButtons = true))
-        compose.onNodeWithText("Settings").assertDoesNotExist()
-        val rest = compose.onNodeWithContentDescription("Settings").getBoundsInRoot()
-        assertEquals(rest.width, rest.height)
-    }
-
-    @Test
-    fun the_inputs_button_is_a_round_icon_at_rest_with_no_theme() {
-        show(TvConfig(columns = 6), inputs = FourPorts)
-        compose.onNodeWithText("Inputs").assertDoesNotExist()
-        val rest = compose.onNodeWithContentDescription("Inputs").getBoundsInRoot()
-        assertEquals(rest.width, rest.height)
-    }
-
-    @Test
-    fun icon_only_inputs_true_leaves_the_inputs_button_a_round_icon_at_rest() {
-        show(TvConfig(columns = 6, iconOnlyInputs = true), inputs = FourPorts)
-        compose.onNodeWithText("Inputs").assertDoesNotExist()
-        val rest = compose.onNodeWithContentDescription("Inputs").getBoundsInRoot()
-        assertEquals(rest.width, rest.height)
-    }
-
-    @Test
-    fun icon_only_inputs_false_keeps_the_inputs_label_at_rest() {
-        show(TvConfig(columns = 6, iconOnlyInputs = false), inputs = FourPorts)
-        compose.onNodeWithText("Inputs").assertIsDisplayed()
-        val rest = compose.onNodeWithContentDescription("Inputs").getBoundsInRoot()
-        assertTrue(rest.width > rest.height)
-    }
-
-    @Test
-    fun a_theme_that_leaves_icon_only_inputs_out_keeps_the_inputs_label_at_rest() {
-        show(parseTvConfig("""{"columns": 6}""").config, inputs = FourPorts)
-        compose.onNodeWithText("Inputs").assertIsDisplayed()
-    }
-
-    @Test
-    fun icon_only_buttons_true_leaves_the_inputs_label_at_rest() {
-        show(parseTvConfig("""{"columns": 6, "icon_only_buttons": true}""").config, inputs = FourPorts)
-        compose.onNodeWithText("Inputs").assertIsDisplayed()
-    }
-
-    @Test
-    fun a_theme_that_leaves_icon_only_buttons_out_shows_the_network_and_settings_labels_at_rest() {
-        show(parseTvConfig("""{"columns": 6}""").config)
-        compose.onNodeWithText("Home").assertIsDisplayed()
-        compose.onNodeWithText("Settings").assertIsDisplayed()
-    }
-
-    @Test
-    fun icon_only_buttons_false_caps_a_long_network_name_at_180_dp() {
-        show(TvConfig(columns = 6, iconOnlyButtons = false), network = LongWifi)
-        assertEquals(180.dp, compose.onNodeWithContentDescription(LongWifi.ssid!!).getBoundsInRoot().width)
-    }
-
-    @Test
-    fun icon_only_buttons_false_with_a_wifi_label_width_caps_the_network_name_at_that_width() {
-        show(TvConfig(columns = 6, iconOnlyButtons = false, wifiLabelWidth = 120), network = LongWifi)
-        assertEquals(120.dp, compose.onNodeWithContentDescription(LongWifi.ssid!!).getBoundsInRoot().width)
-    }
-
-    @Test
-    fun show_network_pill_false_and_show_inputs_pill_false_remove_those_buttons() {
-        show(TvConfig(columns = 6, showNetworkPill = false, showInputsPill = false))
-
-        compose.onNodeWithContentDescription("Home").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Inputs").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Settings").assertIsDisplayed()
-    }
-
-    @Test
-    fun a_top_bar_app_has_a_button_that_clicks_with_its_key() {
-        show(topBarApps = listOf(AppEntry(key = "com.chat/.Main", packageName = "com.chat", label = "Chat")))
-
-        compose.onNodeWithContentDescription("Chat").performClick()
-
-        assertEquals("com.chat/.Main", clicked)
     }
 }

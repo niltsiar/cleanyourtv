@@ -20,39 +20,205 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
+import de.infix.testBalloon.framework.core.JUnit4RulesContext
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectric
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.InputConnection
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.flow.flowOf
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-import org.robolectric.annotation.GraphicsMode
 
 /** With focus on the top bar the band over the grid names the focused button, and says one line about what it stands for. */
-@RunWith(RobolectricTestRunner::class)
-@GraphicsMode(GraphicsMode.Mode.LEGACY)
-@Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
-class TopBarHeaderUiTest {
-    @get:Rule
-    val compose = createAndroidComposeRule<ComponentActivity>()
+val TopBarHeaderUiTest by testSuite {
+    robolectricTestSuite<TopBarHeaderUiTestContent>(
+        "sdk 31, 960x540 dp",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "w960dp-h540dp-xhdpi"
+            },
+    )
+}
 
-    private val cinematic = SixColumns.copy(cinematicHome = true, appLibrary = true, libraryButton = true)
-    private var inputsRequests by mutableIntStateOf(0)
+class TopBarHeaderUiTestContent :
+    RobolectricTestSuiteContent({
+        testFixture { TopBarHeaderUiTestFixture() } asContextForEach {
+            test("on the inputs button the band names the inputs and the device on the only connected port") {
+                showHome(ports(InputConnection.Disconnected, InputConnection.Connected, InputConnection.Unknown))
 
-    private fun showHome(
+                press(Key.DirectionUp)
+
+                compose.onNodeWithContentDescription("Inputs").assertIsFocused()
+                textOf("shelf:title") shouldBe "Inputs"
+                textOf("shelf:title-meta") shouldBe "HDMI 2 · Connected"
+            }
+
+            test("on the inputs button the band counts the connected ports when there are several") {
+                showHome(FourPorts)
+
+                press(Key.DirectionUp)
+
+                textOf("shelf:title-meta") shouldBe "2 inputs connected"
+            }
+
+            test("on the inputs button the band says when no port has a device") {
+                showHome(ports(InputConnection.Disconnected, InputConnection.Unknown))
+
+                press(Key.DirectionUp)
+
+                textOf("shelf:title-meta") shouldBe "No input connected"
+            }
+
+            test("on the network button the band says connected and never the network name") {
+                showHome()
+
+                press(Key.DirectionUp)
+                press(Key.DirectionRight)
+
+                textOf("shelf:title") shouldBe "Wi-Fi"
+                textOf("shelf:title-meta") shouldBe "Connected"
+                (textOf("shelf:title") + textOf("shelf:title-meta")).contains("Living room").shouldBeFalse()
+            }
+
+            test("on the network button without a link the band says offline") {
+                showHome(network = NetworkState(NetworkLink.Offline))
+
+                press(Key.DirectionUp)
+                press(Key.DirectionRight)
+
+                textOf("shelf:title") shouldBe "Wi-Fi"
+                textOf("shelf:title-meta") shouldBe "Offline"
+            }
+
+            test("on the settings button the band names home and system") {
+                showHome()
+
+                press(Key.DirectionUp)
+                press(Key.DirectionRight)
+                press(Key.DirectionRight)
+                press(Key.DirectionRight)
+
+                compose.onNodeWithContentDescription("Settings").assertIsFocused()
+                textOf("shelf:title") shouldBe "Settings"
+                textOf("shelf:title-meta") shouldBe "Home and system"
+            }
+
+            test("with launcher settings button the band on the settings button names launcher settings") {
+                showHome(config = cinematic.copy(launcherSettingsButton = true))
+
+                press(Key.DirectionUp)
+                repeat(3) { press(Key.DirectionRight) }
+
+                compose.onNodeWithContentDescription("Launcher settings").assertIsFocused()
+                textOf("shelf:title") shouldBe "Launcher settings"
+                textOf("shelf:title-meta") shouldBe "Layout, clock and motion"
+            }
+
+            test("with launcher settings button the band keeps naming launcher settings while the settings menu is open") {
+                showHome(config = cinematic.copy(launcherSettingsButton = true))
+                press(Key.DirectionUp)
+                repeat(3) { press(Key.DirectionRight) }
+
+                compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
+                compose.mainClock.advanceTimeBy(600)
+                compose.onRoot().performKeyInput { keyUp(Key.DirectionCenter) }
+                compose.waitForIdle()
+
+                compose.onNodeWithTag("menu").assertExists()
+                textOf("shelf:title") shouldBe "Launcher settings"
+                textOf("shelf:title-meta") shouldBe "Layout, clock and motion"
+            }
+
+            test("on any other button the band shows its name and no second line") {
+                showHome()
+
+                press(Key.DirectionUp)
+                press(Key.DirectionRight)
+                press(Key.DirectionRight)
+
+                textOf("shelf:title") shouldBe "App library"
+                textOf("shelf:title-meta") shouldBe " "
+            }
+
+            test("the band keeps its height and goes back to the dock app when focus returns") {
+                showHome()
+                val bottom = compose.onNodeWithTag("shelf:name").getBoundsInRoot().bottom
+
+                press(Key.DirectionUp)
+                compose.onNodeWithTag("shelf:title").getBoundsInRoot().bottom shouldBe bottom
+
+                press(Key.DirectionDown)
+                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                textOf("shelf:name") shouldBe "App 1"
+            }
+
+            test("the inputs list the remote opens is named in the band whatever button had focus last") {
+                showHome()
+                press(Key.DirectionUp)
+                press(Key.DirectionRight)
+                textOf("shelf:title") shouldBe "Wi-Fi"
+
+                inputsRequests++
+                compose.waitForIdle()
+
+                compose.onNodeWithTag("menu").assertExists()
+                textOf("shelf:title") shouldBe "Inputs"
+                textOf("shelf:title-meta") shouldBe "2 inputs connected"
+            }
+
+            test("a button in the top bar gets a title of 32 sp where a tile gets 48") {
+                showHome()
+                titleSize() shouldBe 48.sp
+
+                press(Key.DirectionUp)
+                titleSize() shouldBe 32.sp
+                press(Key.DirectionRight)
+                titleSize() shouldBe 32.sp
+
+                press(Key.DirectionDown)
+                titleSize() shouldBe 48.sp
+            }
+
+            test("the library pill gets the chrome title size too") {
+                showHome()
+
+                press(Key.DirectionDown)
+                press(Key.DirectionRight)
+                press(Key.DirectionDown)
+                compose.onNodeWithTag("library:pill").assertIsFocused()
+
+                textOf("shelf:title") shouldBe "App library"
+                titleSize() shouldBe 32.sp
+            }
+        }
+    })
+
+private class TopBarHeaderUiTestFixture : JUnit4RulesContext() {
+    val compose = rule(createAndroidComposeRule<ComponentActivity>())
+
+    val cinematic = SixColumns.copy(cinematicHome = true, appLibrary = true, libraryButton = true)
+
+    var inputsRequests by mutableIntStateOf(0)
+
+    fun showHome(
         inputs: InputsMenu = FourPorts,
         network: NetworkState = NetworkState(NetworkLink.Wifi, ssid = "Living room", validated = true),
         config: TvConfig = cinematic,
     ) {
         val sources = sources(inputs = flowOf(inputs), network = flowOf(network), libraryCount = flowOf(23))
+        // A TV has no touch screen; the native graphics mode starts in touch mode, where nothing takes key focus.
+        compose.runOnUiThread {
+            compose.activity.window.decorView
+                .requestFocusFromTouch()
+        }
         compose.setContent {
             TvTheme {
                 val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
@@ -73,12 +239,12 @@ class TopBarHeaderUiTest {
         compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
     }
 
-    private fun press(key: Key) {
+    fun press(key: Key) {
         compose.onRoot().performKeyInput { pressKey(key) }
         compose.waitForIdle()
     }
 
-    private fun textOf(tag: String): String =
+    fun textOf(tag: String): String =
         compose
             .onNodeWithTag(tag)
             .fetchSemanticsNode()
@@ -87,7 +253,7 @@ class TopBarHeaderUiTest {
             ?.joinToString("")
             .orEmpty()
 
-    private fun titleSize(): TextUnit {
+    fun titleSize(): TextUnit {
         val results = mutableListOf<TextLayoutResult>()
         val node = compose.onNodeWithTag("shelf:title").fetchSemanticsNode()
         node.config[SemanticsActions.GetTextLayoutResult].action!!(results)
@@ -96,167 +262,5 @@ class TopBarHeaderUiTest {
             .layoutInput.style.fontSize
     }
 
-    private fun ports(vararg connections: InputConnection) =
-        InputsMenu(available = true, rows = connections.mapIndexed { i, c -> port(i + 1, c) })
-
-    @Test
-    fun on_the_inputs_button_the_band_names_the_inputs_and_the_device_on_the_only_connected_port() {
-        showHome(ports(InputConnection.Disconnected, InputConnection.Connected, InputConnection.Unknown))
-
-        press(Key.DirectionUp)
-
-        compose.onNodeWithContentDescription("Inputs").assertIsFocused()
-        assertEquals("Inputs", textOf("shelf:title"))
-        assertEquals("HDMI 2 · Connected", textOf("shelf:title-meta"))
-    }
-
-    @Test
-    fun on_the_inputs_button_the_band_counts_the_connected_ports_when_there_are_several() {
-        showHome(FourPorts)
-
-        press(Key.DirectionUp)
-
-        assertEquals("2 inputs connected", textOf("shelf:title-meta"))
-    }
-
-    @Test
-    fun on_the_inputs_button_the_band_says_when_no_port_has_a_device() {
-        showHome(ports(InputConnection.Disconnected, InputConnection.Unknown))
-
-        press(Key.DirectionUp)
-
-        assertEquals("No input connected", textOf("shelf:title-meta"))
-    }
-
-    @Test
-    fun on_the_network_button_the_band_says_connected_and_never_the_network_name() {
-        showHome()
-
-        press(Key.DirectionUp)
-        press(Key.DirectionRight)
-
-        assertEquals("Wi-Fi", textOf("shelf:title"))
-        assertEquals("Connected", textOf("shelf:title-meta"))
-        assertFalse((textOf("shelf:title") + textOf("shelf:title-meta")).contains("Living room"))
-    }
-
-    @Test
-    fun on_the_network_button_without_a_link_the_band_says_offline() {
-        showHome(network = NetworkState(NetworkLink.Offline))
-
-        press(Key.DirectionUp)
-        press(Key.DirectionRight)
-
-        assertEquals("Wi-Fi", textOf("shelf:title"))
-        assertEquals("Offline", textOf("shelf:title-meta"))
-    }
-
-    @Test
-    fun on_the_settings_button_the_band_names_home_and_system() {
-        showHome()
-
-        press(Key.DirectionUp)
-        press(Key.DirectionRight)
-        press(Key.DirectionRight)
-        press(Key.DirectionRight)
-
-        compose.onNodeWithContentDescription("Settings").assertIsFocused()
-        assertEquals("Settings", textOf("shelf:title"))
-        assertEquals("Home and system", textOf("shelf:title-meta"))
-    }
-
-    @Test
-    fun with_launcher_settings_button_the_band_on_the_settings_button_names_launcher_settings() {
-        showHome(config = cinematic.copy(launcherSettingsButton = true))
-
-        press(Key.DirectionUp)
-        repeat(3) { press(Key.DirectionRight) }
-
-        compose.onNodeWithContentDescription("Launcher settings").assertIsFocused()
-        assertEquals("Launcher settings", textOf("shelf:title"))
-        assertEquals("Layout, clock and motion", textOf("shelf:title-meta"))
-    }
-
-    @Test
-    fun with_launcher_settings_button_the_band_keeps_naming_launcher_settings_while_the_settings_menu_is_open() {
-        showHome(config = cinematic.copy(launcherSettingsButton = true))
-        press(Key.DirectionUp)
-        repeat(3) { press(Key.DirectionRight) }
-
-        compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
-        compose.mainClock.advanceTimeBy(600)
-        compose.onRoot().performKeyInput { keyUp(Key.DirectionCenter) }
-        compose.waitForIdle()
-
-        compose.onNodeWithTag("menu").assertExists()
-        assertEquals("Launcher settings", textOf("shelf:title"))
-        assertEquals("Layout, clock and motion", textOf("shelf:title-meta"))
-    }
-
-    @Test
-    fun on_any_other_button_the_band_shows_its_name_and_no_second_line() {
-        showHome()
-
-        press(Key.DirectionUp)
-        press(Key.DirectionRight)
-        press(Key.DirectionRight)
-
-        assertEquals("App library", textOf("shelf:title"))
-        assertEquals(" ", textOf("shelf:title-meta"))
-    }
-
-    @Test
-    fun the_band_keeps_its_height_and_goes_back_to_the_dock_app_when_focus_returns() {
-        showHome()
-        val bottom = compose.onNodeWithTag("shelf:name").getBoundsInRoot().bottom
-
-        press(Key.DirectionUp)
-        assertEquals(bottom, compose.onNodeWithTag("shelf:title").getBoundsInRoot().bottom)
-
-        press(Key.DirectionDown)
-        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-        assertEquals("App 1", textOf("shelf:name"))
-    }
-
-    @Test
-    fun the_inputs_list_the_remote_opens_is_named_in_the_band_whatever_button_had_focus_last() {
-        showHome()
-        press(Key.DirectionUp)
-        press(Key.DirectionRight)
-        assertEquals("Wi-Fi", textOf("shelf:title"))
-
-        inputsRequests++
-        compose.waitForIdle()
-
-        compose.onNodeWithTag("menu").assertExists()
-        assertEquals("Inputs", textOf("shelf:title"))
-        assertEquals("2 inputs connected", textOf("shelf:title-meta"))
-    }
-
-    @Test
-    fun a_button_in_the_top_bar_gets_a_title_of_32_sp_where_a_tile_gets_48() {
-        showHome()
-        assertEquals(48.sp, titleSize())
-
-        press(Key.DirectionUp)
-        assertEquals(32.sp, titleSize())
-        press(Key.DirectionRight)
-        assertEquals(32.sp, titleSize())
-
-        press(Key.DirectionDown)
-        assertEquals(48.sp, titleSize())
-    }
-
-    @Test
-    fun the_library_pill_gets_the_chrome_title_size_too() {
-        showHome()
-
-        press(Key.DirectionDown)
-        press(Key.DirectionRight)
-        press(Key.DirectionDown)
-        compose.onNodeWithTag("library:pill").assertIsFocused()
-
-        assertEquals("App library", textOf("shelf:title"))
-        assertEquals(32.sp, titleSize())
-    }
+    fun ports(vararg connections: InputConnection) = InputsMenu(available = true, rows = connections.mapIndexed { i, c -> port(i + 1, c) })
 }

@@ -1,92 +1,89 @@
 package dev.niltsiar.tvhome.feature.home
 
 import androidx.compose.ui.graphics.Color
+import de.infix.testBalloon.framework.core.testSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.ringColor
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.floats.plusOrMinus
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 
-class ShelfLayoutTest {
-    private val art = Color(0xFFC81818)
-    private val plain = Color.Unspecified
+val ShelfLayoutTest by testSuite {
+    testFixture {
+        object {
+            val art = Color(0xFFC81818)
 
-    @Test
-    fun without_the_cinematic_shelf_tiles_keep_the_theme_accent() {
-        val layout = ShelfLayout()
+            val plain = Color.Unspecified
+        }
+    } asContextForEach {
+        test("without the cinematic shelf tiles keep the theme accent") {
+            val layout = ShelfLayout()
 
-        assertEquals(plain, layout.focusAccent(art, inDock = true))
-        assertEquals(plain, layout.focusAccent(art, inDock = false))
-    }
+            layout.focusAccent(art, inDock = true) shouldBe plain
+            layout.focusAccent(art, inDock = false) shouldBe plain
+        }
 
-    @Test
-    fun the_cinematic_shelf_colours_the_dock_and_not_the_grid() {
-        val layout = ShelfLayout(cinematic = true)
+        test("the cinematic shelf colours the dock and not the grid") {
+            val layout = ShelfLayout(cinematic = true)
 
-        assertEquals(art, layout.focusAccent(art, inDock = true))
-        assertEquals(plain, layout.focusAccent(art, inDock = false))
-    }
+            layout.focusAccent(art, inDock = true) shouldBe art
+            layout.focusAccent(art, inDock = false) shouldBe plain
+        }
 
-    @Test
-    fun cinematic_white_focus_keeps_the_dock_white() {
-        val layout = ShelfLayout(cinematic = true, whiteFocus = true)
+        test("cinematic white focus keeps the dock white") {
+            val layout = ShelfLayout(cinematic = true, whiteFocus = true)
 
-        assertEquals(Color.White, layout.focusAccent(art, inDock = true))
-        assertEquals(plain, layout.focusAccent(art, inDock = false))
-    }
+            layout.focusAccent(art, inDock = true) shouldBe Color.White
+            layout.focusAccent(art, inDock = false) shouldBe plain
+        }
 
-    @Test
-    fun app_glow_colours_every_tile_even_with_white_focus_or_without_the_shelf() {
-        assertEquals(art, ShelfLayout(appGlow = true).focusAccent(art, inDock = false))
-        assertEquals(art, ShelfLayout(appGlow = true).focusAccent(art, inDock = true))
-        assertEquals(art, ShelfLayout(cinematic = true, whiteFocus = true, appGlow = true).focusAccent(art, inDock = true))
-    }
+        test("app glow colours every tile even with white focus or without the shelf") {
+            ShelfLayout(appGlow = true).focusAccent(art, inDock = false) shouldBe art
+            ShelfLayout(appGlow = true).focusAccent(art, inDock = true) shouldBe art
+            ShelfLayout(cinematic = true, whiteFocus = true, appGlow = true).focusAccent(art, inDock = true) shouldBe art
+        }
 
-    @Test
-    fun the_ring_takes_the_app_colour_in_the_dock_and_in_the_grid_only_with_app_glow() {
-        val ring = ringColor(art)
+        test("the ring takes the app colour in the dock and in the grid only with app glow") {
+            val ring = ringColor(art)
 
-        assertEquals(ring, ShelfLayout().ringColour(art, inDock = true))
-        assertEquals(Color.White, ShelfLayout().ringColour(art, inDock = false))
-        assertEquals(ring, ShelfLayout(appGlow = true).ringColour(art, inDock = false))
-    }
+            ShelfLayout().ringColour(art, inDock = true) shouldBe ring
+            ShelfLayout().ringColour(art, inDock = false) shouldBe Color.White
+            ShelfLayout(appGlow = true).ringColour(art, inDock = false) shouldBe ring
+        }
 
-    @Test
-    fun the_ring_of_a_tile_whose_edge_is_its_own_colour_is_lifted_toward_white() {
-        val blue = Color(0xFF288BFF)
+        test("the ring of a tile whose edge is its own colour is lifted toward white") {
+            val blue = Color(0xFF288BFF)
 
-        assertEquals(ringColor(blue, tile = blue), ShelfLayout().ringColour(blue, inDock = true, edge = blue))
-        assertNotEquals(ringColor(blue), ShelfLayout().ringColour(blue, inDock = true, edge = blue))
-    }
+            ShelfLayout().ringColour(blue, inDock = true, edge = blue) shouldBe ringColor(blue, tile = blue)
+            ShelfLayout().ringColour(blue, inDock = true, edge = blue) shouldNotBe ringColor(blue)
+        }
 
-    @Test
-    fun cinematic_white_focus_keeps_every_ring_white() {
-        val layout = ShelfLayout(whiteFocus = true, appGlow = true)
+        test("cinematic white focus keeps every ring white") {
+            val layout = ShelfLayout(whiteFocus = true, appGlow = true)
 
-        assertEquals(Color.White, layout.ringColour(art, inDock = true))
-        assertEquals(Color.White, layout.ringColour(art, inDock = false))
-    }
+            layout.ringColour(art, inDock = true) shouldBe Color.White
+            layout.ringColour(art, inDock = false) shouldBe Color.White
+        }
 
-    @Test
-    fun the_theme_percentages_become_fractions_and_motion_follows_the_switches() {
-        val layout = TvConfig(cinematicHome = true, cinematicArt = 20, cinematicScrim = 40, cinematicDots = false).shelfLayout()
+        test("the theme percentages become fractions and motion follows the switches") {
+            val layout = TvConfig(cinematicHome = true, cinematicArt = 20, cinematicScrim = 40, cinematicDots = false).shelfLayout()
 
-        assertTrue(layout.cinematic)
-        assertEquals(0.2f, layout.artAlpha, 0f)
-        assertEquals(0.4f, layout.scrimAlpha, 0f)
-        assertFalse(layout.dots)
-        assertTrue(layout.animated)
-        assertFalse(TvConfig(animations = false).shelfLayout().animated)
-        assertFalse(TvConfig(reducedMotion = true).shelfLayout().animated)
-    }
+            layout.cinematic.shouldBeTrue()
+            layout.artAlpha shouldBe (0.2f plusOrMinus 0f)
+            layout.scrimAlpha shouldBe (0.4f plusOrMinus 0f)
+            layout.dots.shouldBeFalse()
+            layout.animated.shouldBeTrue()
+            TvConfig(animations = false).shelfLayout().animated.shouldBeFalse()
+            TvConfig(reducedMotion = true).shelfLayout().animated.shouldBeFalse()
+        }
 
-    @Test
-    fun the_glow_switches_reach_the_layout() {
-        val layout = TvConfig(ambientGlow = false, glowSnap = true, appGlow = true, cinematicWhiteFocus = true).shelfLayout()
+        test("the glow switches reach the layout") {
+            val layout = TvConfig(ambientGlow = false, glowSnap = true, appGlow = true, cinematicWhiteFocus = true).shelfLayout()
 
-        assertFalse(layout.ambientGlow)
-        assertTrue(layout.glowSnap && layout.appGlow && layout.whiteFocus)
+            layout.ambientGlow.shouldBeFalse()
+            (layout.glowSnap && layout.appGlow && layout.whiteFocus).shouldBeTrue()
+        }
     }
 }

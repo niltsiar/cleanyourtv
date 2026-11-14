@@ -14,26 +14,52 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-import org.robolectric.annotation.GraphicsMode
+import de.infix.testBalloon.framework.core.JUnit4RulesContext
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectric
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import io.kotest.assertions.withClue
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.shouldBe
 
-@RunWith(RobolectricTestRunner::class)
-@GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
-class TrimmedEllipsisTextTest {
-    @get:Rule
-    val compose = createComposeRule()
+val TrimmedEllipsisTextTest by testSuite {
+    robolectricTestSuite<TrimmedEllipsisTextTestContent>(
+        "sdk 31, 960x540 dp",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "w960dp-h540dp-xhdpi"
+            },
+    )
+}
 
-    private val name = "Control de TV con altavoces inteligentes"
-    private var room by mutableStateOf(60.dp)
+class TrimmedEllipsisTextTestContent :
+    RobolectricTestSuiteContent({
+        testFixture { TrimmedEllipsisTextTestFixture() } asContextForEach {
+            test("a name cut for a narrow room shows whole again when the room grows") {
+                compose.setContent {
+                    Box(
+                        Modifier.width(room),
+                    ) { TrimmedEllipsisText(name, TextStyle(fontSize = 14.sp), maxLines = 1, Modifier.testTag("name")) }
+                }
 
-    private fun shown(room: Dp): String {
+                val narrow = shown(120.dp)
+                withClue(narrow) { (narrow.length < name.length && narrow.endsWith(Char(0x2026).toString())).shouldBeTrue() }
+                shown(600.dp) shouldBe name
+            }
+        }
+    })
+
+private class TrimmedEllipsisTextTestFixture : JUnit4RulesContext() {
+    val compose = rule(createComposeRule())
+
+    val name = "Control de TV con altavoces inteligentes"
+
+    var room by mutableStateOf(60.dp)
+
+    fun shown(room: Dp): String {
         this.room = room
         compose.waitForIdle()
         return compose
@@ -41,16 +67,5 @@ class TrimmedEllipsisTextTest {
             .fetchSemanticsNode()
             .config[SemanticsProperties.Text]
             .joinToString("") { it.text }
-    }
-
-    @Test
-    fun a_name_cut_for_a_narrow_room_shows_whole_again_when_the_room_grows() {
-        compose.setContent {
-            Box(Modifier.width(room)) { TrimmedEllipsisText(name, TextStyle(fontSize = 14.sp), maxLines = 1, Modifier.testTag("name")) }
-        }
-
-        val narrow = shown(120.dp)
-        assertTrue(narrow, narrow.length < name.length && narrow.endsWith(Char(0x2026).toString()))
-        assertEquals(name, shown(600.dp))
     }
 }

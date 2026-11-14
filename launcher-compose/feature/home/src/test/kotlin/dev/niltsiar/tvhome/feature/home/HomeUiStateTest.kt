@@ -1,132 +1,115 @@
 package dev.niltsiar.tvhome.feature.home
 
+import de.infix.testBalloon.framework.core.testSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import io.kotest.matchers.shouldBe
 import java.time.LocalDateTime
 import java.util.Locale
 
-class HomeUiStateTest {
-    private fun state(
+val HomeUiStateTest by testSuite {
+    fun state(
         apps: List<AppEntry> = NineApps,
         now: LocalDateTime? = Evening,
         focusedPackage: String? = null,
         header: HeaderStyle = HeaderStyle(),
     ) = homeUiState(homeApps(apps), now, focusedPackage, Locale.ENGLISH, header)
 
-    @Test
-    fun the_time_formats_as_clock_and_date() {
+    test("the time formats as clock and date") {
         val state = state()
-        assertEquals("20:15", state.clock)
-        assertEquals("Tuesday 3 November", state.date)
+        state.clock shouldBe "20:15"
+        state.date shouldBe "Tuesday 3 November"
     }
 
-    @Test
-    fun no_time_yet_gives_an_empty_clock_and_date() {
+    test("no time yet gives an empty clock and date") {
         val state = state(now = null)
-        assertEquals("", state.clock)
-        assertEquals("", state.date)
+        state.clock shouldBe ""
+        state.date shouldBe ""
     }
 
-    @Test
-    fun a_focused_package_gives_its_label() {
-        assertEquals("App 4", state(focusedPackage = "pkg.4").focusedLabel)
+    test("a focused package gives its label") {
+        state(focusedPackage = "pkg.4").focusedLabel shouldBe "App 4"
     }
 
-    @Test
-    fun an_unknown_focused_package_falls_back_to_the_first_app() {
-        assertEquals("App 1", state(focusedPackage = "pkg.missing").focusedLabel)
+    test("an unknown focused package falls back to the first app") {
+        state(focusedPackage = "pkg.missing").focusedLabel shouldBe "App 1"
     }
 
-    @Test
-    fun nine_apps_split_into_six_in_the_dock_and_three_in_the_grid() {
+    test("nine apps split into six in the dock and three in the grid") {
         val state = state()
-        assertEquals(NineApps.take(6), state.dock)
-        assertEquals(NineApps.drop(6), state.grid)
+        state.dock shouldBe NineApps.take(6)
+        state.grid shouldBe NineApps.drop(6)
     }
 
-    @Test
-    fun fewer_apps_than_the_dock_holds_all_go_to_the_dock() {
+    test("fewer apps than the dock holds all go to the dock") {
         val state = state(apps = NineApps.take(4))
-        assertEquals(NineApps.take(4), state.dock)
-        assertEquals(emptyList<Any>(), state.grid)
+        state.dock shouldBe NineApps.take(4)
+        state.grid shouldBe emptyList<Any>()
     }
 
-    @Test
-    fun no_apps_gives_an_empty_dock_grid_and_label() {
+    test("no apps gives an empty dock grid and label") {
         val state = state(apps = emptyList(), focusedPackage = "pkg.1")
-        assertEquals(emptyList<Any>(), state.dock)
-        assertEquals(emptyList<Any>(), state.grid)
-        assertEquals("", state.focusedLabel)
+        state.dock shouldBe emptyList<Any>()
+        state.grid shouldBe emptyList<Any>()
+        state.focusedLabel shouldBe ""
     }
 
-    @Test
-    fun dock_apps_found_come_first_and_the_rest_of_the_row_fills_up() {
+    test("dock apps found come first and the rest of the row fills up") {
         val apps = homeApps(docked = 2)
-        assertEquals(NineApps.take(6), apps.dock)
-        assertEquals(NineApps.drop(6), apps.grid)
+        apps.dock shouldBe NineApps.take(6)
+        apps.grid shouldBe NineApps.drop(6)
     }
 
-    @Test
-    fun fill_dock_off_leaves_the_free_dock_slots_empty() {
+    test("fill dock off leaves the free dock slots empty") {
         val apps = homeApps(docked = 2, config = TvConfig(columns = 6, fillDock = false))
-        assertEquals(NineApps.take(2), apps.dock)
-        assertEquals(NineApps.drop(2), apps.grid)
+        apps.dock shouldBe NineApps.take(2)
+        apps.grid shouldBe NineApps.drop(2)
     }
 
-    @Test
-    fun fill_dock_off_with_no_dock_app_installed_still_fills_the_first_row() {
+    test("fill dock off with no dock app installed still fills the first row") {
         val apps = homeApps(docked = 0, config = TvConfig(columns = 6, fillDock = false))
-        assertEquals(NineApps.take(6), apps.dock)
+        apps.dock shouldBe NineApps.take(6)
     }
 
-    @Test
-    fun the_columns_are_the_dock_size() {
+    test("the columns are the dock size") {
         val apps = homeApps(config = TvConfig(columns = 4))
-        assertEquals(NineApps.take(4), apps.dock)
-        assertEquals(NineApps.drop(4), apps.grid)
+        apps.dock shouldBe NineApps.take(4)
+        apps.grid shouldBe NineApps.drop(4)
     }
 
-    @Test
-    fun a_single_row_holds_every_app_in_the_dock() {
+    test("a single row holds every app in the dock") {
         val apps = homeApps(config = TvConfig(columns = 4, singleRow = true))
-        assertEquals(NineApps, apps.dock)
-        assertEquals(emptyList<Any>(), apps.grid)
+        apps.dock shouldBe NineApps
+        apps.grid shouldBe emptyList<Any>()
     }
 
-    @Test
-    fun empty_dock_slots_follow_the_reference_rules() {
-        assertEquals(1, emptyDockSlots(docked = 3, dockSize = 4, tiles = 20, fill = false))
-        assertEquals(0, emptyDockSlots(docked = 3, dockSize = 4, tiles = 20, fill = true))
-        assertEquals(0, emptyDockSlots(docked = 4, dockSize = 4, tiles = 20, fill = false))
-        assertEquals(0, emptyDockSlots(docked = 0, dockSize = 4, tiles = 20, fill = false))
-        assertEquals(0, emptyDockSlots(docked = 2, dockSize = 4, tiles = 2, fill = false))
+    test("empty dock slots follow the reference rules") {
+        emptyDockSlots(docked = 3, dockSize = 4, tiles = 20, fill = false) shouldBe 1
+        emptyDockSlots(docked = 3, dockSize = 4, tiles = 20, fill = true) shouldBe 0
+        emptyDockSlots(docked = 4, dockSize = 4, tiles = 20, fill = false) shouldBe 0
+        emptyDockSlots(docked = 0, dockSize = 4, tiles = 20, fill = false) shouldBe 0
+        emptyDockSlots(docked = 2, dockSize = 4, tiles = 2, fill = false) shouldBe 0
     }
 
-    @Test
-    fun the_twelve_hour_clock_has_no_leading_zero_and_an_am_pm_marker() {
+    test("the twelve hour clock has no leading zero and an am pm marker") {
         val state = state(header = HeaderStyle(hour24 = false))
-        assertEquals("8:15" to "PM", state.clock to state.amPm)
+        (state.clock to state.amPm) shouldBe ("8:15" to "PM")
         val midnight = state(now = Evening.withHour(0).withMinute(5), header = HeaderStyle(hour24 = false))
-        assertEquals("12:05" to "AM", midnight.clock to midnight.amPm)
-        assertEquals("", state().amPm)
+        (midnight.clock to midnight.amPm) shouldBe ("12:05" to "AM")
+        state().amPm shouldBe ""
     }
 
-    @Test
-    fun the_date_follows_the_pattern_from_the_resources() {
-        assertEquals("Tuesday  3 November", state(header = HeaderStyle(datePattern = "EEEE  d MMMM")).date)
+    test("the date follows the pattern from the resources") {
+        state(header = HeaderStyle(datePattern = "EEEE  d MMMM")).date shouldBe "Tuesday  3 November"
     }
 
-    @Test
-    fun the_greeting_names_the_part_of_the_day_and_the_configured_name() {
-        assertEquals(Greeting(DayPart.Evening, "Sam"), state(header = HeaderStyle(greetingName = "Sam")).greeting)
-        assertEquals(Greeting(DayPart.Evening, null), state().greeting)
+    test("the greeting names the part of the day and the configured name") {
+        state(header = HeaderStyle(greetingName = "Sam")).greeting shouldBe Greeting(DayPart.Evening, "Sam")
+        state().greeting shouldBe Greeting(DayPart.Evening, null)
     }
 
-    @Test
-    fun show_greeting_false_and_no_time_both_leave_no_greeting() {
-        assertEquals(null, state(header = HeaderStyle(showGreeting = false)).greeting)
-        assertEquals(null, state(now = null).greeting)
+    test("show greeting false and no time both leave no greeting") {
+        state(header = HeaderStyle(showGreeting = false)).greeting shouldBe null
+        state(now = null).greeting shouldBe null
     }
 }

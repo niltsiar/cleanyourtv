@@ -33,6 +33,12 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
+import de.infix.testBalloon.framework.core.JUnit4RulesContext
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectric
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
@@ -41,45 +47,468 @@ import dev.niltsiar.tvhome.core.model.InputConnection
 import dev.niltsiar.tvhome.core.model.InputRow
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.Wallpaper
+import io.kotest.assertions.withClue
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.comparables.shouldBeGreaterThan
+import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
+import io.kotest.matchers.comparables.shouldBeLessThan
+import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
+import io.kotest.matchers.floats.plusOrMinus
+import io.kotest.matchers.ranges.shouldBeIn
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-import org.robolectric.annotation.GraphicsMode
 import kotlin.math.abs
 
 /** The tile menu over a Home of white tiles, read from the rendered pixels. */
-@RunWith(RobolectricTestRunner::class)
-@GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
-class HomeOverlayLookUiTest {
-    @get:Rule
-    val compose = createAndroidComposeRule<ComponentActivity>()
+val HomeOverlayLookUiTest by testSuite {
+    robolectricTestSuite<HomeOverlayLookUiTestContent>(
+        "sdk 31, 960x540 dp",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "w960dp-h540dp-xhdpi"
+            },
+    )
+    robolectricTestSuite<HomeOverlayLookUiNightTestContent>(
+        "sdk 31, night, 960x540 dp",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "w960dp-h540dp-night-xhdpi"
+            },
+    )
+}
 
-    private val white =
+class HomeOverlayLookUiNightTestContent :
+    RobolectricTestSuiteContent({
+        testFixture { HomeOverlayLookUiTestFixture() } asContextForEach {
+            test("the menu panel hides the white tile under it") {
+                showHome()
+                press(Key.DirectionDown)
+                compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+                openTileMenu()
+
+                assertNear(0x14, redAt(gapOverATile("menu", above = "menu:Move", below = "menu:AppInfo")), 1)
+            }
+
+            test("a dock tiles menu of four rows ends at least 12 dp above the dock panel") {
+                showHome(config = SixColumns.copy(appLibrary = true))
+                openTileMenu()
+                compose.onNodeWithTag("menu:RemoveFromHome").assertExists()
+                compose.onNodeWithTag("menu:AppInfo").assertExists()
+
+                val clearance = bounds("dock").top.value - bounds("menu").bottom.value
+                withClue("the menu ends $clearance dp above the panel: ${bounds("dock")} ${bounds("menu")} ${bounds("tile:pkg.1")}") {
+                    clearance shouldBeGreaterThanOrEqualTo
+                        11.5f
+                }
+            }
+
+            test("a dock tiles menu that fits under the top bar ends 20 dp above the dock panel") {
+                showHome(config = SixColumns)
+                openTileMenu()
+                compose.onNodeWithTag("menu:RemoveFromHome").assertDoesNotExist()
+
+                val clearance = bounds("dock").top.value - bounds("menu").bottom.value
+                withClue("the menu ends $clearance dp above the panel") { clearance shouldBe (20f plusOrMinus 0.5f) }
+            }
+
+            test("the inputs list ends at least 24 dp above the dock panel and scrolls to the row in focus") {
+                val ports = InputsMenu(available = true, rows = (1..6).map { port(it, InputConnection.Disconnected) } + InputRow.LiveTv)
+                showHome(inputs = ports)
+                press(Key.DirectionUp)
+                press(Key.DirectionCenter)
+
+                val clearance = bounds("dock").top.value - bounds("menu").bottom.value
+                withClue("the list ends $clearance dp above the panel") { clearance shouldBeGreaterThanOrEqualTo 23.5f }
+
+                repeat(6) { press(Key.DirectionDown) }
+                compose.onNodeWithTag("input:6").assertIsFocused()
+                withClue("the last row ends at ${bounds("input:6").bottom}") {
+                    bounds("input:6").bottom.value shouldBeLessThanOrEqualTo
+                        bounds("menu").bottom.value
+                }
+            }
+
+            test("a grid tiles menu leaves no sliver of the next tile beside its right edge") {
+                showHome(appCount = 20)
+                press(Key.DirectionDown)
+                compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+                openTileMenu()
+
+                val menu = bounds("menu")
+                val middle = centreOf("tile:pkg.7").y
+                withClue("the menu does not reach the tile row") { (middle > menu.top.value && middle < menu.bottom.value).shouldBeTrue() }
+                // Pixels 2 to 22 dp past the menu's edge lie in the 24 dp gap between tile columns when it ends on a tile's edge.
+                val ink = (2..22 step 2).map { redAt(Offset(menu.right.value + it, middle)) }
+                withClue("tile ink beside the menu: $ink") { (ink.all { it < 40 }).shouldBeTrue() }
+                withClue("no tile at the next column") { redAt(Offset(menu.right.value + 30f, middle)) shouldBeGreaterThan 100 }
+            }
+
+            test("an open menu dims home behind it by half and back lifts the dim") {
+                showHome()
+                assertNear(255, redAt(centreOf("tile:pkg.6")), 2)
+
+                openTileMenu()
+                assertNear((255 + 0x07) / 2, redAt(centreOf("tile:pkg.6")), 4)
+
+                compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+                settle()
+                compose.onNodeWithTag("menu").assertDoesNotExist()
+                assertNear(255, redAt(centreOf("tile:pkg.6")), 2)
+            }
+
+            test(
+                "the inputs list draws the dock at 055 under its dim and closing it leaves the dock at 075 with focus back on the top bar",
+            ) {
+                openInputs()
+
+                assertNear(dimmedDock(0.55f), redAt(centreOf("tile:pkg.2")), 4)
+
+                back()
+                compose.onNodeWithTag("input:0").assertDoesNotExist()
+                assertNear(Math.round(255 * 0.75f), redAt(centreOf("tile:pkg.2")), 6)
+            }
+
+            test(
+                "the settings menu draws the dock at 055 under its dim and closing it leaves the dock at 075 with focus back on the top bar",
+            ) {
+                showHome()
+                press(Key.DirectionUp)
+                repeat(2) { press(Key.DirectionRight) }
+                compose.onNodeWithContentDescription("Settings").assertIsFocused()
+                openTileMenu()
+
+                assertNear(dimmedDock(0.55f), redAt(centreOf("tile:pkg.2")), 4)
+
+                back()
+                compose.onNodeWithTag("menu").assertDoesNotExist()
+                assertNear(Math.round(255 * 0.75f), redAt(centreOf("tile:pkg.2")), 6)
+            }
+
+            test("a dock tiles menu leaves the dock at full alpha under its dim") {
+                showHome()
+                openTileMenu()
+
+                assertNear(dimmedDock(1f), redAt(centreOf("tile:pkg.6")), 4)
+            }
+
+            test("the app library hides every layer of home behind it and closing it brings them back") {
+                showHome()
+                val far = centreOf("tile:pkg.6")
+                assertNear(255, redAt(far), 2)
+
+                libraryOpen = true
+                settle()
+
+                // The wallpaper under the library's scrim, and nothing of Home's top bar, band, dock or grid over it.
+                val scrimmed = Math.round(0x07 * 0.78f)
+                assertNear(scrimmed, brightestOnScreen(), 2)
+
+                libraryOpen = false
+                settle()
+
+                assertNear(255, redAt(far), 2)
+            }
+
+            test("the tile a menu acts on stays undimmed inside a thin white ring") {
+                showHome()
+                openTileMenu()
+
+                val tile = bounds("tile:pkg.1")
+                val middle = (tile.top.value + tile.bottom.value) / 2
+                assertNear(255, redAt(Offset(tile.left.value + 8f, middle)), 2)
+                // The dimmed dock, in the gap after the tile, and past the ring on its other side.
+                val dimmed = redAt(Offset(tile.right.value + 12f, middle))
+                assertNear(dimmed, redAt(Offset(tile.left.value - 4f, middle)), 3)
+                // 1 dp out from the tile's edge, in the middle of the 2 dp ring: white at 0.70 over the dimmed dock.
+                assertNear(Math.round(dimmed + 0.7f * (255 - dimmed)), redAt(Offset(tile.left.value - 1f, middle)), 8)
+            }
+
+            test("settings menu rows have corners concentric with the panel") {
+                showHome()
+                openSettingsMenu()
+                compose.onNodeWithTag("menu:LauncherSettings").assertIsFocused()
+
+                val row = bounds("menu:LauncherSettings")
+                assertNear(0xF2, redAt(Offset(row.right.value - 12f, (row.top.value + row.bottom.value) / 2)), 3)
+                // 5 dp in from the corner lies inside a 14 dp corner and outside a 20 dp one.
+                redAt(Offset(row.left.value + 5f, row.top.value + 5f)) shouldBeLessThan 0x80
+            }
+
+            test(
+                "a dock tiles menu sets its header off with a 1 dp line of 12 percent white 8 dp under it and keeps the rows 8 dp inside",
+            ) {
+                showHome()
+                openTileMenu()
+
+                val title = bounds("menu:title")
+                val rule = bounds("menu:title:rule")
+                val ground = redAt(Offset(rule.left.value + 4f, rule.top.value - 3f))
+                val line = redAt(Offset((rule.left.value + rule.right.value) / 2, (rule.top.value + rule.bottom.value) / 2))
+
+                assertNear(8f, rule.top.value - title.bottom.value, 0.5f)
+                assertNear(1f, rule.height.value, 0.1f)
+                assertNear(Math.round(ground + 0.12f * (255 - ground)), line, 3)
+                assertNear(8f, focusedRowInset(), 0.5f)
+            }
+
+            test("the restart row draws its text in coral at rest and not while it has focus") {
+                showHome()
+                openSettingsMenu()
+                val row = bounds("menu:PowerMenu")
+
+                withClue("coral pixels at rest: ${pixelsOf(row, 0xFF8A80)}") { pixelsOf(row, 0xFF8A80) shouldBeGreaterThanOrEqualTo 8 }
+                withClue("another row has no coral") { pixelsOf(bounds("menu:Reorder"), 0xFF8A80) shouldBe 0 }
+                repeat(3) { press(Key.DirectionDown) }
+                compose.onNodeWithTag("menu:PowerMenu").assertIsFocused()
+                withClue("coral pixels under focus") { pixelsOf(row, 0xFF8A80) shouldBe 0 }
+            }
+
+            test("the line above the restart row is white at 018") {
+                showHome()
+                openSettingsMenu()
+
+                val rule = compose.onNodeWithTag("menu:divider").getBoundsInRoot()
+                val ground = redAt(Offset((rule.left.value + rule.right.value) / 2, rule.top.value - 3f))
+                val line = redAt(Offset((rule.left.value + rule.right.value) / 2, (rule.top.value + rule.bottom.value) / 2))
+
+                assertNear(Math.round(ground + 0.18f * (255 - ground)), line, 3)
+            }
+
+            test("a focused menu row is a light pill in night mode") {
+                assertNear(0xF2, focusedRowRed(), 3)
+            }
+
+            test("an unfocused connected row shows the faint green capsule in night mode") {
+                openInputs()
+                assertCapsuleFill(row = 1, fillAlpha = 0x29)
+            }
+
+            test("a focused connected row shows a solid 146C2E capsule with white text") {
+                openInputs()
+                val text =
+                    compose
+                        .onNode(hasText("Connected") and hasAnyAncestor(hasTestTag("input:0")), useUnmergedTree = true)
+                        .getBoundsInRoot()
+
+                // The row's own fill is the light pill, red F2; the capsule's solid fill is red 14.
+                assertNear(0x14, redAt(Offset(text.right.value + 4f, (text.top.value + text.bottom.value) / 2)), 3)
+                withClue("ink ${brightestRedIn(text)}") { brightestRedIn(text) shouldBeGreaterThanOrEqualTo 0xE8 }
+            }
+
+            test("the no device label is at least 5 to 1 against the dark menu") {
+                val ratio = noDeviceContrast(focused = false)
+                withClue("contrast $ratio") { ratio shouldBeGreaterThanOrEqualTo 5f }
+            }
+
+            test("the no device label is at least 5 to 1 against the focused row of the dark menu") {
+                val ratio = noDeviceContrast(focused = true)
+                withClue("contrast $ratio") { ratio shouldBeGreaterThanOrEqualTo 5f }
+            }
+
+            test("the inputs button keeps its focused look at a fill of 060 while its list is open") {
+                showHome()
+                press(Key.DirectionUp)
+                compose.onNodeWithContentDescription("Inputs").assertIsFocused()
+                val focusedFill = buttonRed("Inputs", 4f)
+                press(Key.DirectionCenter)
+                compose.onNodeWithTag("input:0").assertIsFocused()
+
+                assertFocusedLookAtSixtyPercent(opener = "Inputs", idle = "Settings", focusedFill = focusedFill)
+            }
+
+            test("the settings button keeps its focused look at a fill of 060 while its menu is open") {
+                showHome()
+                press(Key.DirectionUp)
+                repeat(2) { press(Key.DirectionRight) }
+                compose.onNodeWithContentDescription("Settings").assertIsFocused()
+                val focusedFill = buttonRed("Settings", 4f)
+                openTileMenu()
+
+                assertFocusedLookAtSixtyPercent(opener = "Settings", idle = "Inputs", focusedFill = focusedFill)
+            }
+
+            test("the dock draws at 075 while focus is in the top bar and whole again once focus leaves it") {
+                showHome()
+                val whole = redAt(centreOf("tile:pkg.2"))
+                press(Key.DirectionUp)
+                compose.onNodeWithContentDescription("Inputs").assertIsFocused()
+                val dimmed = redAt(centreOf("tile:pkg.2"))
+                press(Key.DirectionDown)
+                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+
+                assertNear(255, whole, 2)
+                // White art at 0.75 over the dark panel: 255 * 0.75 plus a quarter of what is behind it.
+                withClue("a white tile reads $dimmed in top-bar focus") { dimmed shouldBeIn 188..206 }
+                assertNear(255, redAt(centreOf("tile:pkg.2")), 2)
+            }
+
+            test("the inputs button is idle again once its list has closed") {
+                openInputs()
+                compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+                settle()
+                press(Key.DirectionDown)
+                compose.onNodeWithTag("menu").assertDoesNotExist()
+                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+
+                assertNear(buttonRed("Settings", 4f), buttonRed("Inputs", 4f), 2)
+            }
+
+            test("the settings button reads as its menus anchor on a dark wallpaper with its glyph 4 5 to 1 and its quiet outline 3 to 1") {
+                assertReadsAsAnchor(anchorContrast("Settings", 0f, ::openSettingsFromTopBar))
+            }
+
+            test(
+                "the settings button reads as its menus anchor on a bright wallpaper with its glyph 4 5 to 1 and its quiet outline 3 to 1",
+            ) {
+                assertReadsAsAnchor(anchorContrast("Settings", 1f, ::openSettingsFromTopBar))
+            }
+
+            test("the inputs button reads as its lists anchor on a bright wallpaper with its glyph 4 5 to 1 and its quiet outline 3 to 1") {
+                assertReadsAsAnchor(anchorContrast("Inputs", 1f, ::openInputsFromTopBar))
+            }
+        }
+    })
+
+class HomeOverlayLookUiTestContent :
+    RobolectricTestSuiteContent({
+        testFixture { HomeOverlayLookUiTestFixture() } asContextForEach {
+            test("the focused row of a grid tiles menu is 8 dp inside the panel") {
+                showHome()
+                press(Key.DirectionDown)
+                compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+                openTileMenu()
+
+                assertNear(8f, focusedRowInset(), 0.5f)
+            }
+
+            test("the focused row of the settings menu is 8 dp inside the panel") {
+                showHome()
+                openSettingsMenu()
+
+                assertNear(8f, focusedRowInset(), 0.5f)
+            }
+
+            test("the focused row of the inputs list is 8 dp inside the panel") {
+                openInputs()
+
+                assertNear(8f, focusedRowInset(), 0.5f)
+            }
+
+            test("the settings menu sets its restart row apart with the inputs lists line") {
+                showHome()
+                openSettingsMenu()
+
+                val line = compose.onNodeWithTag("menu:divider").getBoundsInRoot()
+                withClue("the line is ${line.height} dp tall") { abs(line.height.value - 5f) shouldBeLessThanOrEqualTo 0.5f }
+                withClue("the line ${line.top} is under the Reorder row ${bounds("menu:Reorder")}") {
+                    line.top shouldBeGreaterThanOrEqualTo
+                        bounds("menu:Reorder").bottom
+                }
+                withClue("the line ${line.bottom} is over the restart row ${bounds("menu:PowerMenu")}") {
+                    line.bottom shouldBeLessThanOrEqualTo
+                        bounds("menu:PowerMenu").top
+                }
+            }
+
+            test("on the light menu the restart row draws its text in dark red at rest and not the pale coral") {
+                showHome()
+                openSettingsMenu()
+                val row = bounds("menu:PowerMenu")
+
+                withClue("dark red pixels at rest: ${pixelsOf(row, 0xC62828)}") { pixelsOf(row, 0xC62828) shouldBeGreaterThanOrEqualTo 8 }
+                withClue("pale coral on the light menu") { pixelsOf(row, 0xFF8A80) shouldBe 0 }
+                withClue("another row has no red") { pixelsOf(bounds("menu:Reorder"), 0xC62828) shouldBe 0 }
+            }
+
+            test("the inputs list does not end on its line when the row after it does not fit") {
+                showHome(inputs = InputsMenu(available = true, rows = (1..4).map { port(it) } + InputRow.Separator() + InputRow.LiveTv))
+                press(Key.DirectionUp)
+                press(Key.DirectionCenter)
+                compose.onNodeWithTag("input:0").assertIsFocused()
+
+                val list = bounds("menu")
+                val line = compose.onNodeWithTag("menu:divider").getUnclippedBoundsInRoot()
+                val live = compose.onNodeWithTag("input:5").getUnclippedBoundsInRoot()
+                withClue("the last row of the list does not fit: list $list, live tv $live") { live.bottom shouldBeGreaterThan list.bottom }
+                withClue("the line $line shows at the bottom of the list $list") { line.top shouldBeGreaterThanOrEqualTo list.bottom }
+            }
+
+            test("the inputs list ends on the right edge of the top bar") {
+                val chat = (1..3).map { AppEntry(key = "chat.$it", packageName = "chat.$it", label = "Chat $it") }
+                showHome(inputs = InputsMenu(available = true, rows = listOf(port(1))), topBarApps = chat)
+                press(Key.DirectionUp)
+                compose.onNodeWithContentDescription("Inputs").assertIsFocused()
+                press(Key.DirectionCenter)
+
+                val settings = compose.onNodeWithContentDescription("Settings").getBoundsInRoot()
+                assertNear(settings.right.value, bounds("menu").right.value, 1f)
+            }
+
+            test("a focused menu row is a dark pill with night mode off") {
+                assertNear(0x11, focusedRowRed(), 3)
+            }
+
+            test("the no device label is at least 5 to 1 against the light menu") {
+                val ratio = noDeviceContrast(focused = false)
+                withClue("contrast $ratio") { ratio shouldBeGreaterThanOrEqualTo 5f }
+            }
+
+            test("the no device label is at least 5 to 1 against the focused row of the light menu") {
+                val ratio = noDeviceContrast(focused = true)
+                withClue("contrast $ratio") { ratio shouldBeGreaterThanOrEqualTo 5f }
+            }
+
+            test("an unfocused connected row shows the stronger green capsule on the light surface") {
+                openInputs()
+                assertCapsuleFill(row = 1, fillAlpha = 0x2E)
+            }
+
+            test("on the light theme the settings button reads as its menus anchor on a bright wallpaper") {
+                assertReadsAsAnchor(anchorContrast("Settings", 1f, ::openSettingsFromTopBar))
+            }
+
+            test("on the light theme the inputs button reads as its lists anchor on a dark wallpaper") {
+                assertReadsAsAnchor(anchorContrast("Inputs", 0f, ::openInputsFromTopBar))
+            }
+
+            test("the input list the system opens with no inputs button on screen draws the plain scrim and no ring") {
+                showHome(config = SixColumns.copy(showInputsPill = false))
+                compose.onNodeWithContentDescription("Inputs").assertDoesNotExist()
+
+                inputsRequests++
+                settle()
+
+                compose.onNodeWithTag("input:0").assertExists()
+                assertNear(redAt(Offset(40f, 3f)), redAt(Offset(1f, 1f)), 1)
+            }
+        }
+    })
+
+private class HomeOverlayLookUiTestFixture : JUnit4RulesContext() {
+    val compose = rule(createAndroidComposeRule<ComponentActivity>())
+
+    val white =
         ImageBitmap(16, 9).also { image ->
             Canvas(image).drawRect(Rect(0f, 0f, 16f, 9f), Paint().apply { color = Color.White })
         }
 
-    private fun grey(level: Float) =
+    fun grey(level: Float) =
         ImageBitmap(16, 9).also { image ->
             Canvas(image).drawRect(Rect(0f, 0f, 16f, 9f), Paint().apply { color = Color(level, level, level) })
         }
 
-    private fun appsOf(count: Int) = (1..count).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it", image = white) }
+    fun appsOf(count: Int) = (1..count).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it", image = white) }
 
-    private var apps = appsOf(9)
+    var apps = appsOf(9)
 
-    private var libraryOpen by mutableStateOf(false)
+    var libraryOpen by mutableStateOf(false)
 
-    private var inputsRequests by mutableIntStateOf(0)
+    var inputsRequests by mutableIntStateOf(0)
 
-    private fun showHome(
+    fun showHome(
         appCount: Int = 9,
         inputs: InputsMenu = FourPorts,
         config: TvConfig = SixColumns,
@@ -123,7 +552,7 @@ class HomeOverlayLookUiTest {
         compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
     }
 
-    private fun openTileMenu() {
+    fun openTileMenu() {
         compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
         compose.mainClock.advanceTimeBy(600)
         compose.onRoot().performKeyInput { keyUp(Key.DirectionCenter) }
@@ -131,14 +560,14 @@ class HomeOverlayLookUiTest {
         compose.onNodeWithTag("menu").assertExists()
     }
 
-    private fun settle() {
+    fun settle() {
         compose.mainClock.advanceTimeBy(1_000)
         compose.waitForIdle()
     }
 
-    private fun bounds(tag: String): DpRect = compose.onNodeWithTag(tag).getBoundsInRoot()
+    fun bounds(tag: String): DpRect = compose.onNodeWithTag(tag).getBoundsInRoot()
 
-    private fun centreOf(tag: String): Offset =
+    fun centreOf(tag: String): Offset =
         bounds(tag).let {
             Offset(
                 (it.left.value + it.right.value) / 2,
@@ -147,31 +576,31 @@ class HomeOverlayLookUiTest {
         }
 
     /** The red channel, 0 to 255, of the screen at [point] (in dp). */
-    private fun redAt(point: Offset): Int {
+    fun redAt(point: Offset): Int {
         val pixels = compose.onRoot().captureToImage().toPixelMap()
         val density = compose.activity.resources.displayMetrics.density
         return Math.round(pixels[(point.x * density).toInt(), (point.y * density).toInt()].red * 255)
     }
 
-    private fun assertNear(
+    fun assertNear(
         expected: Int,
         actual: Int,
         tolerance: Int,
-    ) = assertTrue("expected $expected, got $actual", abs(actual - expected) <= tolerance)
+    ) = withClue("expected $expected, got $actual") { abs(actual - expected) shouldBeLessThanOrEqualTo tolerance }
 
-    private fun assertNear(
+    fun assertNear(
         expected: Float,
         actual: Float,
         tolerance: Float,
-    ) = assertTrue("expected $expected, got $actual", abs(actual - expected) <= tolerance)
+    ) = withClue("expected $expected, got $actual") { abs(actual - expected) shouldBeLessThanOrEqualTo tolerance }
 
-    private fun press(key: Key) {
+    fun press(key: Key) {
         compose.onRoot().performKeyInput { pressKey(key) }
         settle()
     }
 
     /** A point in the panel [menu], in the gap between its rows [above] and [below], that a tile lies under. */
-    private fun gapOverATile(
+    fun gapOverATile(
         menu: String,
         above: String,
         below: String,
@@ -187,181 +616,23 @@ class HomeOverlayLookUiTest {
         return Offset(checkNotNull(x) { "no tile under the panel $panel at y $y" }, y)
     }
 
-    @Test
-    @Config(qualifiers = "+night")
-    fun the_menu_panel_hides_the_white_tile_under_it() {
-        showHome()
-        press(Key.DirectionDown)
-        compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
-        openTileMenu()
-
-        assertNear(0x14, redAt(gapOverATile("menu", above = "menu:Move", below = "menu:AppInfo")), 1)
-    }
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun a_dock_tiles_menu_of_four_rows_ends_at_least_12_dp_above_the_dock_panel() {
-        showHome(config = SixColumns.copy(appLibrary = true))
-        openTileMenu()
-        compose.onNodeWithTag("menu:RemoveFromHome").assertExists()
-        compose.onNodeWithTag("menu:AppInfo").assertExists()
-
-        val clearance = bounds("dock").top.value - bounds("menu").bottom.value
-        assertTrue(
-            "the menu ends $clearance dp above the panel: ${bounds("dock")} ${bounds("menu")} ${bounds("tile:pkg.1")}",
-            clearance >= 11.5f,
-        )
-    }
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun a_dock_tiles_menu_that_fits_under_the_top_bar_ends_20_dp_above_the_dock_panel() {
-        showHome(config = SixColumns)
-        openTileMenu()
-        compose.onNodeWithTag("menu:RemoveFromHome").assertDoesNotExist()
-
-        val clearance = bounds("dock").top.value - bounds("menu").bottom.value
-        assertEquals("the menu ends $clearance dp above the panel", 20f, clearance, 0.5f)
-    }
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun the_inputs_list_ends_at_least_24_dp_above_the_dock_panel_and_scrolls_to_the_row_in_focus() {
-        val ports = InputsMenu(available = true, rows = (1..6).map { port(it, InputConnection.Disconnected) } + InputRow.LiveTv)
-        showHome(inputs = ports)
-        press(Key.DirectionUp)
-        press(Key.DirectionCenter)
-
-        val clearance = bounds("dock").top.value - bounds("menu").bottom.value
-        assertTrue("the list ends $clearance dp above the panel", clearance >= 23.5f)
-
-        repeat(6) { press(Key.DirectionDown) }
-        compose.onNodeWithTag("input:6").assertIsFocused()
-        assertTrue("the last row ends at ${bounds("input:6").bottom}", bounds("input:6").bottom.value <= bounds("menu").bottom.value)
-    }
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun a_grid_tiles_menu_leaves_no_sliver_of_the_next_tile_beside_its_right_edge() {
-        showHome(appCount = 20)
-        press(Key.DirectionDown)
-        compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
-        openTileMenu()
-
-        val menu = bounds("menu")
-        val middle = centreOf("tile:pkg.7").y
-        assertTrue("the menu does not reach the tile row", middle > menu.top.value && middle < menu.bottom.value)
-        // Pixels 2 to 22 dp past the menu's edge lie in the 24 dp gap between tile columns when it ends on a tile's edge.
-        val ink = (2..22 step 2).map { redAt(Offset(menu.right.value + it, middle)) }
-        assertTrue("tile ink beside the menu: $ink", ink.all { it < 40 })
-        assertTrue("no tile at the next column", redAt(Offset(menu.right.value + 30f, middle)) > 100)
-    }
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun an_open_menu_dims_home_behind_it_by_half_and_back_lifts_the_dim() {
-        showHome()
-        assertNear(255, redAt(centreOf("tile:pkg.6")), 2)
-
-        openTileMenu()
-        assertNear((255 + 0x07) / 2, redAt(centreOf("tile:pkg.6")), 4)
-
-        compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
-        settle()
-        compose.onNodeWithTag("menu").assertDoesNotExist()
-        assertNear(255, redAt(centreOf("tile:pkg.6")), 2)
-    }
-
-    private fun back() {
+    fun back() {
         compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
         settle()
     }
 
     /** What a white dock tile shows under the 0.5 dim of an open popup, once the dock is drawn at [alpha] over the black wallpaper. */
-    private fun dimmedDock(alpha: Float) = Math.round((255 * alpha + 0x07) / 2)
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun the_inputs_list_draws_the_dock_at_055_under_its_dim_and_closing_it_leaves_the_dock_at_075_with_focus_back_on_the_top_bar() {
-        openInputs()
-
-        assertNear(dimmedDock(0.55f), redAt(centreOf("tile:pkg.2")), 4)
-
-        back()
-        compose.onNodeWithTag("input:0").assertDoesNotExist()
-        assertNear(Math.round(255 * 0.75f), redAt(centreOf("tile:pkg.2")), 6)
-    }
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun the_settings_menu_draws_the_dock_at_055_under_its_dim_and_closing_it_leaves_the_dock_at_075_with_focus_back_on_the_top_bar() {
-        showHome()
-        press(Key.DirectionUp)
-        repeat(2) { press(Key.DirectionRight) }
-        compose.onNodeWithContentDescription("Settings").assertIsFocused()
-        openTileMenu()
-
-        assertNear(dimmedDock(0.55f), redAt(centreOf("tile:pkg.2")), 4)
-
-        back()
-        compose.onNodeWithTag("menu").assertDoesNotExist()
-        assertNear(Math.round(255 * 0.75f), redAt(centreOf("tile:pkg.2")), 6)
-    }
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun a_dock_tiles_menu_leaves_the_dock_at_full_alpha_under_its_dim() {
-        showHome()
-        openTileMenu()
-
-        assertNear(dimmedDock(1f), redAt(centreOf("tile:pkg.6")), 4)
-    }
+    fun dimmedDock(alpha: Float) = Math.round((255 * alpha + 0x07) / 2)
 
     /** The brightest red channel, 0 to 255, anywhere on the screen. */
-    private fun brightestOnScreen(): Int {
+    fun brightestOnScreen(): Int {
         val pixels = compose.onRoot().captureToImage().toPixelMap()
         var most = 0f
         for (y in 0 until pixels.height) for (x in 0 until pixels.width) most = maxOf(most, pixels[x, y].red)
         return Math.round(most * 255)
     }
 
-    @Test
-    @Config(qualifiers = "+night")
-    fun the_app_library_hides_every_layer_of_home_behind_it_and_closing_it_brings_them_back() {
-        showHome()
-        val far = centreOf("tile:pkg.6")
-        assertNear(255, redAt(far), 2)
-
-        libraryOpen = true
-        settle()
-
-        // The wallpaper under the library's scrim, and nothing of Home's top bar, band, dock or grid over it.
-        val scrimmed = Math.round(0x07 * 0.78f)
-        assertNear(scrimmed, brightestOnScreen(), 2)
-
-        libraryOpen = false
-        settle()
-
-        assertNear(255, redAt(far), 2)
-    }
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun the_tile_a_menu_acts_on_stays_undimmed_inside_a_thin_white_ring() {
-        showHome()
-        openTileMenu()
-
-        val tile = bounds("tile:pkg.1")
-        val middle = (tile.top.value + tile.bottom.value) / 2
-        assertNear(255, redAt(Offset(tile.left.value + 8f, middle)), 2)
-        // The dimmed dock, in the gap after the tile, and past the ring on its other side.
-        val dimmed = redAt(Offset(tile.right.value + 12f, middle))
-        assertNear(dimmed, redAt(Offset(tile.left.value - 4f, middle)), 3)
-        // 1 dp out from the tile's edge, in the middle of the 2 dp ring: white at 0.70 over the dimmed dock.
-        assertNear(Math.round(dimmed + 0.7f * (255 - dimmed)), redAt(Offset(tile.left.value - 1f, middle)), 8)
-    }
-
-    private fun openSettingsMenu() {
+    fun openSettingsMenu() {
         compose.onRoot().performKeyInput { pressKey(Key.DirectionUp) }
         settle()
         repeat(2) {
@@ -372,83 +643,14 @@ class HomeOverlayLookUiTest {
         openTileMenu()
     }
 
-    @Test
-    @Config(qualifiers = "+night")
-    fun settings_menu_rows_have_corners_concentric_with_the_panel() {
-        showHome()
-        openSettingsMenu()
-        compose.onNodeWithTag("menu:LauncherSettings").assertIsFocused()
-
-        val row = bounds("menu:LauncherSettings")
-        assertNear(0xF2, redAt(Offset(row.right.value - 12f, (row.top.value + row.bottom.value) / 2)), 3)
-        // 5 dp in from the corner lies inside a 14 dp corner and outside a 20 dp one.
-        assertTrue(redAt(Offset(row.left.value + 5f, row.top.value + 5f)) < 0x80)
-    }
-
     /** How far the focused row of the open menu is from the panel's left edge, in dp. */
-    private fun focusedRowInset(): Float {
+    fun focusedRowInset(): Float {
         val row = compose.onNode(isFocused() and hasAnyAncestor(hasTestTag("menu"))).getBoundsInRoot()
         return row.left.value - bounds("menu").left.value
     }
 
-    @Test
-    fun the_focused_row_of_a_grid_tiles_menu_is_8_dp_inside_the_panel() {
-        showHome()
-        press(Key.DirectionDown)
-        compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
-        openTileMenu()
-
-        assertNear(8f, focusedRowInset(), 0.5f)
-    }
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun a_dock_tiles_menu_sets_its_header_off_with_a_1_dp_line_of_12_percent_white_8_dp_under_it_and_keeps_the_rows_8_dp_inside() {
-        showHome()
-        openTileMenu()
-
-        val title = bounds("menu:title")
-        val rule = bounds("menu:title:rule")
-        val ground = redAt(Offset(rule.left.value + 4f, rule.top.value - 3f))
-        val line = redAt(Offset((rule.left.value + rule.right.value) / 2, (rule.top.value + rule.bottom.value) / 2))
-
-        assertNear(8f, rule.top.value - title.bottom.value, 0.5f)
-        assertNear(1f, rule.height.value, 0.1f)
-        assertNear(Math.round(ground + 0.12f * (255 - ground)), line, 3)
-        assertNear(8f, focusedRowInset(), 0.5f)
-    }
-
-    @Test
-    fun the_focused_row_of_the_settings_menu_is_8_dp_inside_the_panel() {
-        showHome()
-        openSettingsMenu()
-
-        assertNear(8f, focusedRowInset(), 0.5f)
-    }
-
-    @Test
-    fun the_focused_row_of_the_inputs_list_is_8_dp_inside_the_panel() {
-        openInputs()
-
-        assertNear(8f, focusedRowInset(), 0.5f)
-    }
-
-    @Test
-    fun the_settings_menu_sets_its_restart_row_apart_with_the_inputs_lists_line() {
-        showHome()
-        openSettingsMenu()
-
-        val line = compose.onNodeWithTag("menu:divider").getBoundsInRoot()
-        assertTrue("the line is ${line.height} dp tall", abs(line.height.value - 5f) <= 0.5f)
-        assertTrue("the line ${line.top} is under the Reorder row ${bounds("menu:Reorder")}", line.top >= bounds("menu:Reorder").bottom)
-        assertTrue(
-            "the line ${line.bottom} is over the restart row ${bounds("menu:PowerMenu")}",
-            line.bottom <= bounds("menu:PowerMenu").top,
-        )
-    }
-
     /** The pixels of the screen in [area] that are [colour] to within 14 in each channel. */
-    private fun pixelsOf(
+    fun pixelsOf(
         area: DpRect,
         colour: Int,
     ): Int {
@@ -466,72 +668,8 @@ class HomeOverlayLookUiTest {
         }
     }
 
-    @Test
-    @Config(qualifiers = "+night")
-    fun the_restart_row_draws_its_text_in_coral_at_rest_and_not_while_it_has_focus() {
-        showHome()
-        openSettingsMenu()
-        val row = bounds("menu:PowerMenu")
-
-        assertTrue("coral pixels at rest: ${pixelsOf(row, 0xFF8A80)}", pixelsOf(row, 0xFF8A80) >= 8)
-        assertEquals("another row has no coral", 0, pixelsOf(bounds("menu:Reorder"), 0xFF8A80))
-        repeat(3) { press(Key.DirectionDown) }
-        compose.onNodeWithTag("menu:PowerMenu").assertIsFocused()
-        assertEquals("coral pixels under focus", 0, pixelsOf(row, 0xFF8A80))
-    }
-
-    @Test
-    fun on_the_light_menu_the_restart_row_draws_its_text_in_dark_red_at_rest_and_not_the_pale_coral() {
-        showHome()
-        openSettingsMenu()
-        val row = bounds("menu:PowerMenu")
-
-        assertTrue("dark red pixels at rest: ${pixelsOf(row, 0xC62828)}", pixelsOf(row, 0xC62828) >= 8)
-        assertEquals("pale coral on the light menu", 0, pixelsOf(row, 0xFF8A80))
-        assertEquals("another row has no red", 0, pixelsOf(bounds("menu:Reorder"), 0xC62828))
-    }
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun the_line_above_the_restart_row_is_white_at_018() {
-        showHome()
-        openSettingsMenu()
-
-        val rule = compose.onNodeWithTag("menu:divider").getBoundsInRoot()
-        val ground = redAt(Offset((rule.left.value + rule.right.value) / 2, rule.top.value - 3f))
-        val line = redAt(Offset((rule.left.value + rule.right.value) / 2, (rule.top.value + rule.bottom.value) / 2))
-
-        assertNear(Math.round(ground + 0.18f * (255 - ground)), line, 3)
-    }
-
-    @Test
-    fun the_inputs_list_does_not_end_on_its_line_when_the_row_after_it_does_not_fit() {
-        showHome(inputs = InputsMenu(available = true, rows = (1..4).map { port(it) } + InputRow.Separator() + InputRow.LiveTv))
-        press(Key.DirectionUp)
-        press(Key.DirectionCenter)
-        compose.onNodeWithTag("input:0").assertIsFocused()
-
-        val list = bounds("menu")
-        val line = compose.onNodeWithTag("menu:divider").getUnclippedBoundsInRoot()
-        val live = compose.onNodeWithTag("input:5").getUnclippedBoundsInRoot()
-        assertTrue("the last row of the list does not fit: list $list, live tv $live", live.bottom > list.bottom)
-        assertTrue("the line $line shows at the bottom of the list $list", line.top >= list.bottom)
-    }
-
-    @Test
-    fun the_inputs_list_ends_on_the_right_edge_of_the_top_bar() {
-        val chat = (1..3).map { AppEntry(key = "chat.$it", packageName = "chat.$it", label = "Chat $it") }
-        showHome(inputs = InputsMenu(available = true, rows = listOf(port(1))), topBarApps = chat)
-        press(Key.DirectionUp)
-        compose.onNodeWithContentDescription("Inputs").assertIsFocused()
-        press(Key.DirectionCenter)
-
-        val settings = compose.onNodeWithContentDescription("Settings").getBoundsInRoot()
-        assertNear(settings.right.value, bounds("menu").right.value, 1f)
-    }
-
     /** The red channel at the empty right end of the focused first row of the open tile menu. */
-    private fun focusedRowRed(): Int {
+    fun focusedRowRed(): Int {
         showHome()
         openTileMenu()
         compose.onNodeWithTag("menu:ReplaceInDock").assertIsFocused()
@@ -539,18 +677,7 @@ class HomeOverlayLookUiTest {
         return redAt(Offset(row.right.value - 12f, (row.top.value + row.bottom.value) / 2))
     }
 
-    @Test
-    @Config(qualifiers = "+night")
-    fun a_focused_menu_row_is_a_light_pill_in_night_mode() {
-        assertNear(0xF2, focusedRowRed(), 3)
-    }
-
-    @Test
-    fun a_focused_menu_row_is_a_dark_pill_with_night_mode_off() {
-        assertNear(0x11, focusedRowRed(), 3)
-    }
-
-    private fun openInputs() {
+    fun openInputs() {
         showHome()
         compose.onRoot().performKeyInput { pressKey(Key.DirectionUp) }
         settle()
@@ -564,7 +691,7 @@ class HomeOverlayLookUiTest {
      * The red channel inside the "Connected" capsule of the Inputs row [row], just right of its text, against the one
      * the row shows right of the capsule, blended as a capsule fill of [fillAlpha] would blend #34C759 over it.
      */
-    private fun assertCapsuleFill(
+    fun assertCapsuleFill(
         row: Int,
         fillAlpha: Int,
     ) {
@@ -578,15 +705,8 @@ class HomeOverlayLookUiTest {
         assertNear(behind + Math.round((0x34 - behind) * fillAlpha / 255f), redAt(Offset(text.right.value + 4f, middle)), 3)
     }
 
-    @Test
-    @Config(qualifiers = "+night")
-    fun an_unfocused_connected_row_shows_the_faint_green_capsule_in_night_mode() {
-        openInputs()
-        assertCapsuleFill(row = 1, fillAlpha = 0x29)
-    }
-
     /** The brightest red channel, 0 to 255, inside [box] (in dp): a glyph's stem shows its ink at full strength. */
-    private fun brightestRedIn(box: DpRect): Int {
+    fun brightestRedIn(box: DpRect): Int {
         val pixels = compose.onRoot().captureToImage().toPixelMap()
         val density = compose.activity.resources.displayMetrics.density
         return (box.top.value * density).toInt().until((box.bottom.value * density).toInt()).maxOf { y ->
@@ -594,25 +714,11 @@ class HomeOverlayLookUiTest {
         }
     }
 
-    @Test
-    @Config(qualifiers = "+night")
-    fun a_focused_connected_row_shows_a_solid_146C2E_capsule_with_white_text() {
-        openInputs()
-        val text =
-            compose
-                .onNode(hasText("Connected") and hasAnyAncestor(hasTestTag("input:0")), useUnmergedTree = true)
-                .getBoundsInRoot()
-
-        // The row's own fill is the light pill, red F2; the capsule's solid fill is red 14.
-        assertNear(0x14, redAt(Offset(text.right.value + 4f, (text.top.value + text.bottom.value) / 2)), 3)
-        assertTrue("ink ${brightestRedIn(text)}", brightestRedIn(text) >= 0xE8)
-    }
-
     /**
      * The contrast ratio of the "No device" ink of the Inputs row 2 against the row beside the label, which has the focus
      * when [focused]. A glyph's stem shows its ink at full strength: it is the pixel farthest in luminance from the row.
      */
-    private fun noDeviceContrast(focused: Boolean): Float {
+    fun noDeviceContrast(focused: Boolean): Float {
         openInputs()
         if (focused) repeat(2) { press(Key.DirectionDown) }
         val text =
@@ -632,40 +738,8 @@ class HomeOverlayLookUiTest {
         return (maxOf(far, row) + 0.05f) / (minOf(far, row) + 0.05f)
     }
 
-    @Test
-    @Config(qualifiers = "+night")
-    fun the_no_device_label_is_at_least_5_to_1_against_the_dark_menu() {
-        val ratio = noDeviceContrast(focused = false)
-        assertTrue("contrast $ratio", ratio >= 5f)
-    }
-
-    @Test
-    fun the_no_device_label_is_at_least_5_to_1_against_the_light_menu() {
-        val ratio = noDeviceContrast(focused = false)
-        assertTrue("contrast $ratio", ratio >= 5f)
-    }
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun the_no_device_label_is_at_least_5_to_1_against_the_focused_row_of_the_dark_menu() {
-        val ratio = noDeviceContrast(focused = true)
-        assertTrue("contrast $ratio", ratio >= 5f)
-    }
-
-    @Test
-    fun the_no_device_label_is_at_least_5_to_1_against_the_focused_row_of_the_light_menu() {
-        val ratio = noDeviceContrast(focused = true)
-        assertTrue("contrast $ratio", ratio >= 5f)
-    }
-
-    @Test
-    fun an_unfocused_connected_row_shows_the_stronger_green_capsule_on_the_light_surface() {
-        openInputs()
-        assertCapsuleFill(row = 1, fillAlpha = 0x2E)
-    }
-
     /** The red channel of the top-bar button described as [description], [inset] dp in from its left edge, at its middle. */
-    private fun buttonRed(
+    fun buttonRed(
         description: String,
         inset: Float,
     ): Int =
@@ -674,7 +748,7 @@ class HomeOverlayLookUiTest {
         }
 
     /** The darkest red channel, 0 to 255, over the button described as [description]: its glyph's ink when the fill is light. */
-    private fun darkestRedOver(description: String): Int {
+    fun darkestRedOver(description: String): Int {
         val box = compose.onNodeWithContentDescription(description).getBoundsInRoot()
         val pixels = compose.onRoot().captureToImage().toPixelMap()
         val density = compose.activity.resources.displayMetrics.density
@@ -684,14 +758,14 @@ class HomeOverlayLookUiTest {
     }
 
     /** A red channel read through the menu's scrim (half of 07080C over it) as it was under it. */
-    private fun withoutMenuScrim(red: Int): Float = (red - 7 * 0.5f) / 0.5f
+    fun withoutMenuScrim(red: Int): Float = (red - 7 * 0.5f) / 0.5f
 
     /**
      * While its panel is open, [opener] stands outside the scrim and is drawn as when focused, with the white fill at 0.60: its
      * fill, 4 dp in from its edge, is 60 percent of the way from the idle [idle] button's to what [opener] read when focused,
      * and its glyph is dark.
      */
-    private fun assertFocusedLookAtSixtyPercent(
+    fun assertFocusedLookAtSixtyPercent(
         opener: String,
         idle: String,
         focusedFill: Int,
@@ -699,68 +773,15 @@ class HomeOverlayLookUiTest {
         val fill = buttonRed(opener, 4f).toFloat()
         val rest = withoutMenuScrim(buttonRed(idle, 4f))
         val share = (fill - rest) / (focusedFill - rest)
-        assertTrue("fill $fill of idle $rest and focused $focusedFill: $share", share in 0.52f..0.68f)
-        assertTrue("the glyph's darkest red ${darkestRedOver(opener)}, fill $fill", darkestRedOver(opener) < fill / 2 - 30)
-    }
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun the_inputs_button_keeps_its_focused_look_at_a_fill_of_060_while_its_list_is_open() {
-        showHome()
-        press(Key.DirectionUp)
-        compose.onNodeWithContentDescription("Inputs").assertIsFocused()
-        val focusedFill = buttonRed("Inputs", 4f)
-        press(Key.DirectionCenter)
-        compose.onNodeWithTag("input:0").assertIsFocused()
-
-        assertFocusedLookAtSixtyPercent(opener = "Inputs", idle = "Settings", focusedFill = focusedFill)
-    }
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun the_settings_button_keeps_its_focused_look_at_a_fill_of_060_while_its_menu_is_open() {
-        showHome()
-        press(Key.DirectionUp)
-        repeat(2) { press(Key.DirectionRight) }
-        compose.onNodeWithContentDescription("Settings").assertIsFocused()
-        val focusedFill = buttonRed("Settings", 4f)
-        openTileMenu()
-
-        assertFocusedLookAtSixtyPercent(opener = "Settings", idle = "Inputs", focusedFill = focusedFill)
-    }
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun the_dock_draws_at_075_while_focus_is_in_the_top_bar_and_whole_again_once_focus_leaves_it() {
-        showHome()
-        val whole = redAt(centreOf("tile:pkg.2"))
-        press(Key.DirectionUp)
-        compose.onNodeWithContentDescription("Inputs").assertIsFocused()
-        val dimmed = redAt(centreOf("tile:pkg.2"))
-        press(Key.DirectionDown)
-        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-
-        assertNear(255, whole, 2)
-        // White art at 0.75 over the dark panel: 255 * 0.75 plus a quarter of what is behind it.
-        assertTrue("a white tile reads $dimmed in top-bar focus", dimmed in 188..206)
-        assertNear(255, redAt(centreOf("tile:pkg.2")), 2)
-    }
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun the_inputs_button_is_idle_again_once_its_list_has_closed() {
-        openInputs()
-        compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
-        settle()
-        press(Key.DirectionDown)
-        compose.onNodeWithTag("menu").assertDoesNotExist()
-        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-
-        assertNear(buttonRed("Settings", 4f), buttonRed("Inputs", 4f), 2)
+        withClue("fill $fill of idle $rest and focused $focusedFill: $share") { share shouldBeIn 0.52f..0.68f }
+        withClue("the glyph's darkest red ${darkestRedOver(opener)}, fill $fill") {
+            darkestRedOver(opener).toFloat() shouldBeLessThan
+                fill / 2 - 30
+        }
     }
 
     /** The contrast of two colours. */
-    private fun ratio(
+    fun ratio(
         a: Color,
         b: Color,
     ): Float = (maxOf(a.luminance(), b.luminance()) + 0.05f) / (minOf(a.luminance(), b.luminance()) + 0.05f)
@@ -769,7 +790,7 @@ class HomeOverlayLookUiTest {
      * With the panel of the button described as [description] open over [wallpaper]: the contrast of the button's glyph against
      * its fill, then of its outline (1 dp out from the left edge) against the dimmed surround 5 dp out.
      */
-    private fun anchorContrast(
+    fun anchorContrast(
         description: String,
         wallpaper: Float,
         open: () -> Unit,
@@ -793,62 +814,24 @@ class HomeOverlayLookUiTest {
         return ratio(glyph, fill) to ratio(at(box.left.value - 1f), at(box.left.value - 5f))
     }
 
-    private fun openSettingsFromTopBar() {
+    fun openSettingsFromTopBar() {
         repeat(2) { press(Key.DirectionRight) }
         compose.onNodeWithContentDescription("Settings").assertIsFocused()
         openTileMenu()
     }
 
-    private fun openInputsFromTopBar() {
+    fun openInputsFromTopBar() {
         press(Key.DirectionCenter)
         compose.onNodeWithTag("input:0").assertIsFocused()
     }
 
     /** The glyph reads 4.5:1 on the fill, and the outline 3:1 on the surround but no more than 5.5:1: it is quieter than focus. */
-    private fun assertReadsAsAnchor(contrast: Pair<Float, Float>) {
-        assertTrue(
-            "glyph on fill ${contrast.first}, outline on surround ${contrast.second}",
-            contrast.first >= 4.5f && contrast.second in 3f..5.5f,
-        )
-    }
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun the_settings_button_reads_as_its_menus_anchor_on_a_dark_wallpaper_with_its_glyph_4_5_to_1_and_its_quiet_outline_3_to_1() {
-        assertReadsAsAnchor(anchorContrast("Settings", 0f, ::openSettingsFromTopBar))
-    }
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun the_settings_button_reads_as_its_menus_anchor_on_a_bright_wallpaper_with_its_glyph_4_5_to_1_and_its_quiet_outline_3_to_1() {
-        assertReadsAsAnchor(anchorContrast("Settings", 1f, ::openSettingsFromTopBar))
-    }
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun the_inputs_button_reads_as_its_lists_anchor_on_a_bright_wallpaper_with_its_glyph_4_5_to_1_and_its_quiet_outline_3_to_1() {
-        assertReadsAsAnchor(anchorContrast("Inputs", 1f, ::openInputsFromTopBar))
-    }
-
-    @Test
-    fun on_the_light_theme_the_settings_button_reads_as_its_menus_anchor_on_a_bright_wallpaper() {
-        assertReadsAsAnchor(anchorContrast("Settings", 1f, ::openSettingsFromTopBar))
-    }
-
-    @Test
-    fun on_the_light_theme_the_inputs_button_reads_as_its_lists_anchor_on_a_dark_wallpaper() {
-        assertReadsAsAnchor(anchorContrast("Inputs", 0f, ::openInputsFromTopBar))
-    }
-
-    @Test
-    fun the_input_list_the_system_opens_with_no_inputs_button_on_screen_draws_the_plain_scrim_and_no_ring() {
-        showHome(config = SixColumns.copy(showInputsPill = false))
-        compose.onNodeWithContentDescription("Inputs").assertDoesNotExist()
-
-        inputsRequests++
-        settle()
-
-        compose.onNodeWithTag("input:0").assertExists()
-        assertNear(redAt(Offset(40f, 3f)), redAt(Offset(1f, 1f)), 1)
+    fun assertReadsAsAnchor(contrast: Pair<Float, Float>) {
+        withClue("glyph on fill ${contrast.first}, outline on surround ${contrast.second}") {
+            (
+                contrast.first >= 4.5f &&
+                    contrast.second in 3f..5.5f
+            ).shouldBeTrue()
+        }
     }
 }

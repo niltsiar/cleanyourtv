@@ -149,11 +149,6 @@ compose.runOnUiThread {
 compose.setContent { /* ... */ }
 ```
 
-A module that moves in several changes keeps JUnit classes beside its suites. A JUnit class without `@GraphicsMode` ran
-in the legacy mode; once the module sets the property it runs in the native mode, and its key focus checks fail. Give
-each such class `@GraphicsMode(GraphicsMode.Mode.LEGACY)` until it moves, as the annotation wins over the property
-(`HomeRefreshFocusTest.kt` in `feature/home`).
-
 ### Compose UI
 
 A Compose test is a Robolectric suite whose tests get a fixture that registers the Compose rule. The fixture object

@@ -2,17 +2,18 @@ package dev.niltsiar.tvhome.feature.home
 
 import app.cash.molecule.RecompositionMode
 import app.cash.turbine.test
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testScope
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Test
 import java.util.Locale
 import kotlin.coroutines.EmptyCoroutineContext
 
-class MoleculeHomeViewModelTest {
-    private fun CoroutineScope.viewModel() =
+val MoleculeHomeViewModelTest by testSuite(testConfig = TestConfig.testScope(isEnabled = true)) {
+    fun CoroutineScope.viewModel() =
         MoleculeHomeViewModel(
             sources(),
             MutableStateFlow(SixColumns),
@@ -23,54 +24,54 @@ class MoleculeHomeViewModelTest {
             EmptyCoroutineContext,
         )
 
-    @Test
-    fun focusing_a_dock_app_updates_the_shelf_label() =
-        runTest {
+    test("focusing a dock app updates the shelf label through the view model") {
+        with(testScope) {
             val viewModel = backgroundScope.viewModel()
             viewModel.uiState.test {
                 viewModel.onFocus("pkg.4")
-                assertEquals("App 4", awaitMatching { it.focusedLabel == "App 4" }.focusedLabel)
+                awaitMatching { it.focusedLabel == "App 4" }.focusedLabel shouldBe "App 4"
                 cancelAndIgnoreRemainingEvents()
             }
         }
+    }
 
-    @Test
-    fun clicking_an_app_emits_a_launch_effect_for_its_package() =
-        runTest {
+    test("clicking an app emits a launch effect for its package through the view model") {
+        with(testScope) {
             val viewModel = backgroundScope.viewModel()
             viewModel.uiState.first { it.dock.isNotEmpty() }
             viewModel.effects.test {
                 viewModel.onClick("pkg.2")
-                assertEquals(HomeEffect.LaunchApp(NineApps[1]), awaitItem())
+                awaitItem() shouldBe HomeEffect.LaunchApp(NineApps[1])
             }
         }
+    }
 
-    @Test
-    fun the_settings_button_emits_an_open_settings_effect() =
-        runTest {
+    test("the settings button emits an open settings effect") {
+        with(testScope) {
             val viewModel = backgroundScope.viewModel()
             viewModel.uiState.first { it.dock.isNotEmpty() }
             viewModel.effects.test {
                 viewModel.onOpenSettings()
-                assertEquals(HomeEffect.OpenSettings, awaitItem())
+                awaitItem() shouldBe HomeEffect.OpenSettings
                 viewModel.onOpenNetwork()
-                assertEquals(HomeEffect.OpenNetwork, awaitItem())
+                awaitItem() shouldBe HomeEffect.OpenNetwork
                 viewModel.onOpenWifiSettings()
-                assertEquals(HomeEffect.OpenWifiSettings, awaitItem())
+                awaitItem() shouldBe HomeEffect.OpenWifiSettings
             }
         }
+    }
 
-    @Test
-    fun a_language_change_formats_the_date_in_the_new_language_and_pattern() =
-        runTest {
+    test("a language change formats the date in the new language and pattern") {
+        with(testScope) {
             val viewModel = backgroundScope.viewModel()
             viewModel.uiState.test {
-                assertEquals("Tuesday 3 November", awaitMatching { it.date.isNotEmpty() }.date)
+                awaitMatching { it.date.isNotEmpty() }.date shouldBe "Tuesday 3 November"
 
                 viewModel.onLocaleChanged(Locale.forLanguageTag("es-ES"), "EEEE d 'de' MMMM")
 
-                assertEquals("martes 3 de noviembre", awaitMatching { it.date.startsWith("martes") }.date)
+                awaitMatching { it.date.startsWith("martes") }.date shouldBe "martes 3 de noviembre"
                 cancelAndIgnoreRemainingEvents()
             }
         }
+    }
 }

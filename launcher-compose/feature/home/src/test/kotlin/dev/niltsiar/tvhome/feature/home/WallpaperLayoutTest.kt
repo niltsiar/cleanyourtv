@@ -1,31 +1,28 @@
 package dev.niltsiar.tvhome.feature.home
 
 import androidx.compose.ui.graphics.toArgb
+import de.infix.testBalloon.framework.core.testSuite
 import dev.niltsiar.tvhome.core.config.HeaderScrim
 import dev.niltsiar.tvhome.core.config.TvConfig
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.shouldBe
 
-class WallpaperLayoutTest {
-    @Test
-    fun the_theme_background_and_sky_reach_the_layout() {
+val WallpaperLayoutTest by testSuite {
+    test("the theme background and sky reach the layout") {
         val layout = TvConfig(backgroundColor = 0xFF102030.toInt(), skyIntensity = 40).wallpaperLayout()
-        assertEquals(0xFF102030.toInt(), layout.background.toArgb())
-        assertEquals(40, layout.skyIntensity)
+        layout.background.toArgb() shouldBe 0xFF102030.toInt()
+        layout.skyIntensity shouldBe 40
     }
 
-    @Test
-    fun a_picture_cross_fades_unless_the_theme_turns_motion_down() {
-        assertTrue(TvConfig().wallpaperLayout().crossfade)
-        assertFalse(TvConfig(animations = false).wallpaperLayout().crossfade)
-        assertFalse(TvConfig(reducedMotion = true).wallpaperLayout().crossfade)
+    test("a picture cross fades unless the theme turns motion down") {
+        TvConfig().wallpaperLayout().crossfade.shouldBeTrue()
+        TvConfig(animations = false).wallpaperLayout().crossfade.shouldBeFalse()
+        TvConfig(reducedMotion = true).wallpaperLayout().crossfade.shouldBeFalse()
     }
 
-    @Test
-    fun the_header_scrim_follows_the_wallpaper_unless_the_theme_turns_it_off() {
-        assertEquals(HeaderScrim.Auto, TvConfig().wallpaperLayout().headerScrim)
-        assertEquals(HeaderScrim.Off, TvConfig(headerScrim = HeaderScrim.Off).wallpaperLayout().headerScrim)
+    test("the header scrim follows the wallpaper unless the theme turns it off") {
+        TvConfig().wallpaperLayout().headerScrim shouldBe HeaderScrim.Auto
+        TvConfig(headerScrim = HeaderScrim.Off).wallpaperLayout().headerScrim shouldBe HeaderScrim.Off
     }
 }
