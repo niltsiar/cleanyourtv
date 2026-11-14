@@ -49,7 +49,8 @@ private val UnknownInputs = InputsMenu(available = false)
 /**
  * Home's state logic for any host that runs a composable: Molecule today. It uses the Compose runtime only. It follows
  * [config] only while Home shows: a choice made on another screen reaches Home when it comes back, not under the
- * person's feet, and all at once.
+ * person's feet, and all at once. While a press opens an app (press_feedback), the line under the title keeps the
+ * last-opened record of the press, and shows the new one once the press ends.
  */
 @Composable
 internal fun homePresenter(
@@ -78,7 +79,17 @@ internal fun homePresenter(
     LaunchedEffect(interaction) { sources.apps.collect { interaction.listLoaded(it) } }
     LaunchedEffect(interaction) { sources.topBarApps.collect(interaction::topBarAppsLoaded) }
     LaunchedEffect(interaction) { sources.inputs.collect(interaction::inputsLoaded) }
-    LaunchedEffect(events) { events.collect(interaction::handle) }
+    val recorded = sources.lastOpened.collectAsState(NoOpened)
+    var openedAtPress by remember { mutableStateOf(NoOpened) }
+    LaunchedEffect(events) {
+        events.collect { event ->
+            // The launch a press starts records the app as opened before Home recomposes, so take the record from before it.
+            val shown = recorded.value
+            val before = interaction.launch?.token
+            interaction.handle(event)
+            interaction.launch?.let { if (it.token != before) openedAtPress = shown }
+        }
+    }
     val arriving = interaction.arriving
     LaunchedEffect(interaction, arriving) {
         if (arriving != null) {
@@ -127,7 +138,7 @@ internal fun homePresenter(
     val now by sources.clock.collectAsState(null)
     val network by sources.network.collectAsState(NoNetwork)
     val wallpaper by sources.wallpaper.collectAsState(NoWallpaper)
-    val lastOpened by sources.lastOpened.collectAsState(NoOpened)
+    val lastOpened = recorded.value
     val libraryCount by sources.libraryCount.collectAsState(null)
     val openedSince by sources.openedSince.collectAsState(null)
     // Read again with each new time, which also follows the TV's 12/24-hour setting after a stop and start of Home.
@@ -152,7 +163,7 @@ internal fun homePresenter(
         interaction.topBarApps,
         wallpaper,
         cinematic = current.cinematicHome,
-        lastOpened = lastOpened,
+        lastOpened = if (launch != null) openedAtPress else lastOpened,
         menu = interaction.menu,
         reorder = remember(session, shown) { session?.view { key -> shown.all.firstOrNull { it.key == key }?.label } },
         focusRequest = interaction.focusRequest,

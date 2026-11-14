@@ -8,14 +8,19 @@ import de.infix.testBalloon.framework.core.TestConfig
 import de.infix.testBalloon.framework.core.testScope
 import de.infix.testBalloon.framework.core.testSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.model.ShelfItem
+import dev.niltsiar.tvhome.core.model.ShelfKind
 import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
+import java.time.ZoneId
 import java.util.Locale
 
 /** press_feedback on the presenter: one start per press, the line that says the app is opening, and what ends it. */
@@ -26,14 +31,28 @@ val HomePressFeedbackTest by testSuite(testConfig = TestConfig.testScope(isEnabl
 
             val effects = mutableListOf<HomeEffect>()
 
+            /** The last-opened record, which notes an app the moment an effect opens it, as the host's launcher does. */
+            val opened = MutableStateFlow(emptyMap<String, Long>())
+
+            fun open(effect: HomeEffect) {
+                effects += effect
+                val app =
+                    when (effect) {
+                        is HomeEffect.LaunchApp -> effect.app
+                        is HomeEffect.OpenShelfItem -> effect.app
+                        else -> return
+                    }
+                opened.value += app.key to OPENED_AT
+            }
+
             var probes = 0
 
             val eventFlow = events.receiveAsFlow()
 
             fun presenter(config: TvConfig = SixColumns.copy(pressFeedback = true)): Flow<HomeUiState> {
-                val sources = sources()
+                val sources = sources(lastOpened = opened)
                 return moleculeFlow(RecompositionMode.Immediate) {
-                    homePresenter(eventFlow, sources, config, { effects += it }, Locale.ENGLISH, "EEEE d MMMM")
+                    homePresenter(eventFlow, sources, config, ::open, Locale.ENGLISH, "EEEE d MMMM")
                 }
             }
 
@@ -140,6 +159,60 @@ val HomePressFeedbackTest by testSuite(testConfig = TestConfig.testScope(isEnabl
             }
         }
 
+        test("a tile press keeps the line's never opened until the opening ends, then shows the new record") {
+            with(it.testScope) {
+                presenter().test {
+                    awaitMatching { it.dock.isNotEmpty() }
+                    events.send(HomeEvent.Focus("pkg.2"))
+                    awaitMatching { it.focusedKey == "pkg.2" }.focusedNeverOpened shouldBe true
+                    press("pkg.2")
+                    pass(OPENING_SAYS_MS - 1)
+                    expectMostRecentItem().focusedNeverOpened shouldBe true
+
+                    pass(1)
+                    expectMostRecentItem().focusedNeverOpened shouldBe true
+                    events.send(HomeEvent.Stopped)
+
+                    val ended = awaitMatching { it.opening == null }
+                    ended.focusedNeverOpened shouldBe false
+                    ended.focusedOpened.shouldNotBeNull()
+                    cancelAndIgnoreRemainingEvents()
+                }
+            }
+        }
+
+        test("a card press keeps the line's never opened until the opening ends") {
+            with(it.testScope) {
+                presenter().test {
+                    awaitMatching { it.dock.isNotEmpty() }
+                    events.send(HomeEvent.Focus("pkg.2"))
+                    awaitMatching { it.focusedKey == "pkg.2" }.focusedNeverOpened shouldBe true
+                    events.send(HomeEvent.OpenShelfItem("pkg.2", ShelfItem(packageName = "pkg.2", title = "Andor", kind = ShelfKind.Next)))
+                    pass(OPENING_SAYS_MS)
+                    expectMostRecentItem().focusedNeverOpened shouldBe true
+
+                    events.send(HomeEvent.AppNotStarted("pkg.2"))
+
+                    awaitMatching { it.opening == null }.focusedNeverOpened shouldBe false
+                    cancelAndIgnoreRemainingEvents()
+                }
+            }
+        }
+
+        test("without the key a press shows the new last-opened record at once") {
+            with(it.testScope) {
+                presenter(SixColumns).test {
+                    awaitMatching { it.dock.isNotEmpty() }
+                    events.send(HomeEvent.Focus("pkg.2"))
+                    awaitMatching { it.focusedKey == "pkg.2" }.focusedNeverOpened shouldBe true
+                    press("pkg.2")
+
+                    expectMostRecentItem().focusedNeverOpened shouldBe false
+                    cancelAndIgnoreRemainingEvents()
+                }
+            }
+        }
+
         test("without the key every press starts its app and nothing is opening") {
             with(it.testScope) {
                 presenter(SixColumns).test {
@@ -156,3 +229,5 @@ val HomePressFeedbackTest by testSuite(testConfig = TestConfig.testScope(isEnabl
         }
     }
 }
+
+private val OPENED_AT = Evening.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
