@@ -998,7 +998,7 @@ private suspend fun focusOn(
  * Whether the app shelf's cards show: the shelf is the focused tile's, focus is on that dock tile or one of the cards, and no
  * menu, input list, mode or library is open.
  */
-private fun shelfOnScreen(
+internal fun shelfOnScreen(
     state: HomeUiState,
     input: HomeInput,
     cards: ShelfCardsState,

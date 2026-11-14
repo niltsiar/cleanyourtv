@@ -19,6 +19,7 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
@@ -160,8 +161,8 @@ internal fun AppShelfCards(
         }
     }
     val current by remember(shelf) { derivedStateOf(shelf) }
-    if (visible.value) cards.shown = current
-    val shown = cards.shown ?: return
+    val shown = (if (visible.value) current else cards.shown) ?: return
+    SideEffect { cards.shown = shown }
     val tile by remember(app, shown.key) { derivedStateOf { app(shown.key) } }
     val owner = tile ?: return
     BackHandler(enabled = cards.focused >= 0) { input.focus(shown.key) }

@@ -199,6 +199,38 @@ class AppShelfUiTestContent :
                 effects shouldBe listOf(HomeEffect.OpenShelfItem(apps[0], items[1]))
             }
 
+            test("a card with focus whose shelf a new read finds empty hands focus to its dock tile") {
+                showHome()
+                hold()
+                press(Key.DirectionUp)
+                press(Key.DirectionRight)
+                compose.onNodeWithTag("shelf:card:1").assertIsFocused()
+
+                items.clear()
+                compose.runOnUiThread { viewModel.onStarted() }
+                compose.waitForIdle()
+
+                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                compose.onNodeWithTag("shelf:card:0").assertDoesNotExist()
+            }
+
+            test("a card with focus that a new read leaves out hands focus to its dock tile, and the shorter shelf shows") {
+                showHome()
+                hold()
+                press(Key.DirectionUp)
+                press(Key.DirectionRight)
+                press(Key.DirectionRight)
+                compose.onNodeWithTag("shelf:card:2").assertIsFocused()
+
+                items.subList(1, items.size).clear()
+                compose.runOnUiThread { viewModel.onStarted() }
+                compose.waitForIdle()
+
+                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                compose.onNodeWithTag("shelf:card:0").assertExists()
+                compose.onNodeWithTag("shelf:card:1").assertDoesNotExist()
+            }
+
             test("with press_feedback ok on a card dips it to 96 percent of its focused size and back") {
                 showHome(Cinematic.copy(pressFeedback = true))
                 hold()
@@ -356,6 +388,8 @@ private class AppShelfUiTestFixture : JUnit4RulesContext() {
 
     val reads = mutableListOf<String>()
 
+    lateinit var viewModel: MoleculeHomeViewModel
+
     val red =
         ImageBitmap(16, 9).also { image ->
             Canvas(image).drawRect(Rect(0f, 0f, 16f, 9f), Paint().apply { color = Color.Red })
@@ -389,13 +423,13 @@ private class AppShelfUiTestFixture : JUnit4RulesContext() {
                 inputs = inputs,
                 shelfItems = { pkg ->
                     reads += pkg
-                    items
+                    items.toList()
                 },
                 shelfPoster = { uri, _, _ -> if (uri.startsWith("content://")) red else null },
             )
         compose.setContent {
             TvTheme(motion = motion) {
-                val viewModel = rememberHomeViewModel(sources, config, effects)
+                val viewModel = rememberHomeViewModel(sources, config, effects).also { viewModel = it }
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(
                     state = { state.value },
