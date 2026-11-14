@@ -45,6 +45,18 @@ feature is off until a theme or that page turns it on, for example:
 The remote's Home, Input, Settings and app keys go through one accessibility service, which the install script below
 turns on ([ADR 0001](/launcher-compose/docs/adr/0001-one-key-service.md)).
 
+## Screenshots
+
+These come from a Sony Bravia, with the launcher's English text.
+
+| Home | App library |
+|---|---|
+| ![Home at rest: the dock with the first tile focused and its name above the dock](screenshots/home.jpg) | ![The App library page with every installed app, one focused](screenshots/library.jpg) |
+
+| Tile menu | Launcher settings |
+|---|---|
+| ![A tile's menu open over the dock, with Replace with another app, Move, Remove from Home and App info](screenshots/tile-menu.jpg) | ![The Launcher settings page, with options in groups under headings](screenshots/settings.jpg) |
+
 ## Build and install TV Home
 
 You need JDK 21, the Android SDK and ADB access to the TV (the upstream [PROMPT.md](/PROMPT.md) sets that up).
