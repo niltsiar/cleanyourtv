@@ -27,15 +27,18 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import de.infix.testBalloon.framework.core.JUnit4RulesContext
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectric
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.designsystem.GlassDropdown
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
-import org.junit.Assert.assertTrue
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-import org.robolectric.annotation.GraphicsMode
+import io.kotest.assertions.withClue
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
+import io.kotest.matchers.ranges.shouldBeIn
 import kotlin.math.abs
 
 private const val ROWS = 10
@@ -45,16 +48,80 @@ private val Row = 46.dp
 private val HiddenX = 10.dp
 
 /** A scrolling [GlassDropdown] of ten black rows, read from the rendered pixels: where it ends and where its content fades. */
-@RunWith(RobolectricTestRunner::class)
-@GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
-class GlassDropdownScrollUiTest {
-    @get:Rule
-    val compose = createAndroidComposeRule<ComponentActivity>()
+val GlassDropdownScrollUiTest by testSuite {
+    robolectricTestSuite<GlassDropdownScrollUiTestContent>(
+        "sdk 31, 960x540 dp",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "w960dp-h540dp-xhdpi"
+            },
+    )
+}
 
-    private val density get() = compose.activity.resources.displayMetrics.density
+class GlassDropdownScrollUiTestContent :
+    RobolectricTestSuiteContent({
+        testFixture { GlassDropdownScrollUiTestFixture() } asContextForEach {
+            test("a panel taller than its room ends between two rows") {
+                show()
+                val panel = panelEdge
 
-    private fun show() {
+                val inside = (0 until ROWS).filter { compose.onNodeWithTag("row:$it").getUnclippedBoundsInRoot().top < panel.bottom }
+                withClue("rows inside: $inside") { inside.size shouldBeIn (1 until ROWS) }
+                inside.forEach {
+                    withClue("row $it") {
+                        compose.onNodeWithTag("row:$it").getUnclippedBoundsInRoot().bottom shouldBeLessThanOrEqualTo
+                            panel.bottom
+                    }
+                }
+            }
+
+            test("the edge with hidden rows hides its first 12 dp and fades over 36 dp and the edge without stays whole") {
+                show()
+
+                // Row 0 starts 14 dp under the top edge; nothing is hidden above it.
+                assertNear(0, redUnderTop(15.dp), 2)
+                // Rows lie below: hidden in the 12 dp band at the edge, half shown in the middle of the ramp, whole past it.
+                listOf(6.dp, 24.dp, 40.dp).forEach { assertRowAt(panelEdge.bottom - it) }
+                assertNear(through(0f, panelEdge.bottom - 6.dp), redAt(panelEdge.bottom - 6.dp, x = HiddenX), 2)
+                assertNear(through(0.5f, panelEdge.bottom - 24.dp), redAboveBottom(24.dp), 14)
+                assertNear(0, redAboveBottom(40.dp), 2)
+            }
+
+            test("at the end of the list the top edge fades and the bottom edge does not") {
+                show()
+
+                down(ROWS - 1)
+
+                compose.onNodeWithTag("row:${ROWS - 1}").assertIsFocused()
+                // The last row ends 14 dp over the edge; nothing is hidden below it.
+                assertNear(0, redAboveBottom(15.dp), 2)
+                // Rows lie in the band at the top edge, where they are hidden, and in the middle of the ramp, where they show half.
+                listOf(6.dp, 24.dp).forEach { assertRowAt(panelEdge.top + it) }
+                assertNear(through(0f, panelEdge.top + 6.dp), redAt(panelEdge.top + 6.dp, x = HiddenX), 2)
+                assertNear(through(0.5f, panelEdge.top + 24.dp), redUnderTop(24.dp), 14)
+            }
+
+            test("a focused row clears the fade at the edge it moved towards") {
+                show()
+
+                // The third row is the last whole one, at the edge.
+                down(2)
+
+                compose.onNodeWithTag("row:2").assertIsFocused()
+                val row = compose.onNodeWithTag("row:2").getUnclippedBoundsInRoot()
+                assertNear(0, redAt(row.bottom - 1.dp), 2)
+                assertNear(0, redAt(row.top + 1.dp), 2)
+            }
+        }
+    })
+
+private class GlassDropdownScrollUiTestFixture : JUnit4RulesContext() {
+    val compose = rule(createAndroidComposeRule<ComponentActivity>())
+
+    val density get() = compose.activity.resources.displayMetrics.density
+
+    fun show() {
         compose.setContent {
             TvTheme {
                 val anchor = remember { mutableStateOf(Rect(100f, 100f, 400f, 160f)) }
@@ -90,26 +157,26 @@ class GlassDropdownScrollUiTest {
         compose.onNodeWithTag("row:0").assertIsFocused()
     }
 
-    private fun settle() {
+    fun settle() {
         compose.mainClock.advanceTimeBy(1_000)
         compose.waitForIdle()
     }
 
-    private fun down(times: Int) =
+    fun down(times: Int) =
         repeat(times) {
             compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
             settle()
         }
 
-    private val panelEdge get() = compose.onNodeWithTag("menu").getBoundsInRoot()
+    val panelEdge get() = compose.onNodeWithTag("menu").getBoundsInRoot()
 
     /** The red channel, 0 to 255, [dp] dp over the panel's bottom edge. */
-    private fun redAboveBottom(dp: Dp): Int = redAt(panelEdge.bottom - dp)
+    fun redAboveBottom(dp: Dp): Int = redAt(panelEdge.bottom - dp)
 
-    private fun redUnderTop(dp: Dp): Int = redAt(panelEdge.top + dp)
+    fun redUnderTop(dp: Dp): Int = redAt(panelEdge.top + dp)
 
     /** The red at [y], in the middle of the panel or at [x] dp from its left edge. */
-    private fun redAt(
+    fun redAt(
         y: Dp,
         x: Dp? = null,
     ): Int {
@@ -118,72 +185,21 @@ class GlassDropdownScrollUiTest {
         return Math.round(pixels[(at.value * density).toInt(), (y.value * density).toInt()].red * 255)
     }
 
-    private fun assertNear(
+    fun assertNear(
         expected: Int,
         actual: Int,
         tolerance: Int,
-    ) = assertTrue("expected $expected, got $actual", abs(actual - expected) <= tolerance)
+    ) = withClue("expected $expected, got $actual") { abs(actual - expected) shouldBeLessThanOrEqualTo tolerance }
 
     /** The red at [y] of a black row that [alpha] of it shows through: the panel's bare surface, in its padding at the side, at [y]. */
-    private fun through(
+    fun through(
         alpha: Float,
         y: Dp,
     ) = Math.round((1 - alpha) * redAt(y, x = 6.dp))
 
-    @Test
-    fun a_panel_taller_than_its_room_ends_between_two_rows() {
-        show()
-        val panel = panelEdge
-
-        val inside = (0 until ROWS).filter { compose.onNodeWithTag("row:$it").getUnclippedBoundsInRoot().top < panel.bottom }
-        assertTrue("rows inside: $inside", inside.size in 1 until ROWS)
-        inside.forEach { assertTrue("row $it", compose.onNodeWithTag("row:$it").getUnclippedBoundsInRoot().bottom <= panel.bottom) }
-    }
-
     /** Fails unless a row, not a gap, lies at [y]. */
-    private fun assertRowAt(y: Dp) {
+    fun assertRowAt(y: Dp) {
         val rows = (0 until ROWS).map { compose.onNodeWithTag("row:$it").getUnclippedBoundsInRoot() }
-        assertTrue("a row at $y", rows.any { it.top < y && it.bottom > y })
-    }
-
-    @Test
-    fun the_edge_with_hidden_rows_hides_its_first_12_dp_and_fades_over_36_dp_and_the_edge_without_stays_whole() {
-        show()
-
-        // Row 0 starts 14 dp under the top edge; nothing is hidden above it.
-        assertNear(0, redUnderTop(15.dp), 2)
-        // Rows lie below: hidden in the 12 dp band at the edge, half shown in the middle of the ramp, whole past it.
-        listOf(6.dp, 24.dp, 40.dp).forEach { assertRowAt(panelEdge.bottom - it) }
-        assertNear(through(0f, panelEdge.bottom - 6.dp), redAt(panelEdge.bottom - 6.dp, x = HiddenX), 2)
-        assertNear(through(0.5f, panelEdge.bottom - 24.dp), redAboveBottom(24.dp), 14)
-        assertNear(0, redAboveBottom(40.dp), 2)
-    }
-
-    @Test
-    fun at_the_end_of_the_list_the_top_edge_fades_and_the_bottom_edge_does_not() {
-        show()
-
-        down(ROWS - 1)
-
-        compose.onNodeWithTag("row:${ROWS - 1}").assertIsFocused()
-        // The last row ends 14 dp over the edge; nothing is hidden below it.
-        assertNear(0, redAboveBottom(15.dp), 2)
-        // Rows lie in the band at the top edge, where they are hidden, and in the middle of the ramp, where they show half.
-        listOf(6.dp, 24.dp).forEach { assertRowAt(panelEdge.top + it) }
-        assertNear(through(0f, panelEdge.top + 6.dp), redAt(panelEdge.top + 6.dp, x = HiddenX), 2)
-        assertNear(through(0.5f, panelEdge.top + 24.dp), redUnderTop(24.dp), 14)
-    }
-
-    @Test
-    fun a_focused_row_clears_the_fade_at_the_edge_it_moved_towards() {
-        show()
-
-        // The third row is the last whole one, at the edge.
-        down(2)
-
-        compose.onNodeWithTag("row:2").assertIsFocused()
-        val row = compose.onNodeWithTag("row:2").getUnclippedBoundsInRoot()
-        assertNear(0, redAt(row.bottom - 1.dp), 2)
-        assertNear(0, redAt(row.top + 1.dp), 2)
+        withClue("a row at $y") { (rows.any { it.top < y && it.bottom > y }).shouldBeTrue() }
     }
 }

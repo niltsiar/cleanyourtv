@@ -30,6 +30,12 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.width
+import de.infix.testBalloon.framework.core.JUnit4RulesContext
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectric
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.HeaderScrim
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.GlassState
@@ -45,39 +51,347 @@ import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.Wallpaper
+import io.kotest.assertions.withClue
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.comparables.shouldBeGreaterThan
+import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
+import io.kotest.matchers.comparables.shouldBeLessThan
+import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
+import io.kotest.matchers.floats.plusOrMinus
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-import org.robolectric.annotation.GraphicsMode
 import java.time.ZoneId
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
 /** What the header and the top-bar buttons look like over a bright or a dark wallpaper, read from the rendered pixels. */
-@RunWith(RobolectricTestRunner::class)
-@GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
-class HeaderLegibilityUiTest {
-    @get:Rule
-    val compose = createAndroidComposeRule<ComponentActivity>()
+val HeaderLegibilityUiTest by testSuite {
+    robolectricTestSuite<HeaderLegibilityUiTestContent>(
+        "sdk 31, 960x540 dp",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "w960dp-h540dp-xhdpi"
+            },
+    )
+}
 
-    private fun grey(level: Float) =
+class HeaderLegibilityUiTestContent :
+    RobolectricTestSuiteContent({
+        testFixture { HeaderLegibilityUiTestFixture() } asContextForEach {
+            test("a bright wallpaper gets the stronger scrim behind the title") {
+                showHome(level = 1f)
+                val at = aboveTheTitle()
+
+                assertNear(scrimmed(255, top = 0.70f, left = 0.60f, at), redAt(at))
+            }
+
+            test("a dark wallpaper keeps the fixed scrim behind the title") {
+                showHome(level = 0.4f)
+                val at = aboveTheTitle()
+
+                assertNear(scrimmed(102, top = 0.55f, left = 0.40f, at), redAt(at))
+            }
+
+            test("header scrim off keeps the fixed scrim over a bright wallpaper") {
+                showHome(level = 1f, wallpaperLayout = WallpaperLayout(headerScrim = HeaderScrim.Off))
+                val at = aboveTheTitle()
+
+                assertNear(scrimmed(255, top = 0.55f, left = 0.40f, at), redAt(at))
+            }
+
+            test("a bright wallpaper puts the subtitle on a black 045 pill over what the local scrim adds to the page scrim") {
+                showHome(level = 1f)
+                val at = besideTheSubtitle()
+
+                assertNear(pilled(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at), at)), redAt(at))
+            }
+
+            test("the subtitle pill reaches 10 dp left of its text") {
+                showHome(level = 1f)
+                val subtitle = compose.onNodeWithTag("shelf:title-meta").getBoundsInRoot()
+
+                // 8.5 dp out lies inside a pill with 10 dp across, and past the end of one with 8.
+                assertNear(
+                    pilled(outsideThePill()),
+                    redAt(Offset(subtitle.left.value - 8.5f, (subtitle.top.value + subtitle.bottom.value) / 2f)),
+                )
+            }
+
+            test("the subtitle pill ends in half circles so its corners stay clear") {
+                showHome(level = 1f)
+                val subtitle = compose.onNodeWithTag("shelf:title-meta").getBoundsInRoot()
+
+                // The pill is 26 dp high, 3 dp over the text's box: 3 dp in from each corner of its box is outside a radius of 13 and inside one of 8.
+                assertNoPill(outsideThePill(), redAt(Offset(subtitle.left.value - 7f, subtitle.top.value)))
+            }
+
+            test("the subtitle pill has a white 012 stroke 1 dp wide inside its edge") {
+                showHome(level = 1f)
+                val subtitle = compose.onNodeWithTag("shelf:title-meta").getBoundsInRoot()
+                val middle = (subtitle.top.value + subtitle.bottom.value) / 2f
+                val fill = pilled(outsideThePill())
+
+                assertNear(Math.round(fill * 0.88f + 255 * 0.12f), redAt(Offset(subtitle.left.value - 9.5f, middle)))
+                assertNear(fill, redAt(Offset(subtitle.left.value - 6f, middle)))
+            }
+
+            test("a dark wallpaper gets no local scrim and no pill behind the subtitle") {
+                showHome(level = 0.3f)
+                val at = besideTheSubtitle()
+
+                assertNoPill(scrimmed(77, top = 0.55f, left = 0.40f, at), redAt(at))
+            }
+
+            test("header scrim off draws no local scrim and no pill behind the subtitle") {
+                showHome(level = 1f, wallpaperLayout = WallpaperLayout(headerScrim = HeaderScrim.Off))
+                val at = besideTheSubtitle()
+
+                assertNoPill(scrimmed(255, top = 0.55f, left = 0.40f, at), redAt(at))
+            }
+
+            test("a busy light picture with a quarter of its pixels bright gets the scrim and the pill behind the subtitle") {
+                showHome(wallpapers = flowOf(Wallpaper(picture = grey(1f), thumbnail = stripes(period = 20, white = 5))))
+                val at = besideTheSubtitle()
+
+                // A quarter of the thumbnail is white and the rest is grey 0.1: a mean relative luminance of 0.2575.
+                val darkening = heroScrimDarkening(0.2575f)
+                withClue("the local scrim darkens by $darkening") { darkening shouldBeGreaterThan 0.05f }
+                assertNear(pilled(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at), at, darkening)), redAt(at))
+            }
+
+            test("a dark picture with a few bright spots gets no local scrim and no pill behind the subtitle") {
+                showHome(wallpapers = flowOf(Wallpaper(picture = grey(0.4f), thumbnail = stripes(period = 25, white = 2))))
+                val at = besideTheSubtitle()
+
+                assertNoPill(scrimmed(102, top = 0.55f, left = 0.40f, at), redAt(at))
+            }
+
+            test("the picture is sampled once per wallpaper and again for the next one") {
+                val picture = grey(1f)
+                val thumbnail = grey(1f)
+                val wallpapers = MutableStateFlow(Wallpaper(picture = picture, thumbnail = thumbnail))
+                showHome(wallpapers = wallpapers)
+                val at = besideTheSubtitle()
+                val withHeroScrim = pilled(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at), at))
+                assertNear(withHeroScrim, redAt(at))
+
+                // The thumbnail is the sample's input: darkening it in place and moving focus around must not make Home sample it again.
+                Canvas(thumbnail).drawRect(Rect(0f, 0f, 16f, 9f), Paint().apply { color = Color.Black })
+                press(Key.DirectionDown)
+                press(Key.DirectionUp)
+                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                assertNear(withHeroScrim, redAt(at))
+
+                wallpapers.value = Wallpaper(picture = picture, thumbnail = grey(0.3f))
+                settle()
+                assertNoPill(scrimmed(255, top = 0.55f, left = 0.40f, at), redAt(at))
+            }
+
+            test("the hero title has a black 055 shadow 1 dp down blurred 9 dp") {
+                showHome(level = 0.3f)
+
+                val shadow = checkNotNull(compose.onNodeWithTag("shelf:title").textStyle().shadow)
+                val density = compose.activity.resources.displayMetrics.density
+
+                shadow.color shouldBe Color.Black.copy(alpha = 0.55f)
+                shadow.offset shouldBe Offset(0f, density)
+                shadow.blurRadius shouldBe (9 * density plusOrMinus 0.01f)
+            }
+
+            test("the hero title is medium weight") {
+                showHome(level = 0.3f)
+
+                compose.onNodeWithTag("shelf:title").textStyle().fontWeight shouldBe FontWeight.Medium
+            }
+
+            test("the local scrim keeps its full strength 24 dp under the subtitle line") {
+                showHome(level = 1f)
+                val line = compose.onNodeWithTag("shelf:title-meta").getBoundsInRoot()
+                val x = line.left.value - 20f
+
+                // 5 dp under the line is below its pill, which reaches 3 dp.
+                val inside = redAt(Offset(x, line.bottom.value + 5f))
+                val below = redAt(Offset(x, line.bottom.value + 24f))
+
+                assertNear(inside, below, tolerance = 3)
+            }
+
+            test("over a white picture the title holds 3 to 1 and the subtitle 4 5 to 1 against what is round them") {
+                val wallpapers = MutableStateFlow(Wallpaper(picture = grey(0f), thumbnail = grey(0f)))
+                val connected =
+                    InputRow.Port(
+                        "HDMI 3 (eARC/ARC)",
+                        InputIcon.Hdmi,
+                        InputConnection.Connected,
+                        InputTarget.TvInput("tv/.Hdmi/HW3"),
+                    )
+                showHome(wallpapers = wallpapers, inputs = flowOf(InputsMenu(available = true, rows = listOf(connected))))
+                press(Key.DirectionUp)
+                press(Key.DirectionLeft)
+                compose.onNodeWithContentDescription("Inputs").assertIsFocused()
+                val onBlack = compose.onRoot().captureToImage().toPixelMap()
+
+                wallpapers.value = Wallpaper(picture = grey(1f), thumbnail = grey(1f))
+                settle()
+                val onPicture = compose.onRoot().captureToImage().toPixelMap()
+
+                val title = worstContrast("shelf:title", onBlack, onPicture)
+                val subtitle = worstContrast("shelf:title-meta", onBlack, onPicture)
+                withClue("title $title") { title shouldBeGreaterThanOrEqualTo 3f }
+                withClue("subtitle $subtitle") { subtitle shouldBeGreaterThanOrEqualTo 4.5f }
+            }
+
+            test("over the bright sky a long app name holds 3 to 1 and its subtitle 4 5 to 1") {
+                val (title, subtitle) = contrastOver("bright")
+
+                withClue("title $title") { title shouldBeGreaterThanOrEqualTo 3f }
+                withClue("subtitle $subtitle") { subtitle shouldBeGreaterThanOrEqualTo 4.5f }
+            }
+
+            test("over the busy light forest a long app name holds 3 to 1 and its subtitle 4 5 to 1") {
+                val (title, subtitle) = contrastOver("busy")
+
+                withClue("title $title") { title shouldBeGreaterThanOrEqualTo 3f }
+                withClue("subtitle $subtitle") { subtitle shouldBeGreaterThanOrEqualTo 4.5f }
+            }
+
+            test("the local scrim holds to the end of the title and fades out as a smoothstep over the next 240 dp") {
+                showHome(
+                    level = 1f,
+                    apps = listOf(AppEntry(key = "pkg.1", packageName = "pkg.1", label = "Prime Video")) + NineApps.drop(1),
+                )
+                val title = compose.onNodeWithTag("shelf:title").getBoundsInRoot()
+                val y = title.bottom.value + 3f
+
+                fun at(beyond: Float) = Offset(title.right.value + beyond, y)
+
+                val end = heroAlpha(title.right.value)
+                assertNear(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at(-20f)), at(-20f)), redAt(at(-20f)))
+                // Half way the smoothstep has taken half of the alpha at the title's end; a quarter of the way it has taken 0.156 of it.
+                assertNear(Math.round(scrimmed(255, top = 0.70f, left = 0.60f, at(120f)) * (1f - end * 0.5f)), redAt(at(120f)))
+                assertNear(Math.round(scrimmed(255, top = 0.70f, left = 0.60f, at(60f)) * (1f - end * (1f - 0.15625f))), redAt(at(60f)))
+                assertNear(scrimmed(255, top = 0.70f, left = 0.60f, at(250f)), redAt(at(250f)))
+            }
+
+            test("the subtitle is medium weight with a black 075 shadow blurred 12 dp") {
+                showHome(level = 0.4f)
+
+                val style = compose.onNodeWithTag("shelf:title-meta").textStyle()
+                val shadow = checkNotNull(style.shadow)
+                val density = compose.activity.resources.displayMetrics.density
+
+                style.fontWeight shouldBe FontWeight.Medium
+                shadow.color shouldBe Color.Black.copy(alpha = 0.75f)
+                shadow.blurRadius shouldBe (12 * density plusOrMinus 0.01f)
+            }
+
+            test("a wallpaper between the two brightness marks gets a scrim between the two strengths") {
+                // Grey 191 is L* 77.3: 0.865 of the way from the fixed scrim to the strongest.
+                showHome(level = 0.75f)
+                val at = aboveTheTitle()
+
+                assertNear(scrimmed(191, top = 0.55f + 0.15f * 0.865f, left = 0.40f + 0.20f * 0.865f, at), redAt(at))
+            }
+
+            test("the clock pills greeting and date read at 4 5 to 1 on every wallpaper and the date 5 5 to 1 on the busy forest") {
+                val ratios =
+                    pillContrastOver(
+                        true,
+                        noFrost,
+                        black,
+                        white,
+                        "bright sky" to picture("bright"),
+                        "busy forest" to picture("busy"),
+                    )
+
+                val low = ratios.filter { (name, greeting, date) -> greeting < 4.5f || date < if (name == "busy forest") 5.5f else 4.5f }
+                withClue("greeting and date contrast on the pill: $ratios") { low.isEmpty().shouldBeTrue() }
+            }
+
+            test("without night mode the clock pills greeting and date read at 4 5 to 1 on every wallpaper") {
+                val ratios = pillContrastOver(false, noFrost, black, white, "busy forest" to picture("busy"))
+
+                withClue("greeting and date contrast on the pill: $ratios") {
+                    (
+                        ratios.all { (_, greeting, date) ->
+                            greeting >= 4.5f &&
+                                date >= 4.5f
+                        }
+                    ).shouldBeTrue()
+                }
+            }
+
+            test("the clock pills ink steps down from the clock to the greeting to the date") {
+                showHome(wallpapers = flowOf(Wallpaper(picture = grey(0f), thumbnail = grey(0f))))
+                val image = compose.onRoot().captureToImage().toPixelMap()
+
+                val clock = ink(pillPixels(image, 12f..44f, 24f, 140f), darkTheme = true).luminance()
+                val greeting = ink(pillPixels(image, greetingRows, 160f, pillWidth() - 30f), darkTheme = true).luminance()
+                val date = ink(pillPixels(image, dateRows, 160f, pillWidth() - 30f), darkTheme = true).luminance()
+
+                withClue("clock $clock, greeting $greeting, date $date") { (clock > greeting && greeting > date).shouldBeTrue() }
+            }
+
+            test("the top bar buttons thicken their tint over a wallpaper brighter than l star 70") {
+                showHome(level = 1f)
+                withClue("L* ${glass.topBarLightness}") { glass.topBarLightness shouldBeGreaterThan 95f }
+                val bright = settingsFill()
+
+                setTopBarLightness(70f)
+                val atTheMark = settingsFill()
+                setTopBarLightness(0f)
+                val dark = settingsFill()
+
+                assertNear(dark, atTheMark, tolerance = 1)
+                withClue("bright $bright, dark $dark") { bright shouldBeLessThan dark - 15 }
+            }
+
+            test("an unfocused network label draws at three quarters and a focused one in full") {
+                showHome(level = 0.4f, config = SixColumns.copy(wifiLabelWidth = 180))
+                val label = labelBounds()
+                val pill = redAt(Offset(label.left.value - 4f, (label.top.value + label.bottom.value) / 2f))
+
+                // The label's ink is F2F4F8: at 0.75 its stems keep three quarters of their lead over the pill.
+                assertNear(pill + (242 - pill) * 3 / 4, redIn(label) { a, b -> max(a, b) }, tolerance = 6)
+
+                press(Key.DirectionUp)
+                networkButton().assertIsFocused()
+                // The focused pill is light and its label near black.
+                redIn(labelBounds()) { a, b -> minOf(a, b) } shouldBeLessThan 60
+            }
+
+            test("the network button with a label has no white rim where an icon button keeps it") {
+                showHome(level = 0.4f, config = SixColumns.copy(wifiLabelWidth = 180))
+                val network = networkButton().getBoundsInRoot()
+                val settings = compose.onNodeWithContentDescription("Settings").getBoundsInRoot()
+
+                fun rimLift(button: DpRect): Int {
+                    val row = (button.top.value + button.bottom.value) / 2f
+                    return redAt(Offset(button.left.value + 0.75f, row)) - redAt(Offset(button.left.value + 4f, row))
+                }
+
+                withClue("the icon button's rim lifts its edge by ${rimLift(settings)}") { rimLift(settings) shouldBeGreaterThan 10 }
+                assertNear(0, rimLift(network), tolerance = 6)
+            }
+        }
+    })
+
+private class HeaderLegibilityUiTestFixture : JUnit4RulesContext() {
+    val compose = rule(createAndroidComposeRule<ComponentActivity>())
+
+    fun grey(level: Float) =
         ImageBitmap(16, 9).also { image ->
             Canvas(image).drawRect(Rect(0f, 0f, 16f, 9f), Paint().apply { color = Color(level, level, level) })
         }
 
     /** A 100 by 10 thumbnail, dark except for [white] columns out of every [period]: that share of its pixels is bright, anywhere. */
-    private fun stripes(
+    fun stripes(
         period: Int,
         white: Int,
     ) = ImageBitmap(100, 10).also { image ->
@@ -88,11 +402,13 @@ class HeaderLegibilityUiTest {
         }
     }
 
-    private lateinit var glass: GlassState
-    private val ssid = "Living room"
-    private val wifi = NetworkState(NetworkLink.Wifi, ssid = ssid, validated = true)
+    lateinit var glass: GlassState
 
-    private fun showHome(
+    val ssid = "Living room"
+
+    val wifi = NetworkState(NetworkLink.Wifi, ssid = ssid, validated = true)
+
+    fun showHome(
         level: Float = 1f,
         config: TvConfig = SixColumns,
         wallpaperLayout: WallpaperLayout = WallpaperLayout(),
@@ -138,26 +454,26 @@ class HeaderLegibilityUiTest {
         compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
     }
 
-    private fun settle() {
+    fun settle() {
         compose.mainClock.advanceTimeBy(1_000)
         compose.waitForIdle()
     }
 
-    private fun press(key: Key) {
+    fun press(key: Key) {
         compose.onRoot().performKeyInput { pressKey(key) }
         settle()
     }
 
-    private fun screen(): DpRect = compose.onRoot().getBoundsInRoot()
+    fun screen(): DpRect = compose.onRoot().getBoundsInRoot()
 
-    private fun redAt(point: Offset): Int {
+    fun redAt(point: Offset): Int {
         val pixels = compose.onRoot().captureToImage().toPixelMap()
         val density = compose.activity.resources.displayMetrics.density
         return Math.round(pixels[(point.x * density).toInt(), (point.y * density).toInt()].red * 255)
     }
 
     /** The scrims over a picture of [level], 0 to 255, at [at] in dp: black from the top, then black from the left. */
-    private fun scrimmed(
+    fun scrimmed(
         level: Int,
         top: Float,
         left: Float,
@@ -170,13 +486,13 @@ class HeaderLegibilityUiTest {
     }
 
     /** Above the title, out of reach of its shadow and of the local scrim's 96 dp rise, at the title's left. */
-    private fun aboveTheTitle(): Offset {
+    fun aboveTheTitle(): Offset {
         val title = compose.onNodeWithTag("shelf:title").getBoundsInRoot()
         return Offset(title.left.value + 20f, title.top.value - 100f)
     }
 
     /** Left of the subtitle's text, 4 dp inside where its pill starts: the picture there under the page scrim, the local one and the pill. */
-    private fun besideTheSubtitle(): Offset {
+    fun besideTheSubtitle(): Offset {
         val subtitle = compose.onNodeWithTag("shelf:title-meta").getBoundsInRoot()
         return Offset(subtitle.left.value - 4f, (subtitle.top.value + subtitle.bottom.value) / 2f)
     }
@@ -185,7 +501,7 @@ class HeaderLegibilityUiTest {
      * The local scrim's alpha at [x] dp over a picture it takes to [darkening] in all, where Home's left scrim is [left] strong at the
      * edge and gone 0.55 of the screen's width in: only what the left scrim lacks.
      */
-    private fun heroAlpha(
+    fun heroAlpha(
         x: Float,
         left: Float = 0.60f,
         darkening: Float = 0.50f,
@@ -195,188 +511,35 @@ class HeaderLegibilityUiTest {
     }
 
     /** What the local scrim leaves of a level inside the title block at [at]. */
-    private fun heroScrimmed(
+    fun heroScrimmed(
         level: Int,
         at: Offset,
         darkening: Float = 0.50f,
     ): Int = Math.round(level * (1f - heroAlpha(at.x, darkening = darkening)))
 
     /** What the subtitle's pill leaves of a level: black 0.45. */
-    private fun pilled(level: Int): Int = Math.round(level * (1f - 0.45f))
+    fun pilled(level: Int): Int = Math.round(level * (1f - 0.45f))
 
-    private fun assertNear(
+    fun assertNear(
         expected: Int,
         actual: Int,
         tolerance: Int = 4,
-    ) = assertTrue("expected $expected, got $actual", abs(actual - expected) <= tolerance)
+    ) = withClue("expected $expected, got $actual") { abs(actual - expected) shouldBeLessThanOrEqualTo tolerance }
 
     /** Beside the subtitle its own shadow darkens the picture by up to a tenth; a pill would take it down by nearly half. */
-    private fun assertNoPill(
+    fun assertNoPill(
         expected: Int,
         actual: Int,
     ) = assertNear(expected, actual, tolerance = 12)
 
-    @Test
-    fun a_bright_wallpaper_gets_the_stronger_scrim_behind_the_title() {
-        showHome(level = 1f)
-        val at = aboveTheTitle()
-
-        assertNear(scrimmed(255, top = 0.70f, left = 0.60f, at), redAt(at))
-    }
-
-    @Test
-    fun a_dark_wallpaper_keeps_the_fixed_scrim_behind_the_title() {
-        showHome(level = 0.4f)
-        val at = aboveTheTitle()
-
-        assertNear(scrimmed(102, top = 0.55f, left = 0.40f, at), redAt(at))
-    }
-
-    @Test
-    fun header_scrim_off_keeps_the_fixed_scrim_over_a_bright_wallpaper() {
-        showHome(level = 1f, wallpaperLayout = WallpaperLayout(headerScrim = HeaderScrim.Off))
-        val at = aboveTheTitle()
-
-        assertNear(scrimmed(255, top = 0.55f, left = 0.40f, at), redAt(at))
-    }
-
-    @Test
-    fun a_bright_wallpaper_puts_the_subtitle_on_a_black_045_pill_over_what_the_local_scrim_adds_to_the_page_scrim() {
-        showHome(level = 1f)
-        val at = besideTheSubtitle()
-
-        assertNear(pilled(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at), at)), redAt(at))
-    }
-
     /** The picture over [at] under the page scrim and the local one: 14 dp left of the subtitle, outside its pill. */
-    private fun outsideThePill(): Int {
+    fun outsideThePill(): Int {
         val subtitle = compose.onNodeWithTag("shelf:title-meta").getBoundsInRoot()
         return redAt(Offset(subtitle.left.value - 14f, (subtitle.top.value + subtitle.bottom.value) / 2f))
     }
 
-    @Test
-    fun the_subtitle_pill_reaches_10_dp_left_of_its_text() {
-        showHome(level = 1f)
-        val subtitle = compose.onNodeWithTag("shelf:title-meta").getBoundsInRoot()
-
-        // 8.5 dp out lies inside a pill with 10 dp across, and past the end of one with 8.
-        assertNear(
-            pilled(outsideThePill()),
-            redAt(Offset(subtitle.left.value - 8.5f, (subtitle.top.value + subtitle.bottom.value) / 2f)),
-        )
-    }
-
-    @Test
-    fun the_subtitle_pill_ends_in_half_circles_so_its_corners_stay_clear() {
-        showHome(level = 1f)
-        val subtitle = compose.onNodeWithTag("shelf:title-meta").getBoundsInRoot()
-
-        // The pill is 26 dp high, 3 dp over the text's box: 3 dp in from each corner of its box is outside a radius of 13 and inside one of 8.
-        assertNoPill(outsideThePill(), redAt(Offset(subtitle.left.value - 7f, subtitle.top.value)))
-    }
-
-    @Test
-    fun the_subtitle_pill_has_a_white_012_stroke_1_dp_wide_inside_its_edge() {
-        showHome(level = 1f)
-        val subtitle = compose.onNodeWithTag("shelf:title-meta").getBoundsInRoot()
-        val middle = (subtitle.top.value + subtitle.bottom.value) / 2f
-        val fill = pilled(outsideThePill())
-
-        assertNear(Math.round(fill * 0.88f + 255 * 0.12f), redAt(Offset(subtitle.left.value - 9.5f, middle)))
-        assertNear(fill, redAt(Offset(subtitle.left.value - 6f, middle)))
-    }
-
-    @Test
-    fun a_dark_wallpaper_gets_no_local_scrim_and_no_pill_behind_the_subtitle() {
-        showHome(level = 0.3f)
-        val at = besideTheSubtitle()
-
-        assertNoPill(scrimmed(77, top = 0.55f, left = 0.40f, at), redAt(at))
-    }
-
-    @Test
-    fun header_scrim_off_draws_no_local_scrim_and_no_pill_behind_the_subtitle() {
-        showHome(level = 1f, wallpaperLayout = WallpaperLayout(headerScrim = HeaderScrim.Off))
-        val at = besideTheSubtitle()
-
-        assertNoPill(scrimmed(255, top = 0.55f, left = 0.40f, at), redAt(at))
-    }
-
-    @Test
-    fun a_busy_light_picture_with_a_quarter_of_its_pixels_bright_gets_the_scrim_and_the_pill_behind_the_subtitle() {
-        showHome(wallpapers = flowOf(Wallpaper(picture = grey(1f), thumbnail = stripes(period = 20, white = 5))))
-        val at = besideTheSubtitle()
-
-        // A quarter of the thumbnail is white and the rest is grey 0.1: a mean relative luminance of 0.2575.
-        val darkening = heroScrimDarkening(0.2575f)
-        assertTrue("the local scrim darkens by $darkening", darkening > 0.05f)
-        assertNear(pilled(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at), at, darkening)), redAt(at))
-    }
-
-    @Test
-    fun a_dark_picture_with_a_few_bright_spots_gets_no_local_scrim_and_no_pill_behind_the_subtitle() {
-        showHome(wallpapers = flowOf(Wallpaper(picture = grey(0.4f), thumbnail = stripes(period = 25, white = 2))))
-        val at = besideTheSubtitle()
-
-        assertNoPill(scrimmed(102, top = 0.55f, left = 0.40f, at), redAt(at))
-    }
-
-    @Test
-    fun the_picture_is_sampled_once_per_wallpaper_and_again_for_the_next_one() {
-        val picture = grey(1f)
-        val thumbnail = grey(1f)
-        val wallpapers = MutableStateFlow(Wallpaper(picture = picture, thumbnail = thumbnail))
-        showHome(wallpapers = wallpapers)
-        val at = besideTheSubtitle()
-        val withHeroScrim = pilled(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at), at))
-        assertNear(withHeroScrim, redAt(at))
-
-        // The thumbnail is the sample's input: darkening it in place and moving focus around must not make Home sample it again.
-        Canvas(thumbnail).drawRect(Rect(0f, 0f, 16f, 9f), Paint().apply { color = Color.Black })
-        press(Key.DirectionDown)
-        press(Key.DirectionUp)
-        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-        assertNear(withHeroScrim, redAt(at))
-
-        wallpapers.value = Wallpaper(picture = picture, thumbnail = grey(0.3f))
-        settle()
-        assertNoPill(scrimmed(255, top = 0.55f, left = 0.40f, at), redAt(at))
-    }
-
-    @Test
-    fun the_hero_title_has_a_black_055_shadow_1_dp_down_blurred_9_dp() {
-        showHome(level = 0.3f)
-
-        val shadow = checkNotNull(compose.onNodeWithTag("shelf:title").textStyle().shadow)
-        val density = compose.activity.resources.displayMetrics.density
-
-        assertEquals(Color.Black.copy(alpha = 0.55f), shadow.color)
-        assertEquals(Offset(0f, density), shadow.offset)
-        assertEquals(9 * density, shadow.blurRadius, 0.01f)
-    }
-
-    @Test
-    fun the_hero_title_is_medium_weight() {
-        showHome(level = 0.3f)
-
-        assertEquals(FontWeight.Medium, compose.onNodeWithTag("shelf:title").textStyle().fontWeight)
-    }
-
-    @Test
-    fun the_local_scrim_keeps_its_full_strength_24_dp_under_the_subtitle_line() {
-        showHome(level = 1f)
-        val line = compose.onNodeWithTag("shelf:title-meta").getBoundsInRoot()
-        val x = line.left.value - 20f
-
-        // 5 dp under the line is below its pill, which reaches 3 dp.
-        val inside = redAt(Offset(x, line.bottom.value + 5f))
-        val below = redAt(Offset(x, line.bottom.value + 24f))
-
-        assertNear(inside, below, tolerance = 3)
-    }
-
     /** Pixels of [mask] within [reach] pixels of a set one, in a [width] by [height] image. */
-    private fun spread(
+    fun spread(
         mask: BooleanArray,
         width: Int,
         height: Int,
@@ -402,7 +565,7 @@ class HeaderLegibilityUiTest {
      * it. [onBlack] is the screen over a black picture, where only the text shows, and gives its pixels; [onPicture] is
      * the screen over the picture under test.
      */
-    private fun worstContrast(
+    fun worstContrast(
         tag: String,
         onBlack: PixelMap,
         onPicture: PixelMap,
@@ -440,38 +603,19 @@ class HeaderLegibilityUiTest {
         }
     }
 
-    @Test
-    fun over_a_white_picture_the_title_holds_3_to_1_and_the_subtitle_4_5_to_1_against_what_is_round_them() {
-        val wallpapers = MutableStateFlow(Wallpaper(picture = grey(0f), thumbnail = grey(0f)))
-        val connected = InputRow.Port("HDMI 3 (eARC/ARC)", InputIcon.Hdmi, InputConnection.Connected, InputTarget.TvInput("tv/.Hdmi/HW3"))
-        showHome(wallpapers = wallpapers, inputs = flowOf(InputsMenu(available = true, rows = listOf(connected))))
-        press(Key.DirectionUp)
-        press(Key.DirectionLeft)
-        compose.onNodeWithContentDescription("Inputs").assertIsFocused()
-        val onBlack = compose.onRoot().captureToImage().toPixelMap()
+    val longName = "TV Control with Smart Speakers"
 
-        wallpapers.value = Wallpaper(picture = grey(1f), thumbnail = grey(1f))
-        settle()
-        val onPicture = compose.onRoot().captureToImage().toPixelMap()
-
-        val title = worstContrast("shelf:title", onBlack, onPicture)
-        val subtitle = worstContrast("shelf:title-meta", onBlack, onPicture)
-        assertTrue("title $title", title >= 3f)
-        assertTrue("subtitle $subtitle", subtitle >= 4.5f)
-    }
-
-    private val longName = "TV Control with Smart Speakers"
-    private val namedApps = listOf(AppEntry(key = "pkg.1", packageName = "pkg.1", label = longName)) + NineApps.drop(1)
+    val namedApps = listOf(AppEntry(key = "pkg.1", packageName = "pkg.1", label = longName)) + NineApps.drop(1)
 
     /** The council's wallpaper [name] at half size (960 by 540), with the 120 pixel thumbnail Home samples. */
-    private fun picture(name: String): Wallpaper {
+    fun picture(name: String): Wallpaper {
         val full = checkNotNull(javaClass.getResourceAsStream("/wallpaper/$name.jpg")).use { BitmapFactory.decodeStream(it) }
         val thumbnail = Bitmap.createScaledBitmap(full, 120, 120 * full.height / full.width, true)
         return Wallpaper(picture = full.asImageBitmap(), thumbnail = thumbnail.asImageBitmap())
     }
 
     /** Home on a black picture, then on [name]: the contrast of the 30-character app name and of its last-opened line, against what is round them. */
-    private fun contrastOver(name: String): Pair<Float, Float> {
+    fun contrastOver(name: String): Pair<Float, Float> {
         val wallpapers = MutableStateFlow(Wallpaper(picture = grey(0f), thumbnail = grey(0f)))
         val yesterday = Evening.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() - 26 * 3_600_000L
         showHome(wallpapers = wallpapers, apps = namedApps, lastOpened = mapOf("pkg.1" to yesterday))
@@ -484,71 +628,18 @@ class HeaderLegibilityUiTest {
         return worstContrast("shelf:title", onBlack, onPicture) to worstContrast("shelf:title-meta", onBlack, onPicture)
     }
 
-    @Test
-    fun over_the_bright_sky_a_long_app_name_holds_3_to_1_and_its_subtitle_4_5_to_1() {
-        val (title, subtitle) = contrastOver("bright")
-
-        assertTrue("title $title", title >= 3f)
-        assertTrue("subtitle $subtitle", subtitle >= 4.5f)
-    }
-
-    @Test
-    fun over_the_busy_light_forest_a_long_app_name_holds_3_to_1_and_its_subtitle_4_5_to_1() {
-        val (title, subtitle) = contrastOver("busy")
-
-        assertTrue("title $title", title >= 3f)
-        assertTrue("subtitle $subtitle", subtitle >= 4.5f)
-    }
-
-    @Test
-    fun the_local_scrim_holds_to_the_end_of_the_title_and_fades_out_as_a_smoothstep_over_the_next_240_dp() {
-        showHome(level = 1f, apps = listOf(AppEntry(key = "pkg.1", packageName = "pkg.1", label = "Prime Video")) + NineApps.drop(1))
-        val title = compose.onNodeWithTag("shelf:title").getBoundsInRoot()
-        val y = title.bottom.value + 3f
-
-        fun at(beyond: Float) = Offset(title.right.value + beyond, y)
-
-        val end = heroAlpha(title.right.value)
-        assertNear(heroScrimmed(scrimmed(255, top = 0.70f, left = 0.60f, at(-20f)), at(-20f)), redAt(at(-20f)))
-        // Half way the smoothstep has taken half of the alpha at the title's end; a quarter of the way it has taken 0.156 of it.
-        assertNear(Math.round(scrimmed(255, top = 0.70f, left = 0.60f, at(120f)) * (1f - end * 0.5f)), redAt(at(120f)))
-        assertNear(Math.round(scrimmed(255, top = 0.70f, left = 0.60f, at(60f)) * (1f - end * (1f - 0.15625f))), redAt(at(60f)))
-        assertNear(scrimmed(255, top = 0.70f, left = 0.60f, at(250f)), redAt(at(250f)))
-    }
-
-    @Test
-    fun the_subtitle_is_medium_weight_with_a_black_075_shadow_blurred_12_dp() {
-        showHome(level = 0.4f)
-
-        val style = compose.onNodeWithTag("shelf:title-meta").textStyle()
-        val shadow = checkNotNull(style.shadow)
-        val density = compose.activity.resources.displayMetrics.density
-
-        assertEquals(FontWeight.Medium, style.fontWeight)
-        assertEquals(Color.Black.copy(alpha = 0.75f), shadow.color)
-        assertEquals(12 * density, shadow.blurRadius, 0.01f)
-    }
-
-    @Test
-    fun a_wallpaper_between_the_two_brightness_marks_gets_a_scrim_between_the_two_strengths() {
-        // Grey 191 is L* 77.3: 0.865 of the way from the fixed scrim to the strongest.
-        showHome(level = 0.75f)
-        val at = aboveTheTitle()
-
-        assertNear(scrimmed(191, top = 0.55f + 0.15f * 0.865f, left = 0.40f + 0.20f * 0.865f, at), redAt(at))
-    }
-
-    private fun contrast(
+    fun contrast(
         first: Color,
         second: Color,
     ): Float = (max(first.luminance(), second.luminance()) + 0.05f) / (min(first.luminance(), second.luminance()) + 0.05f)
 
     /** The date's rows under the clock pill's top, in dp, and the greeting's. */
-    private val dateRows = 31f..44f
-    private val greetingRows = 11f..22f
+    val dateRows = 31f..44f
+
+    val greetingRows = 11f..22f
 
     /** The pixels in [rows] under the clock pill's top and from [from] to [to] dp past its left edge. */
-    private fun pillPixels(
+    fun pillPixels(
         image: PixelMap,
         rows: ClosedFloatingPointRange<Float>,
         from: Float,
@@ -562,20 +653,20 @@ class HeaderLegibilityUiTest {
     }
 
     /** The most extreme pixel of [pixels], the one furthest from the pill's surface: the ink of text drawn on it. */
-    private fun ink(
+    fun ink(
         pixels: List<Color>,
         darkTheme: Boolean,
     ): Color = if (darkTheme) pixels.maxBy { it.luminance() } else pixels.minBy { it.luminance() }
 
     /** The clock pill's width in dp, for the strips of its padding at both ends of a line. */
-    private fun pillWidth(): Float =
+    fun pillWidth(): Float =
         compose
             .onNodeWithTag("clock")
             .getBoundsInRoot()
             .width.value
 
     /** The lowest contrast of the ink of the pill's line in [rows] against the pill's own surface beside it: its padding at both ends. */
-    private fun lineContrast(
+    fun lineContrast(
         image: PixelMap,
         rows: ClosedFloatingPointRange<Float>,
         darkTheme: Boolean,
@@ -585,12 +676,14 @@ class HeaderLegibilityUiTest {
         return surface.minOf { contrast(ink, it) }
     }
 
-    private val noFrost = "no frost" to Wallpaper()
-    private val black = "black" to Wallpaper(picture = grey(0f), thumbnail = grey(0f))
-    private val white = "white" to Wallpaper(picture = grey(1f), thumbnail = grey(1f))
+    val noFrost = "no frost" to Wallpaper()
+
+    val black = "black" to Wallpaper(picture = grey(0f), thumbnail = grey(0f))
+
+    val white = "white" to Wallpaper(picture = grey(1f), thumbnail = grey(1f))
 
     /** The contrast of the greeting, then of the date, on the clock pill with each of [surfaces] behind it, by name. */
-    private fun pillContrastOver(
+    fun pillContrastOver(
         darkTheme: Boolean,
         vararg surfaces: Pair<String, Wallpaper>,
     ): List<Triple<String, Float, Float>> {
@@ -604,67 +697,22 @@ class HeaderLegibilityUiTest {
         }
     }
 
-    @Test
-    fun the_clock_pills_greeting_and_date_read_at_4_5_to_1_on_every_wallpaper_and_the_date_5_5_to_1_on_the_busy_forest() {
-        val ratios = pillContrastOver(true, noFrost, black, white, "bright sky" to picture("bright"), "busy forest" to picture("busy"))
-
-        val low = ratios.filter { (name, greeting, date) -> greeting < 4.5f || date < if (name == "busy forest") 5.5f else 4.5f }
-        assertTrue("greeting and date contrast on the pill: $ratios", low.isEmpty())
-    }
-
-    @Test
-    fun without_night_mode_the_clock_pills_greeting_and_date_read_at_4_5_to_1_on_every_wallpaper() {
-        val ratios = pillContrastOver(false, noFrost, black, white, "busy forest" to picture("busy"))
-
-        assertTrue(
-            "greeting and date contrast on the pill: $ratios",
-            ratios.all { (_, greeting, date) -> greeting >= 4.5f && date >= 4.5f },
-        )
-    }
-
-    @Test
-    fun the_clock_pills_ink_steps_down_from_the_clock_to_the_greeting_to_the_date() {
-        showHome(wallpapers = flowOf(Wallpaper(picture = grey(0f), thumbnail = grey(0f))))
-        val image = compose.onRoot().captureToImage().toPixelMap()
-
-        val clock = ink(pillPixels(image, 12f..44f, 24f, 140f), darkTheme = true).luminance()
-        val greeting = ink(pillPixels(image, greetingRows, 160f, pillWidth() - 30f), darkTheme = true).luminance()
-        val date = ink(pillPixels(image, dateRows, 160f, pillWidth() - 30f), darkTheme = true).luminance()
-
-        assertTrue("clock $clock, greeting $greeting, date $date", clock > greeting && greeting > date)
-    }
-
-    private fun settingsFill(): Int {
+    fun settingsFill(): Int {
         val button = compose.onNodeWithContentDescription("Settings").getBoundsInRoot()
         return redAt(Offset((button.left.value + button.right.value) / 2f, button.top.value + 4f))
     }
 
-    private fun setTopBarLightness(lightness: Float) {
+    fun setTopBarLightness(lightness: Float) {
         compose.runOnIdle { glass.topBarLightness = lightness }
         settle()
     }
 
-    @Test
-    fun the_top_bar_buttons_thicken_their_tint_over_a_wallpaper_brighter_than_l_star_70() {
-        showHome(level = 1f)
-        assertTrue("L* ${glass.topBarLightness}", glass.topBarLightness > 95f)
-        val bright = settingsFill()
+    fun networkButton() = compose.onNode(hasClickAction() and hasText(ssid))
 
-        setTopBarLightness(70f)
-        val atTheMark = settingsFill()
-        setTopBarLightness(0f)
-        val dark = settingsFill()
-
-        assertNear(dark, atTheMark, tolerance = 1)
-        assertTrue("bright $bright, dark $dark", bright < dark - 15)
-    }
-
-    private fun networkButton() = compose.onNode(hasClickAction() and hasText(ssid))
-
-    private fun labelBounds(): DpRect = compose.onNode(hasText(ssid), useUnmergedTree = true).getBoundsInRoot()
+    fun labelBounds(): DpRect = compose.onNode(hasText(ssid), useUnmergedTree = true).getBoundsInRoot()
 
     /** The red channel of the pixels inside [box], reduced by [pick]: a glyph's stem shows its colour at full strength. */
-    private fun redIn(
+    fun redIn(
         box: DpRect,
         pick: (Int, Int) -> Int,
     ): Int {
@@ -678,35 +726,5 @@ class HeaderLegibilityUiTest {
             }
         }
         return found
-    }
-
-    @Test
-    fun an_unfocused_network_label_draws_at_three_quarters_and_a_focused_one_in_full() {
-        showHome(level = 0.4f, config = SixColumns.copy(wifiLabelWidth = 180))
-        val label = labelBounds()
-        val pill = redAt(Offset(label.left.value - 4f, (label.top.value + label.bottom.value) / 2f))
-
-        // The label's ink is F2F4F8: at 0.75 its stems keep three quarters of their lead over the pill.
-        assertNear(pill + (242 - pill) * 3 / 4, redIn(label) { a, b -> max(a, b) }, tolerance = 6)
-
-        press(Key.DirectionUp)
-        networkButton().assertIsFocused()
-        // The focused pill is light and its label near black.
-        assertTrue(redIn(labelBounds()) { a, b -> minOf(a, b) } < 60)
-    }
-
-    @Test
-    fun the_network_button_with_a_label_has_no_white_rim_where_an_icon_button_keeps_it() {
-        showHome(level = 0.4f, config = SixColumns.copy(wifiLabelWidth = 180))
-        val network = networkButton().getBoundsInRoot()
-        val settings = compose.onNodeWithContentDescription("Settings").getBoundsInRoot()
-
-        fun rimLift(button: DpRect): Int {
-            val row = (button.top.value + button.bottom.value) / 2f
-            return redAt(Offset(button.left.value + 0.75f, row)) - redAt(Offset(button.left.value + 4f, row))
-        }
-
-        assertTrue("the icon button's rim lifts its edge by ${rimLift(settings)}", rimLift(settings) > 10)
-        assertNear(0, rimLift(network), tolerance = 6)
     }
 }

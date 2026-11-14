@@ -34,9 +34,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /** With focus on the top bar the band over the grid names the focused button, and says one line about what it stands for. */
 @RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.LEGACY)
 @Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
 class TopBarHeaderUiTest {
     @get:Rule

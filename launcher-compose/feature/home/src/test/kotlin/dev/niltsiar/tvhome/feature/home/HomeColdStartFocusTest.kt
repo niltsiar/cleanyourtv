@@ -21,9 +21,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /** A cold start: the window asks Home for focus on its first frame, the app list arrives frames later, and its tiles show names until their art lands. */
 @RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.LEGACY)
 @Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
 class HomeColdStartFocusTest {
     @get:Rule

@@ -10,9 +10,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.LEGACY)
 @Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
 class WallpaperCaptionTest {
     @get:Rule

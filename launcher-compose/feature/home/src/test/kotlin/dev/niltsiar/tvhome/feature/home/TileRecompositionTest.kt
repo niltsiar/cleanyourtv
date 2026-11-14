@@ -41,6 +41,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /**
  * A focus move changes the shelf and the focused tile's look, composes no tile again and recomposes no grid item: each
@@ -48,6 +49,7 @@ import org.robolectric.annotation.Config
  */
 @OptIn(InternalComposeTracingApi::class, ExperimentalComposeRuntimeApi::class)
 @RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.LEGACY)
 @Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
 open class TileRecompositionTest {
     @get:Rule

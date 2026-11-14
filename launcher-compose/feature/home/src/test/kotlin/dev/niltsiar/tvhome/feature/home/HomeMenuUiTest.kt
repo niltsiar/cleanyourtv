@@ -43,11 +43,13 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /** Home on the real presenter: keys go in at the screen, the menus and modes come out of the state. */
 @RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.LEGACY)
 @Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
 class HomeMenuUiTest {
     @get:Rule

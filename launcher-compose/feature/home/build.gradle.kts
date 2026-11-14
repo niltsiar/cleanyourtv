@@ -1,5 +1,6 @@
 plugins {
     id("tvhome.android.library.compose")
+    id("tvhome.android.testballoon")
 }
 
 android {
@@ -8,6 +9,9 @@ android {
     testOptions {
         unitTests.isReturnDefaultValues = true
         unitTests.isIncludeAndroidResources = true
+        // TestBalloon does not read @GraphicsMode and TestConfig.robolectric has no graphics mode; the pixel tests need the
+        // native canvas.
+        unitTests.all { it.systemProperty("robolectric.graphicsMode", "NATIVE") }
     }
 }
 

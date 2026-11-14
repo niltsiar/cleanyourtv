@@ -1,48 +1,30 @@
 package dev.niltsiar.tvhome.feature.home
 
 import androidx.compose.ui.graphics.Color
+import de.infix.testBalloon.framework.core.testSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import io.kotest.assertions.withClue
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
+import io.kotest.matchers.comparables.shouldBeLessThan
+import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
+import io.kotest.matchers.floats.plusOrMinus
+import io.kotest.matchers.shouldBe
 import kotlin.math.pow
 
 /** What the dock panel is tinted with, from the theme and the wallpaper under it. */
-class DockLookTest {
-    private val dark = Color(0xFF0B0D12)
-    private val light = Color(0xFFF4F6FA)
+val DockLookTest by testSuite {
+    val dark = Color(0xFF0B0D12)
 
-    @Test
-    fun the_dark_tint_is_016_and_the_light_one_020_on_a_dim_wallpaper() {
-        assertEquals(dark.copy(alpha = 0.16f), DockLook().tint(darkSurfaces = true, lightness = 60f))
-        assertEquals(light.copy(alpha = 0.20f), DockLook().tint(darkSurfaces = false, lightness = 60f))
-    }
+    val light = Color(0xFFF4F6FA)
 
-    @Test
-    fun above_L_60_the_dark_tint_climbs_to_022_at_L_75() {
-        for ((lightness, extra) in listOf(60f to 0f, 67.5f to 0.03f, 75f to 0.06f, 95f to 0.06f)) {
-            assertEquals("dark at $lightness", 0.16f + extra, DockLook().tint(true, lightness).alpha, 0.005f)
-        }
-    }
+    fun encode(luminance: Float) = 1.055f * luminance.pow(1f / 2.4f) - 0.055f
 
-    @Test
-    fun dock_glass_takes_the_light_tint_in_night_mode() {
-        assertEquals(light.copy(alpha = 0.20f), DockLook(glass = true).tint(darkSurfaces = true, lightness = 60f))
-    }
-
-    @Test
-    fun dock_opacity_sets_the_tint_to_085_times_the_percent_and_the_wallpaper_no_longer_matters() {
-        assertEquals(dark.copy(alpha = 0.85f * 0.70f), DockLook(opacity = 70).tint(true, lightness = 90f))
-        assertEquals(light.copy(alpha = 0.85f * 0.30f), DockLook(opacity = 30, glass = true).tint(true, lightness = 90f))
-    }
-
-    private fun encode(luminance: Float) = 1.055f * luminance.pow(1f / 2.4f) - 0.055f
-
-    private fun decode(value: Float) = ((value + 0.055f) / 1.055f).pow(2.4f)
+    fun decode(value: Float) = ((value + 0.055f) / 1.055f).pow(2.4f)
 
     /** The relative luminance of a grey frost of CIE L* [lightness] under [tint], mixed on the encoded values. */
-    private fun trayLuminance(
+    fun trayLuminance(
         tint: Color,
         lightness: Float,
     ): Float {
@@ -52,95 +34,117 @@ class DockLookTest {
         return 0.2126f * mixed(tint.red) + 0.7152f * mixed(tint.green) + 0.0722f * mixed(tint.blue)
     }
 
-    @Test
-    fun the_light_tray_keeps_a_relative_luminance_under_056_over_any_frost() {
-        for (lightness in listOf(40f, 75f, 85f, 90f, 95f, 100f)) {
-            val tint = DockLook(glass = true).tint(darkSurfaces = true, lightness = lightness)
+    test("the dark tint is 016 and the light one 020 on a dim wallpaper") {
+        DockLook().tint(darkSurfaces = true, lightness = 60f) shouldBe dark.copy(alpha = 0.16f)
+        DockLook().tint(darkSurfaces = false, lightness = 60f) shouldBe light.copy(alpha = 0.20f)
+    }
 
-            assertTrue("L* $lightness gives ${trayLuminance(tint, lightness)}", trayLuminance(tint, lightness) <= 0.56f)
+    test("above L 60 the dark tint climbs to 022 at L 75") {
+        for ((lightness, extra) in listOf(60f to 0f, 67.5f to 0.03f, 75f to 0.06f, 95f to 0.06f)) {
+            withClue("dark at $lightness") { DockLook().tint(true, lightness).alpha shouldBe (0.16f + extra plusOrMinus 0.005f) }
         }
     }
 
-    @Test
-    fun on_a_dark_picture_the_light_tray_lifts_the_picture_by_at_most_002() {
+    test("dock glass takes the light tint in night mode") {
+        DockLook(glass = true).tint(darkSurfaces = true, lightness = 60f) shouldBe light.copy(alpha = 0.20f)
+    }
+
+    test("dock opacity sets the tint to 085 times the percent and the wallpaper no longer matters") {
+        DockLook(opacity = 70).tint(true, lightness = 90f) shouldBe dark.copy(alpha = 0.85f * 0.70f)
+        DockLook(opacity = 30, glass = true).tint(true, lightness = 90f) shouldBe light.copy(alpha = 0.85f * 0.30f)
+    }
+
+    test("the light tray keeps a relative luminance under 056 over any frost") {
+        for (lightness in listOf(40f, 75f, 85f, 90f, 95f, 100f)) {
+            val tint = DockLook(glass = true).tint(darkSurfaces = true, lightness = lightness)
+
+            withClue("L* $lightness gives ${trayLuminance(tint, lightness)}") {
+                trayLuminance(tint, lightness) shouldBeLessThanOrEqualTo
+                    0.56f
+            }
+        }
+    }
+
+    test("on a dark picture the light tray lifts the picture by at most 002") {
         for (lightness in listOf(1f, 5f, 10f, 15f, 20f, 25f, 30f)) {
             val tint = DockLook(glass = true).tint(darkSurfaces = true, lightness = lightness)
             val lift = trayLuminance(tint, lightness) - ((lightness + 16f) / 116f).pow(3)
 
-            assertTrue("L* $lightness lifts the picture by $lift", lift <= 0.021f)
+            withClue("L* $lightness lifts the picture by $lift") { lift shouldBeLessThanOrEqualTo 0.021f }
         }
     }
 
-    @Test
-    fun over_a_frost_from_L_31_to_38_the_light_tray_lifts_it_to_at_most_1_6_times_its_luminance() {
+    test("over a frost from L 31 to 38 the light tray lifts it to at most 1 6 times its luminance") {
         for (lightness in listOf(31f, 33f, 35f, 36.5f, 38f)) {
             val tint = DockLook(glass = true).tint(darkSurfaces = true, lightness = lightness)
             val frost = ((lightness + 16f) / 116f).pow(3)
 
-            assertTrue(
-                "L* $lightness gives ${trayLuminance(tint, lightness) / frost} times",
-                trayLuminance(tint, lightness) <= 1.6f * frost,
-            )
+            withClue("L* $lightness gives ${trayLuminance(tint, lightness) / frost} times") {
+                trayLuminance(tint, lightness) shouldBeLessThanOrEqualTo
+                    1.6f * frost
+            }
         }
     }
 
-    @Test
-    fun over_a_frost_of_L_35_to_50_the_light_tray_lifts_it_by_at_most_004() {
+    test("over a frost of L 35 to 50 the light tray lifts it by at most 004") {
         for (lightness in listOf(35f, 40f, 45f, 50f)) {
             val tint = DockLook(glass = true).tint(darkSurfaces = true, lightness = lightness)
             val lift = trayLuminance(tint, lightness) - ((lightness + 16f) / 116f).pow(3)
 
-            assertTrue("L* $lightness lifts the picture by $lift", lift <= 0.041f)
+            withClue("L* $lightness lifts the picture by $lift") { lift shouldBeLessThanOrEqualTo 0.041f }
         }
     }
 
-    @Test
-    fun over_a_frost_of_L_65_or_more_the_light_tray_is_the_base_tint_or_at_the_055_cap() {
+    test("over a frost of L 65 or more the light tray is the base tint or at the 055 cap") {
         for (lightness in listOf(65f, 70f, 75f, 80f, 90f, 100f)) {
             val tint = DockLook(glass = true).tint(darkSurfaces = true, lightness = lightness)
             val base = light.copy(alpha = 0.20f + 0.06f * ((lightness - 60f) / 15f).coerceIn(0f, 1f))
 
-            assertEquals("L* $lightness", minOf(trayLuminance(base, lightness), 0.55f), trayLuminance(tint, lightness), 0.005f)
+            withClue("L* $lightness") {
+                trayLuminance(tint, lightness) shouldBe
+                    (minOf(trayLuminance(base, lightness), 0.55f) plusOrMinus 0.005f)
+            }
         }
     }
 
-    @Test
-    fun the_light_tray_never_gets_darker_as_the_frost_gets_lighter_from_L_30_to_80() {
+    test("the light tray never gets darker as the frost gets lighter from L 30 to 80") {
         var before = 0f
         for (lightness in 30..80) {
             val tint = DockLook(glass = true).tint(darkSurfaces = true, lightness = lightness.toFloat())
             val tray = trayLuminance(tint, lightness.toFloat())
 
-            assertTrue("L* $lightness gives $tray after $before", tray >= before - 0.0005f)
+            withClue("L* $lightness gives $tray after $before") { tray shouldBeGreaterThanOrEqualTo before - 0.0005f }
             before = tray
         }
     }
 
-    @Test
-    fun a_light_tray_keeps_all_its_gloss_on_a_frost_of_L_60_or_more_or_with_no_frost_and_a_dark_one_always() {
+    test("a light tray keeps all its gloss on a frost of L 60 or more or with no frost and a dark one always") {
         for (lightness in listOf(0f, 60f, 80f, 100f)) {
-            assertEquals("L* $lightness", 1f, DockLook(glass = true).gloss(darkSurfaces = true, lightness = lightness), 0f)
+            withClue("L* $lightness") {
+                DockLook(glass = true).gloss(darkSurfaces = true, lightness = lightness) shouldBe
+                    (1f plusOrMinus 0f)
+            }
         }
         for (lightness in listOf(1f, 30f, 40f, 100f)) {
-            assertEquals("dark tray at L* $lightness", 1f, DockLook().gloss(darkSurfaces = true, lightness = lightness), 0f)
+            withClue("dark tray at L* $lightness") {
+                DockLook().gloss(darkSurfaces = true, lightness = lightness) shouldBe
+                    (1f plusOrMinus 0f)
+            }
         }
     }
 
-    @Test
-    fun a_light_tray_over_a_frost_of_L_30_or_less_keeps_a_quarter_of_its_gloss_and_more_up_to_L_60() {
-        assertEquals(0.25f, DockLook(glass = true).gloss(darkSurfaces = true, lightness = 30f), 0.001f)
-        assertEquals(0.25f, DockLook(glass = true).gloss(darkSurfaces = true, lightness = 10f), 0.001f)
-        assertEquals(0.625f, DockLook(glass = true).gloss(darkSurfaces = true, lightness = 45f), 0.001f)
-        assertTrue(DockLook(glass = true).gloss(darkSurfaces = true, lightness = 45f) < 0.75f)
+    test("a light tray over a frost of L 30 or less keeps a quarter of its gloss and more up to L 60") {
+        DockLook(glass = true).gloss(darkSurfaces = true, lightness = 30f) shouldBe (0.25f plusOrMinus 0.001f)
+        DockLook(glass = true).gloss(darkSurfaces = true, lightness = 10f) shouldBe (0.25f plusOrMinus 0.001f)
+        DockLook(glass = true).gloss(darkSurfaces = true, lightness = 45f) shouldBe (0.625f plusOrMinus 0.001f)
+        DockLook(glass = true).gloss(darkSurfaces = true, lightness = 45f) shouldBeLessThan 0.75f
     }
 
-    @Test
-    fun with_no_frost_under_the_dock_a_lightness_of_0_keeps_the_base_light_tint() {
-        assertEquals(light.copy(alpha = 0.20f), DockLook(glass = true).tint(darkSurfaces = true, lightness = 0f))
+    test("with no frost under the dock a lightness of 0 keeps the base light tint") {
+        DockLook(glass = true).tint(darkSurfaces = true, lightness = 0f) shouldBe light.copy(alpha = 0.20f)
     }
 
-    @Test
-    fun on_a_bright_picture_the_light_tint_keeps_its_alpha_and_colour() {
+    test("on a bright picture the light tint keeps its alpha and colour") {
         val kept =
             listOf(
                 Triple(60f, 0.20f, 0.95686275f),
@@ -154,29 +158,26 @@ class DockLookTest {
         for ((lightness, alpha, red) in kept) {
             val tint = DockLook(glass = true).tint(darkSurfaces = true, lightness = lightness)
 
-            assertEquals("alpha at L* $lightness", alpha, tint.alpha, 0.001f)
-            assertEquals("red at L* $lightness", red, tint.red, 0.001f)
+            withClue("alpha at L* $lightness") { tint.alpha shouldBe (alpha plusOrMinus 0.001f) }
+            withClue("red at L* $lightness") { tint.red shouldBe (red plusOrMinus 0.001f) }
         }
     }
 
-    @Test
-    fun a_light_tint_darkens_only_over_a_frost_bright_enough_to_need_it() {
-        assertEquals(light.copy(alpha = 0.20f), DockLook(glass = true).tint(true, lightness = 60f))
-        assertTrue(DockLook(glass = true).tint(true, lightness = 100f).red < light.red - 0.05f)
+    test("a light tint darkens only over a frost bright enough to need it") {
+        DockLook(glass = true).tint(true, lightness = 60f) shouldBe light.copy(alpha = 0.20f)
+        DockLook(glass = true).tint(true, lightness = 100f).red shouldBeLessThan light.red - 0.05f
     }
 
-    @Test
-    fun the_edge_light_needs_the_dock_panel_and_motion() {
-        assertTrue(TvConfig().dockLook().edgeLight)
-        assertFalse(TvConfig(dockBand = false).dockLook().edgeLight)
-        assertFalse(TvConfig(animations = false).dockLook().edgeLight)
-        assertFalse(TvConfig(reducedMotion = true).dockLook().edgeLight)
-        assertFalse(TvConfig(dockEdgeLight = false).dockLook().edgeLight)
+    test("the edge light needs the dock panel and motion") {
+        TvConfig().dockLook().edgeLight.shouldBeTrue()
+        TvConfig(dockBand = false).dockLook().edgeLight.shouldBeFalse()
+        TvConfig(animations = false).dockLook().edgeLight.shouldBeFalse()
+        TvConfig(reducedMotion = true).dockLook().edgeLight.shouldBeFalse()
+        TvConfig(dockEdgeLight = false).dockLook().edgeLight.shouldBeFalse()
     }
 
-    @Test
-    fun even_padding_follows_the_themes_dock_even_padding() {
-        assertFalse(TvConfig().dockLook().evenPadding)
-        assertTrue(TvConfig(dockEvenPadding = true).dockLook().evenPadding)
+    test("even padding follows the themes dock even padding") {
+        TvConfig().dockLook().evenPadding.shouldBeFalse()
+        TvConfig(dockEvenPadding = true).dockLook().evenPadding.shouldBeTrue()
     }
 }

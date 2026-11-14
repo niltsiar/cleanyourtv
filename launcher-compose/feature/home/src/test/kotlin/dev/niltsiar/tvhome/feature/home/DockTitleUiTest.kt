@@ -25,38 +25,113 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import de.infix.testBalloon.framework.core.JUnit4RulesContext
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectric
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppList
 import dev.niltsiar.tvhome.core.model.Wallpaper
+import io.kotest.assertions.withClue
+import io.kotest.matchers.comparables.shouldBeGreaterThan
+import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-import org.robolectric.annotation.GraphicsMode
 import kotlin.math.abs
 
 /** dock_title false: the focused tile gets no line and no scrim under it; the lines that are not the tile's keep both. */
-@RunWith(RobolectricTestRunner::class)
-@GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
-class DockTitleUiTest {
-    @get:Rule
-    val compose = createAndroidComposeRule<ComponentActivity>()
+val DockTitleUiTest by testSuite {
+    robolectricTestSuite<DockTitleUiTestContent>(
+        "sdk 31, 960x540 dp",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "w960dp-h540dp-xhdpi"
+            },
+    )
+}
 
-    private val white: ImageBitmap =
+class DockTitleUiTestContent :
+    RobolectricTestSuiteContent({
+        testFixture { DockTitleUiTestFixture() } asContextForEach {
+            test("the focused tile is named over the dock by default") {
+                showHome(dockTitle = true)
+
+                titleText() shouldBe "App 1"
+            }
+
+            test("the focused tile is not named over the dock when dock title is false") {
+                showHome(dockTitle = false)
+                press(Key.DirectionRight)
+                compose.onNodeWithTag("tile:pkg.2").assertIsFocused()
+
+                titleText() shouldBe ""
+            }
+
+            test("reorder mode still names the moved app and shows its keys when dock title is false") {
+                showHome(dockTitle = false)
+                press(Key.Menu)
+                press(Key.DirectionDown)
+                press(Key.DirectionCenter)
+
+                titleText() shouldBe "App 1"
+                compose.onNode(hasText("drop") and hasAnyAncestor(hasTestTag("reorder:hint"))).assertExists()
+            }
+
+            test("the library pill still names the library when dock title is false") {
+                showHome(dockTitle = false)
+                press(Key.DirectionDown)
+                press(Key.DirectionDown)
+
+                compose.onNodeWithTag("library:pill").assertIsFocused()
+                titleText() shouldBe "App library"
+            }
+
+            test("dock title false takes the scrim from under a focused tile") {
+                showHome(dockTitle = true)
+                val withTitle = redUnderTitle()
+
+                dockTitleOn.value = false
+                settle()
+
+                withClue("red under the title: ${redUnderTitle()} with dock_title false, $withTitle with it true") {
+                    redUnderTitle() -
+                        withTitle shouldBeGreaterThan
+                        15
+                }
+            }
+
+            test("dock title false keeps the scrim under a top bar control s line") {
+                showHome(dockTitle = false)
+                press(Key.DirectionUp)
+                val bare = redUnderTitle()
+
+                dockTitleOn.value = true
+                settle()
+
+                withClue("red under the title: $bare with dock_title false, ${redUnderTitle()} with it true") {
+                    abs(bare - redUnderTitle()) shouldBeLessThanOrEqualTo
+                        3
+                }
+            }
+        }
+    })
+
+private class DockTitleUiTestFixture : JUnit4RulesContext() {
+    val compose = rule(createAndroidComposeRule<ComponentActivity>())
+
+    val white: ImageBitmap =
         ImageBitmap(16, 9).also { Canvas(it).drawRect(Rect(0f, 0f, 16f, 9f), Paint().apply { color = Color.White }) }
 
-    private val dockTitleOn = mutableStateOf(true)
+    val dockTitleOn = mutableStateOf(true)
 
-    private var probe = Offset.Zero
+    var probe = Offset.Zero
 
-    private fun showHome(dockTitle: Boolean) {
+    fun showHome(dockTitle: Boolean) {
         dockTitleOn.value = true
         val config = SixColumns.copy(appLibrary = true)
         val sources = sources(apps = flowOf(AppList(NineApps)), wallpaper = flowOf(Wallpaper(picture = white, thumbnail = white)))
@@ -90,17 +165,17 @@ class DockTitleUiTest {
         settle()
     }
 
-    private fun settle() {
+    fun settle() {
         compose.mainClock.advanceTimeBy(1_000)
         compose.waitForIdle()
     }
 
-    private fun press(key: Key) {
+    fun press(key: Key) {
         compose.onRoot().performKeyInput { pressKey(key) }
         settle()
     }
 
-    private fun titleText(): String =
+    fun titleText(): String =
         compose
             .onNodeWithTag("shelf:title")
             .fetchSemanticsNode()
@@ -110,72 +185,9 @@ class DockTitleUiTest {
             .orEmpty()
 
     /** The red of the pixel just under the title, at the end of the first tile's name, where the hero scrim lies over the wallpaper. */
-    private fun redUnderTitle(): Int {
+    fun redUnderTitle(): Int {
         val density = compose.activity.resources.displayMetrics.density
         val pixels = compose.onRoot().captureToImage().toPixelMap()
         return Math.round(pixels[(probe.x * density).toInt(), (probe.y * density).toInt()].red * 255)
-    }
-
-    @Test
-    fun the_focused_tile_is_named_over_the_dock_by_default() {
-        showHome(dockTitle = true)
-
-        assertEquals("App 1", titleText())
-    }
-
-    @Test
-    fun the_focused_tile_is_not_named_over_the_dock_when_dock_title_is_false() {
-        showHome(dockTitle = false)
-        press(Key.DirectionRight)
-        compose.onNodeWithTag("tile:pkg.2").assertIsFocused()
-
-        assertEquals("", titleText())
-    }
-
-    @Test
-    fun reorder_mode_still_names_the_moved_app_and_shows_its_keys_when_dock_title_is_false() {
-        showHome(dockTitle = false)
-        press(Key.Menu)
-        press(Key.DirectionDown)
-        press(Key.DirectionCenter)
-
-        assertEquals("App 1", titleText())
-        compose.onNode(hasText("drop") and hasAnyAncestor(hasTestTag("reorder:hint"))).assertExists()
-    }
-
-    @Test
-    fun the_library_pill_still_names_the_library_when_dock_title_is_false() {
-        showHome(dockTitle = false)
-        press(Key.DirectionDown)
-        press(Key.DirectionDown)
-
-        compose.onNodeWithTag("library:pill").assertIsFocused()
-        assertEquals("App library", titleText())
-    }
-
-    @Test
-    fun dock_title_false_takes_the_scrim_from_under_a_focused_tile() {
-        showHome(dockTitle = true)
-        val withTitle = redUnderTitle()
-
-        dockTitleOn.value = false
-        settle()
-
-        assertTrue(
-            "red under the title: ${redUnderTitle()} with dock_title false, $withTitle with it true",
-            redUnderTitle() - withTitle > 15,
-        )
-    }
-
-    @Test
-    fun dock_title_false_keeps_the_scrim_under_a_top_bar_control_s_line() {
-        showHome(dockTitle = false)
-        press(Key.DirectionUp)
-        val bare = redUnderTitle()
-
-        dockTitleOn.value = true
-        settle()
-
-        assertTrue("red under the title: $bare with dock_title false, ${redUnderTitle()} with it true", abs(bare - redUnderTitle()) <= 3)
     }
 }

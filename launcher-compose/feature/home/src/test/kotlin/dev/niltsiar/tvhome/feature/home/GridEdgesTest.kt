@@ -4,9 +4,13 @@ import androidx.compose.foundation.lazy.grid.LazyGridItemInfo
 import androidx.compose.foundation.lazy.grid.LazyGridLayoutInfo
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.assertions.withClue
+import io.kotest.matchers.comparables.shouldBeGreaterThan
+import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
+import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
+import io.kotest.matchers.floats.plusOrMinus
+import io.kotest.matchers.shouldBe
 import java.lang.reflect.Proxy
 import kotlin.math.abs
 
@@ -61,41 +65,44 @@ private fun layout(
     )
 }
 
-class GridEdgesTest {
-    private fun fade(
+val GridEdgesTest by testSuite {
+    fun fade(
         lastBottom: Int,
         lastHeight: Int = TILE_HEIGHT,
     ) = bottomFade(layout(lastBottom, lastHeight), shift = 0f, height = SCREEN_HEIGHT, minVisible = MIN_VISIBLE)
 
-    @Test
-    fun a_last_row_that_ends_inside_the_screen_is_not_faded() {
+    test("a last row that ends inside the screen is not faded") {
         val mask = fade(THIRD_ROW_BOTTOM)
 
-        assertTrue("fade starts at ${mask.start}, under the row that ends at $THIRD_ROW_BOTTOM", mask.start >= THIRD_ROW_BOTTOM)
+        withClue("fade starts at ${mask.start}, under the row that ends at $THIRD_ROW_BOTTOM") {
+            mask.start shouldBeGreaterThanOrEqualTo
+                THIRD_ROW_BOTTOM.toFloat()
+        }
     }
 
-    @Test
-    fun a_row_that_ends_past_the_edge_keeps_its_peek_fade() {
+    test("a row that ends past the edge keeps its peek fade") {
         val hidden = fade(lastBottom = 1110)
-        assertEquals(940f, hidden.start, 0.01f)
-        assertEquals(1012f, hidden.end, 0.01f)
+        hidden.start shouldBe (940f plusOrMinus 0.01f)
+        hidden.end shouldBe (1012f plusOrMinus 0.01f)
 
         val peeking = fade(lastBottom = 1100, lastHeight = 220)
-        assertEquals(988f, peeking.start, 0.01f)
-        assertEquals(1060f, peeking.end, 0.01f)
+        peeking.start shouldBe (988f plusOrMinus 0.01f)
+        peeking.end shouldBe (1060f plusOrMinus 0.01f)
     }
 
-    @Test
-    fun the_fade_start_moves_without_a_jump_as_a_rows_bottom_passes_the_edge() {
+    test("the fade start moves without a jump as a rows bottom passes the edge") {
         val step = 2
         var previous = fade(THIRD_ROW_BOTTOM + 60).start
         var moved = 0f
         for (bottom in THIRD_ROW_BOTTOM + 60 - step downTo THIRD_ROW_BOTTOM - 60 step step) {
             val start = fade(bottom).start
-            assertTrue("start $previous to $start in a $step px scroll to a row bottom of $bottom", abs(start - previous) <= step * 10f)
+            withClue("start $previous to $start in a $step px scroll to a row bottom of $bottom") {
+                abs(start - previous) shouldBeLessThanOrEqualTo
+                    step * 10f
+            }
             moved += abs(start - previous)
             previous = start
         }
-        assertTrue("the fade start moved $moved px, so the sweep crossed the edge", moved > 100f)
+        withClue("the fade start moved $moved px, so the sweep crossed the edge") { moved shouldBeGreaterThan 100f }
     }
 }

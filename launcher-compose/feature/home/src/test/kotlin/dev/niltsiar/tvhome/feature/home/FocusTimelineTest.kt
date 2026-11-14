@@ -5,84 +5,149 @@ import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import de.infix.testBalloon.framework.core.JUnit4RulesContext
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectric
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.comparables.shouldBeLessThan
+import io.kotest.matchers.floats.plusOrMinus
+import io.kotest.matchers.ranges.shouldBeIn
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
-class WifiLightTest {
-    private val parts = 0..2
+val WifiLightTest by testSuite {
+    val parts = 0..2
 
-    @Test
-    fun all_three_parts_are_lit_at_both_ends_of_the_run() {
+    test("all three parts are lit at both ends of the run") {
         for (part in parts) {
-            assertEquals(1f, wifiLight(0f, part), 0f)
-            assertEquals(1f, wifiLight(1f, part), 0f)
+            wifiLight(0f, part) shouldBe (1f plusOrMinus 0f)
+            wifiLight(1f, part) shouldBe (1f plusOrMinus 0f)
         }
     }
 
-    @Test
-    fun all_three_parts_fade_down_together_before_any_lights_again() {
+    test("all three parts fade down together before any lights again") {
         val early = parts.map { wifiLight(0.15f, it) }
-        assertTrue(early.all { it < 1f })
-        assertEquals(1, early.distinct().size)
-        for (part in parts) assertEquals(0.2f, wifiLight(0.23f, part), 0f)
+        (early.all { it < 1f }).shouldBeTrue()
+        early.distinct().size shouldBe 1
+        for (part in parts) wifiLight(0.23f, part) shouldBe (0.2f plusOrMinus 0f)
     }
 
-    @Test
-    fun the_dot_then_the_inner_arc_then_the_outer_arc_light_in_turn() {
+    test("the dot then the inner arc then the outer arc light in turn") {
         val lit = { part: Int -> (0..100).first { wifiLight(it / 100f, part) > 0.9f && it > 25 } }
 
-        assertTrue(lit(0) < lit(1))
-        assertTrue(lit(1) < lit(2))
+        lit(0) shouldBeLessThan lit(1)
+        lit(1) shouldBeLessThan lit(2)
     }
 
-    @Test
-    fun each_part_only_brightens_once_it_has_started_to_light() {
+    test("each part only brightens once it has started to light") {
         for (part in parts) {
             val values = (24..100).map { wifiLight(it / 100f, part) }
-            assertEquals(values.sorted(), values)
+            values shouldBe values.sorted()
         }
     }
 
-    @Test
-    fun the_inputs_arrow_starts_7_units_before_its_place_and_invisible() {
-        assertEquals(-7f, inputsArrowOffset(0f), 1e-4f)
-        assertEquals(0f, inputsArrowAlpha(0f), 0f)
+    test("the inputs arrow starts 7 units before its place and invisible") {
+        inputsArrowOffset(0f) shouldBe (-7f plusOrMinus 1e-4f)
+        inputsArrowAlpha(0f) shouldBe (0f plusOrMinus 0f)
     }
 
-    @Test
-    fun the_inputs_arrow_passes_its_place_by_one_unit_and_rests_there_at_the_end() {
+    test("the inputs arrow passes its place by one unit and rests there at the end") {
         val offsets = (0..100).map { inputsArrowOffset(it / 100f) }
 
-        assertEquals(1f, offsets.max(), 0.05f)
-        assertTrue(offsets.indexOf(offsets.max()) in 50..90)
-        assertEquals(0f, inputsArrowOffset(1f), 1e-4f)
+        offsets.max() shouldBe (1f plusOrMinus 0.05f)
+        offsets.indexOf(offsets.max()) shouldBeIn 50..90
+        inputsArrowOffset(1f) shouldBe (0f plusOrMinus 1e-4f)
     }
 
-    @Test
-    fun the_inputs_arrow_fades_in_over_the_first_30_percent_and_stays_opaque() {
-        assertEquals(0.5f, inputsArrowAlpha(0.15f), 1e-4f)
-        assertEquals(1f, inputsArrowAlpha(0.3f), 0f)
-        assertEquals(1f, inputsArrowAlpha(1f), 0f)
+    test("the inputs arrow fades in over the first 30 percent and stays opaque") {
+        inputsArrowAlpha(0.15f) shouldBe (0.5f plusOrMinus 1e-4f)
+        inputsArrowAlpha(0.3f) shouldBe (1f plusOrMinus 0f)
+        inputsArrowAlpha(1f) shouldBe (1f plusOrMinus 0f)
     }
 }
 
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
-class FocusTimelineTest {
-    @get:Rule
-    val compose = createComposeRule()
+val FocusTimelineTest by testSuite {
+    robolectricTestSuite<FocusTimelineTestContent>(
+        "sdk 31, 960x540 dp",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "w960dp-h540dp-xhdpi"
+            },
+    )
+}
 
-    private val source = MutableInteractionSource()
-    private val focus = FocusInteraction.Focus()
-    private lateinit var value: () -> Float
+class FocusTimelineTestContent :
+    RobolectricTestSuiteContent({
+        testFixture { FocusTimelineTestFixture() } asContextForEach {
+            test("it rests at one and runs from zero to one in 750 ms when focus arrives") {
+                show()
+                value() shouldBe (1f plusOrMinus 0f)
 
-    private fun show(animated: Boolean = true) {
+                emit(focus)
+                compose.mainClock.advanceTimeBy(160)
+                value() shouldBeIn 0.1f..0.6f
+
+                compose.mainClock.advanceTimeBy(500)
+                value() shouldBeLessThan 1f
+
+                compose.mainClock.advanceTimeBy(750 - 660L + 20)
+                value() shouldBe (1f plusOrMinus 0f)
+            }
+
+            test("losing focus mid run settles to one without going back") {
+                show()
+                emit(focus)
+                compose.mainClock.advanceTimeBy(150)
+                val before = value()
+
+                emit(FocusInteraction.Unfocus(focus))
+                val seen = mutableListOf<Float>()
+                repeat(20) {
+                    compose.mainClock.advanceTimeBy(20)
+                    seen += value()
+                }
+
+                before shouldBeLessThan 1f
+                seen shouldBe seen.sorted()
+                seen.last() shouldBe (1f plusOrMinus 0f)
+            }
+
+            test("losing focus after the run replays nothing") {
+                show()
+                emit(focus)
+                compose.mainClock.advanceTimeBy(750 + 50L)
+
+                emit(FocusInteraction.Unfocus(focus))
+                compose.mainClock.advanceTimeBy(300)
+
+                value() shouldBe (1f plusOrMinus 0f)
+            }
+
+            test("it stays at one with animations off") {
+                show(animated = false)
+
+                emit(focus)
+                compose.mainClock.advanceTimeBy(300)
+
+                value() shouldBe (1f plusOrMinus 0f)
+            }
+        }
+    })
+
+private class FocusTimelineTestFixture : JUnit4RulesContext() {
+    val compose = rule(createComposeRule())
+
+    val source = MutableInteractionSource()
+
+    val focus = FocusInteraction.Focus()
+
+    lateinit var value: () -> Float
+
+    fun show(animated: Boolean = true) {
         compose.mainClock.autoAdvance = false
         compose.setContent {
             val timeline = rememberFocusTimeline(source, animated = animated)
@@ -91,65 +156,8 @@ class FocusTimelineTest {
         compose.mainClock.advanceTimeBy(50)
     }
 
-    private fun emit(interaction: Interaction) {
+    fun emit(interaction: Interaction) {
         runBlocking { source.emit(interaction) }
         compose.mainClock.advanceTimeBy(20)
-    }
-
-    @Test
-    fun it_rests_at_one_and_runs_from_zero_to_one_in_750_ms_when_focus_arrives() {
-        show()
-        assertEquals(1f, value(), 0f)
-
-        emit(focus)
-        compose.mainClock.advanceTimeBy(160)
-        assertTrue(value() in 0.1f..0.6f)
-
-        compose.mainClock.advanceTimeBy(500)
-        assertTrue(value() < 1f)
-
-        compose.mainClock.advanceTimeBy(750 - 660L + 20)
-        assertEquals(1f, value(), 0f)
-    }
-
-    @Test
-    fun losing_focus_mid_run_settles_to_one_without_going_back() {
-        show()
-        emit(focus)
-        compose.mainClock.advanceTimeBy(150)
-        val before = value()
-
-        emit(FocusInteraction.Unfocus(focus))
-        val seen = mutableListOf<Float>()
-        repeat(20) {
-            compose.mainClock.advanceTimeBy(20)
-            seen += value()
-        }
-
-        assertTrue(before < 1f)
-        assertEquals(seen.sorted(), seen)
-        assertEquals(1f, seen.last(), 0f)
-    }
-
-    @Test
-    fun losing_focus_after_the_run_replays_nothing() {
-        show()
-        emit(focus)
-        compose.mainClock.advanceTimeBy(750 + 50L)
-
-        emit(FocusInteraction.Unfocus(focus))
-        compose.mainClock.advanceTimeBy(300)
-
-        assertEquals(1f, value(), 0f)
-    }
-
-    @Test
-    fun it_stays_at_one_with_animations_off() {
-        show(animated = false)
-
-        emit(focus)
-        compose.mainClock.advanceTimeBy(300)
-
-        assertEquals(1f, value(), 0f)
     }
 }

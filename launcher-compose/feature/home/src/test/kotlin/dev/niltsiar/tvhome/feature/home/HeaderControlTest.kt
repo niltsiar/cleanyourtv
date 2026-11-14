@@ -1,51 +1,48 @@
 package dev.niltsiar.tvhome.feature.home
 
 import androidx.compose.runtime.mutableStateOf
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.shouldBe
 
 /** Which top-bar control the band over the grid names. */
-class HeaderControlTest {
-    private val input =
+val HeaderControlTest by testSuite {
+    fun state(
+        inputsOpen: Boolean = false,
+        menu: HomeMenu? = null,
+    ) = HomeUiState(inputsOpen = inputsOpen, menu = menu)
+
+    testFixture {
         HomeInput(
             mutableStateOf(HomeMenuActions()),
             carried = mutableStateOf(null),
             dimmed = mutableStateOf(emptySet()),
             reordering = mutableStateOf(false),
         )
+    } asParameterForEach {
+        test("the band names the button that has focus") { input ->
+            input.topBarControl = BarControl.Network
+            input.topBarFocused = true
 
-    private fun state(
-        inputsOpen: Boolean = false,
-        menu: HomeMenu? = null,
-    ) = HomeUiState(inputsOpen = inputsOpen, menu = menu)
+            input.headerControl(state()) shouldBe BarControl.Network
+        }
 
-    @Test
-    fun the_band_names_the_button_that_has_focus() {
-        input.topBarControl = BarControl.Network
-        input.topBarFocused = true
+        test("no control is named while focus is not on the top bar") { input ->
+            input.topBarControl = BarControl.Network
 
-        assertEquals(BarControl.Network, input.headerControl(state()))
-    }
+            input.headerControl(state()) shouldBe null
+            input.headerControl(state(menu = HomeMenu("pkg.1", listOf(MenuRow.Move)))) shouldBe null
+        }
 
-    @Test
-    fun no_control_is_named_while_focus_is_not_on_the_top_bar() {
-        input.topBarControl = BarControl.Network
+        test("the inputs list is named as the inputs control whatever button had focus last") { input ->
+            input.topBarControl = BarControl.Network
 
-        assertEquals(null, input.headerControl(state()))
-        assertEquals(null, input.headerControl(state(menu = HomeMenu("pkg.1", listOf(MenuRow.Move)))))
-    }
+            input.headerControl(state(inputsOpen = true)) shouldBe BarControl.Inputs
+        }
 
-    @Test
-    fun the_inputs_list_is_named_as_the_inputs_control_whatever_button_had_focus_last() {
-        input.topBarControl = BarControl.Network
+        test("a menu with no tile is named as the settings control whatever button had focus last") { input ->
+            input.topBarControl = BarControl.Inputs
 
-        assertEquals(BarControl.Inputs, input.headerControl(state(inputsOpen = true)))
-    }
-
-    @Test
-    fun a_menu_with_no_tile_is_named_as_the_settings_control_whatever_button_had_focus_last() {
-        input.topBarControl = BarControl.Inputs
-
-        assertEquals(BarControl.Settings, input.headerControl(state(menu = HomeMenu(null, listOf(MenuRow.Move)))))
+            input.headerControl(state(menu = HomeMenu(null, listOf(MenuRow.Move)))) shouldBe BarControl.Settings
+        }
     }
 }

@@ -27,39 +27,471 @@ import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
+import de.infix.testBalloon.framework.core.JUnit4RulesContext
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectric
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
 import dev.niltsiar.tvhome.core.model.Wallpaper
+import io.kotest.assertions.withClue
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.comparables.shouldBeGreaterThan
+import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
+import io.kotest.matchers.comparables.shouldBeLessThan
+import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
+import io.kotest.matchers.floats.plusOrMinus
+import io.kotest.matchers.ranges.shouldBeIn
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import kotlinx.coroutines.flow.flowOf
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-import org.robolectric.annotation.GraphicsMode
 import kotlin.math.abs
 
 /** always_show_names puts the app's name under every tile, dimmed until it has focus, and makes room for it only then. */
-@RunWith(RobolectricTestRunner::class)
-@GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
-class AlwaysShowNamesUiTest {
-    @get:Rule
-    val compose = createAndroidComposeRule<ComponentActivity>()
+val AlwaysShowNamesUiTest by testSuite {
+    robolectricTestSuite<AlwaysShowNamesUiTestContent>(
+        "sdk 31, 960x540 dp",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "w960dp-h540dp-xhdpi"
+            },
+    )
+    robolectricTestSuite<AlwaysShowNamesUiH603TestContent>(
+        "sdk 31, 960x603 dp",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "w960dp-h603dp-xhdpi"
+            },
+    )
+    robolectricTestSuite<AlwaysShowNamesUiH613TestContent>(
+        "sdk 31, 960x613 dp",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "w960dp-h613dp-xhdpi"
+            },
+    )
+    robolectricTestSuite<AlwaysShowNamesUiH1080TestContent>(
+        "sdk 31, 960x1080 dp",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "w960dp-h1080dp-xhdpi"
+            },
+    )
+    robolectricTestSuite<AlwaysShowNamesUiNightTestContent>(
+        "sdk 31, night, 960x540 dp",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "w960dp-h540dp-night-xhdpi"
+            },
+    )
+}
 
-    private val white =
+class AlwaysShowNamesUiTestContent :
+    RobolectricTestSuiteContent({
+        testFixture { AlwaysShowNamesUiTestFixture() } asContextForEach {
+            test("the focused tile s cut name scrolls and a cut name without focus stays still") {
+                showHome(TvConfig(columns = 4, alwaysShowNames = true), apps = longNames)
+                // Waiting for idle would run a whole pass and back to its start.
+                compose.mainClock.autoAdvance = false
+                val focused = frame("name:pkg.1")
+                val other = frame("name:pkg.2")
+
+                compose.mainClock.advanceTimeBy(2_000)
+
+                withClue("the focused cut name did not move") { frame("name:pkg.1") shouldNotBe focused }
+                frame("name:pkg.2") shouldBe other
+            }
+
+            test("with reduced motion the focused tile s cut name stays still") {
+                showHome(TvConfig(columns = 4, alwaysShowNames = true), apps = longNames, motion = Motion(reducedMotion = true))
+                // Waiting for idle would run a whole pass and back to its start.
+                compose.mainClock.autoAdvance = false
+                val focused = frame("name:pkg.1")
+
+                compose.mainClock.advanceTimeBy(2_000)
+
+                frame("name:pkg.1") shouldBe focused
+            }
+
+            test("a name cut to two lines on a text tile ends in an ellipsis with no space before it") {
+                // Words of 1 to 6 letters, so the cut falls at a different place in each name.
+                val names = (1..6).map { size -> List(30) { "x".repeat(size) }.joinToString(" ") }
+                showHome(SixColumns, apps = names.mapIndexed { i, name -> AppEntry("pkg.${i + 1}", "pkg.${i + 1}", name) })
+
+                val shown =
+                    (1..6).map { i ->
+                        compose
+                            .onNode(hasText("x", substring = true) and hasAnyAncestor(hasTestTag("tile:pkg.$i")), useUnmergedTree = true)
+                            .fetchSemanticsNode()
+                            .config[SemanticsProperties.Text]
+                            .joinToString("") { it.text }
+                    }
+
+                withClue("$shown") { (shown.all { it.endsWith(Char(0x2026).toString()) }).shouldBeTrue() }
+                withClue("$shown") { (shown.none { it.endsWith(" " + Char(0x2026)) }).shouldBeTrue() }
+            }
+
+            test("with the key off no tile has a name under it") {
+                showHome(SixColumns)
+
+                compose.onAllNodesWithTag("name:pkg.1").fetchSemanticsNodes().size shouldBe 0
+                compose.onAllNodesWithTag("name:pkg.7").fetchSemanticsNodes().size shouldBe 0
+            }
+
+            test("a name on its pill is white ink with the surfaces light too") {
+                showHome(SixColumns.copy(alwaysShowNames = true))
+
+                ink("name:pkg.2") shouldBe (0.85f plusOrMinus 0.05f)
+            }
+
+            test("the name under an unfocused dock tile shows at 85 percent") {
+                showHome(SixColumns.copy(alwaysShowNames = true))
+
+                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                ink("name:pkg.2") shouldBe (0.85f plusOrMinus 0.05f)
+            }
+
+            test("the name under an unfocused grid tile shows at 85 percent") {
+                showHome(SixColumns.copy(alwaysShowNames = true))
+
+                press(Key.DirectionDown)
+                compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+
+                ink("name:pkg.8") shouldBe (0.85f plusOrMinus 0.05f)
+            }
+
+            test("a grid name sits on a black 055 pill 6 dp wider than its text on each side") {
+                showHome(SixColumns.copy(alwaysShowNames = true), wallpaper = Wallpaper(picture = white))
+                press(Key.DirectionDown)
+                compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+
+                val (bareLeft, bareRight) = besideName("name:pkg.9", out = 9f)
+                val (padLeft, padRight) = besideName("name:pkg.9", out = 3f)
+
+                // The text's own shadow darkens its padding a little too, so the pill is "under half of the bare picture".
+                withClue("left $padLeft of $bareLeft") { padLeft.toFloat() shouldBeLessThan bareLeft * 0.5f }
+                withClue("right $padRight of $bareRight") { padRight.toFloat() shouldBeLessThan bareRight * 0.5f }
+            }
+
+            test("a dock name sits on a black 055 pill 6 dp wider than its text on each side") {
+                showHome(SixColumns.copy(alwaysShowNames = true), wallpaper = Wallpaper(picture = white))
+
+                val (bareLeft, bareRight) = besideName("name:pkg.4", out = 9f)
+                val (padLeft, padRight) = besideName("name:pkg.4", out = 3f)
+
+                withClue("left $padLeft of $bareLeft") { padLeft.toFloat() shouldBeLessThan bareLeft * 0.5f }
+                withClue("right $padRight of $bareRight") { padRight.toFloat() shouldBeLessThan bareRight * 0.5f }
+            }
+
+            test("with the key off the dock panel is a tile and two gaps tall") {
+                showHome(SixColumns)
+                val tile = height("tile:pkg.1")
+                assertNear(tile + TileGap * 2, height("dock"))
+            }
+
+            test("the dock panel grows by the room of a name with the key on") {
+                showHome(SixColumns.copy(alwaysShowNames = true))
+                val tile = height("tile:pkg.1")
+                assertNear(tile + TileGap * 2 + TileNameRoom, height("dock"))
+            }
+
+            test("a grid row is a tile and a gap tall with the key off") {
+                showHome(SixColumns)
+                assertNear(height("tile:pkg.1") + TileGap, rowPitch())
+            }
+
+            test("a grid row grows by the room of a name with the key on") {
+                showHome(SixColumns.copy(alwaysShowNames = true))
+                assertNear(height("tile:pkg.1") + TileGap + TileNameRoom, rowPitch())
+            }
+
+            test("with names no grid row shows a strip of under 48 dp of its tile at any scroll step") {
+                assertNoStripAtAnyScrollStep(named4)
+            }
+
+            test("with names on a 1080p screen with focus on the first grid row the second draws with at least 48 dp of its tile") {
+                showHome(named4, apps = whiteApps)
+                press(Key.DirectionDown)
+                compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
+
+                withClue("the second row draws ${drawnDp("tile:pkg.9")} dp of its tile") {
+                    drawnDp("tile:pkg.9") shouldBeGreaterThanOrEqualTo
+                        48f
+                }
+            }
+
+            test("with names a grid row whose tiles end inside the screen draws its tile whole though the names hang over the edge") {
+                showHome(named4, apps = whiteApps)
+                press(Key.DirectionDown)
+                compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
+
+                val screen =
+                    compose
+                        .onRoot()
+                        .getBoundsInRoot()
+                        .bottom.value
+                val tileBottom = bounds("tile:pkg.9").bottom.value
+                withClue("the tiles end at $tileBottom of $screen") { tileBottom shouldBeLessThanOrEqualTo screen }
+                withClue("the pills end at ${tileBottom + 14f + 24f} of $screen") { tileBottom + 14f + 24f shouldBeGreaterThan screen }
+                val low = bounds("tile:pkg.9")
+                val red = redAt((low.left.value + low.right.value) / 2f, low.bottom.value - 3f)
+                withClue("the tile's bottom edge shows red $red of 255") { red shouldBeGreaterThanOrEqualTo 250 }
+            }
+
+            test("without names on a 1080p screen with focus on the first grid row the second draws whole") {
+                showHome(SixColumns.copy(columns = 4), apps = whiteApps)
+                press(Key.DirectionDown)
+                compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
+
+                withClue("the second row draws ${drawnDp("tile:pkg.9")} dp of its tile") {
+                    drawnDp("tile:pkg.9") shouldBeGreaterThanOrEqualTo
+                        height("tile:pkg.9").value - 1f
+                }
+            }
+
+            test("without names no grid row shows a strip of under 48 dp of its tile at any scroll step") {
+                assertNoStripAtAnyScrollStep(SixColumns.copy(columns = 4))
+            }
+
+            test("in a single row every tile has its name and the panel grows to hold them") {
+                showHome(SixColumns.copy(singleRow = true, alwaysShowNames = true))
+
+                compose.onAllNodesWithTag("name:pkg.5").fetchSemanticsNodes().size shouldBe 1
+                assertNear(height("tile:pkg.1") + TileGap * 2 + TileNameRoom, height("dock"))
+            }
+
+            test("a name too long for its tile stays on one line in a pill no wider than the tile") {
+                showHome(named4, apps = withLongName("pkg.1"))
+
+                assertNear(height("name:pkg.2"), height("name:pkg.1"))
+                // The pill is the name's box and 6 dp of padding on each side.
+                val pill = bounds("name:pkg.1").width.value + 12f
+                val tile = bounds("tile:pkg.1").width.value
+                withClue(
+                    "the pill is $pill dp wide under a tile of $tile dp",
+                ) { (pill <= tile + 0.5f && pill >= tile - 16f).shouldBeTrue() }
+            }
+
+            test("a name too long for its tile does not make its row taller") {
+                showHome(SixColumns.copy(alwaysShowNames = true), apps = withLongName("pkg.7"))
+
+                assertNear(height("tile:pkg.1") + TileGap + TileNameRoom, rowPitch())
+            }
+
+            test("the name pills of the dock share one top with a focused tile in it at every point of the focus growth") {
+                showHome(named4)
+                compose.mainClock.autoAdvance = false
+                compose.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
+                for (elapsed in listOf(0L, 40L, 80L, 400L)) {
+                    compose.mainClock.advanceTimeBy(elapsed)
+                    val tops = pillTops("pkg.1", "pkg.2", "pkg.3", "pkg.4")
+                    withClue("the dock pills are at $tops after $elapsed ms") { (tops.all { abs(it - tops[0]) < 0.01f }).shouldBeTrue() }
+                }
+            }
+
+            test("the name pills of a grid row share one top with a focused tile in it at every point of the focus growth") {
+                showHome(named4)
+                press(Key.DirectionDown)
+                compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
+                compose.mainClock.autoAdvance = false
+                compose.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
+                for (elapsed in listOf(0L, 40L, 80L, 400L)) {
+                    compose.mainClock.advanceTimeBy(elapsed)
+                    val tops = pillTops("pkg.5", "pkg.6", "pkg.7", "pkg.8")
+                    withClue("the grid pills are at $tops after $elapsed ms") { (tops.all { abs(it - tops[0]) < 0.01f }).shouldBeTrue() }
+                }
+            }
+
+            test("an unfocused grid tiles name pill is 14 dp under its tile") {
+                showHome(named4)
+                press(Key.DirectionDown)
+
+                tileToPill("pkg.2") shouldBe (14f plusOrMinus 0.01f)
+                tileToPill("pkg.6") shouldBe (14f plusOrMinus 0.01f)
+            }
+
+            test("an unfocused dock tiles name pill is 14 dp under its tile") {
+                showHome(named4)
+
+                tileToPill("pkg.2") shouldBe (14f plusOrMinus 0.01f)
+            }
+
+            test("the space under an unfocused grid name pill is at least one and a half times the space over it") {
+                showHome(named4)
+                press(Key.DirectionDown)
+
+                val under = bounds("tile:pkg.10").top.value - (bounds("name:pkg.6").bottom.value + 2f)
+                withClue("$under dp under the pill, ${tileToPill("pkg.6")} over it") {
+                    under shouldBeGreaterThanOrEqualTo
+                        1.5f * tileToPill("pkg.6")
+                }
+            }
+
+            test("the space under an unfocused dock name pill is at least one and a half times the space over it") {
+                showHome(named4)
+
+                val under = bounds("dock").bottom.value - (bounds("name:pkg.2").bottom.value + 2f)
+                withClue("$under dp under the pill, ${tileToPill("pkg.2")} over it") {
+                    under shouldBeGreaterThanOrEqualTo
+                        1.5f * tileToPill("pkg.2")
+                }
+            }
+
+            test("a name pill is a capsule of the height of one line also when the name is cut") {
+                showHome(named4, wallpaper = Wallpaper(picture = white), apps = withLongName("pkg.2"))
+                val bare = inPill("name:pkg.3", -6f, 12f)
+
+                // One line: 24 dp tall, so its ends are half circles of 12 dp.
+                for (key in listOf("pkg.3", "pkg.2")) {
+                    withClue("$key, corner ${inPill("name:$key", 2.5f, 2.5f)} of $bare") {
+                        inPill("name:$key", 2.5f, 2.5f).toFloat() shouldBeGreaterThan
+                            bare * 0.8f
+                    }
+                    withClue("$key, end ${inPill("name:$key", 1.2f, 12f)} of $bare") {
+                        inPill("name:$key", 1.2f, 12f).toFloat() shouldBeLessThan
+                            bare * 0.6f
+                    }
+                    assertNear(24.dp, (bounds("name:$key").height.value + 4f).dp)
+                }
+            }
+
+            test("with names the tiles and the dock keep their names off width and x") {
+                showHome(named4)
+                val gridWidth =
+                    compose
+                        .onRoot()
+                        .getBoundsInRoot()
+                        .width.value - ScreenMargin.value * 2
+                val tile = ((gridWidth - TileGap.value * 3) / 4).dp
+
+                // The dock tiles stand inside the panel's padding, which leaves their ring room at the wall.
+                val dockTile = bounds("tile:pkg.1")
+                withClue("the dock tile is $dockTile dp") { dockTile.width.value shouldBeIn tile.value - 6f..tile.value }
+                withClue("the dock tile starts at ${dockTile.left}") {
+                    dockTile.left.value shouldBeIn
+                        ScreenMargin.value..ScreenMargin.value + 8f
+                }
+                assertNear(ScreenMargin - TileGap, left("dock"))
+                assertNear((gridWidth + TileGap.value * 2).dp, bounds("dock").width)
+                press(Key.DirectionDown)
+                compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
+                assertNear(tile, bounds("tile:pkg.5").width)
+                assertNear(ScreenMargin, left("tile:pkg.5"))
+            }
+
+            test("with names a shrunk grid stays centred between the margins as it does without") {
+                showHome(SixColumns.copy(columns = 4, rowsBelowDock = 3, alwaysShowNames = true))
+                press(Key.DirectionDown)
+
+                withClue(
+                    "the grid starts at ${left("tile:pkg.5")}",
+                ) { left("tile:pkg.5").value shouldBeGreaterThan ScreenMargin.value + 4f }
+            }
+
+            test("without names a shrunk grid stays centred between the margins") {
+                showHome(SixColumns.copy(columns = 4, rowsBelowDock = 3))
+                press(Key.DirectionDown)
+
+                withClue(
+                    "the grid starts at ${left("tile:pkg.5")}",
+                ) { left("tile:pkg.5").value shouldBeGreaterThan ScreenMargin.value + 4f }
+            }
+        }
+    })
+
+class AlwaysShowNamesUiH603TestContent :
+    RobolectricTestSuiteContent({
+        testFixture { AlwaysShowNamesUiTestFixture() } asContextForEach {
+            test("with names a grid row with under 48 dp visible draws nothing and leaves no band") {
+                showHome(named4, apps = whiteApps)
+
+                withClue("the row shows ${visibleDp("tile:pkg.5")} dp") { visibleDp("tile:pkg.5") shouldBeIn 30f..48f }
+                redUnderTop("tile:pkg.5", 2f) shouldBe 0
+                redUnderTop("tile:pkg.5", 10f) shouldBe 0
+            }
+        }
+    })
+
+class AlwaysShowNamesUiH613TestContent :
+    RobolectricTestSuiteContent({
+        testFixture { AlwaysShowNamesUiTestFixture() } asContextForEach {
+            test("with names a grid row with 48 dp above the edge but less left after the bottom fade draws nothing") {
+                showHome(named4, apps = whiteApps)
+
+                withClue("the row shows ${visibleDp("tile:pkg.5")} dp") { visibleDp("tile:pkg.5") shouldBeIn 48f..60f }
+                redUnderTop("tile:pkg.5", 2f) shouldBe 0
+            }
+        }
+    })
+
+class AlwaysShowNamesUiH1080TestContent :
+    RobolectricTestSuiteContent({
+        testFixture { AlwaysShowNamesUiTestFixture() } asContextForEach {
+            test("with 2 columns the ring keeps 4 dp from the pills and the rim and a pill has 1 5 times its gap before the next element") {
+                assertRingsKeepClear(2)
+            }
+
+            test("with 3 columns the ring keeps 4 dp from the pills and the rim and a pill has 1 5 times its gap before the next element") {
+                assertRingsKeepClear(3)
+            }
+
+            test("with 4 columns the ring keeps 4 dp from the pills and the rim and a pill has 1 5 times its gap before the next element") {
+                assertRingsKeepClear(4)
+            }
+
+            test("with 6 columns the ring keeps 4 dp from the pills and the rim and a pill has 1 5 times its gap before the next element") {
+                assertRingsKeepClear(6)
+            }
+
+            test("with focus overshoot and 2 columns the ring at the peak keeps 4 dp from the pills of the row above") {
+                assertRoomOverARowFitsThePeak(2)
+            }
+
+            test("with focus overshoot and 4 columns the ring at the peak keeps 4 dp from the pills of the row above") {
+                assertRoomOverARowFitsThePeak(4)
+            }
+
+            test("with focus overshoot and 7 columns the ring at the peak keeps 4 dp from the pills of the row above") {
+                assertRoomOverARowFitsThePeak(7)
+            }
+        }
+    })
+
+class AlwaysShowNamesUiNightTestContent :
+    RobolectricTestSuiteContent({
+        testFixture { AlwaysShowNamesUiTestFixture() } asContextForEach {
+            test("the focused tiles name keeps the dark pill and light ink of the others") {
+                showHome(named4, wallpaper = Wallpaper(picture = white))
+
+                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                withClue("focused pill ${inPill("name:pkg.1", 3f, 12f)}") { inPill("name:pkg.1", 3f, 12f) shouldBeLessThan 140 }
+                withClue("other pill ${inPill("name:pkg.2", 3f, 12f)}") { inPill("name:pkg.2", 3f, 12f) shouldBeLessThan 140 }
+                ink("name:pkg.1") shouldBe (0.85f plusOrMinus 0.05f)
+            }
+        }
+    })
+
+private class AlwaysShowNamesUiTestFixture : JUnit4RulesContext() {
+    val compose = rule(createAndroidComposeRule<ComponentActivity>())
+
+    val white =
         ImageBitmap(16, 9).also { image ->
             Canvas(image).drawRect(Rect(0f, 0f, 16f, 9f), Paint().apply { color = Color.White })
         }
 
-    private val apps = (1..18).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") }
+    val apps = (1..18).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") }
 
-    private fun showHome(
+    fun showHome(
         config: TvConfig,
         wallpaper: Wallpaper = Wallpaper(),
         apps: List<AppEntry> = this.apps,
@@ -91,22 +523,22 @@ class AlwaysShowNamesUiTest {
         compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
     }
 
-    private fun settle() {
+    fun settle() {
         compose.mainClock.advanceTimeBy(1_000)
         compose.waitForIdle()
     }
 
-    private fun press(key: Key) {
+    fun press(key: Key) {
         compose.onRoot().performKeyInput { pressKey(key) }
         settle()
     }
 
-    private fun top(tag: String): Dp = compose.onNodeWithTag(tag).getBoundsInRoot().top
+    fun top(tag: String): Dp = compose.onNodeWithTag(tag).getBoundsInRoot().top
 
-    private fun height(tag: String): Dp = compose.onNodeWithTag(tag).getBoundsInRoot().height
+    fun height(tag: String): Dp = compose.onNodeWithTag(tag).getBoundsInRoot().height
 
     /** How far the brightest and the darkest red of [tag] are apart: what shows of the name, in 0 to 1. */
-    private fun contrast(tag: String): Float {
+    fun contrast(tag: String): Float {
         val image: ImageBitmap = compose.onNodeWithTag(tag).captureToImage()
         val pixels = image.toPixelMap()
         val reds = (0 until image.height).flatMap { y -> (0 until image.width).map { x -> pixels[x, y].red } }
@@ -114,113 +546,35 @@ class AlwaysShowNamesUiTest {
     }
 
     /** From the top of the first grid row to the top of the second, which only both being on screen can tell. */
-    private fun rowPitch(): Dp {
+    fun rowPitch(): Dp {
         repeat(2) { press(Key.DirectionDown) }
         compose.onNodeWithTag("tile:pkg.13").assertIsFocused()
         return top("tile:pkg.13") - top("tile:pkg.7")
     }
 
-    private fun assertNear(
+    fun assertNear(
         expected: Dp,
         actual: Dp,
-    ) = assertTrue("expected $expected, got $actual", abs(expected.value - actual.value) <= 1f)
+    ) = withClue("expected $expected, got $actual") { abs(expected.value - actual.value) shouldBeLessThanOrEqualTo 1f }
 
     /** The pixels of [tag] as the screen draws them now. */
-    private fun frame(tag: String): List<Color> {
+    fun frame(tag: String): List<Color> {
         val pixels = compose.onNodeWithTag(tag).captureToImage().toPixelMap()
         return (0 until pixels.height).flatMap { y -> (0 until pixels.width).map { x -> pixels[x, y] } }
     }
 
-    private val longNames =
+    val longNames =
         apps.mapIndexed { i, app ->
             if (i < 2) app.copy(label = "Control de TV con altavoces inteligentes ${i + 1}") else app
         }
 
-    @Test
-    fun the_focused_tile_s_cut_name_scrolls_and_a_cut_name_without_focus_stays_still() {
-        showHome(TvConfig(columns = 4, alwaysShowNames = true), apps = longNames)
-        // Waiting for idle would run a whole pass and back to its start.
-        compose.mainClock.autoAdvance = false
-        val focused = frame("name:pkg.1")
-        val other = frame("name:pkg.2")
-
-        compose.mainClock.advanceTimeBy(2_000)
-
-        assertTrue("the focused cut name did not move", frame("name:pkg.1") != focused)
-        assertEquals(other, frame("name:pkg.2"))
-    }
-
-    @Test
-    fun with_reduced_motion_the_focused_tile_s_cut_name_stays_still() {
-        showHome(TvConfig(columns = 4, alwaysShowNames = true), apps = longNames, motion = Motion(reducedMotion = true))
-        // Waiting for idle would run a whole pass and back to its start.
-        compose.mainClock.autoAdvance = false
-        val focused = frame("name:pkg.1")
-
-        compose.mainClock.advanceTimeBy(2_000)
-
-        assertEquals(focused, frame("name:pkg.1"))
-    }
-
-    @Test
-    fun a_name_cut_to_two_lines_on_a_text_tile_ends_in_an_ellipsis_with_no_space_before_it() {
-        // Words of 1 to 6 letters, so the cut falls at a different place in each name.
-        val names = (1..6).map { size -> List(30) { "x".repeat(size) }.joinToString(" ") }
-        showHome(SixColumns, apps = names.mapIndexed { i, name -> AppEntry("pkg.${i + 1}", "pkg.${i + 1}", name) })
-
-        val shown =
-            (1..6).map { i ->
-                compose
-                    .onNode(hasText("x", substring = true) and hasAnyAncestor(hasTestTag("tile:pkg.$i")), useUnmergedTree = true)
-                    .fetchSemanticsNode()
-                    .config[SemanticsProperties.Text]
-                    .joinToString("") { it.text }
-            }
-
-        assertTrue("$shown", shown.all { it.endsWith(Char(0x2026).toString()) })
-        assertTrue("$shown", shown.none { it.endsWith(" " + Char(0x2026)) })
-    }
-
-    @Test
-    fun with_the_key_off_no_tile_has_a_name_under_it() {
-        showHome(SixColumns)
-
-        assertEquals(0, compose.onAllNodesWithTag("name:pkg.1").fetchSemanticsNodes().size)
-        assertEquals(0, compose.onAllNodesWithTag("name:pkg.7").fetchSemanticsNodes().size)
-    }
-
     /** The brightest red, 0 to 1, of [tag]: the ink of a name over its pill. */
-    private fun ink(tag: String): Float {
+    fun ink(tag: String): Float {
         val pixels = compose.onNodeWithTag(tag).captureToImage().toPixelMap()
         return (0 until pixels.height).maxOf { y -> (0 until pixels.width).maxOf { x -> pixels[x, y].red } }
     }
 
-    @Test
-    fun a_name_on_its_pill_is_white_ink_with_the_surfaces_light_too() {
-        showHome(SixColumns.copy(alwaysShowNames = true))
-
-        assertEquals(0.85f, ink("name:pkg.2"), 0.05f)
-    }
-
-    @Test
-    fun the_name_under_an_unfocused_dock_tile_shows_at_85_percent() {
-        showHome(SixColumns.copy(alwaysShowNames = true))
-
-        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-        assertEquals(0.85f, ink("name:pkg.2"), 0.05f)
-    }
-
-    @Test
-    fun the_name_under_an_unfocused_grid_tile_shows_at_85_percent() {
-        showHome(SixColumns.copy(alwaysShowNames = true))
-
-        press(Key.DirectionDown)
-        compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
-
-        assertEquals(0.85f, ink("name:pkg.8"), 0.05f)
-    }
-
-    private fun redAt(
+    fun redAt(
         x: Float,
         y: Float,
     ): Int {
@@ -235,7 +589,7 @@ class AlwaysShowNamesUiTest {
     }
 
     /** The red channel [out] dp left of the name's text, and [out] dp right of it, over the middle of its line. */
-    private fun besideName(
+    fun besideName(
         tag: String,
         out: Float,
     ): Pair<Int, Int> {
@@ -244,60 +598,9 @@ class AlwaysShowNamesUiTest {
         return redAt(name.left.value - out, middle) to redAt(name.right.value + out, middle)
     }
 
-    @Test
-    fun a_grid_name_sits_on_a_black_055_pill_6_dp_wider_than_its_text_on_each_side() {
-        showHome(SixColumns.copy(alwaysShowNames = true), wallpaper = Wallpaper(picture = white))
-        press(Key.DirectionDown)
-        compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+    val whiteApps = apps.map { it.copy(image = white) }
 
-        val (bareLeft, bareRight) = besideName("name:pkg.9", out = 9f)
-        val (padLeft, padRight) = besideName("name:pkg.9", out = 3f)
-
-        // The text's own shadow darkens its padding a little too, so the pill is "under half of the bare picture".
-        assertTrue("left $padLeft of $bareLeft", padLeft < bareLeft * 0.5f)
-        assertTrue("right $padRight of $bareRight", padRight < bareRight * 0.5f)
-    }
-
-    @Test
-    fun a_dock_name_sits_on_a_black_055_pill_6_dp_wider_than_its_text_on_each_side() {
-        showHome(SixColumns.copy(alwaysShowNames = true), wallpaper = Wallpaper(picture = white))
-
-        val (bareLeft, bareRight) = besideName("name:pkg.4", out = 9f)
-        val (padLeft, padRight) = besideName("name:pkg.4", out = 3f)
-
-        assertTrue("left $padLeft of $bareLeft", padLeft < bareLeft * 0.5f)
-        assertTrue("right $padRight of $bareRight", padRight < bareRight * 0.5f)
-    }
-
-    @Test
-    fun with_the_key_off_the_dock_panel_is_a_tile_and_two_gaps_tall() {
-        showHome(SixColumns)
-        val tile = height("tile:pkg.1")
-        assertNear(tile + TileGap * 2, height("dock"))
-    }
-
-    @Test
-    fun the_dock_panel_grows_by_the_room_of_a_name_with_the_key_on() {
-        showHome(SixColumns.copy(alwaysShowNames = true))
-        val tile = height("tile:pkg.1")
-        assertNear(tile + TileGap * 2 + TileNameRoom, height("dock"))
-    }
-
-    @Test
-    fun a_grid_row_is_a_tile_and_a_gap_tall_with_the_key_off() {
-        showHome(SixColumns)
-        assertNear(height("tile:pkg.1") + TileGap, rowPitch())
-    }
-
-    @Test
-    fun a_grid_row_grows_by_the_room_of_a_name_with_the_key_on() {
-        showHome(SixColumns.copy(alwaysShowNames = true))
-        assertNear(height("tile:pkg.1") + TileGap + TileNameRoom, rowPitch())
-    }
-
-    private val whiteApps = apps.map { it.copy(image = white) }
-
-    private fun redUnderTop(
+    fun redUnderTop(
         tag: String,
         below: Float,
     ): Int {
@@ -306,33 +609,14 @@ class AlwaysShowNamesUiTest {
     }
 
     /** How many dp of tile [tag] show above the screen's bottom edge. */
-    private fun visibleDp(tag: String): Float =
+    fun visibleDp(tag: String): Float =
         compose
             .onRoot()
             .getBoundsInRoot()
             .bottom.value - bounds(tag).top.value
 
-    @Test
-    @Config(qualifiers = "w960dp-h603dp-xhdpi")
-    fun with_names_a_grid_row_with_under_48_dp_visible_draws_nothing_and_leaves_no_band() {
-        showHome(named4, apps = whiteApps)
-
-        assertTrue("the row shows ${visibleDp("tile:pkg.5")} dp", visibleDp("tile:pkg.5") in 30f..48f)
-        assertEquals(0, redUnderTop("tile:pkg.5", 2f))
-        assertEquals(0, redUnderTop("tile:pkg.5", 10f))
-    }
-
-    @Test
-    @Config(qualifiers = "w960dp-h613dp-xhdpi")
-    fun with_names_a_grid_row_with_48_dp_above_the_edge_but_less_left_after_the_bottom_fade_draws_nothing() {
-        showHome(named4, apps = whiteApps)
-
-        assertTrue("the row shows ${visibleDp("tile:pkg.5")} dp", visibleDp("tile:pkg.5") in 48f..60f)
-        assertEquals(0, redUnderTop("tile:pkg.5", 2f))
-    }
-
     /** How many dp of tile [tag] show: the rows of its middle column, on the screen, whose red is above 10 percent. */
-    private fun drawnDp(tag: String): Float {
+    fun drawnDp(tag: String): Float {
         val density = compose.activity.resources.displayMetrics.density
         val tile = bounds(tag)
         val screen =
@@ -350,7 +634,7 @@ class AlwaysShowNamesUiTest {
     }
 
     /** At each of six scroll steps, no tile in the lower half of the screen shows more than nothing and less than 48 dp of itself. */
-    private fun assertNoStripAtAnyScrollStep(config: TvConfig) {
+    fun assertNoStripAtAnyScrollStep(config: TvConfig) {
         showHome(config, apps = whiteApps)
         repeat(6) { step ->
             press(Key.DirectionDown)
@@ -359,91 +643,21 @@ class AlwaysShowNamesUiTest {
                     compose.onAllNodesWithTag(it).fetchSemanticsNodes().isNotEmpty() && bounds(it).top.value > 270f
                 }
             val strips = lower.associateWith(::drawnDp).filterValues { it in 0.5f..47f }
-            assertTrue("a row shows a strip of its tile at step ${step + 1}: $strips", strips.isEmpty())
+            withClue("a row shows a strip of its tile at step ${step + 1}: $strips") { strips.isEmpty().shouldBeTrue() }
         }
     }
 
-    @Test
-    fun with_names_no_grid_row_shows_a_strip_of_under_48_dp_of_its_tile_at_any_scroll_step() = assertNoStripAtAnyScrollStep(named4)
+    val longName = List(30) { "Largo" }.joinToString(" ")
 
-    @Test
-    fun with_names_on_a_1080p_screen_with_focus_on_the_first_grid_row_the_second_draws_with_at_least_48_dp_of_its_tile() {
-        showHome(named4, apps = whiteApps)
-        press(Key.DirectionDown)
-        compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
+    fun withLongName(vararg keys: String) = apps.map { if (it.key in keys) it.copy(label = longName) else it }
 
-        assertTrue("the second row draws ${drawnDp("tile:pkg.9")} dp of its tile", drawnDp("tile:pkg.9") >= 48f)
-    }
-
-    @Test
-    fun with_names_a_grid_row_whose_tiles_end_inside_the_screen_draws_its_tile_whole_though_the_names_hang_over_the_edge() {
-        showHome(named4, apps = whiteApps)
-        press(Key.DirectionDown)
-        compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
-
-        val screen =
-            compose
-                .onRoot()
-                .getBoundsInRoot()
-                .bottom.value
-        val tileBottom = bounds("tile:pkg.9").bottom.value
-        assertTrue("the tiles end at $tileBottom of $screen", tileBottom <= screen)
-        assertTrue("the pills end at ${tileBottom + 14f + 24f} of $screen", tileBottom + 14f + 24f > screen)
-        val low = bounds("tile:pkg.9")
-        val red = redAt((low.left.value + low.right.value) / 2f, low.bottom.value - 3f)
-        assertTrue("the tile's bottom edge shows red $red of 255", red >= 250)
-    }
-
-    @Test
-    fun without_names_on_a_1080p_screen_with_focus_on_the_first_grid_row_the_second_draws_whole() {
-        showHome(SixColumns.copy(columns = 4), apps = whiteApps)
-        press(Key.DirectionDown)
-        compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
-
-        assertTrue("the second row draws ${drawnDp("tile:pkg.9")} dp of its tile", drawnDp("tile:pkg.9") >= height("tile:pkg.9").value - 1f)
-    }
-
-    @Test
-    fun without_names_no_grid_row_shows_a_strip_of_under_48_dp_of_its_tile_at_any_scroll_step() =
-        assertNoStripAtAnyScrollStep(SixColumns.copy(columns = 4))
-
-    @Test
-    fun in_a_single_row_every_tile_has_its_name_and_the_panel_grows_to_hold_them() {
-        showHome(SixColumns.copy(singleRow = true, alwaysShowNames = true))
-
-        assertEquals(1, compose.onAllNodesWithTag("name:pkg.5").fetchSemanticsNodes().size)
-        assertNear(height("tile:pkg.1") + TileGap * 2 + TileNameRoom, height("dock"))
-    }
-
-    private val longName = List(30) { "Largo" }.joinToString(" ")
-
-    private fun withLongName(vararg keys: String) = apps.map { if (it.key in keys) it.copy(label = longName) else it }
-
-    private val named4 = SixColumns.copy(columns = 4, alwaysShowNames = true)
-
-    @Test
-    fun a_name_too_long_for_its_tile_stays_on_one_line_in_a_pill_no_wider_than_the_tile() {
-        showHome(named4, apps = withLongName("pkg.1"))
-
-        assertNear(height("name:pkg.2"), height("name:pkg.1"))
-        // The pill is the name's box and 6 dp of padding on each side.
-        val pill = bounds("name:pkg.1").width.value + 12f
-        val tile = bounds("tile:pkg.1").width.value
-        assertTrue("the pill is $pill dp wide under a tile of $tile dp", pill <= tile + 0.5f && pill >= tile - 16f)
-    }
-
-    @Test
-    fun a_name_too_long_for_its_tile_does_not_make_its_row_taller() {
-        showHome(SixColumns.copy(alwaysShowNames = true), apps = withLongName("pkg.7"))
-
-        assertNear(height("tile:pkg.1") + TileGap + TileNameRoom, rowPitch())
-    }
+    val named4 = SixColumns.copy(columns = 4, alwaysShowNames = true)
 
     /**
      * In the column at [x], going from [from] dp (the top or bottom of a focused tile of white art on a white wallpaper) in
      * direction [step] (-1 up, +1 down): where, in dp, the dark outer stroke of the ring ends, past the art, the gap and the white ring.
      */
-    private fun ringEnd(
+    fun ringEnd(
         x: Float,
         from: Float,
         step: Int,
@@ -464,7 +678,7 @@ class AlwaysShowNamesUiTest {
         return (if (step < 0) row + 1 else row) / density
     }
 
-    private fun assertRingsKeepClear(columns: Int) {
+    fun assertRingsKeepClear(columns: Int) {
         showHome(
             SixColumns.copy(columns = columns, alwaysShowNames = true),
             wallpaper = Wallpaper(picture = white),
@@ -489,39 +703,23 @@ class AlwaysShowNamesUiTest {
         val gridBelow = grid.top.value - (bounds("name:pkg.${columns + 1}").bottom.value + 2f)
 
         val clearances = "own pill $dockOwn and $gridOwn, row above $gridAbove, dock rim $dockRim"
-        assertTrue(
-            "the ring of a ${grid.height} dp tile is not 4 dp clear: $clearances",
-            listOf(dockOwn, gridOwn, gridAbove, dockRim).all { it >= 4f },
-        )
-        assertTrue("under the dock pill $dockBelow dp, over it $dockGap", dockBelow >= 1.5f * dockGap - 0.01f)
-        assertTrue("under the grid pill $gridBelow dp, over it $gridGap", gridBelow >= 1.5f * gridGap - 0.01f)
+        withClue("the ring of a ${grid.height} dp tile is not 4 dp clear: $clearances") {
+            (
+                listOf(dockOwn, gridOwn, gridAbove, dockRim).all {
+                    it >=
+                        4f
+                }
+            ).shouldBeTrue()
+        }
+        withClue("under the dock pill $dockBelow dp, over it $dockGap") { dockBelow shouldBeGreaterThanOrEqualTo 1.5f * dockGap - 0.01f }
+        withClue("under the grid pill $gridBelow dp, over it $gridGap") { gridBelow shouldBeGreaterThanOrEqualTo 1.5f * gridGap - 0.01f }
     }
-
-    @Test
-    @Config(qualifiers = "w960dp-h1080dp-xhdpi")
-    fun with_2_columns_the_ring_keeps_4_dp_from_the_pills_and_the_rim_and_a_pill_has_1_5_times_its_gap_before_the_next_element() =
-        assertRingsKeepClear(2)
-
-    @Test
-    @Config(qualifiers = "w960dp-h1080dp-xhdpi")
-    fun with_3_columns_the_ring_keeps_4_dp_from_the_pills_and_the_rim_and_a_pill_has_1_5_times_its_gap_before_the_next_element() =
-        assertRingsKeepClear(3)
-
-    @Test
-    @Config(qualifiers = "w960dp-h1080dp-xhdpi")
-    fun with_4_columns_the_ring_keeps_4_dp_from_the_pills_and_the_rim_and_a_pill_has_1_5_times_its_gap_before_the_next_element() =
-        assertRingsKeepClear(4)
-
-    @Test
-    @Config(qualifiers = "w960dp-h1080dp-xhdpi")
-    fun with_6_columns_the_ring_keeps_4_dp_from_the_pills_and_the_rim_and_a_pill_has_1_5_times_its_gap_before_the_next_element() =
-        assertRingsKeepClear(6)
 
     /**
      * With focus_overshoot, the room between the pills of the first grid row and the tiles of the second: a ring at the 1.144
      * peak of a pop, grown about the tile's bottom edge or 128.5 dp down, and 4 dp.
      */
-    private fun assertRoomOverARowFitsThePeak(columns: Int) {
+    fun assertRoomOverARowFitsThePeak(columns: Int) {
         showHome(SixColumns.copy(columns = columns, alwaysShowNames = true), motion = Motion(focusOvershoot = true))
         repeat(2) { press(Key.DirectionDown) }
         val tile = bounds("tile:pkg.${2 * columns + 1}")
@@ -530,92 +728,18 @@ class AlwaysShowNamesUiTest {
 
         val room = tile.top.value - (bounds("name:pkg.${columns + 1}").bottom.value + 2f)
         // The layout places in whole pixels: at xhdpi an edge moves by up to 0.25 dp.
-        assertTrue("$room dp over a ${tile.height} tile, whose ring reaches $ring", room >= ring + 4f - 0.25f)
+        withClue("$room dp over a ${tile.height} tile, whose ring reaches $ring") { room shouldBeGreaterThanOrEqualTo ring + 4f - 0.25f }
     }
 
-    @Test
-    @Config(qualifiers = "w960dp-h1080dp-xhdpi")
-    fun with_focus_overshoot_and_2_columns_the_ring_at_the_peak_keeps_4_dp_from_the_pills_of_the_row_above() =
-        assertRoomOverARowFitsThePeak(2)
-
-    @Test
-    @Config(qualifiers = "w960dp-h1080dp-xhdpi")
-    fun with_focus_overshoot_and_4_columns_the_ring_at_the_peak_keeps_4_dp_from_the_pills_of_the_row_above() =
-        assertRoomOverARowFitsThePeak(4)
-
-    @Test
-    @Config(qualifiers = "w960dp-h1080dp-xhdpi")
-    fun with_focus_overshoot_and_7_columns_the_ring_at_the_peak_keeps_4_dp_from_the_pills_of_the_row_above() =
-        assertRoomOverARowFitsThePeak(7)
-
-    private fun pillTops(vararg keys: String): List<Float> = keys.map { bounds("name:$it").top.value }
-
-    @Test
-    fun the_name_pills_of_the_dock_share_one_top_with_a_focused_tile_in_it_at_every_point_of_the_focus_growth() {
-        showHome(named4)
-        compose.mainClock.autoAdvance = false
-        compose.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
-        for (elapsed in listOf(0L, 40L, 80L, 400L)) {
-            compose.mainClock.advanceTimeBy(elapsed)
-            val tops = pillTops("pkg.1", "pkg.2", "pkg.3", "pkg.4")
-            assertTrue("the dock pills are at $tops after $elapsed ms", tops.all { abs(it - tops[0]) < 0.01f })
-        }
-    }
-
-    @Test
-    fun the_name_pills_of_a_grid_row_share_one_top_with_a_focused_tile_in_it_at_every_point_of_the_focus_growth() {
-        showHome(named4)
-        press(Key.DirectionDown)
-        compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
-        compose.mainClock.autoAdvance = false
-        compose.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
-        for (elapsed in listOf(0L, 40L, 80L, 400L)) {
-            compose.mainClock.advanceTimeBy(elapsed)
-            val tops = pillTops("pkg.5", "pkg.6", "pkg.7", "pkg.8")
-            assertTrue("the grid pills are at $tops after $elapsed ms", tops.all { abs(it - tops[0]) < 0.01f })
-        }
-    }
+    fun pillTops(vararg keys: String): List<Float> = keys.map { bounds("name:$it").top.value }
 
     /** From the bottom of tile [key] to the top of its name's pill, in dp. */
-    private fun tileToPill(key: String): Float = bounds("name:$key").top.value - 2f - bounds("tile:$key").bottom.value
+    fun tileToPill(key: String): Float = bounds("name:$key").top.value - 2f - bounds("tile:$key").bottom.value
 
-    @Test
-    fun an_unfocused_grid_tiles_name_pill_is_14_dp_under_its_tile() {
-        showHome(named4)
-        press(Key.DirectionDown)
-
-        assertEquals(14f, tileToPill("pkg.2"), 0.01f)
-        assertEquals(14f, tileToPill("pkg.6"), 0.01f)
-    }
-
-    @Test
-    fun an_unfocused_dock_tiles_name_pill_is_14_dp_under_its_tile() {
-        showHome(named4)
-
-        assertEquals(14f, tileToPill("pkg.2"), 0.01f)
-    }
-
-    @Test
-    fun the_space_under_an_unfocused_grid_name_pill_is_at_least_one_and_a_half_times_the_space_over_it() {
-        showHome(named4)
-        press(Key.DirectionDown)
-
-        val under = bounds("tile:pkg.10").top.value - (bounds("name:pkg.6").bottom.value + 2f)
-        assertTrue("$under dp under the pill, ${tileToPill("pkg.6")} over it", under >= 1.5f * tileToPill("pkg.6"))
-    }
-
-    @Test
-    fun the_space_under_an_unfocused_dock_name_pill_is_at_least_one_and_a_half_times_the_space_over_it() {
-        showHome(named4)
-
-        val under = bounds("dock").bottom.value - (bounds("name:pkg.2").bottom.value + 2f)
-        assertTrue("$under dp under the pill, ${tileToPill("pkg.2")} over it", under >= 1.5f * tileToPill("pkg.2"))
-    }
-
-    private fun bounds(tag: String): DpRect = compose.onNodeWithTag(tag).getBoundsInRoot()
+    fun bounds(tag: String): DpRect = compose.onNodeWithTag(tag).getBoundsInRoot()
 
     /** The red channel at ([x], [y]) in dp, relative to the left and top of the pill that holds name [tag]: the text's box and 6 dp across, 2 dp down. */
-    private fun inPill(
+    fun inPill(
         tag: String,
         x: Float,
         y: Float,
@@ -624,67 +748,5 @@ class AlwaysShowNamesUiTest {
         return redAt(name.left.value - 6f + x, name.top.value - 2f + y)
     }
 
-    @Test
-    fun a_name_pill_is_a_capsule_of_the_height_of_one_line_also_when_the_name_is_cut() {
-        showHome(named4, wallpaper = Wallpaper(picture = white), apps = withLongName("pkg.2"))
-        val bare = inPill("name:pkg.3", -6f, 12f)
-
-        // One line: 24 dp tall, so its ends are half circles of 12 dp.
-        for (key in listOf("pkg.3", "pkg.2")) {
-            assertTrue("$key, corner ${inPill("name:$key", 2.5f, 2.5f)} of $bare", inPill("name:$key", 2.5f, 2.5f) > bare * 0.8f)
-            assertTrue("$key, end ${inPill("name:$key", 1.2f, 12f)} of $bare", inPill("name:$key", 1.2f, 12f) < bare * 0.6f)
-            assertNear(24.dp, (bounds("name:$key").height.value + 4f).dp)
-        }
-    }
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun the_focused_tiles_name_keeps_the_dark_pill_and_light_ink_of_the_others() {
-        showHome(named4, wallpaper = Wallpaper(picture = white))
-
-        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-        assertTrue("focused pill ${inPill("name:pkg.1", 3f, 12f)}", inPill("name:pkg.1", 3f, 12f) < 140)
-        assertTrue("other pill ${inPill("name:pkg.2", 3f, 12f)}", inPill("name:pkg.2", 3f, 12f) < 140)
-        assertEquals(0.85f, ink("name:pkg.1"), 0.05f)
-    }
-
-    private fun left(tag: String): Dp = compose.onNodeWithTag(tag).getBoundsInRoot().left
-
-    @Test
-    fun with_names_the_tiles_and_the_dock_keep_their_names_off_width_and_x() {
-        showHome(named4)
-        val gridWidth =
-            compose
-                .onRoot()
-                .getBoundsInRoot()
-                .width.value - ScreenMargin.value * 2
-        val tile = ((gridWidth - TileGap.value * 3) / 4).dp
-
-        // The dock tiles stand inside the panel's padding, which leaves their ring room at the wall.
-        val dockTile = bounds("tile:pkg.1")
-        assertTrue("the dock tile is $dockTile dp", dockTile.width.value in tile.value - 6f..tile.value)
-        assertTrue("the dock tile starts at ${dockTile.left}", dockTile.left.value in ScreenMargin.value..ScreenMargin.value + 8f)
-        assertNear(ScreenMargin - TileGap, left("dock"))
-        assertNear((gridWidth + TileGap.value * 2).dp, bounds("dock").width)
-        press(Key.DirectionDown)
-        compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
-        assertNear(tile, bounds("tile:pkg.5").width)
-        assertNear(ScreenMargin, left("tile:pkg.5"))
-    }
-
-    @Test
-    fun with_names_a_shrunk_grid_stays_centred_between_the_margins_as_it_does_without() {
-        showHome(SixColumns.copy(columns = 4, rowsBelowDock = 3, alwaysShowNames = true))
-        press(Key.DirectionDown)
-
-        assertTrue("the grid starts at ${left("tile:pkg.5")}", left("tile:pkg.5").value > ScreenMargin.value + 4f)
-    }
-
-    @Test
-    fun without_names_a_shrunk_grid_stays_centred_between_the_margins() {
-        showHome(SixColumns.copy(columns = 4, rowsBelowDock = 3))
-        press(Key.DirectionDown)
-
-        assertTrue("the grid starts at ${left("tile:pkg.5")}", left("tile:pkg.5").value > ScreenMargin.value + 4f)
-    }
+    fun left(tag: String): Dp = compose.onNodeWithTag(tag).getBoundsInRoot().left
 }

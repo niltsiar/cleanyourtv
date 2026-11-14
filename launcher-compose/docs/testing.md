@@ -149,6 +149,11 @@ compose.runOnUiThread {
 compose.setContent { /* ... */ }
 ```
 
+A module that moves in several changes keeps JUnit classes beside its suites. A JUnit class without `@GraphicsMode` ran
+in the legacy mode; once the module sets the property it runs in the native mode, and its key focus checks fail. Give
+each such class `@GraphicsMode(GraphicsMode.Mode.LEGACY)` until it moves, as the annotation wins over the property
+(`HomeFocusTest.kt` in `feature/home`).
+
 ### Compose UI
 
 A Compose test is a Robolectric suite whose tests get a fixture that registers the Compose rule. The fixture object
@@ -223,6 +228,12 @@ violation ... kotlinx.coroutines.test.TestScope` (`OpenOnStartTest.kt` in `data/
 
 A test inside `asContextForEach` has the fixture as its receiver and the `Test.ExecutionScope` as its lambda
 parameter, so `testScope` and `launch` are `it.testScope` and `it.launch` there.
+
+The session's default configuration runs each test in a `TestScope` with a 60 s timeout, which JUnit did not have. A
+test that takes longer fails with `UncompletedCoroutinesError: After waiting for 1m, the test body did not run to
+completion`. A test that runs close to a minute, such as a pixel test that scrolls a row step by step, gets
+`testConfig = TestConfig.testScope(isEnabled = true, timeout = 10.minutes)` (`FocusColourUiTest.kt` in
+`feature/home`). `TestConfig.testScope(isEnabled = false)` on the test does not lift the limit.
 
 ## Assertions
 

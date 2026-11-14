@@ -14,9 +14,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /** The hero scrim's alpha follows whether a line other than the tile's is on the band, in the time the line takes to swap. */
 @RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.LEGACY)
 @Config(sdk = [31])
 class HeroScrimFadeTest {
     @get:Rule
