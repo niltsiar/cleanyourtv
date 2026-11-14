@@ -21,6 +21,7 @@
   <string name="settings_names">Nama di bawah setiap app</string>
   <string name="settings_greeting">Salam</string>
   <string name="settings_date_below">Tanggal di bawah jam</string>
+  <string name="settings_move_to_menu">Pindah cepat di menu ubin</string>
   <string name="settings_app_library">Tampilkan pustaka aplikasi</string>
   <string name="settings_least_used">Paling jarang dipakai dulu</string>
   <string name="settings_fade_unused">Pudarkan app tak terpakai setelah (hari)</string>
@@ -29,6 +30,7 @@
   <string name="settings_clock_wallpaper">Wallpaper di belakang jam</string>
   <string name="settings_reduced_motion">Kurangi gerakan</string>
   <string name="settings_focus_overshoot">Fokus memantul</string>
+  <string name="settings_press_feedback">Umpan balik tekan</string>
   <string name="settings_habit_hint">Petunjuk kebiasaan</string>
   <string name="settings_input_arrival">Pemberitahuan input baru</string>
   <string name="settings_follow_theme">Ikuti tema (atur ulang pilihan di TV)</string>

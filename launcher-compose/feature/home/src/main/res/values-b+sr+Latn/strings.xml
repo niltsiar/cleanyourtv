@@ -22,6 +22,11 @@
   <string name="tile_add_to_dock">Dodaj u dok</string>
   <string name="tile_replace_in_dock">Zameni drugom aplikacijom</string>
   <string name="tile_move">Premesti</string>
+  <string name="tile_move_to">Premesti na</string>
+  <string name="move_dock_start">Početak doka</string>
+  <string name="move_dock_end">Kraj doka</string>
+  <string name="move_grid_start">Početak mreže</string>
+  <string name="move_grid_end">Kraj mreže</string>
   <string name="tile_remove_from_home">Ukloni sa početnog ekrana</string>
   <string name="library_save_failed">Prečica nije sačuvana</string>
   <string name="dock_edit">Izaberi aplikacije za dok</string>
@@ -54,6 +59,7 @@
   </plurals>
   <string name="habit_usual">Obično je otvarate u ovo vreme</string>
   <string name="never_opened">Nikad otvorena</string>
+  <string name="opening_app">Otvara se %1$s&#8230;</string>
   <string name="launcher_settings">Podešavanja početnog ekrana</string>
   <string name="launcher_settings_summary">Raspored, sat i kretanje</string>
 </resources>

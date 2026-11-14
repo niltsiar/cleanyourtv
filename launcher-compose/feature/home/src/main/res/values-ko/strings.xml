@@ -23,6 +23,11 @@
   <string name="tile_add_to_dock">독에 추가</string>
   <string name="tile_replace_in_dock">다른 앱으로 바꾸기</string>
   <string name="tile_move">이동</string>
+  <string name="tile_move_to">다음으로 이동</string>
+  <string name="move_dock_start">독 처음</string>
+  <string name="move_dock_end">독 끝</string>
+  <string name="move_grid_start">그리드 처음</string>
+  <string name="move_grid_end">그리드 끝</string>
   <string name="tile_remove_from_home">홈에서 삭제</string>
   <string name="library_save_failed">바로가기를 저장할 수 없음</string>
   <string name="dock_edit">독 앱 선택</string>
@@ -51,6 +56,7 @@
   </plurals>
   <string name="habit_usual">보통 이 시간에 이 앱을 엽니다</string>
   <string name="never_opened">열어 본 적 없음</string>
+  <string name="opening_app">%1$s 여는 중&#8230;</string>
   <string name="launcher_settings">런처 설정</string>
   <string name="launcher_settings_summary">레이아웃, 시계, 모션</string>
 </resources>

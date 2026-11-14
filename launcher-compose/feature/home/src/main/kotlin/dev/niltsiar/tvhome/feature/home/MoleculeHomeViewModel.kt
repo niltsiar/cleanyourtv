@@ -65,6 +65,11 @@ public class MoleculeHomeViewModel(
         events.trySend(HomeEvent.Click(key))
     }
 
+    /** The host started no app for the tile [key]: the launch failed, or the tile switched input instead. */
+    public fun onAppNotStarted(key: String) {
+        events.trySend(HomeEvent.AppNotStarted(key))
+    }
+
     public fun onOpenSettings() {
         events.trySend(HomeEvent.OpenSettings)
     }

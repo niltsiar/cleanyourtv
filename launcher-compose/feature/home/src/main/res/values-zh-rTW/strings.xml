@@ -23,6 +23,11 @@
   <string name="tile_add_to_dock">新增至 Dock</string>
   <string name="tile_replace_in_dock">以其他應用程式取代</string>
   <string name="tile_move">移動</string>
+  <string name="tile_move_to">移動到</string>
+  <string name="move_dock_start">Dock 開頭</string>
+  <string name="move_dock_end">Dock 結尾</string>
+  <string name="move_grid_start">格狀排列開頭</string>
+  <string name="move_grid_end">格狀排列結尾</string>
   <string name="tile_remove_from_home">從主畫面移除</string>
   <string name="library_save_failed">無法儲存捷徑</string>
   <string name="dock_edit">選擇 Dock 應用程式</string>
@@ -51,6 +56,7 @@
   </plurals>
   <string name="habit_usual">你通常在這個時間開啟它</string>
   <string name="never_opened">從未開啟</string>
+  <string name="opening_app">正在開啟 %1$s&#8230;</string>
   <string name="launcher_settings">桌面設定</string>
   <string name="launcher_settings_summary">版面、時鐘與動態</string>
 </resources>

@@ -23,6 +23,11 @@
   <string name="tile_add_to_dock">添加到程序坞</string>
   <string name="tile_replace_in_dock">替换为其他应用</string>
   <string name="tile_move">移动</string>
+  <string name="tile_move_to">移动到</string>
+  <string name="move_dock_start">程序坞开头</string>
+  <string name="move_dock_end">程序坞末尾</string>
+  <string name="move_grid_start">网格开头</string>
+  <string name="move_grid_end">网格末尾</string>
   <string name="tile_remove_from_home">从主屏幕隐藏</string>
   <string name="library_save_failed">无法保存快捷方式</string>
   <string name="dock_edit">选择程序坤应用</string>
@@ -51,6 +56,7 @@
   </plurals>
   <string name="habit_usual">你通常在这个时间打开它</string>
   <string name="never_opened">从未打开</string>
+  <string name="opening_app">正在打开 %1$s&#8230;</string>
   <string name="launcher_settings">简洁桌面设置</string>
   <string name="launcher_settings_summary">布局、时钟和动效</string>
 </resources>

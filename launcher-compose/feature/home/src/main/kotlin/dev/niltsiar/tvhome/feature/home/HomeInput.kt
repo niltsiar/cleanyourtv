@@ -39,6 +39,8 @@ internal class HomeInput(
     val habit: State<String?>? = null,
     /** The keys of the grid tiles drawn faded; null without unused_fade_days. Read it in effects and layer lambdas only. */
     val faded: State<Set<String>>? = null,
+    /** Whether a tile press is opening its app (press_feedback), which takes no other press. Read it in click handlers only. */
+    val launching: State<Boolean> = mutableStateOf(false),
     val hold: OkHold = OkHold(),
 ) {
     /** The colour of the focus ring as it moves from tile to tile. */

@@ -26,6 +26,11 @@ val TileMenuRowsTest by testSuite {
         tileMenuRows(dockRow = false, inDock = false, appInfo = false, library = true) shouldBe listOf(MenuRow.Move, MenuRow.RemoveFromHome)
     }
 
+    test("move to comes right after move") {
+        tileMenuRows(dockRow = true, inDock = false, appInfo = true, library = true, moveTo = true) shouldBe
+            listOf(MenuRow.AddToDock, MenuRow.Move, MenuRow.MoveTo, MenuRow.RemoveFromHome, MenuRow.AppInfo)
+    }
+
     test("the settings menu offers launcher settings first then native settings edit dock and reorder") {
         settingsMenuRows(dockRow = true, nativeSettings = true) shouldBe
             listOf(MenuRow.LauncherSettings, MenuRow.NativeSettings, MenuRow.EditDock, MenuRow.Reorder)

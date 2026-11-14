@@ -22,6 +22,11 @@
   <string name="tile_add_to_dock">إضافة إلى الشريط</string>
   <string name="tile_replace_in_dock">استبدال بتطبيق آخر</string>
   <string name="tile_move">نقل</string>
+  <string name="tile_move_to">نقل إلى</string>
+  <string name="move_dock_start">بداية الشريط</string>
+  <string name="move_dock_end">نهاية الشريط</string>
+  <string name="move_grid_start">بداية الشبكة</string>
+  <string name="move_grid_end">نهاية الشبكة</string>
   <string name="tile_remove_from_home">إزالة من الرئيسية</string>
   <string name="library_save_failed">تعذر حفظ الاختصار</string>
   <string name="dock_edit">اختيار تطبيقات شريط التطبيقات</string>
@@ -60,6 +65,7 @@
   </plurals>
   <string name="habit_usual">عادةً ما تفتحه الآن</string>
   <string name="never_opened">لم يُفتح أبدًا</string>
+  <string name="opening_app">جارٍ فتح %1$s&#8230;</string>
   <string name="launcher_settings">إعدادات المشغّل</string>
   <string name="launcher_settings_summary">التخطيط والساعة والحركة</string>
 </resources>

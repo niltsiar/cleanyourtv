@@ -23,6 +23,11 @@
   <string name="tile_add_to_dock">Thêm vào dock</string>
   <string name="tile_replace_in_dock">Thay bằng ứng dụng khác</string>
   <string name="tile_move">Di chuyển</string>
+  <string name="tile_move_to">Di chuyển đến</string>
+  <string name="move_dock_start">Đầu dock</string>
+  <string name="move_dock_end">Cuối dock</string>
+  <string name="move_grid_start">Đầu lưới</string>
+  <string name="move_grid_end">Cuối lưới</string>
   <string name="tile_remove_from_home">Bỏ khỏi màn hình chính</string>
   <string name="library_save_failed">Không lưu được lối tắt</string>
   <string name="dock_edit">Chọn ứng dụng trên dock</string>
@@ -51,6 +56,7 @@
   </plurals>
   <string name="habit_usual">Bạn thường mở ứng dụng này vào giờ này</string>
   <string name="never_opened">Chưa từng mở</string>
+  <string name="opening_app">Đang mở %1$s&#8230;</string>
   <string name="launcher_settings">Cài đặt launcher</string>
   <string name="launcher_settings_summary">Bố cục, đồng hồ và chuyển động</string>
 </resources>

@@ -23,6 +23,11 @@
   <string name="tile_add_to_dock">Dockga qoʻshish</string>
   <string name="tile_replace_in_dock">Boshqa ilova bilan almashtirish</string>
   <string name="tile_move">Koʻchirish</string>
+  <string name="tile_move_to">Koʻchirish joyi</string>
+  <string name="move_dock_start">Dock boshi</string>
+  <string name="move_dock_end">Dock oxiri</string>
+  <string name="move_grid_start">Toʻr boshi</string>
+  <string name="move_grid_end">Toʻr oxiri</string>
   <string name="tile_remove_from_home">Bosh ekrandan olib tashlash</string>
   <string name="library_save_failed">Yorliq saqlanmadi</string>
   <string name="dock_edit">Dock ilovalarini tanlash</string>
@@ -53,6 +58,7 @@
   </plurals>
   <string name="habit_usual">Odatda buni shu vaqtda ochasiz</string>
   <string name="never_opened">Hech ochilmagan</string>
+  <string name="opening_app">%1$s ochilmoqda&#8230;</string>
   <string name="launcher_settings">Launcher sozlamalari</string>
   <string name="launcher_settings_summary">Joylashuv, soat va harakat</string>
 </resources>

@@ -20,6 +20,11 @@
   <string name="tile_add_to_dock">Zum Dock hinzufügen</string>
   <string name="tile_replace_in_dock">Durch andere App ersetzen</string>
   <string name="tile_move">Verschieben</string>
+  <string name="tile_move_to">Verschieben nach</string>
+  <string name="move_dock_start">Anfang des Docks</string>
+  <string name="move_dock_end">Ende des Docks</string>
+  <string name="move_grid_start">Anfang des Rasters</string>
+  <string name="move_grid_end">Ende des Rasters</string>
   <string name="tile_remove_from_home">Vom Startbildschirm entfernen</string>
   <string name="library_save_failed">Verknüpfung konnte nicht gespeichert werden</string>
   <string name="dock_edit">Dock-Apps wählen</string>
@@ -50,6 +55,7 @@
   </plurals>
   <string name="habit_usual">Du öffnest sie meistens um diese Zeit</string>
   <string name="never_opened">Nie geöffnet</string>
+  <string name="opening_app">%1$s wird geöffnet&#8230;</string>
   <string name="launcher_settings">Launcher-Einstellungen</string>
   <string name="launcher_settings_summary">Layout, Uhr und Bewegung</string>
 </resources>

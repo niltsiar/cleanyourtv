@@ -96,6 +96,7 @@ internal val settingsGroups: List<Group> =
                     onOff(SettingsRowId.AlwaysShowNames, R.string.settings_names, Choices.AlwaysShowNames) { it.alwaysShowNames },
                     onOff(SettingsRowId.ShowGreeting, R.string.settings_greeting, Choices.ShowGreeting) { it.showGreeting },
                     onOff(SettingsRowId.DateBelowClock, R.string.settings_date_below, Choices.DateBelowClock) { it.dateBelowClock },
+                    onOff(SettingsRowId.MoveToMenu, R.string.settings_move_to_menu, Choices.MoveToMenu) { it.moveToMenu },
                 ),
         ),
         Group(
@@ -132,6 +133,7 @@ internal val settingsGroups: List<Group> =
                 listOf(
                     onOff(SettingsRowId.ReducedMotion, R.string.settings_reduced_motion, Choices.ReducedMotion) { it.reducedMotion },
                     onOff(SettingsRowId.FocusOvershoot, R.string.settings_focus_overshoot, Choices.FocusOvershoot) { it.focusOvershoot },
+                    onOff(SettingsRowId.PressFeedback, R.string.settings_press_feedback, Choices.PressFeedback) { it.pressFeedback },
                     onOff(SettingsRowId.HabitHint, R.string.settings_habit_hint, Choices.HabitHint) { it.habitHint },
                     onOff(SettingsRowId.InputArrival, R.string.settings_input_arrival, Choices.InputArrival) { it.inputArrival },
                 ),

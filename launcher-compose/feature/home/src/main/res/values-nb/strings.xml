@@ -23,6 +23,11 @@
   <string name="tile_add_to_dock">Legg til i favorittraden</string>
   <string name="tile_replace_in_dock">Erstatt med en annen app</string>
   <string name="tile_move">Flytt</string>
+  <string name="tile_move_to">Flytt til</string>
+  <string name="move_dock_start">Starten av favorittraden</string>
+  <string name="move_dock_end">Slutten av favorittraden</string>
+  <string name="move_grid_start">Starten av rutenettet</string>
+  <string name="move_grid_end">Slutten av rutenettet</string>
   <string name="tile_remove_from_home">Fjern fra startskjermen</string>
   <string name="library_save_failed">Kunne ikke lagre snarveien</string>
   <string name="dock_edit">Velg apper i favorittraden</string>
@@ -53,6 +58,7 @@
   </plurals>
   <string name="habit_usual">Du åpner den vanligvis på dette tidspunktet</string>
   <string name="never_opened">Aldri åpnet</string>
+  <string name="opening_app">Åpner %1$s&#8230;</string>
   <string name="launcher_settings">Innstillinger for startskjermen</string>
   <string name="launcher_settings_summary">Oppsett, klokke og bevegelse</string>
 </resources>

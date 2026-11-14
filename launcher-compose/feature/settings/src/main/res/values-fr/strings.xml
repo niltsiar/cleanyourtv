@@ -21,6 +21,7 @@
   <string name="settings_names">Noms sous chaque application</string>
   <string name="settings_greeting">Salutation</string>
   <string name="settings_date_below">Date sous l\'horloge</string>
+  <string name="settings_move_to_menu">Déplacement rapide dans le menu</string>
   <string name="settings_app_library">Afficher la bibliothèque d\'applications</string>
   <string name="settings_least_used">Les moins utilisées d\'abord</string>
   <string name="settings_fade_unused">Estomper les applis inutilisées après (jours)</string>
@@ -29,6 +30,7 @@
   <string name="settings_clock_wallpaper">Fond d\'écran derrière l\'horloge</string>
   <string name="settings_reduced_motion">Mouvement réduit</string>
   <string name="settings_focus_overshoot">Focus avec rebond</string>
+  <string name="settings_press_feedback">Retour à l\'appui</string>
   <string name="settings_habit_hint">Indice d\'habitude</string>
   <string name="settings_input_arrival">Alerte nouvelle source</string>
   <string name="settings_follow_theme">Suivre le thème (réinitialiser les choix)</string>

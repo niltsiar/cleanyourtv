@@ -21,6 +21,7 @@
   <string name="settings_names">Namen onder elke app</string>
   <string name="settings_greeting">Begroeting</string>
   <string name="settings_date_below">Datum onder de klok</string>
+  <string name="settings_move_to_menu">Snel verplaatsen in menu</string>
   <string name="settings_app_library">App-bibliotheek tonen</string>
   <string name="settings_least_used">Minst gebruikt eerst</string>
   <string name="settings_fade_unused">Ongebruikte apps vervagen na (dagen)</string>
@@ -29,6 +30,7 @@
   <string name="settings_clock_wallpaper">Achtergrond achter de klok</string>
   <string name="settings_reduced_motion">Minder beweging</string>
   <string name="settings_focus_overshoot">Verende focus</string>
+  <string name="settings_press_feedback">Reactie op drukken</string>
   <string name="settings_habit_hint">Gewoontetip</string>
   <string name="settings_input_arrival">Melding nieuwe ingang</string>
   <string name="settings_follow_theme">Thema volgen (keuzes op de tv wissen)</string>

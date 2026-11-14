@@ -23,6 +23,11 @@
   <string name="tile_add_to_dock">Añadir al dock</string>
   <string name="tile_replace_in_dock">Sustituir por otra app</string>
   <string name="tile_move">Mover</string>
+  <string name="tile_move_to">Mover a</string>
+  <string name="move_dock_start">Inicio del dock</string>
+  <string name="move_dock_end">Final del dock</string>
+  <string name="move_grid_start">Inicio de la cuadrícula</string>
+  <string name="move_grid_end">Final de la cuadrícula</string>
   <string name="tile_remove_from_home">Quitar de Inicio</string>
   <string name="library_save_failed">No se pudo guardar el acceso directo</string>
   <string name="dock_edit">Elegir apps del dock</string>
@@ -56,6 +61,7 @@
   </plurals>
   <string name="habit_usual">Sueles abrirla a esta hora</string>
   <string name="never_opened">Nunca abierta</string>
+  <string name="opening_app">Abriendo %1$s&#8230;</string>
   <string name="launcher_settings">Ajustes del lanzador</string>
   <string name="launcher_settings_summary">Diseño, reloj y movimiento</string>
 </resources>

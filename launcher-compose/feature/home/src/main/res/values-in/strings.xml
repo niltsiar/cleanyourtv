@@ -23,6 +23,11 @@
   <string name="tile_add_to_dock">Tambah ke dock</string>
   <string name="tile_replace_in_dock">Ganti dengan aplikasi lain</string>
   <string name="tile_move">Pindahkan</string>
+  <string name="tile_move_to">Pindahkan ke</string>
+  <string name="move_dock_start">Awal dock</string>
+  <string name="move_dock_end">Akhir dock</string>
+  <string name="move_grid_start">Awal kisi</string>
+  <string name="move_grid_end">Akhir kisi</string>
   <string name="tile_remove_from_home">Hapus dari Beranda</string>
   <string name="library_save_failed">Tidak dapat menyimpan pintasan</string>
   <string name="dock_edit">Pilih aplikasi Dock</string>
@@ -51,6 +56,7 @@
   </plurals>
   <string name="habit_usual">Biasanya Anda membukanya pada jam ini</string>
   <string name="never_opened">Belum pernah dibuka</string>
+  <string name="opening_app">Membuka %1$s&#8230;</string>
   <string name="launcher_settings">Setelan antarmuka</string>
   <string name="launcher_settings_summary">Tata letak, jam, dan gerakan</string>
 </resources>

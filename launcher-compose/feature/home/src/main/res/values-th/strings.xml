@@ -20,6 +20,11 @@
   <string name="tile_add_to_dock">เพิ่มในแถบแอป</string>
   <string name="tile_replace_in_dock">แทนที่ด้วยแอปอื่น</string>
   <string name="tile_move">ย้าย</string>
+  <string name="tile_move_to">ย้ายไปที่</string>
+  <string name="move_dock_start">ต้นแถบแอป</string>
+  <string name="move_dock_end">ท้ายแถบแอป</string>
+  <string name="move_grid_start">ต้นตาราง</string>
+  <string name="move_grid_end">ท้ายตาราง</string>
   <string name="tile_remove_from_home">นำออกจากหน้าหลัก</string>
   <string name="library_save_failed">บันทึกทางลัดไม่สำเร็จ</string>
   <string name="dock_edit">เลือกแอปบนแถบแอป</string>
@@ -48,6 +53,7 @@
   </plurals>
   <string name="habit_usual">คุณมักเปิดแอปนี้ในเวลานี้</string>
   <string name="never_opened">ไม่เคยเปิด</string>
+  <string name="opening_app">กำลังเปิด %1$s&#8230;</string>
   <string name="launcher_settings">การตั้งค่าหน้าหลัก</string>
   <string name="launcher_settings_summary">เลย์เอาต์ นาฬิกา และการเคลื่อนไหว</string>
 </resources>

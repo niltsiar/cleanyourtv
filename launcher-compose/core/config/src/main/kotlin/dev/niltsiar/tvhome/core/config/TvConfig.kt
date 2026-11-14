@@ -149,6 +149,8 @@ public data class TvConfig(
     val reducedMotion: Boolean = false,
     val focusOvershoot: Boolean = false,
     val tileMenu: Boolean = true,
+    /** The tile menu has a "Move to" row that puts the app first or last in the dock or the grid in one choice. */
+    val moveToMenu: Boolean = false,
     /** A top-bar button turns reorder mode on and off. */
     val reorderButton: Boolean = false,
     /** The header Settings action opens Launcher settings directly. */
@@ -186,6 +188,8 @@ public data class TvConfig(
     val inputArrival: Boolean = false,
     /** A quiet mark on the app the household usually opens at this time of day; Home keeps a log of its launches for it. */
     val habitHint: Boolean = false,
+    /** OK on an app tile dips it and brightens its ring; a slow start says the app is opening and takes no second OK. */
+    val pressFeedback: Boolean = false,
     /** Days, 0 to 3650: a grid tile whose app Home has not opened for more than this many days is drawn faded; 0 fades none. */
     val unusedFadeDays: Int = 0,
     /** Answer the system's VIEW_INPUTS request by opening the Inputs menu. */

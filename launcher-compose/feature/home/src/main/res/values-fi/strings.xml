@@ -23,6 +23,11 @@
   <string name="tile_add_to_dock">Lisää telakkaan</string>
   <string name="tile_replace_in_dock">Korvaa toisella sovelluksella</string>
   <string name="tile_move">Siirrä</string>
+  <string name="tile_move_to">Siirrä kohtaan</string>
+  <string name="move_dock_start">Telakan alkuun</string>
+  <string name="move_dock_end">Telakan loppuun</string>
+  <string name="move_grid_start">Ruudukon alkuun</string>
+  <string name="move_grid_end">Ruudukon loppuun</string>
   <string name="tile_remove_from_home">Poista kotinäkymästä</string>
   <string name="library_save_failed">Pikakuvaketta ei voitu tallentaa</string>
   <string name="dock_edit">Valitse telakan sovellukset</string>
@@ -53,6 +58,7 @@
   </plurals>
   <string name="habit_usual">Avaat sen yleensä tähän aikaan</string>
   <string name="never_opened">Ei koskaan avattu</string>
+  <string name="opening_app">Avataan %1$s&#8230;</string>
   <string name="launcher_settings">Käynnistimen asetukset</string>
   <string name="launcher_settings_summary">Asettelu, kello ja liike</string>
 </resources>

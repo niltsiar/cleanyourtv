@@ -88,6 +88,7 @@ public object Choices {
     public val AlwaysShowNames: Choice<Boolean> = boolChoice("always_show_names") { copy(alwaysShowNames = it) }
     public val ShowGreeting: Choice<Boolean> = boolChoice("show_greeting") { copy(showGreeting = it) }
     public val DateBelowClock: Choice<Boolean> = boolChoice("date_below_clock") { copy(dateBelowClock = it) }
+    public val MoveToMenu: Choice<Boolean> = boolChoice("move_to_menu") { copy(moveToMenu = it) }
     public val AppLibrary: Choice<Boolean> = boolChoice("app_library") { copy(appLibrary = it) }
     public val LibraryLeastUsed: Choice<Boolean> = boolChoice("library_least_used") { copy(libraryLeastUsed = it) }
     public val UnusedFadeDays: Choice<Int> = intChoice("unused_fade_days", 0..3650) { copy(unusedFadeDays = it) }
@@ -96,6 +97,7 @@ public object Choices {
     public val ClockWallpaper: Choice<Boolean> = boolChoice("clock_wallpaper") { copy(clockWallpaper = it) }
     public val ReducedMotion: Choice<Boolean> = boolChoice("reduced_motion") { copy(reducedMotion = it) }
     public val FocusOvershoot: Choice<Boolean> = boolChoice("focus_overshoot") { copy(focusOvershoot = it) }
+    public val PressFeedback: Choice<Boolean> = boolChoice("press_feedback") { copy(pressFeedback = it) }
     public val HabitHint: Choice<Boolean> = boolChoice("habit_hint") { copy(habitHint = it) }
     public val InputArrival: Choice<Boolean> = boolChoice("input_arrival") { copy(inputArrival = it) }
 
@@ -111,6 +113,7 @@ public object Choices {
             AlwaysShowNames,
             ShowGreeting,
             DateBelowClock,
+            MoveToMenu,
             AppLibrary,
             LibraryLeastUsed,
             UnusedFadeDays,
@@ -119,6 +122,7 @@ public object Choices {
             ClockWallpaper,
             ReducedMotion,
             FocusOvershoot,
+            PressFeedback,
             HabitHint,
             InputArrival,
         )

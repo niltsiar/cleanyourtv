@@ -257,13 +257,23 @@ class MainActivity : ComponentActivity() {
         startActivity(Intent(this, ClockActivity::class.java))
     }
 
-    private fun launchApp(app: AppEntry) {
+    /** Opens a Home tile; true when an app started, false when none could or the tile switched input instead. */
+    private fun launchApp(app: AppEntry): Boolean =
         when (val result = graph.appLauncher.open(app)) {
-            is LaunchResult.SwitchInput -> openInput(result.target)
-            LaunchResult.CantOpen -> cantOpen(app.label)
-            LaunchResult.Opened -> Unit
+            is LaunchResult.SwitchInput -> {
+                openInput(result.target)
+                false
+            }
+
+            LaunchResult.CantOpen -> {
+                cantOpen(app.label)
+                false
+            }
+
+            LaunchResult.Opened -> {
+                true
+            }
         }
-    }
 
     /**
      * handle_view_inputs: switch InputsRequestActivity, the VIEW_INPUTS handler, on or off. It is disabled in the

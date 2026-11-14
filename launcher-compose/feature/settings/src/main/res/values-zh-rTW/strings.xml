@@ -21,6 +21,7 @@
   <string name="settings_names">每個 app 下方顯示名稱</string>
   <string name="settings_greeting">問候語</string>
   <string name="settings_date_below">時鐘下方顯示日期</string>
+  <string name="settings_move_to_menu">圖塊選單快速移動</string>
   <string name="settings_app_library">顯示應用程式庫</string>
   <string name="settings_least_used">最少使用的優先</string>
   <string name="settings_fade_unused">未使用的 app 淡化（天後）</string>
@@ -29,6 +30,7 @@
   <string name="settings_clock_wallpaper">時鐘背後的桌布</string>
   <string name="settings_reduced_motion">減少動態效果</string>
   <string name="settings_focus_overshoot">彈性焦點</string>
+  <string name="settings_press_feedback">按鍵回饋</string>
   <string name="settings_habit_hint">習慣提示</string>
   <string name="settings_input_arrival">新輸入來源提醒</string>
   <string name="settings_follow_theme">跟隨主題（重設電視上的選擇）</string>

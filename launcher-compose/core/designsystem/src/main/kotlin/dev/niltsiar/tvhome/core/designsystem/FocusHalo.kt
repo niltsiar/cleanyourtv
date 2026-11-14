@@ -67,8 +67,8 @@ private class HaloClipNode :
 
 /**
  * The halo glow of a focused [FocusSurface] in [ring]'s colour, white without one, drawn grown as the surface is: [scale]
- * when [focus] is 1, about [pivot]'s height or the middle. It runs up to [HaloWidth] past the ring's keyline, at 0.5
- * under the surface and 0.25 at its sides and top, in [HALO_STEPS] bands that fade out. On a side where a [clipsHalo]
+ * when [focus] is 1, less while a [press] [dips] it, about [pivot]'s height or the middle. It runs up to [HaloWidth] past the
+ * ring's keyline, at 0.5 under the surface and 0.25 at its sides and top, in [HALO_STEPS] bands that fade out. On a side where a [clipsHalo]
  * container leaves less room, the glow on that side is narrowed to end before the container's edge, so the clip never cuts it.
  */
 internal data class FocusHaloElement(
@@ -77,6 +77,8 @@ internal data class FocusHaloElement(
     val pivot: ((Float) -> Float)?,
     val shape: Shape,
     val ring: ColorProducer?,
+    val press: Animatable<Float, AnimationVector1D>? = null,
+    val dips: Boolean = false,
 ) : ModifierNodeElement<FocusHaloNode>() {
     override fun create(): FocusHaloNode = FocusHaloNode(this)
 
@@ -111,7 +113,7 @@ internal class FocusHaloNode(
         val focus = spec.focus.value
         val progress = focus.coerceIn(0f, 1f)
         if (progress > 0f) {
-            val grown = 1f + (spec.scale - 1f) * focus
+            val grown = (1f + (spec.scale - 1f) * focus) * dipOf(spec.press, spec.dips)
             val pivot = Offset(size.width / 2f, spec.pivot?.invoke(size.height) ?: (size.height / 2f))
             scale(grown, pivot) { drawHalo(progress, grown, pivot) }
         }

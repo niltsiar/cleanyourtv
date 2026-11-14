@@ -23,6 +23,11 @@
   <string name="tile_add_to_dock">Přidat do doku</string>
   <string name="tile_replace_in_dock">Nahradit jinou aplikací</string>
   <string name="tile_move">Přesunout</string>
+  <string name="tile_move_to">Přesunout na</string>
+  <string name="move_dock_start">Začátek doku</string>
+  <string name="move_dock_end">Konec doku</string>
+  <string name="move_grid_start">Začátek mřížky</string>
+  <string name="move_grid_end">Konec mřížky</string>
   <string name="tile_remove_from_home">Odebrat z domovské obrazovky</string>
   <string name="library_save_failed">Zástupce se nepodařilo uložit</string>
   <string name="dock_edit">Vybrat aplikace v doku</string>
@@ -57,6 +62,7 @@
   </plurals>
   <string name="habit_usual">Obvykle ji otevíráte v tuto dobu</string>
   <string name="never_opened">Nikdy neotevřeno</string>
+  <string name="opening_app">Otevírá se %1$s&#8230;</string>
   <string name="launcher_settings">Nastavení domovské obrazovky</string>
   <string name="launcher_settings_summary">Rozložení, hodiny a pohyb</string>
 </resources>

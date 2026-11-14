@@ -24,6 +24,11 @@
   <string name="tile_add_to_dock">Add to dock</string>
   <string name="tile_replace_in_dock">Replace with another app</string>
   <string name="tile_move">Move</string>
+  <string name="tile_move_to">Move to</string>
+  <string name="move_dock_start">Start of dock</string>
+  <string name="move_dock_end">End of dock</string>
+  <string name="move_grid_start">Start of grid</string>
+  <string name="move_grid_end">End of grid</string>
   <string name="tile_remove_from_home">Remove from Home</string>
   <string name="library_save_failed">Could not save the shortcut</string>
   <string name="dock_edit">Choose dock apps</string>
@@ -54,6 +59,7 @@
   </plurals>
   <string name="habit_usual">You usually open it now</string>
   <string name="never_opened">Never opened</string>
+  <string name="opening_app">Opening %1$s&#8230;</string>
   <string name="launcher_settings">Launcher settings</string>
   <string name="launcher_settings_summary">Layout, clock and motion</string>
 </resources>

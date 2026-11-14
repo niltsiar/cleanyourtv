@@ -34,11 +34,14 @@ internal data class SettingsClosing(
     val token: Int,
 )
 
-/** Home state comes from the Molecule-hosted presenter. [overlays] go in Home's overlay host. */
+/**
+ * Home state comes from the Molecule-hosted presenter. [onLaunchApp] opens a Home tile and says whether an app started.
+ * [overlays] go in Home's overlay host.
+ */
 @Composable
 internal fun HomeHost(
     graph: AppGraph,
-    onLaunchApp: (AppEntry) -> Unit,
+    onLaunchApp: (AppEntry) -> Boolean,
     onOpenSettings: () -> Unit,
     onOpenNetwork: () -> Unit,
     onOpenWifiSettings: () -> Unit,
@@ -66,7 +69,7 @@ internal fun HomeHost(
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
             when (effect) {
-                is HomeEffect.LaunchApp -> onLaunchApp(effect.app)
+                is HomeEffect.LaunchApp -> if (!onLaunchApp(effect.app)) viewModel.onAppNotStarted(effect.app.key)
                 HomeEffect.OpenSettings -> onOpenSettings()
                 HomeEffect.OpenNetwork -> onOpenNetwork()
                 HomeEffect.OpenWifiSettings -> onOpenWifiSettings()

@@ -23,6 +23,11 @@
   <string name="tile_add_to_dock">Добавить в док</string>
   <string name="tile_replace_in_dock">Заменить другим приложением</string>
   <string name="tile_move">Переместить</string>
+  <string name="tile_move_to">Переместить в</string>
+  <string name="move_dock_start">Начало дока</string>
+  <string name="move_dock_end">Конец дока</string>
+  <string name="move_grid_start">Начало сетки</string>
+  <string name="move_grid_end">Конец сетки</string>
   <string name="tile_remove_from_home">Убрать с главного экрана</string>
   <string name="library_save_failed">Не удалось сохранить ярлык</string>
   <string name="dock_edit">Выбрать приложения дока</string>
@@ -57,6 +62,7 @@
   </plurals>
   <string name="habit_usual">Обычно вы открываете её в это время</string>
   <string name="never_opened">Ни разу не открывалось</string>
+  <string name="opening_app">Открывается %1$s&#8230;</string>
   <string name="launcher_settings">Настройки главного экрана</string>
   <string name="launcher_settings_summary">Макет, часы и движение</string>
 </resources>

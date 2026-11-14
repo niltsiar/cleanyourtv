@@ -2,6 +2,7 @@ package dev.niltsiar.tvhome.core.designsystem
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -32,6 +33,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.isUnspecified
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.Role
@@ -40,6 +42,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** How much a focused [FocusSurface] grows by default. */
@@ -58,6 +61,16 @@ private val Gloss = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f
 private const val PLATE_TOP_ALPHA = 0.22f
 private const val PLATE_BOTTOM_ALPHA = 0.06f
 private const val PLATE_STROKE_ALPHA = 0.3f
+
+/** How much of its size a pressed surface gives up at the bottom of its dip. */
+private const val PRESS_DIP = 0.04f
+
+/** How long a press takes to dip, and as long again to come back, in milliseconds. */
+private const val PRESS_DIP_MS = 80
+
+/** How far a pressed ring's colour moves toward white, and how much wider it grows into the gap inside it. */
+private const val PRESS_LIGHT = 0.5f
+private val PressRingGrowth = 1.dp
 
 /**
  * How a focused [FocusSurface] is lit, from glass_style. [slab] gives it the lit top and, with a [FocusSurface] `plate`, the
@@ -96,7 +109,9 @@ public val FocusRingReach: Dp = RingGap + RingWidth + HairlineWidth + OuterStrok
  * drawn, not a layer scale, so the surface's bounds stay put while it grows and accessibility has nothing to update.
  * [growthPivot], given the surface's height in pixels, says how far under its top the growth is anchored, in the middle
  * of its width; without it the surface grows about its centre. [focus] is its focus progress, for a parent that orders
- * its children by it ([popsOver]).
+ * its children by it ([popsOver]). [press] is the progress of a press ([pressDip]), 0 at rest: the surface draws up to 4% under
+ * its size, with [Motion.animated] only, and its ring moves toward white and grows wider into the gap inside it, its outer edge
+ * where it was.
  */
 @Composable
 public fun FocusSurface(
@@ -113,9 +128,11 @@ public fun FocusSurface(
     plate: Color = Color.Unspecified,
     growthPivot: ((Float) -> Float)? = null,
     focus: Animatable<Float, AnimationVector1D> = remember { Animatable(0f) },
+    press: Animatable<Float, AnimationVector1D>? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val motion = TvTheme.motion
+    val dips = press != null && motion.animated
     val scope = rememberCoroutineScope()
     val grownScale = motion.focusScale(focusedScale)
     val style = TvTheme.focusStyle
@@ -138,13 +155,13 @@ public fun FocusSurface(
             modifier
                 .graphicsLayer {
                     shadowElevation = if (glowing) GlowElevation.toPx() * focus.value.coerceIn(0f, 1f) else 0f
-                    this.shape = ScaledShape(shape, 1f + (grownScale - 1f) * focus.value, growthPivot)
+                    this.shape = ScaledShape(shape, (1f + (grownScale - 1f) * focus.value) * dipOf(press, dips), growthPivot)
                     ambientShadowColor = glowColor
                     spotShadowColor = glowColor
-                }.then(if (halo) FocusHaloElement(focus, grownScale, growthPivot, shape, ring) else Modifier)
+                }.then(if (halo) FocusHaloElement(focus, grownScale, growthPivot, shape, ring, press, dips) else Modifier)
                 .drawWithContent {
                     scale(
-                        1f + (grownScale - 1f) * focus.value,
+                        (1f + (grownScale - 1f) * focus.value) * dipOf(press, dips),
                         Offset(
                             size.width / 2f,
                             growthPivot?.invoke(size.height) ?: (size.height / 2f),
@@ -154,7 +171,10 @@ public fun FocusSurface(
                         val outline = if (progress > 0f) shape.createOutline(size, layoutDirection, this) else null
                         val width = style.ringWidth.toPx()
                         val gap = (RingGap + RingWidth).toPx() - width
-                        val ringColour = ring?.invoke() ?: Color.White
+                        val pressed = press?.value ?: 0f
+                        val lit = width + PressRingGrowth.toPx() * pressed
+                        val base = ring?.invoke() ?: Color.White
+                        val ringColour = if (pressed > 0f) lerp(base, Color.White, PRESS_LIGHT * pressed) else base
                         if (outline != null && plateFill != null) {
                             val behind = outline.grownBy(gap)
                             drawOutline(behind, plateFill, alpha = progress)
@@ -168,10 +188,10 @@ public fun FocusSurface(
                                 drawOutline(outline.grownBy(gap - inner / 2f), InnerStroke, alpha = progress, style = Stroke(inner))
                             }
                             drawOutline(
-                                outline.grownBy(gap + width / 2f),
+                                outline.grownBy(gap + width - lit / 2f),
                                 ringColour,
                                 alpha = progress,
-                                style = Stroke(width),
+                                style = Stroke(lit),
                             )
                             val hairline = HairlineWidth.toPx()
                             drawOutline(outline.grownBy(gap + width + hairline / 2f), Hairline, alpha = progress, style = Stroke(hairline))
@@ -196,6 +216,27 @@ public fun FocusSurface(
                 }.clickable(interactionSource = interactionSource, indication = null, role = Role.Button, onClick = onClick),
         content = content,
     )
+}
+
+/** The share of its size a surface draws at for [press]: under 1 while it dips, which only it does when it [dips]. */
+internal fun dipOf(
+    press: Animatable<Float, AnimationVector1D>?,
+    dips: Boolean,
+): Float = if (dips && press != null) 1f - PRESS_DIP * press.value else 1f
+
+/**
+ * Runs one press of a [FocusSurface] that takes this as its `press`: down over [PRESS_DIP_MS] and back over as long, or
+ * with animations off to full at once and back after twice that time.
+ */
+public suspend fun Animatable<Float, AnimationVector1D>.pressDip(motion: Motion) {
+    if (motion.animations) {
+        animateTo(1f, tween(PRESS_DIP_MS))
+        animateTo(0f, tween(PRESS_DIP_MS))
+    } else {
+        snapTo(1f)
+        delay(2L * PRESS_DIP_MS)
+        snapTo(0f)
+    }
 }
 
 /**

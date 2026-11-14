@@ -23,6 +23,11 @@
   <string name="tile_add_to_dock">Toevoegen aan dock</string>
   <string name="tile_replace_in_dock">Vervangen door andere app</string>
   <string name="tile_move">Verplaatsen</string>
+  <string name="tile_move_to">Verplaatsen naar</string>
+  <string name="move_dock_start">Begin van dock</string>
+  <string name="move_dock_end">Einde van dock</string>
+  <string name="move_grid_start">Begin van raster</string>
+  <string name="move_grid_end">Einde van raster</string>
   <string name="tile_remove_from_home">Verwijderen van Home</string>
   <string name="library_save_failed">Kon de snelkoppeling niet opslaan</string>
   <string name="dock_edit">Dock-apps kiezen</string>
@@ -53,6 +58,7 @@
   </plurals>
   <string name="habit_usual">Je opent deze meestal rond deze tijd</string>
   <string name="never_opened">Nooit geopend</string>
+  <string name="opening_app">%1$s wordt geopend&#8230;</string>
   <string name="launcher_settings">Launcher-instellingen</string>
   <string name="launcher_settings_summary">Indeling, klok en beweging</string>
 </resources>

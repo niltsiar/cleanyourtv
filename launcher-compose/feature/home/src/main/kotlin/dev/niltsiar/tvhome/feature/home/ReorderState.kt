@@ -109,7 +109,18 @@ internal data class ReorderState(
                 }
             }
         if (to < 0 || to >= n || to == from) return this
-        return copy(keys = keys.moved(from, to), inDock = if (to < columns) inDock + key else inDock - key)
+        return place(key, to, docked = to < columns)
+    }
+
+    /** Puts [key] at [to] in the list, as one of the tiles put in the dock when [docked], else as one taken out of it. */
+    fun place(
+        key: String,
+        to: Int,
+        docked: Boolean,
+    ): ReorderState {
+        val from = keys.indexOf(key)
+        if (from < 0 || to !in keys.indices) return this
+        return copy(keys = keys.moved(from, to), inDock = if (docked) inDock + key else inDock - key)
     }
 
     /** Puts the tile at [pos] into dock place [slot] and the tile that was there where the chosen one was. */

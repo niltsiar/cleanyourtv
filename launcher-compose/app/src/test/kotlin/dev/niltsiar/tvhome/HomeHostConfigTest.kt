@@ -131,7 +131,7 @@ class HomeHostConfigTestContent :
                                     }
                                 HomeHost(
                                     graph = graph,
-                                    onLaunchApp = {},
+                                    onLaunchApp = { true },
                                     onOpenSettings = {},
                                     onOpenNetwork = {},
                                     onOpenWifiSettings = {},

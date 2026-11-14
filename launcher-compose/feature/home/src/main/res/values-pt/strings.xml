@@ -23,6 +23,11 @@
   <string name="tile_add_to_dock">Adicionar ao dock</string>
   <string name="tile_replace_in_dock">Substituir por outro app</string>
   <string name="tile_move">Mover</string>
+  <string name="tile_move_to">Mover para</string>
+  <string name="move_dock_start">Início do dock</string>
+  <string name="move_dock_end">Fim do dock</string>
+  <string name="move_grid_start">Início da grade</string>
+  <string name="move_grid_end">Fim da grade</string>
   <string name="tile_remove_from_home">Remover da tela inicial</string>
   <string name="library_save_failed">Não foi possível salvar o atalho</string>
   <string name="dock_edit">Escolher apps do dock</string>
@@ -55,6 +60,7 @@
   </plurals>
   <string name="habit_usual">Você costuma abrir este app neste horário</string>
   <string name="never_opened">Nunca aberto</string>
+  <string name="opening_app">Abrindo %1$s&#8230;</string>
   <string name="launcher_settings">Configurações do launcher</string>
   <string name="launcher_settings_summary">Layout, relógio e movimento</string>
 </resources>

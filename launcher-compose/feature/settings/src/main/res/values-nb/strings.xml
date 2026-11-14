@@ -21,6 +21,7 @@
   <string name="settings_names">Navn under hver app</string>
   <string name="settings_greeting">Hilsen</string>
   <string name="settings_date_below">Dato under klokken</string>
+  <string name="settings_move_to_menu">Rask flytting i menyen</string>
   <string name="settings_app_library">Vis appbiblioteket</string>
   <string name="settings_least_used">Minst brukte først</string>
   <string name="settings_fade_unused">Dimm ubrukte apper etter (dager)</string>
@@ -29,6 +30,7 @@
   <string name="settings_clock_wallpaper">Bakgrunnsbilde bak klokken</string>
   <string name="settings_reduced_motion">Redusert bevegelse</string>
   <string name="settings_focus_overshoot">Spretten fokus</string>
+  <string name="settings_press_feedback">Svar på trykk</string>
   <string name="settings_habit_hint">Vanetips</string>
   <string name="settings_input_arrival">Varsel om ny inngang</string>
   <string name="settings_follow_theme">Følg temaet (tilbakestill lokale valg)</string>

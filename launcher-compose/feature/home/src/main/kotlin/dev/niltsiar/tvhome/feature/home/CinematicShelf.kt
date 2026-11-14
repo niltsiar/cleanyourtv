@@ -179,7 +179,12 @@ internal fun CinematicShelf(
                                 .lineBetween(TitleAscent, TitleDescent)
                                 .drawnAt(titleAlpha),
                     )
-                    val meta = if (live) lastOpenedLine(app.lastOpened, app.usual, app.neverOpened) else AnnotatedString("")
+                    val meta =
+                        when {
+                            !live -> AnnotatedString("")
+                            app.opening != null -> AnnotatedString(stringResource(R.string.opening_app, app.opening))
+                            else -> lastOpenedLine(app.lastOpened, app.usual, app.neverOpened)
+                        }
                     BasicText(
                         text = meta,
                         style = metaStyle,

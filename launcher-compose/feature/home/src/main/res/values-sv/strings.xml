@@ -24,6 +24,11 @@
   <string name="tile_add_to_dock">Lägg till i favoritraden</string>
   <string name="tile_replace_in_dock">Ersätt med en annan app</string>
   <string name="tile_move">Flytta</string>
+  <string name="tile_move_to">Flytta till</string>
+  <string name="move_dock_start">Början av favoritraden</string>
+  <string name="move_dock_end">Slutet av favoritraden</string>
+  <string name="move_grid_start">Början av rutnätet</string>
+  <string name="move_grid_end">Slutet av rutnätet</string>
   <string name="tile_remove_from_home">Ta bort från startskärmen</string>
   <string name="library_save_failed">Kunde inte spara genvägen</string>
   <string name="dock_edit">Välj appar i favoritraden</string>
@@ -54,6 +59,7 @@
   </plurals>
   <string name="habit_usual">Du brukar öppna den vid den här tiden</string>
   <string name="never_opened">Aldrig öppnad</string>
+  <string name="opening_app">Öppnar %1$s&#8230;</string>
   <string name="launcher_settings">Startskärmsinställningar</string>
   <string name="launcher_settings_summary">Layout, klocka och rörelse</string>
 </resources>

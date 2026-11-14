@@ -173,6 +173,7 @@ class ConfigRepositoryTestContent :
                 repo.choose(Choices.AlwaysShowNames, true)
                 repo.choose(Choices.ShowGreeting, false)
                 repo.choose(Choices.DateBelowClock, true)
+                repo.choose(Choices.MoveToMenu, true)
                 repo.choose(Choices.AppLibrary, true)
                 repo.choose(Choices.LibraryLeastUsed, true)
                 repo.choose(Choices.UnusedFadeDays, 30)
@@ -181,6 +182,7 @@ class ConfigRepositoryTestContent :
                 repo.choose(Choices.ClockWallpaper, true)
                 repo.choose(Choices.ReducedMotion, true)
                 repo.choose(Choices.FocusOvershoot, true)
+                repo.choose(Choices.PressFeedback, true)
                 repo.choose(Choices.HabitHint, true)
                 repo.choose(Choices.InputArrival, true)
                 awaitConfig(repo) { it.inputArrival }
@@ -190,6 +192,7 @@ class ConfigRepositoryTestContent :
                         alwaysShowNames = true,
                         showGreeting = false,
                         dateBelowClock = true,
+                        moveToMenu = true,
                         appLibrary = true,
                         libraryLeastUsed = true,
                         unusedFadeDays = 30,
@@ -198,6 +201,7 @@ class ConfigRepositoryTestContent :
                         clockWallpaper = true,
                         reducedMotion = true,
                         focusOvershoot = true,
+                        pressFeedback = true,
                         habitHint = true,
                         inputArrival = true,
                     )

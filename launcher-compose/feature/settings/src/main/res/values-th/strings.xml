@@ -21,6 +21,7 @@
   <string name="settings_names">ชื่อใต้แอปทุกตัว</string>
   <string name="settings_greeting">คำทักทาย</string>
   <string name="settings_date_below">วันที่ใต้นาฬิกา</string>
+  <string name="settings_move_to_menu">ย้ายด่วนในเมนู</string>
   <string name="settings_app_library">แสดงคลังแอป</string>
   <string name="settings_least_used">แอปที่ใช้น้อยสุดก่อน</string>
   <string name="settings_fade_unused">ทำแอปที่ไม่ได้ใช้ให้จางหลัง (วัน)</string>
@@ -29,6 +30,7 @@
   <string name="settings_clock_wallpaper">วอลเปเปอร์หลังนาฬิกา</string>
   <string name="settings_reduced_motion">ลดการเคลื่อนไหว</string>
   <string name="settings_focus_overshoot">โฟกัสเด้ง</string>
+  <string name="settings_press_feedback">ตอบสนองเมื่อกด</string>
   <string name="settings_habit_hint">คำใบ้ตามความเคยชิน</string>
   <string name="settings_input_arrival">แจ้งเตือนแหล่งสัญญาณใหม่</string>
   <string name="settings_follow_theme">ใช้ตามธีม (รีเซ็ตการตั้งค่า)</string>

@@ -17,6 +17,7 @@ public enum class SettingsRowId {
     AlwaysShowNames,
     ShowGreeting,
     DateBelowClock,
+    MoveToMenu,
     AppLibrary,
     LibraryLeastUsed,
     UnusedFadeDays,
@@ -25,6 +26,7 @@ public enum class SettingsRowId {
     ClockWallpaper,
     ReducedMotion,
     FocusOvershoot,
+    PressFeedback,
     HabitHint,
     InputArrival,
 }

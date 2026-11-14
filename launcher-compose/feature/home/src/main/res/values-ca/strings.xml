@@ -22,6 +22,11 @@
   <string name="tile_add_to_dock">Afegeix al dock</string>
   <string name="tile_replace_in_dock">Substitueix per una altra aplicació</string>
   <string name="tile_move">Mou</string>
+  <string name="tile_move_to">Mou a</string>
+  <string name="move_dock_start">Inici del dock</string>
+  <string name="move_dock_end">Final del dock</string>
+  <string name="move_grid_start">Inici de la graella</string>
+  <string name="move_grid_end">Final de la graella</string>
   <string name="tile_remove_from_home">Elimina de l’inici</string>
   <string name="library_save_failed">No s’ha pogut desar la drecera</string>
   <string name="dock_edit">Tria les apps del dock</string>
@@ -54,6 +59,7 @@
   </plurals>
   <string name="habit_usual">Normalment l\'obres a aquesta hora</string>
   <string name="never_opened">Mai oberta</string>
+  <string name="opening_app">S\'està obrint %1$s&#8230;</string>
   <string name="launcher_settings">Configuració del llançador</string>
   <string name="launcher_settings_summary">Disseny, rellotge i moviment</string>
 </resources>

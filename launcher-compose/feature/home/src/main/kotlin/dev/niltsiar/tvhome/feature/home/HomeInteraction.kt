@@ -27,6 +27,14 @@ internal data class DockCounts(
     val fillDock: Boolean,
 )
 
+/** A tile press that is opening the app of [key], named [label]; [says] once the line under the title says so. Each press has its own [token]. */
+internal data class Launch(
+    val key: String,
+    val label: String,
+    val token: Int,
+    val says: Boolean = false,
+)
+
 /** The Launcher settings page closed and Home has yet to apply what it changed; [reorder] asks for reorder mode next. */
 internal data class SettingsReturn(
     val reorder: Boolean,
@@ -98,6 +106,23 @@ internal class HomeInteraction(
 
     fun habitFound(packageName: String?) {
         habit = packageName
+    }
+
+    /**
+     * The app a tile press is opening with press_feedback, from the press until Home stops, the host starts no app or
+     * [OPENING_MAX_MS] pass. A tile press meanwhile starts nothing.
+     */
+    var launch by mutableStateOf<Launch?>(null)
+        private set
+    private var launches = 0
+
+    /** Home is still in front [OPENING_SAYS_MS] after the press [token]: the line under the title says the app is opening. */
+    fun launchSays(token: Int) {
+        launch = launch?.let { if (it.token == token) it.copy(says = true) else it }
+    }
+
+    fun launchEnded(token: Int) {
+        if (launch?.token == token) launch = null
     }
 
     /** Set when the Launcher settings page closes, cleared once the presenter has applied the config and [settingsReturned] ran. */
@@ -192,6 +217,7 @@ internal class HomeInteraction(
 
             HomeEvent.Stopped -> {
                 showing = false
+                launch = null
                 closeAll()
                 inputs = inputs?.copy(arrival = null)
             }
@@ -210,8 +236,11 @@ internal class HomeInteraction(
             }
 
             is HomeEvent.Click -> {
-                val app = list.apps.firstOrNull { it.key == event.key } ?: topBarApps.firstOrNull { it.key == event.key }
-                if (app != null) effect(HomeEffect.LaunchApp(app))
+                click(event.key)
+            }
+
+            is HomeEvent.AppNotStarted -> {
+                if (launch?.key == event.key) launch = null
             }
 
             HomeEvent.OpenSettings -> {
@@ -226,6 +255,17 @@ internal class HomeInteraction(
                 effect(HomeEffect.OpenWifiSettings)
             }
         }
+    }
+
+    /** With press_feedback a tile press waits out the one before it; a top-bar app opens as before. */
+    private fun click(key: String) {
+        val tile = list.apps.firstOrNull { it.key == key }
+        if (tile != null && config.value.pressFeedback) {
+            if (launch != null) return
+            launch = Launch(tile.key, tile.label, ++launches)
+        }
+        val app = tile ?: topBarApps.firstOrNull { it.key == key }
+        if (app != null) effect(HomeEffect.LaunchApp(app))
     }
 
     fun topBarAppsLoaded(loaded: List<AppEntry>) {
@@ -341,7 +381,14 @@ internal class HomeInteraction(
         when {
             config.value.tileMenu -> {
                 val current = config.value
-                val rows = tileMenuRows(current.dockRow, inDock(apps, app.key), sources.hasAppInfo(app.packageName), current.appLibrary)
+                val rows =
+                    tileMenuRows(
+                        current.dockRow,
+                        inDock(apps, app.key),
+                        sources.hasAppInfo(app.packageName),
+                        current.appLibrary,
+                        moveTo = current.moveToMenu && movePlaces(app.key).isNotEmpty(),
+                    )
                 menu = HomeMenu(app.key, rows)
             }
 
@@ -372,6 +419,17 @@ internal class HomeInteraction(
         when (row) {
             MenuRow.Move -> {
                 if (!startReorder(carry = key)) focus(key)
+            }
+
+            MenuRow.MoveTo -> {
+                val places = key?.let(::movePlaces).orEmpty()
+                if (places.isEmpty()) focus(key) else menu = HomeMenu(key, places, parent = open)
+            }
+
+            MenuRow.DockStart, MenuRow.DockEnd, MenuRow.GridStart, MenuRow.GridEnd -> {
+                val change = key?.let { movedTo(it, row) }
+                focus(key)
+                if (change != null) keep(change)
             }
 
             MenuRow.AddToDock -> {
@@ -429,8 +487,8 @@ internal class HomeInteraction(
             }
 
             open != null -> {
-                menu = null
-                focus(open.tileKey ?: SETTINGS_FOCUS)
+                menu = open.parent
+                if (open.parent == null) focus(open.tileKey ?: SETTINGS_FOCUS)
             }
 
             current == null -> {
@@ -452,16 +510,56 @@ internal class HomeInteraction(
         }
     }
 
+    /** How many leading apps are dock apps: the saved order's count while it applies, else the loaded list's. */
+    private fun docked(): Int =
+        saved
+            ?.takeIf { it.base === list }
+            ?.change
+            ?.docked
+            ?.coerceAtLeast(0) ?: list.docked
+
     private fun begin(): ReorderState? {
-        val loaded = list
-        val docked =
-            saved
-                ?.takeIf { it.base === loaded }
-                ?.change
-                ?.docked
-                ?.coerceAtLeast(0) ?: loaded.docked
         val current = config.value
-        return ReorderState.start(shown.all.map { it.key }, docked, current.columns, current.singleRow, current.fillDock)
+        return ReorderState.start(shown.all.map { it.key }, docked(), current.columns, current.singleRow, current.fillDock)
+    }
+
+    /** The places "Move to" lists for [key]: those it would land in and that change the order; with dock_row off, the grid's only. */
+    private fun movePlaces(key: String): List<MenuRow> =
+        MovePlaces.filter { place ->
+            (config.value.dockRow || place == MenuRow.GridStart || place == MenuRow.GridEnd) && movedTo(key, place) != null
+        }
+
+    /**
+     * The order with [key] first or last in the dock or the grid, as Move leaves it: an app put into a full dock pushes the
+     * dock's last app to the start of the grid, and with fill_dock off an app takes a free dock place or leaves its own free,
+     * where with fill_dock on the grid's first app moves up into it. The dock and the grid are those of the grid layout, so
+     * with single_row the dock is the row's first places. Null when the app would not land there or nothing would change.
+     */
+    private fun movedTo(
+        key: String,
+        place: MenuRow,
+    ): OrderChange? {
+        val session = begin() ?: return null
+        val grid = layout.copy(singleRow = false)
+        val before = HomeApps(AppList(shown.all, docked()), grid).dock
+        val inDock = before.any { it.key == key }
+        val (to, intoDock) =
+            when (place) {
+                MenuRow.DockStart -> 0 to true
+                MenuRow.DockEnd -> (if (inDock) before.lastIndex else minOf(before.size, layout.columns - 1)) to true
+                MenuRow.GridStart -> (if (inDock && !layout.fillDock) before.lastIndex else before.size) to false
+                else -> session.keys.lastIndex to false
+            }
+        val change = session.place(key, to, intoDock).finish() ?: return null
+        val after = HomeApps(AppList(shown.all).arranged(change.keys, change.docked), grid)
+        val landed =
+            when (place) {
+                MenuRow.DockStart -> after.dock.firstOrNull()
+                MenuRow.DockEnd -> after.dock.lastOrNull()
+                MenuRow.GridStart -> after.grid.firstOrNull()
+                else -> after.grid.lastOrNull()
+            }
+        return change.takeIf { landed?.key == key }
     }
 
     /** False when fewer than two tiles can move. */
@@ -557,7 +655,11 @@ internal class HomeInteraction(
     private suspend fun end() {
         val current = session ?: return
         session = null
-        val change = current.finish() ?: return
+        current.finish()?.let { keep(it) }
+    }
+
+    /** Shows [change] at once and writes it. */
+    private suspend fun keep(change: OrderChange) {
         saved = SavedOrder(list, change)
         if (!sources.saveOrder(change.keys, change.docked)) effect(HomeEffect.OrderNotSaved)
     }

@@ -146,6 +146,7 @@ import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.clipsHalo
 import dev.niltsiar.tvhome.core.designsystem.holdOk
 import dev.niltsiar.tvhome.core.designsystem.popsOver
+import dev.niltsiar.tvhome.core.designsystem.pressDip
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.designsystem.ringBlendsWith
 import dev.niltsiar.tvhome.core.model.AppEntry
@@ -454,6 +455,7 @@ public fun HomeScreen(
                 inputOffered = derivedStateOf { currentState.value().inputOffer != null },
                 habit = if (layout.habitMark) derivedStateOf { currentState.value().habit } else null,
                 faded = if (layout.unusedFade) derivedStateOf { currentState.value().faded } else null,
+                launching = derivedStateOf { currentState.value().opening != null },
             ).also { it.anchor.value = menuAnchor }
         }
     val menu by remember { derivedStateOf { currentState.value().menu } }
@@ -875,6 +877,7 @@ private fun HomeContent(
                     tileMenu = layout.tileMenu,
                     showName = layout.showNames,
                     fadeUnused = true,
+                    pressFeedback = layout.pressFeedback,
                     modifier =
                         Modifier
                             .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = TvTheme.motion.placementSpec)
@@ -1582,6 +1585,8 @@ private data class HeroLine(
     val opened: OpenedAt? = null,
     val never: Boolean = false,
     val usual: Boolean = false,
+    /** The name of the app a tile press is opening, which the line names in place of [opened]. */
+    val opening: String? = null,
     val hint: ReorderHint? = null,
     /** The dock place the app to choose goes to, named in the hint. */
     val slot: DockSlot? = null,
@@ -1627,7 +1632,13 @@ private fun HeroTitle(
             ) {
                 HeroLine("")
             } else {
-                HeroLine(home.focusedLabel, opened = home.focusedOpened, never = home.focusedNeverOpened, usual = home.focusedUsual)
+                HeroLine(
+                    home.focusedLabel,
+                    opened = home.focusedOpened,
+                    never = home.focusedNeverOpened,
+                    usual = home.focusedUsual,
+                    opening = home.opening?.takeIf { it.says }?.label,
+                )
             }
         }
     }
@@ -1669,7 +1680,7 @@ private fun HeroTitle(
             animated,
             rise,
             // A new time for the same tile, as the clock moves on, replaces the old one without a cross-fade.
-            key = { it.copy(opened = null, never = false, usual = false) },
+            key = { it.copy(opened = null, never = false, usual = false, opening = null) },
             inMillis = { from, to -> if (from.quick || to.quick) LIBRARY_SWAP_MS else CINEMATIC_MS },
             extent = extent,
         ) { shown, live ->
@@ -1696,6 +1707,7 @@ private fun HeroTitle(
                             val meta =
                                 when {
                                     !live -> AnnotatedString("")
+                                    shown.opening != null -> AnnotatedString(stringResource(R.string.opening_app, shown.opening))
                                     opened != null || shown.usual || shown.never -> lastOpenedLine(opened, shown.usual, shown.never)
                                     else -> AnnotatedString(shown.meta)
                                 }
@@ -1920,6 +1932,7 @@ private fun Dock(
                             rowUnder = false,
                             edge = edge,
                             glassEdge = look.band && look.glass,
+                            pressFeedback = layout.pressFeedback,
                             modifier =
                                 Modifier
                                     .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = TvTheme.motion.placementSpec)
@@ -1978,6 +1991,7 @@ private fun Dock(
                             rowUnder = false,
                             edge = edge,
                             glassEdge = look.band && look.glass,
+                            pressFeedback = layout.pressFeedback,
                             modifier =
                                 (if (shrunk) Modifier.width(rowTileWidth) else Modifier.weight(1f))
                                     .slideToIndex(index, TileGap)
@@ -2120,6 +2134,7 @@ private fun AppTile(
     glassEdge: Boolean = false,
     bannerName: Boolean = true,
     growthPivot: ((Float) -> Float)? = null,
+    pressFeedback: Boolean = false,
     focus: Animatable<Float, AnimationVector1D> = remember { Animatable(0f) },
 ) {
     val marked = (if (habitMark) modifier.habitMark(input.habit, app.packageName) else modifier).popsOver(focus)
@@ -2147,6 +2162,7 @@ private fun AppTile(
                 glassEdge = glassEdge,
                 bannerName = false,
                 growthPivot = pivot,
+                pressFeedback = pressFeedback,
                 focus = focus,
             )
         }
@@ -2164,8 +2180,12 @@ private fun AppTile(
         remember(input, key, ring) {
             ColorProducer { if (input.carried.value == key) ReorderRing else travel.colourFor(key, ring) }
         }
+    val press = if (pressFeedback) remember { Animatable(0f) } else null
     FocusSurface(
-        onClick = { onClick(key) },
+        onClick = {
+            if (press != null && !input.launching.value) scope.launch { press.pressDip(motion) }
+            onClick(key)
+        },
         onFocused = {
             onFocus(key)
             travel.arrive(key, ring, motion, scope)
@@ -2180,6 +2200,7 @@ private fun AppTile(
         ringBlends = ringBlends,
         growthPivot = growthPivot,
         focus = focus,
+        press = press,
         modifier =
             (if (fadeUnused) marked.unusedFade(input.faded, key) else marked)
                 .then(if (reordering) Modifier.reorderLook(key, input, TileShape, growthPivot) else Modifier)

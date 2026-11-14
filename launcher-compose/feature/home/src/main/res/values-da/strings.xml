@@ -24,6 +24,11 @@
   <string name="tile_add_to_dock">Føj til dock</string>
   <string name="tile_replace_in_dock">Erstat med en anden app</string>
   <string name="tile_move">Flyt</string>
+  <string name="tile_move_to">Flyt til</string>
+  <string name="move_dock_start">Start af dock</string>
+  <string name="move_dock_end">Slut af dock</string>
+  <string name="move_grid_start">Start af gitter</string>
+  <string name="move_grid_end">Slut af gitter</string>
   <string name="tile_remove_from_home">Fjern fra startskærm</string>
   <string name="dock_edit">Vælg apps i dock</string>
   <string name="reorder">Flyt apps</string>
@@ -48,6 +53,7 @@
   </plurals>
   <string name="habit_usual">Du åbner den normalt på dette tidspunkt</string>
   <string name="never_opened">Aldrig åbnet</string>
+  <string name="opening_app">Åbner %1$s&#8230;</string>
   <string name="launcher_settings">Launcher-indstillinger</string>
   <string name="launcher_settings_summary">Layout, ur og bevægelse</string>
 </resources>

@@ -34,6 +34,7 @@ import java.util.Locale
  * [habit] is the package of the app the household usually opens at this time of day (habit_hint), null when none is, and
  * [focusedUsual] whether the focused app is it. [faded] holds the keys of the grid tiles drawn faded (unused_fade_days).
  * [awaitingApps] is true until the first app list arrives: the dock is empty then, and focus waits for it.
+ * [opening] is the app a press on its tile is opening while Home still shows (press_feedback), null otherwise.
  * [config] is the config this state was made with. The layouts are read from it, so they always match the split of [dock] and
  * [grid].
  */
@@ -64,7 +65,18 @@ public data class HomeUiState(
     val focusedUsual: Boolean = false,
     val faded: Set<String> = emptySet(),
     val awaitingApps: Boolean = false,
+    val opening: Opening? = null,
     val config: TvConfig = TvConfig(),
+)
+
+/**
+ * The app a tile press is opening (press_feedback): its [label], and whether the line under the title [says] so yet, which
+ * it does once Home has stayed in front for [OPENING_SAYS_MS].
+ */
+@Immutable
+public data class Opening(
+    val label: String,
+    val says: Boolean,
 )
 
 /** Focus goes to the tile with this key, or to the Settings button for [SETTINGS_FOCUS]. A new [token] asks again. */
@@ -90,6 +102,7 @@ public const val LIBRARY_BUTTON_FOCUS: String = "library-button"
  * The dock app the cinematic shelf shows: its [key] and [label], the [accent] colour of its art, its [position] among
  * the [count] dock apps (one dot each), [lastOpened], when Home last opened it, null if it never did or the time is not
  * valid yet, [neverOpened] when Home has no record of opening it, and whether it is the [usual] app of this time of day.
+ * [opening] is the name of the app a tile press is opening, which the line says in place of when Home last opened the app.
  */
 @Immutable
 public data class Shelf(
@@ -101,6 +114,7 @@ public data class Shelf(
     val lastOpened: OpenedAt?,
     val neverOpened: Boolean = false,
     val usual: Boolean = false,
+    val opening: String? = null,
 )
 
 /** One-shot results the host handles outside the UI state. */
@@ -254,6 +268,11 @@ internal sealed interface HomeEvent {
 
     /** The Home key was pressed while Home shows. */
     data object HomePressed : HomeEvent
+
+    /** The host started no app for the tile [key]: the launch failed, or the tile switched input instead. */
+    data class AppNotStarted(
+        val key: String,
+    ) : HomeEvent
 }
 
 /**
@@ -324,6 +343,7 @@ internal fun homeUiState(
     habit: String? = null,
     faded: Set<String> = emptySet(),
     awaitingApps: Boolean = false,
+    opening: Opening? = null,
     config: TvConfig = TvConfig(),
 ): HomeUiState {
     val focused = apps.all.firstOrNull { it.key == focusedKey } ?: apps.all.firstOrNull()
@@ -341,7 +361,14 @@ internal fun homeUiState(
         focusedOpened = focused?.let { openedAt(it.key, lastOpened, now, header.hour24, zone) },
         focusedNeverOpened = focused != null && focused.key !in lastOpened,
         wallpaper = wallpaper,
-        shelf = if (cinematic) shelfFor(apps, focusedKey, lastOpened, now, header.hour24, zone, habit) else null,
+        shelf =
+            if (cinematic) {
+                shelfFor(apps, focusedKey, lastOpened, now, header.hour24, zone, habit)?.let { shelf ->
+                    opening?.takeIf { it.says }?.let { shelf.copy(opening = it.label) } ?: shelf
+                }
+            } else {
+                null
+            },
         menu = menu,
         reorder = reorder,
         focusRequest = focusRequest,
@@ -353,6 +380,7 @@ internal fun homeUiState(
         focusedUsual = habit != null && focused?.packageName == habit,
         faded = faded,
         awaitingApps = awaitingApps,
+        opening = opening,
         config = config,
     )
 }

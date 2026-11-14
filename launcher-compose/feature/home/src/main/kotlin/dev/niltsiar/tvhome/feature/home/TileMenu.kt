@@ -8,6 +8,11 @@ public enum class MenuRow {
     AddToDock,
     ReplaceInDock,
     Move,
+    MoveTo,
+    DockStart,
+    DockEnd,
+    GridStart,
+    GridEnd,
     RemoveFromHome,
     AppInfo,
     LauncherSettings,
@@ -19,13 +24,17 @@ public enum class MenuRow {
 
 /**
  * The open menu. [tileKey] is the tile it belongs to, or null for the Settings button's menu; [rows] are its rows
- * from top to bottom.
+ * from top to bottom. [parent] is the menu Back returns to, for a list that a row of it opened.
  */
 @Immutable
 public data class HomeMenu(
     val tileKey: String?,
     val rows: List<MenuRow>,
+    val parent: HomeMenu? = null,
 )
+
+/** The places "Move to" offers, in the order it lists them. */
+internal val MovePlaces: List<MenuRow> = listOf(MenuRow.DockStart, MenuRow.DockEnd, MenuRow.GridStart, MenuRow.GridEnd)
 
 /** What the menus and the reorder and edit-dock modes ask of Home. */
 @Immutable
@@ -50,17 +59,19 @@ public class HomeMenuActions(
 
 /**
  * The tile menu's rows: "Add to dock" for a grid tile or "Replace in dock" for a dock tile (with dock_row only),
- * "Move", "Remove from Home" with the app library, and "App info" where the TV has a page for it.
+ * "Move", "Move to" with [moveTo], "Remove from Home" with the app library, and "App info" where the TV has a page for it.
  */
 internal fun tileMenuRows(
     dockRow: Boolean,
     inDock: Boolean,
     appInfo: Boolean,
     library: Boolean = false,
+    moveTo: Boolean = false,
 ): List<MenuRow> =
     buildList {
         if (dockRow) add(if (inDock) MenuRow.ReplaceInDock else MenuRow.AddToDock)
         add(MenuRow.Move)
+        if (moveTo) add(MenuRow.MoveTo)
         if (library) add(MenuRow.RemoveFromHome)
         if (appInfo) add(MenuRow.AppInfo)
     }

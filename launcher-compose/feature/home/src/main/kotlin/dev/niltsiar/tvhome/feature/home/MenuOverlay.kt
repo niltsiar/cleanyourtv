@@ -16,6 +16,11 @@ private fun MenuRow.label(): Int =
         MenuRow.AddToDock -> R.string.tile_add_to_dock
         MenuRow.ReplaceInDock -> R.string.tile_replace_in_dock
         MenuRow.Move -> R.string.tile_move
+        MenuRow.MoveTo -> R.string.tile_move_to
+        MenuRow.DockStart -> R.string.move_dock_start
+        MenuRow.DockEnd -> R.string.move_dock_end
+        MenuRow.GridStart -> R.string.move_grid_start
+        MenuRow.GridEnd -> R.string.move_grid_end
         MenuRow.RemoveFromHome -> R.string.tile_remove_from_home
         MenuRow.AppInfo -> R.string.app_info
         MenuRow.LauncherSettings -> R.string.launcher_settings

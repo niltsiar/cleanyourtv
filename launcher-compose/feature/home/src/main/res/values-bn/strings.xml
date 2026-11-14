@@ -22,6 +22,11 @@
   <string name="tile_add_to_dock">ডকে যোগ করুন</string>
   <string name="tile_replace_in_dock">অন্য অ্যাপ দিয়ে বদলান</string>
   <string name="tile_move">সরান</string>
+  <string name="tile_move_to">অন্য জায়গায় সরান</string>
+  <string name="move_dock_start">ডকের শুরুতে</string>
+  <string name="move_dock_end">ডকের শেষে</string>
+  <string name="move_grid_start">গ্রিডের শুরুতে</string>
+  <string name="move_grid_end">গ্রিডের শেষে</string>
   <string name="tile_remove_from_home">হোম থেকে সরান</string>
   <string name="library_save_failed">শর্টকাটটি সেভ করা যায়নি</string>
   <string name="dock_edit">ডকের অ্যাপ বেছে নিন</string>
@@ -52,6 +57,7 @@
   </plurals>
   <string name="habit_usual">আপনি সাধারণত এই সময়ে এটি খোলেন</string>
   <string name="never_opened">কখনও খোলা হয়নি</string>
+  <string name="opening_app">%1$s খোলা হচ্ছে&#8230;</string>
   <string name="launcher_settings">লঞ্চার সেটিংস</string>
   <string name="launcher_settings_summary">লেআউট, ঘড়ি ও গতি</string>
 </resources>

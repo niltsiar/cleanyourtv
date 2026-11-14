@@ -34,6 +34,12 @@ internal const val ARRIVAL_HOLD_MS = 2_000L
 /** How long the Inputs button offers a device that nobody acted on. */
 internal const val OFFER_MS = 20_000L
 
+/** How long Home stays in front after a tile press before the line under the title says the app is opening. */
+internal const val OPENING_SAYS_MS = 1_000L
+
+/** How long after a tile press Home gives up waiting for the app and takes presses again. */
+internal const val OPENING_MAX_MS = 10_000L
+
 /** How often the habit is looked at again while Home shows. */
 internal const val HABIT_REFRESH_MS = 15 * 60 * 1_000L
 
@@ -85,6 +91,15 @@ internal fun homePresenter(
         if (offered != null) {
             delay(OFFER_MS)
             interaction.offerEnded(offered)
+        }
+    }
+    val launch = interaction.launch
+    LaunchedEffect(interaction, launch?.token) {
+        if (launch != null) {
+            delay(OPENING_SAYS_MS)
+            interaction.launchSays(launch.token)
+            delay(OPENING_MAX_MS - OPENING_SAYS_MS)
+            interaction.launchEnded(launch.token)
         }
     }
     LaunchedEffect(interaction, showing, current.habitHint) {
@@ -144,6 +159,7 @@ internal fun homePresenter(
         habit = interaction.habit,
         faded = faded,
         awaitingApps = interaction.awaitingApps,
+        opening = remember(launch) { launch?.let { Opening(it.label, it.says) } },
         config = current,
     )
 }

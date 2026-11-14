@@ -22,6 +22,11 @@
   <string name="tile_add_to_dock">Dodaj do docku</string>
   <string name="tile_replace_in_dock">Zamień na inną aplikację</string>
   <string name="tile_move">Przenieś</string>
+  <string name="tile_move_to">Przenieś do</string>
+  <string name="move_dock_start">Początek docku</string>
+  <string name="move_dock_end">Koniec docku</string>
+  <string name="move_grid_start">Początek siatki</string>
+  <string name="move_grid_end">Koniec siatki</string>
   <string name="tile_remove_from_home">Usuń z ekranu głównego</string>
   <string name="library_save_failed">Nie udało się zapisać skrótu</string>
   <string name="dock_edit">Wybierz aplikacje w docku</string>
@@ -56,6 +61,7 @@
   </plurals>
   <string name="habit_usual">Zwykle otwierasz ją o tej porze</string>
   <string name="never_opened">Nigdy nieotwierana</string>
+  <string name="opening_app">Otwieranie: %1$s&#8230;</string>
   <string name="launcher_settings">Ustawienia ekranu głównego</string>
   <string name="launcher_settings_summary">Układ, zegar i ruch</string>
 </resources>
