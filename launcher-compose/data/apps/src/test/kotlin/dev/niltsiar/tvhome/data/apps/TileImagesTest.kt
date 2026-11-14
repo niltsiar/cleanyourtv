@@ -1,43 +1,37 @@
 package dev.niltsiar.tvhome.data.apps
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.shouldBe
 
-class TileImagesTest {
-    @Test
-    fun wide_banners_are_kept() {
-        assertTrue(isBannerShaped(320, 180))
-        assertTrue(isBannerShaped(1920, 1080))
+val TileImagesTest by testSuite {
+    test("wide banners are kept") {
+        isBannerShaped(320, 180).shouldBeTrue()
+        isBannerShaped(1920, 1080).shouldBeTrue()
     }
 
-    @Test
-    fun square_and_tall_pictures_are_not_banners() {
-        assertFalse(isBannerShaped(64, 64))
-        assertFalse(isBannerShaped(256, 256))
-        assertFalse(isBannerShaped(100, 160))
+    test("square and tall pictures are not banners") {
+        isBannerShaped(64, 64).shouldBeFalse()
+        isBannerShaped(256, 256).shouldBeFalse()
+        isBannerShaped(100, 160).shouldBeFalse()
     }
 
-    @Test
-    fun a_drawable_without_a_size_still_fills_the_tile() {
-        assertTrue(isBannerShaped(-1, -1))
-        assertTrue(isBannerShaped(0, 0))
+    test("a drawable without a size still fills the tile") {
+        isBannerShaped(-1, -1).shouldBeTrue()
+        isBannerShaped(0, 0).shouldBeTrue()
     }
 
-    @Test
-    fun the_tile_width_is_the_cell_less_room_for_the_focus_zoom_up_to_the_design_size() {
-        assertEquals(360, tileWidthPx(innerWidthPx = 1920, columns = 4, density = 2f))
-        assertEquals(269, tileWidthPx(innerWidthPx = 1920, columns = 6, density = 2f))
+    test("the tile width is the cell less room for the focus zoom up to the design size") {
+        tileWidthPx(innerWidthPx = 1920, columns = 4, density = 2f) shouldBe 360
+        tileWidthPx(innerWidthPx = 1920, columns = 6, density = 2f) shouldBe 269
     }
 
-    @Test
-    fun a_tile_never_gets_narrower_than_the_smallest_size() {
-        assertEquals(160, tileWidthPx(innerWidthPx = 400, columns = 8, density = 2f))
+    test("a tile never gets narrower than the smallest size") {
+        tileWidthPx(innerWidthPx = 400, columns = 8, density = 2f) shouldBe 160
     }
 
-    @Test
-    fun an_unknown_grid_width_gives_the_design_size() {
-        assertEquals(360, tileWidthPx(innerWidthPx = 0, columns = 6, density = 2f))
+    test("an unknown grid width gives the design size") {
+        tileWidthPx(innerWidthPx = 0, columns = 6, density = 2f) shouldBe 360
     }
 }

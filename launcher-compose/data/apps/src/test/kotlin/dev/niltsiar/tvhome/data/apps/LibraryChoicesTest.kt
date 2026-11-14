@@ -1,13 +1,16 @@
 package dev.niltsiar.tvhome.data.apps
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.assertions.withClue
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.shouldBe
 
-class LibraryChoicesTest {
-    private fun shows(
+val LibraryChoicesTest by testSuite {
+    fun shows(
         tvApp: Boolean,
         hidden: Boolean,
         added: Boolean,
@@ -17,44 +20,39 @@ class LibraryChoicesTest {
         return choices.showsOnHome("pkg", tvApp, hidden)
     }
 
-    @Test
-    fun theme_and_tv_defaults_stay_in_place_until_the_owner_chooses_an_app() {
-        assertTrue(shows(tvApp = true, hidden = false, added = false))
-        assertFalse(shows(tvApp = true, hidden = true, added = false))
-        assertFalse(shows(tvApp = false, hidden = false, added = false))
-        assertTrue(shows(tvApp = false, hidden = false, added = true))
-        assertTrue(shows(tvApp = true, hidden = true, added = true))
+    test("theme and tv defaults stay in place until the owner chooses an app") {
+        shows(tvApp = true, hidden = false, added = false).shouldBeTrue()
+        shows(tvApp = true, hidden = true, added = false).shouldBeFalse()
+        shows(tvApp = false, hidden = false, added = false).shouldBeFalse()
+        shows(tvApp = false, hidden = false, added = true).shouldBeTrue()
+        shows(tvApp = true, hidden = true, added = true).shouldBeTrue()
     }
 
-    @Test
-    fun removing_any_home_app_overrides_theme_defaults_and_previous_additions() {
-        assertFalse(shows(tvApp = true, hidden = false, added = false, removed = true))
-        assertFalse(shows(tvApp = true, hidden = false, added = true, removed = true))
-        assertFalse(shows(tvApp = false, hidden = false, added = true, removed = true))
+    test("removing any home app overrides theme defaults and previous additions") {
+        shows(tvApp = true, hidden = false, added = false, removed = true).shouldBeFalse()
+        shows(tvApp = true, hidden = false, added = true, removed = true).shouldBeFalse()
+        shows(tvApp = false, hidden = false, added = true, removed = true).shouldBeFalse()
     }
 
-    @Test
-    fun undoing_an_addition_restores_default_visibility_and_keeps_other_choices() {
+    test("undoing an addition restores default visibility and keeps other choices") {
         val original = setOf("com.example.phone", "com.example.hidden")
 
         val next = changeChoices(original, "com.example.phone", added = false)
 
-        assertEquals(setOf("com.example.hidden"), next)
-        assertEquals(2, original.size)
-        assertFalse(LibraryChoices(added = next).showsOnHome("com.example.phone", tvApp = false, hidden = false))
+        next shouldBe setOf("com.example.hidden")
+        original shouldHaveSize 2
+        LibraryChoices(added = next).showsOnHome("com.example.phone", tvApp = false, hidden = false).shouldBeFalse()
     }
 
-    @Test
-    fun choices_round_trip_in_stable_order_including_an_empty_list() {
+    test("choices round trip in stable order including an empty list") {
         val apps = setOf("org.z.example", "com.a.example")
 
-        assertEquals("com.a.example\norg.z.example\n", encodeChoices(apps))
-        assertEquals(apps, decodeChoices(encodeChoices(apps)))
-        assertEquals(emptySet<String>(), decodeChoices(""))
+        encodeChoices(apps) shouldBe "com.a.example\norg.z.example\n"
+        decodeChoices(encodeChoices(apps)) shouldBe apps
+        decodeChoices("").shouldBeEmpty()
     }
 
-    @Test
-    fun duplicate_and_malformed_records_are_rejected() {
+    test("duplicate and malformed records are rejected") {
         for (raw in listOf(
             "com.example\ncom.example\n",
             "com..example\n",
@@ -63,52 +61,31 @@ class LibraryChoicesTest {
             "9bad.app\n",
             "com.example\ninvalid/name\n",
         )) {
-            try {
-                decodeChoices(raw)
-                fail(raw)
-            } catch (expected: IllegalArgumentException) {
-                // expected
-            }
+            withClue(raw) { shouldThrow<IllegalArgumentException> { decodeChoices(raw) } }
         }
     }
 
-    @Test
-    fun a_package_name_is_dot_separated_words_that_do_not_start_with_a_digit() {
-        assertTrue(isValidPackage("com.example.app_2"))
-        assertTrue(isValidPackage("single"))
-        for (bad in listOf("", ".a", "a.", "a..b", "a.9b", "a b", "a/b", "a-b", "x".repeat(256))) assertFalse(bad, isValidPackage(bad))
-        assertFalse(isValidPackage(null))
+    test("a package name is dot separated words that do not start with a digit") {
+        isValidPackage("com.example.app_2").shouldBeTrue()
+        isValidPackage("single").shouldBeTrue()
+        for (bad in listOf("", ".a", "a.", "a..b", "a.9b", "a b", "a/b", "a-b", "x".repeat(256))) {
+            withClue(bad) { isValidPackage(bad).shouldBeFalse() }
+        }
+        isValidPackage(null).shouldBeFalse()
     }
 
-    @Test
-    fun a_full_list_allows_removal_and_an_existing_choice_but_not_another_app() {
+    test("a full list allows removal and an existing choice but not another app") {
         val apps = (0 until MAX_ADDED).map { "com.example.app$it" }.toSet()
 
-        assertEquals(apps, changeChoices(apps, "com.example.app0", added = true))
-        assertEquals(MAX_ADDED - 1, changeChoices(apps, "com.example.app0", added = false).size)
-        try {
-            changeChoices(apps, "com.example.extra", added = true)
-            fail()
-        } catch (expected: IllegalArgumentException) {
-            // expected
-        }
-        assertEquals(MAX_ADDED, apps.size)
+        changeChoices(apps, "com.example.app0", added = true) shouldBe apps
+        changeChoices(apps, "com.example.app0", added = false) shouldHaveSize MAX_ADDED - 1
+        shouldThrow<IllegalArgumentException> { changeChoices(apps, "com.example.extra", added = true) }
+        apps shouldHaveSize MAX_ADDED
     }
 
-    @Test
-    fun a_file_with_more_than_the_most_packages_or_bytes_is_rejected() {
+    test("a file with more than the most packages or bytes is rejected") {
         val tooMany = (0..MAX_ADDED).joinToString("") { "com.example.app$it\n" }
-        try {
-            decodeChoices(tooMany)
-            fail()
-        } catch (expected: IllegalArgumentException) {
-            // expected
-        }
-        try {
-            decodeChoices("a".repeat(MAX_ADDED * 256 + 1))
-            fail()
-        } catch (expected: IllegalArgumentException) {
-            // expected
-        }
+        shouldThrow<IllegalArgumentException> { decodeChoices(tooMany) }
+        shouldThrow<IllegalArgumentException> { decodeChoices("a".repeat(MAX_ADDED * 256 + 1)) }
     }
 }

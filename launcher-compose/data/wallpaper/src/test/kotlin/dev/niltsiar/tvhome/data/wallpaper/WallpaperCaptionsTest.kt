@@ -1,46 +1,42 @@
 package dev.niltsiar.tvhome.data.wallpaper
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.ints.shouldBeLessThanOrEqual
+import io.kotest.matchers.maps.shouldBeEmpty
+import io.kotest.matchers.maps.shouldNotContainKey
+import io.kotest.matchers.shouldBe
 
-class WallpaperCaptionsTest {
-    @Test
-    fun reads_filename_tab_name() {
+val WallpaperCaptionsTest by testSuite {
+    test("reads filename tab name") {
         val names =
             WallpaperCaptions.parse(
                 listOf("001.jpg\tSunrise and aurora over northern Europe · NASA, Expedition 43", "002.jpg\t  Falcon 9 at sunset  "),
             )
-        assertEquals("Sunrise and aurora over northern Europe · NASA, Expedition 43", names["001.jpg"])
-        assertEquals("Falcon 9 at sunset", names["002.jpg"])
+        names["001.jpg"] shouldBe "Sunrise and aurora over northern Europe · NASA, Expedition 43"
+        names["002.jpg"] shouldBe "Falcon 9 at sunset"
     }
 
-    @Test
-    fun skips_comments_blank_and_malformed_lines() {
+    test("skips comments blank and malformed lines") {
         val names =
             WallpaperCaptions.parse(
                 listOf("# captions for the collection", "", "   ", "no-tab-here.jpg Dusk", "\tno file", "003.jpg\t", null),
             )
-        assertTrue(names.isEmpty())
+        names.shouldBeEmpty()
     }
 
-    @Test
-    fun cuts_very_long_names() {
+    test("cuts very long names") {
         val longName = "word ".repeat(30)
         val names = WallpaperCaptions.parse(listOf("004.jpg\t$longName"))
-        assertTrue(names["004.jpg"]!!.length <= WallpaperCaptions.MAX_LENGTH)
+        names["004.jpg"]!!.length shouldBeLessThanOrEqual WallpaperCaptions.MAX_LENGTH
     }
 
-    @Test
-    fun later_line_wins_for_the_same_file() {
+    test("later line wins for the same file") {
         val names = WallpaperCaptions.parse(listOf("005.jpg\tOld", "005.jpg\tNew"))
-        assertEquals("New", names["005.jpg"])
-        assertFalse(names.containsKey("006.jpg"))
+        names["005.jpg"] shouldBe "New"
+        names shouldNotContainKey "006.jpg"
     }
 
-    @Test
-    fun missing_folder_has_no_names() {
-        assertTrue(WallpaperCaptions.read(null).isEmpty())
+    test("missing folder has no names") {
+        WallpaperCaptions.read(null).shouldBeEmpty()
     }
 }

@@ -1,35 +1,38 @@
 package dev.niltsiar.tvhome.data.inputs
 
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.shouldBe
 
-@RunWith(RobolectricTestRunner::class)
-class SourcePanelTest {
-    @Test
-    fun the_panel_is_the_component_with_its_action_and_one_int_extra() {
-        val intent =
-            sourcePanelIntent(
-                TvConfig(
-                    sourcePanelService = "com.coocaa.tv/.ControlCenterService",
-                    sourcePanelAction = "com.coocaa.SHOW",
-                    sourcePanelExtra = "control_center_command = 100",
-                ),
-            )!!
-
-        assertEquals("com.coocaa.tv", intent.component?.packageName)
-        assertEquals("com.coocaa.SHOW", intent.action)
-        assertEquals(100, intent.getIntExtra("control_center_command", -1))
-    }
-
-    @Test
-    fun an_extra_that_is_not_a_number_is_left_out_and_no_service_means_no_panel() {
-        val intent = sourcePanelIntent(TvConfig(sourcePanelService = "a.b/.C", sourcePanelExtra = "key=abc"))!!
-
-        assertEquals(false, intent.hasExtra("key"))
-        assertNull(sourcePanelIntent(TvConfig()))
-    }
+val SourcePanelTest by testSuite {
+    robolectricTestSuite<SourcePanelTestContent>("default sdk")
 }
+
+class SourcePanelTestContent :
+    RobolectricTestSuiteContent({
+        test("the panel is the component with its action and one int extra") {
+            val intent =
+                sourcePanelIntent(
+                    TvConfig(
+                        sourcePanelService = "com.coocaa.tv/.ControlCenterService",
+                        sourcePanelAction = "com.coocaa.SHOW",
+                        sourcePanelExtra = "control_center_command = 100",
+                    ),
+                )!!
+
+            intent.component?.packageName shouldBe "com.coocaa.tv"
+            intent.action shouldBe "com.coocaa.SHOW"
+            intent.getIntExtra("control_center_command", -1) shouldBe 100
+        }
+
+        test("an extra that is not a number is left out and no service means no panel") {
+            val intent = sourcePanelIntent(TvConfig(sourcePanelService = "a.b/.C", sourcePanelExtra = "key=abc"))!!
+
+            intent.hasExtra("key").shouldBeFalse()
+            sourcePanelIntent(TvConfig()).shouldBeNull()
+        }
+    })

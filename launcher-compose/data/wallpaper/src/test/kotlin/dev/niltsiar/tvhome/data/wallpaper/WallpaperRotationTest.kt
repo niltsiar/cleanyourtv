@@ -1,115 +1,109 @@
 package dev.niltsiar.tvhome.data.wallpaper
 
+import de.infix.testBalloon.framework.core.JUnit4RulesContext
+import de.infix.testBalloon.framework.core.testSuite
 import dev.niltsiar.tvhome.core.config.WallpaperOrder
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Rule
-import org.junit.Test
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import org.junit.rules.TemporaryFolder
 import java.io.File
 import kotlin.random.Random
 
-class WallpaperRotationTest {
-    @get:Rule
-    val folder = TemporaryFolder()
+val WallpaperRotationTest by testSuite {
+    fun files(vararg names: String) = names.map { File(it) }
 
-    private fun touch(
-        name: String,
-        bytes: Int,
-    ) = folder.newFile(name).also { it.writeBytes(ByteArray(bytes)) }
+    testFixture {
+        object : JUnit4RulesContext() {
+            val folder = rule(TemporaryFolder())
 
-    private fun files(vararg names: String) = names.map { File(it) }
+            fun touch(
+                name: String,
+                bytes: Int,
+            ) = folder.newFile(name).also { it.writeBytes(ByteArray(bytes)) }
+        }
+    } asContextForEach {
+        test("images keeps pictures only sorted by name") {
+            touch("b.JPG", 10)
+            touch("a.png", 10)
+            touch("notes.txt", 10)
+            touch("empty.jpg", 0)
+            folder.newFolder("folder.jpg")
+            WallpaperRotation.images(folder.root).map { it.name } shouldBe listOf("a.png", "b.JPG")
+            WallpaperRotation.images(null).isEmpty().shouldBeTrue()
+            WallpaperRotation.images(File(folder.root, "missing")).isEmpty().shouldBeTrue()
+        }
 
-    @Test
-    fun images_keeps_pictures_only_sorted_by_name() {
-        touch("b.JPG", 10)
-        touch("a.png", 10)
-        touch("notes.txt", 10)
-        touch("empty.jpg", 0)
-        folder.newFolder("folder.jpg")
-        assertEquals(listOf("a.png", "b.JPG"), WallpaperRotation.images(folder.root).map { it.name })
-        assertTrue(WallpaperRotation.images(null).isEmpty())
-        assertTrue(WallpaperRotation.images(File(folder.root, "missing")).isEmpty())
-    }
+        test("pick avoids the previous picture when there is another") {
+            val images = files("a.jpg", "b.jpg")
+            val random = Random(1)
+            repeat(20) { WallpaperRotation.pick(images, "a.jpg", random)!!.name shouldNotBe "a.jpg" }
+            WallpaperRotation.pick(files("a.jpg"), "a.jpg", random)!!.name shouldBe "a.jpg"
+            WallpaperRotation.pick(emptyList(), "", random).shouldBeNull()
+        }
 
-    @Test
-    fun pick_avoids_the_previous_picture_when_there_is_another() {
-        val images = files("a.jpg", "b.jpg")
-        val random = Random(1)
-        repeat(20) { assertNotEquals("a.jpg", WallpaperRotation.pick(images, "a.jpg", random)!!.name) }
-        assertEquals("a.jpg", WallpaperRotation.pick(files("a.jpg"), "a.jpg", random)!!.name)
-        assertNull(WallpaperRotation.pick(emptyList(), "", random))
-    }
+        test("sequential advances in sorted order and wraps") {
+            val images = files("a.jpg", "b.jpg", "c.jpg")
+            WallpaperRotation.next(images, "a.jpg")!!.name shouldBe "b.jpg"
+            WallpaperRotation.next(images, "b.jpg")!!.name shouldBe "c.jpg"
+            WallpaperRotation.next(images, "c.jpg")!!.name shouldBe "a.jpg"
+            // A first run, or an image removed from the collection, starts at the first picture.
+            WallpaperRotation.next(images, "")!!.name shouldBe "a.jpg"
+            WallpaperRotation.next(images, "gone.jpg")!!.name shouldBe "a.jpg"
+            WallpaperRotation.next(files("only.jpg"), "only.jpg")!!.name shouldBe "only.jpg"
+            WallpaperRotation.next(emptyList(), "").shouldBeNull()
+        }
 
-    @Test
-    fun sequential_advances_in_sorted_order_and_wraps() {
-        val images = files("a.jpg", "b.jpg", "c.jpg")
-        assertEquals("b.jpg", WallpaperRotation.next(images, "a.jpg")!!.name)
-        assertEquals("c.jpg", WallpaperRotation.next(images, "b.jpg")!!.name)
-        assertEquals("a.jpg", WallpaperRotation.next(images, "c.jpg")!!.name)
-        // A first run, or an image removed from the collection, starts at the first picture.
-        assertEquals("a.jpg", WallpaperRotation.next(images, "")!!.name)
-        assertEquals("a.jpg", WallpaperRotation.next(images, "gone.jpg")!!.name)
-        assertEquals("only.jpg", WallpaperRotation.next(files("only.jpg"), "only.jpg")!!.name)
-        assertNull(WallpaperRotation.next(emptyList(), ""))
-    }
+        test("pick uses the requested order") {
+            val images = files("a.jpg", "b.jpg", "c.jpg")
+            val random = Random(1)
+            WallpaperRotation.pick(images, "a.jpg", WallpaperOrder.Sequential, random)!!.name shouldBe "b.jpg"
+            WallpaperRotation.pick(images, "c.jpg", WallpaperOrder.Sequential, random)!!.name shouldBe "a.jpg"
+            repeat(20) { WallpaperRotation.pick(images, "a.jpg", WallpaperOrder.Shuffle, random)!!.name shouldNotBe "a.jpg" }
+        }
 
-    @Test
-    fun pick_uses_the_requested_order() {
-        val images = files("a.jpg", "b.jpg", "c.jpg")
-        val random = Random(1)
-        assertEquals("b.jpg", WallpaperRotation.pick(images, "a.jpg", WallpaperOrder.Sequential, random)!!.name)
-        assertEquals("a.jpg", WallpaperRotation.pick(images, "c.jpg", WallpaperOrder.Sequential, random)!!.name)
-        repeat(20) { assertNotEquals("a.jpg", WallpaperRotation.pick(images, "a.jpg", WallpaperOrder.Shuffle, random)!!.name) }
-    }
+        test("finds the first picture when the previous one is gone") {
+            WallpaperRotation.next(files("a.jpg", "b.jpg"), "deleted.jpg")!!.name shouldBe "a.jpg"
+        }
 
-    @Test
-    fun finds_the_first_picture_when_the_previous_one_is_gone() {
-        assertEquals("a.jpg", WallpaperRotation.next(files("a.jpg", "b.jpg"), "deleted.jpg")!!.name)
-    }
+        test("find matches by name") {
+            val images = files("a.jpg", "b.jpg")
+            WallpaperRotation.find(images, "b.jpg")!!.name shouldBe "b.jpg"
+            WallpaperRotation.find(images, "c.jpg").shouldBeNull()
+        }
 
-    @Test
-    fun find_matches_by_name() {
-        val images = files("a.jpg", "b.jpg")
-        assertEquals("b.jpg", WallpaperRotation.find(images, "b.jpg")!!.name)
-        assertNull(WallpaperRotation.find(images, "c.jpg"))
-    }
+        test("due only with rotation on and the interval passed") {
+            val minute = 60_000L
+            WallpaperRotation.due(0, 10 * minute, 0).shouldBeFalse() // rotation off
+            WallpaperRotation.due(0, 10 * minute, 5 * minute).shouldBeTrue() // never changed yet
+            WallpaperRotation.due(8 * minute, 10 * minute, 5 * minute).shouldBeFalse()
+            WallpaperRotation.due(5 * minute, 10 * minute, 5 * minute).shouldBeTrue()
+            WallpaperRotation.due(20 * minute, 10 * minute, 5 * minute).shouldBeTrue() // clock went back
+        }
 
-    @Test
-    fun due_only_with_rotation_on_and_the_interval_passed() {
-        val minute = 60_000L
-        assertFalse(WallpaperRotation.due(0, 10 * minute, 0)) // rotation off
-        assertTrue(WallpaperRotation.due(0, 10 * minute, 5 * minute)) // never changed yet
-        assertFalse(WallpaperRotation.due(8 * minute, 10 * minute, 5 * minute))
-        assertTrue(WallpaperRotation.due(5 * minute, 10 * minute, 5 * minute))
-        assertTrue(WallpaperRotation.due(20 * minute, 10 * minute, 5 * minute)) // clock went back
-    }
+        test("the on tv choice is nothing for the theme to decide none or one picture") {
+            val collection = files("a.jpg", "b.jpg")
+            val single = File("wallpaper.jpg")
 
-    @Test
-    fun the_on_tv_choice_is_nothing_for_the_theme_to_decide_none_or_one_picture() {
-        val collection = files("a.jpg", "b.jpg")
-        val single = File("wallpaper.jpg")
+            WallpaperRotation.chosen(collection, single, null).shouldBeNull()
+            WallpaperRotation.chosen(collection, single, "none") shouldBe emptyList()
+            WallpaperRotation.chosen(collection, single, "b.jpg") shouldBe files("b.jpg")
+            WallpaperRotation.chosen(collection, single, "wallpaper.jpg") shouldBe listOf(single)
+            WallpaperRotation.chosen(collection, single, "gone.jpg").shouldBeNull()
+            WallpaperRotation.chosen(collection, null, "wallpaper.jpg").shouldBeNull()
+        }
 
-        assertNull(WallpaperRotation.chosen(collection, single, null))
-        assertEquals(emptyList<File>(), WallpaperRotation.chosen(collection, single, "none"))
-        assertEquals(files("b.jpg"), WallpaperRotation.chosen(collection, single, "b.jpg"))
-        assertEquals(listOf(single), WallpaperRotation.chosen(collection, single, "wallpaper.jpg"))
-        assertNull(WallpaperRotation.chosen(collection, single, "gone.jpg"))
-        assertNull(WallpaperRotation.chosen(collection, null, "wallpaper.jpg"))
-    }
+        test("the picker offers the single wallpaper first when it has content then the folder") {
+            val wallpapers = folder.newFolder("wallpapers")
+            File(wallpapers, "b.jpg").writeBytes(ByteArray(4))
+            File(wallpapers, "a.jpg").writeBytes(ByteArray(4))
+            val single = touch("wallpaper.jpg", 4)
 
-    @Test
-    fun the_picker_offers_the_single_wallpaper_first_when_it_has_content_then_the_folder() {
-        val wallpapers = folder.newFolder("wallpapers")
-        File(wallpapers, "b.jpg").writeBytes(ByteArray(4))
-        File(wallpapers, "a.jpg").writeBytes(ByteArray(4))
-        val single = touch("wallpaper.jpg", 4)
-
-        assertEquals(listOf("wallpaper.jpg", "a.jpg", "b.jpg"), WallpaperRotation.offered(wallpapers, single).map { it.name })
-        assertEquals(listOf("a.jpg", "b.jpg"), WallpaperRotation.offered(wallpapers, File(folder.root, "missing.jpg")).map { it.name })
-        assertEquals(listOf("a.jpg", "b.jpg"), WallpaperRotation.offered(wallpapers, touch("empty.jpg", 0)).map { it.name })
+            WallpaperRotation.offered(wallpapers, single).map { it.name } shouldBe listOf("wallpaper.jpg", "a.jpg", "b.jpg")
+            WallpaperRotation.offered(wallpapers, File(folder.root, "missing.jpg")).map { it.name } shouldBe listOf("a.jpg", "b.jpg")
+            WallpaperRotation.offered(wallpapers, touch("empty.jpg", 0)).map { it.name } shouldBe listOf("a.jpg", "b.jpg")
+        }
     }
 }

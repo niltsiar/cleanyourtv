@@ -1,11 +1,11 @@
 package dev.niltsiar.tvhome.data.inputs
 
+import de.infix.testBalloon.framework.core.testSuite
 import dev.niltsiar.tvhome.core.model.InputArrival
 import dev.niltsiar.tvhome.core.model.InputTarget
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertNull
-import org.junit.Test
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 
 private fun port(
     n: Int,
@@ -40,125 +40,116 @@ private fun device(
 )
 
 /** What Home is told about a device switched on while it shows, read from TvInputManager snapshots. */
-class ArrivalWatchTest {
-    private var tokens = 0
-    private val watch = ArrivalWatch { ++tokens }
+val ArrivalWatchTest by testSuite {
+    testFixture {
+        object {
+            var tokens = 0
+            val watch = ArrivalWatch { ++tokens }
 
-    private fun look(
-        vararg inputs: TvInput,
-        settings: InputsSettings = InputsSettings(),
-    ): InputArrival? = watch.update(portEntries(inputs.toList(), settings))
+            fun look(
+                vararg inputs: TvInput,
+                settings: InputsSettings = InputsSettings(),
+            ): InputArrival? = watch.update(portEntries(inputs.toList(), settings))
+        }
+    } asContextForEach {
+        test("a port that goes from no device to connected is an arrival named by its cec device and port") {
+            look(port(1, PortState.Connected), port(2, PortState.Disconnected), port(3, PortState.Disconnected))
 
-    @Test
-    fun a_port_that_goes_from_no_device_to_connected_is_an_arrival_named_by_its_cec_device_and_port() {
-        look(port(1, PortState.Connected), port(2, PortState.Disconnected), port(3, PortState.Disconnected))
+            val arrival =
+                look(
+                    port(1, PortState.Connected),
+                    port(2, PortState.Connected),
+                    device(2, PortState.Connected),
+                    port(3, PortState.Disconnected),
+                )
 
-        val arrival =
-            look(
-                port(1, PortState.Connected),
-                port(2, PortState.Connected),
-                device(2, PortState.Connected),
-                port(3, PortState.Disconnected),
-            )
+            arrival shouldBe InputArrival("PlayStation 5 · HDMI 2", InputTarget.TvInput("tv/.Cec/HDMI2"), token = 1)
+        }
 
-        assertEquals(InputArrival("PlayStation 5 · HDMI 2", InputTarget.TvInput("tv/.Cec/HDMI2"), token = 1), arrival)
-    }
+        test("a port without a cec device is named by the port alone") {
+            look(port(1, PortState.Disconnected), port(2, PortState.Disconnected))
 
-    @Test
-    fun a_port_without_a_cec_device_is_named_by_the_port_alone() {
-        look(port(1, PortState.Disconnected), port(2, PortState.Disconnected))
+            val arrival = look(port(1, PortState.Connected), port(2, PortState.Disconnected))
 
-        val arrival = look(port(1, PortState.Connected), port(2, PortState.Disconnected))
+            arrival shouldBe InputArrival("HDMI 1", InputTarget.TvInput("tv/.Hdmi/HW1"), token = 1)
+        }
 
-        assertEquals(InputArrival("HDMI 1", InputTarget.TvInput("tv/.Hdmi/HW1"), token = 1), arrival)
-    }
+        test("a cec device that wakes from standby is an arrival") {
+            look(port(2, PortState.Connected), device(2, PortState.Standby))
 
-    @Test
-    fun a_cec_device_that_wakes_from_standby_is_an_arrival() {
-        look(port(2, PortState.Connected), device(2, PortState.Standby))
+            val arrival = look(port(2, PortState.Connected), device(2, PortState.Connected))
 
-        val arrival = look(port(2, PortState.Connected), device(2, PortState.Connected))
+            arrival?.label shouldBe "PlayStation 5 · HDMI 2"
+        }
 
-        assertEquals("PlayStation 5 · HDMI 2", arrival?.label)
-    }
+        test("a port that was connected when home came to the front is not an arrival") {
+            val first = look(port(1, PortState.Connected), port(2, PortState.Disconnected))
+            val second = look(port(1, PortState.Connected), port(2, PortState.Disconnected), port(3, PortState.Disconnected))
 
-    @Test
-    fun a_port_that_was_connected_when_home_came_to_the_front_is_not_an_arrival() {
-        val first = look(port(1, PortState.Connected), port(2, PortState.Disconnected))
-        val second = look(port(1, PortState.Connected), port(2, PortState.Disconnected), port(3, PortState.Disconnected))
+            first.shouldBeNull()
+            second.shouldBeNull()
+        }
 
-        assertNull(first)
-        assertNull(second)
-    }
+        test("the arrival stays while its port stays connected and ends when it leaves") {
+            look(port(2, PortState.Disconnected))
+            look(port(2, PortState.Connected))
 
-    @Test
-    fun the_arrival_stays_while_its_port_stays_connected_and_ends_when_it_leaves() {
-        look(port(2, PortState.Disconnected))
-        look(port(2, PortState.Connected))
+            look(port(2, PortState.Connected), device(2, PortState.Connected))?.token shouldBe 1
+            look(port(2, PortState.Disconnected)).shouldBeNull()
+        }
 
-        assertEquals(1, look(port(2, PortState.Connected), device(2, PortState.Connected))?.token)
-        assertNull(look(port(2, PortState.Disconnected)))
-    }
+        test("a port that flaps back to connected is a new arrival") {
+            look(port(2, PortState.Disconnected))
+            val first = look(port(2, PortState.Connected))
+            look(port(2, PortState.Standby))
 
-    @Test
-    fun a_port_that_flaps_back_to_connected_is_a_new_arrival() {
-        look(port(2, PortState.Disconnected))
-        val first = look(port(2, PortState.Connected))
-        look(port(2, PortState.Standby))
+            val second = look(port(2, PortState.Connected))
 
-        val second = look(port(2, PortState.Connected))
+            second?.token shouldNotBe first?.token
+        }
 
-        assertNotEquals(first?.token, second?.token)
-    }
+        test("a name that arrives late updates the arrival and keeps its token") {
+            look(port(2, PortState.Disconnected))
+            val bare = look(port(2, PortState.Connected))
 
-    @Test
-    fun a_name_that_arrives_late_updates_the_arrival_and_keeps_its_token() {
-        look(port(2, PortState.Disconnected))
-        val bare = look(port(2, PortState.Connected))
+            val named = look(port(2, PortState.Connected), device(2, PortState.Connected))
 
-        val named = look(port(2, PortState.Connected), device(2, PortState.Connected))
+            bare?.label shouldBe "HDMI 2"
+            named shouldBe InputArrival("PlayStation 5 · HDMI 2", InputTarget.TvInput("tv/.Cec/HDMI2"), bare?.token ?: -1)
+        }
 
-        assertEquals("HDMI 2", bare?.label)
-        assertEquals(InputArrival("PlayStation 5 · HDMI 2", InputTarget.TvInput("tv/.Cec/HDMI2"), bare?.token ?: -1), named)
-    }
+        test("a device that goes while its port still reports connected is not an arrival") {
+            look(port(2, PortState.Connected), device(2, PortState.Connected))
 
-    @Test
-    fun a_device_that_goes_while_its_port_still_reports_connected_is_not_an_arrival() {
-        look(port(2, PortState.Connected), device(2, PortState.Connected))
+            val arrival = look(port(2, PortState.Connected))
 
-        val arrival = look(port(2, PortState.Connected))
+            arrival.shouldBeNull()
+        }
 
-        assertNull(arrival)
-    }
+        test("the latest arrival replaces the one before") {
+            look(port(1, PortState.Disconnected), port(2, PortState.Disconnected), port(3, PortState.Disconnected))
+            look(port(1, PortState.Connected), port(2, PortState.Disconnected), port(3, PortState.Disconnected))
 
-    @Test
-    fun the_latest_arrival_replaces_the_one_before() {
-        look(port(1, PortState.Disconnected), port(2, PortState.Disconnected), port(3, PortState.Disconnected))
-        look(port(1, PortState.Connected), port(2, PortState.Disconnected), port(3, PortState.Disconnected))
+            val second = look(port(1, PortState.Connected), port(2, PortState.Connected), port(3, PortState.Disconnected))
 
-        val second = look(port(1, PortState.Connected), port(2, PortState.Connected), port(3, PortState.Disconnected))
+            second shouldBe InputArrival("HDMI 2", InputTarget.TvInput("tv/.Hdmi/HW2"), token = 2)
+        }
 
-        assertEquals(InputArrival("HDMI 2", InputTarget.TvInput("tv/.Hdmi/HW2"), token = 2), second)
-    }
+        test("a tv that reports every port connected cannot tell an arrival") {
+            look(port(1, PortState.Connected), port(2, PortState.Connected))
 
-    @Test
-    fun a_tv_that_reports_every_port_connected_cannot_tell_an_arrival() {
-        look(port(1, PortState.Connected), port(2, PortState.Connected))
+            val arrival = look(port(1, PortState.Connected), port(2, PortState.Connected), device(2, PortState.Connected))
 
-        val arrival = look(port(1, PortState.Connected), port(2, PortState.Connected), device(2, PortState.Connected))
+            arrival.shouldBeNull()
+        }
 
-        assertNull(arrival)
-    }
+        test("with inputs cec state only a ports own state is ignored and the device counts") {
+            val settings = InputsSettings(cecStateOnly = true)
+            look(port(2, PortState.Disconnected), device(2, PortState.Standby), settings = settings)
 
-    @Test
-    fun with_inputs_cec_state_only_a_ports_own_state_is_ignored_and_the_device_counts() {
-        val settings = InputsSettings(cecStateOnly = true)
-        look(port(2, PortState.Disconnected), device(2, PortState.Standby), settings = settings)
-
-        assertNull(look(port(2, PortState.Connected), device(2, PortState.Standby), settings = settings))
-        assertEquals(
-            "PlayStation 5 · HDMI 2",
-            look(port(2, PortState.Connected), device(2, PortState.Connected), settings = settings)?.label,
-        )
+            look(port(2, PortState.Connected), device(2, PortState.Standby), settings = settings).shouldBeNull()
+            look(port(2, PortState.Connected), device(2, PortState.Connected), settings = settings)?.label shouldBe
+                "PlayStation 5 · HDMI 2"
+        }
     }
 }

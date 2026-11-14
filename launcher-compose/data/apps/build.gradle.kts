@@ -1,5 +1,6 @@
 plugins {
     id("tvhome.android.library")
+    id("tvhome.android.testballoon")
 }
 
 android {
@@ -7,6 +8,8 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
+        // TestBalloon does not read @GraphicsMode; AppArtTest keeps the native canvas it had under JUnit.
+        unitTests.all { it.systemProperty("robolectric.graphicsMode", "NATIVE") }
     }
 }
 

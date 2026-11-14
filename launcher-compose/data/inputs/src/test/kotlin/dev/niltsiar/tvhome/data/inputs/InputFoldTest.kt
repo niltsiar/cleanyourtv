@@ -1,33 +1,28 @@
 package dev.niltsiar.tvhome.data.inputs
 
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
 
-class InputFoldTest {
-    @Test
-    fun a_connected_hdmi_port_stays() {
-        assertFalse(inputFolds(hdmi = true, PortState.Connected))
+val InputFoldTest by testSuite {
+    test("a connected hdmi port stays") {
+        inputFolds(hdmi = true, PortState.Connected).shouldBeFalse()
     }
 
-    @Test
-    fun an_empty_port_reporting_standby_folds() {
-        assertTrue(inputFolds(hdmi = true, PortState.Standby))
+    test("an empty port reporting standby folds") {
+        inputFolds(hdmi = true, PortState.Standby).shouldBeTrue()
     }
 
-    @Test
-    fun a_disconnected_port_folds() {
-        assertTrue(inputFolds(hdmi = true, PortState.Disconnected))
+    test("a disconnected port folds") {
+        inputFolds(hdmi = true, PortState.Disconnected).shouldBeTrue()
     }
 
-    @Test
-    fun an_hdmi_row_with_no_state_stays() {
-        assertFalse(inputFolds(hdmi = true, PortState.None))
+    test("an hdmi row with no state stays") {
+        inputFolds(hdmi = true, PortState.None).shouldBeFalse()
     }
 
-    @Test
-    fun an_av_jack_always_folds() {
-        assertTrue(inputFolds(hdmi = false, PortState.None))
-        assertTrue(inputFolds(hdmi = false, PortState.Connected))
+    test("an av jack always folds") {
+        inputFolds(hdmi = false, PortState.None).shouldBeTrue()
+        inputFolds(hdmi = false, PortState.Connected).shouldBeTrue()
     }
 }

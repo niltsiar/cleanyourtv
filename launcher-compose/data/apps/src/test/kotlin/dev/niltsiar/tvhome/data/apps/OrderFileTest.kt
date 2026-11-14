@@ -1,68 +1,69 @@
 package dev.niltsiar.tvhome.data.apps
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Rule
-import org.junit.Test
+import de.infix.testBalloon.framework.core.JUnit4RulesContext
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.shouldBe
 import org.junit.rules.TemporaryFolder
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 
-@RunWith(RobolectricTestRunner::class)
-class OrderFileTest {
-    @get:Rule
-    val folder = TemporaryFolder()
-
-    @Test
-    fun a_written_order_reads_back() {
-        val file = folder.newFile()
-        val order = Order("a,b", listOf("x/.X", "y/.Y"), docked = 1)
-
-        assertTrue(writeOrder(file, order))
-
-        assertEquals(order, readOrder(file))
-    }
-
-    @Test
-    fun no_file_is_no_order() {
-        assertNull(readOrder(folder.root.resolve(ORDER_FILE_NAME)))
-    }
-
-    @Test
-    fun a_file_that_is_not_an_order_is_ignored_but_kept() {
-        val file = folder.newFile()
-        file.writeText("not an order")
-
-        assertNull(readOrder(file))
-        assertTrue(file.exists())
-    }
-
-    @Test
-    fun a_write_that_cannot_be_made_reports_failure() {
-        val notAFolder = folder.newFile()
-
-        assertFalse(writeOrder(notAFolder.resolve("order.txt"), Order("a", emptyList())))
-    }
-
-    @Test
-    fun the_file_holds_the_reference_text() {
-        val file = folder.newFile()
-
-        writeOrder(file, Order("a,b", listOf("x/.X", "y/.Y"), docked = 1))
-
-        assertEquals("tvhome-order 1\ndock a,b\ndocked 1\nx/.X\ny/.Y\n", file.readText())
-    }
-
-    @Test
-    fun a_second_write_replaces_the_first_whole_and_leaves_no_backup() {
-        val file = folder.newFile()
-        writeOrder(file, Order("a", listOf("x/.X", "y/.Y", "z/.Z")))
-
-        writeOrder(file, Order("a", listOf("z/.Z")))
-
-        assertEquals(Order("a", listOf("z/.Z")), readOrder(file))
-        assertEquals(listOf(file.name), folder.root.list()!!.toList())
-    }
+val OrderFileTest by testSuite {
+    robolectricTestSuite<OrderFileTestContent>("default sdk")
 }
+
+class OrderFileTestContent :
+    RobolectricTestSuiteContent({
+        testFixture {
+            object : JUnit4RulesContext() {
+                val folder = rule(TemporaryFolder())
+            }
+        } asContextForEach {
+            test("a written order reads back") {
+                val file = folder.newFile()
+                val order = Order("a,b", listOf("x/.X", "y/.Y"), docked = 1)
+
+                writeOrder(file, order).shouldBeTrue()
+
+                readOrder(file) shouldBe order
+            }
+
+            test("no file is no order") {
+                readOrder(folder.root.resolve(ORDER_FILE_NAME)).shouldBeNull()
+            }
+
+            test("a file that is not an order is ignored but kept") {
+                val file = folder.newFile()
+                file.writeText("not an order")
+
+                readOrder(file).shouldBeNull()
+                file.exists().shouldBeTrue()
+            }
+
+            test("a write that cannot be made reports failure") {
+                val notAFolder = folder.newFile()
+
+                writeOrder(notAFolder.resolve("order.txt"), Order("a", emptyList())).shouldBeFalse()
+            }
+
+            test("the file holds the reference text") {
+                val file = folder.newFile()
+
+                writeOrder(file, Order("a,b", listOf("x/.X", "y/.Y"), docked = 1))
+
+                file.readText() shouldBe "tvhome-order 1\ndock a,b\ndocked 1\nx/.X\ny/.Y\n"
+            }
+
+            test("a second write replaces the first whole and leaves no backup") {
+                val file = folder.newFile()
+                writeOrder(file, Order("a", listOf("x/.X", "y/.Y", "z/.Z")))
+
+                writeOrder(file, Order("a", listOf("z/.Z")))
+
+                readOrder(file) shouldBe Order("a", listOf("z/.Z"))
+                folder.root.list()!!.toList() shouldBe listOf(file.name)
+            }
+        }
+    })

@@ -1,59 +1,50 @@
 package dev.niltsiar.tvhome.data.wallpaper
 
-import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.shouldBe
 
-class WallpaperSizeTest {
-    @Test
-    fun very_wide_picture_is_refused() {
-        assertFalse(WallpaperSize.accepted(65535, 2159))
+val WallpaperSizeTest by testSuite {
+    test("very wide picture is refused") {
+        WallpaperSize.accepted(65535, 2159).shouldBeFalse()
     }
 
-    @Test
-    fun four_k_picture_is_accepted() {
-        assertTrue(WallpaperSize.accepted(3840, 2160))
-        assertTrue(WallpaperSize.accepted(1920, 1080))
+    test("four k picture is accepted") {
+        WallpaperSize.accepted(3840, 2160).shouldBeTrue()
+        WallpaperSize.accepted(1920, 1080).shouldBeTrue()
     }
 
-    @Test
-    fun unreadable_picture_is_refused() {
-        assertFalse(WallpaperSize.accepted(-1, -1))
-        assertFalse(WallpaperSize.accepted(0, 1080))
+    test("unreadable picture is refused") {
+        WallpaperSize.accepted(-1, -1).shouldBeFalse()
+        WallpaperSize.accepted(0, 1080).shouldBeFalse()
     }
 
-    @Test
-    fun four_k_on_1080p_samples_by_two() {
-        assertEquals(2, WallpaperSize.sampleSize(3840, 2160, 1920, 1080))
-        assertNull(WallpaperSize.coverScale(1920, 1080, 1920, 1080))
+    test("four k on 1080p samples by two") {
+        WallpaperSize.sampleSize(3840, 2160, 1920, 1080) shouldBe 2
+        WallpaperSize.coverScale(1920, 1080, 1920, 1080).shouldBeNull()
     }
 
-    @Test
-    fun photo_between_sample_sizes_is_scaled_to_the_screen() {
+    test("photo between sample sizes is scaled to the screen") {
         // 3000x2000 keeps sample size 1; the cover is limited by the width, so it decodes 1920 wide.
-        assertEquals(1, WallpaperSize.sampleSize(3000, 2000, 1920, 1080))
-        assertArrayEquals(intArrayOf(3000, 1920), WallpaperSize.coverScale(3000, 2000, 1920, 1080))
+        WallpaperSize.sampleSize(3000, 2000, 1920, 1080) shouldBe 1
+        WallpaperSize.coverScale(3000, 2000, 1920, 1080) shouldBe intArrayOf(3000, 1920)
     }
 
-    @Test
-    fun wide_picture_is_scaled_by_its_height() {
-        assertArrayEquals(intArrayOf(2000, 1080), WallpaperSize.coverScale(4000, 2000, 1920, 1080))
+    test("wide picture is scaled by its height") {
+        WallpaperSize.coverScale(4000, 2000, 1920, 1080) shouldBe intArrayOf(2000, 1080)
     }
 
-    @Test
-    fun small_picture_is_not_scaled() {
-        assertEquals(1, WallpaperSize.sampleSize(1280, 720, 1920, 1080))
-        assertNull(WallpaperSize.coverScale(1280, 720, 1920, 1080))
+    test("small picture is not scaled") {
+        WallpaperSize.sampleSize(1280, 720, 1920, 1080) shouldBe 1
+        WallpaperSize.coverScale(1280, 720, 1920, 1080).shouldBeNull()
     }
 
-    @Test
-    fun a_phone_sized_photo_is_accepted_once_sampled_down() {
+    test("a phone sized photo is accepted once sampled down") {
         val s = WallpaperSize.sampleSize(4032, 3024, 1920, 1080)
-        assertTrue(WallpaperSize.accepted(4032 / s, 3024 / s))
+        WallpaperSize.accepted(4032 / s, 3024 / s).shouldBeTrue()
         val t = WallpaperSize.sampleSize(65535, 2159, 1920, 1080)
-        assertFalse(WallpaperSize.accepted(65535 / t, 2159 / t))
+        WallpaperSize.accepted(65535 / t, 2159 / t).shouldBeFalse()
     }
 }

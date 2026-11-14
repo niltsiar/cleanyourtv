@@ -1,39 +1,34 @@
 package dev.niltsiar.tvhome.data.inputs
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.shouldBe
 
-class InputNamesTest {
-    @Test
-    fun philips_type_becomes_an_emoji() {
-        assertEquals("🎮 Xbox", tidyInputName("Xbox&GAME_CONSOLE"))
-        assertEquals("🎮 Switch", tidyInputName("Switch &GAME_CONSOLE"))
-        assertEquals("💻 Ordinateur", tidyInputName("Ordinateur&COMPUTER"))
+val InputNamesTest by testSuite {
+    test("philips type becomes an emoji") {
+        tidyInputName("Xbox&GAME_CONSOLE") shouldBe "🎮 Xbox"
+        tidyInputName("Switch &GAME_CONSOLE") shouldBe "🎮 Switch"
+        tidyInputName("Ordinateur&COMPUTER") shouldBe "💻 Ordinateur"
     }
 
-    @Test
-    fun an_unknown_type_leaves_the_name_alone() {
-        assertEquals("Box", tidyInputName("Box&SOMETHING_NEW"))
+    test("an unknown type leaves the name alone") {
+        tidyInputName("Box&SOMETHING_NEW") shouldBe "Box"
     }
 
-    @Test
-    fun a_type_with_no_name_is_just_its_emoji() {
-        assertEquals("🎮", tidyInputName("&GAME_CONSOLE"))
+    test("a type with no name is just its emoji") {
+        tidyInputName("&GAME_CONSOLE") shouldBe "🎮"
     }
 
-    @Test
-    fun the_text_null_and_blanks_are_no_name() {
-        assertNull(tidyInputName("null"))
-        assertNull(tidyInputName("  "))
-        assertNull(tidyInputName(null))
+    test("the text null and blanks are no name") {
+        tidyInputName("null").shouldBeNull()
+        tidyInputName("  ").shouldBeNull()
+        tidyInputName(null).shouldBeNull()
     }
 
-    @Test
-    fun other_names_are_kept() {
-        assertEquals("MacBook Pro", tidyInputName("MacBook Pro"))
-        assertEquals("Tom & Jerry", tidyInputName("Tom & Jerry"))
-        assertEquals("AT&T", tidyInputName("AT&T"))
-        assertEquals("R&D", tidyInputName("R&D"))
+    test("other names are kept") {
+        tidyInputName("MacBook Pro") shouldBe "MacBook Pro"
+        tidyInputName("Tom & Jerry") shouldBe "Tom & Jerry"
+        tidyInputName("AT&T") shouldBe "AT&T"
+        tidyInputName("R&D") shouldBe "R&D"
     }
 }

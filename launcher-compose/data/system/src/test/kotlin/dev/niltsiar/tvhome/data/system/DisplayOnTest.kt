@@ -1,33 +1,28 @@
 package dev.niltsiar.tvhome.data.system
 
 import android.view.Display
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
 
-class DisplayOnTest {
-    @Test
-    fun a_display_that_was_off_and_is_now_on_counts() {
-        assertTrue(turnedOn(Display.STATE_OFF, Display.STATE_ON))
+val DisplayOnTest by testSuite {
+    test("a display that was off and is now on counts") {
+        turnedOn(Display.STATE_OFF, Display.STATE_ON).shouldBeTrue()
     }
 
-    @Test
-    fun a_display_that_was_dozing_and_is_now_on_counts() {
-        assertTrue(turnedOn(Display.STATE_DOZE, Display.STATE_ON))
+    test("a display that was dozing and is now on counts") {
+        turnedOn(Display.STATE_DOZE, Display.STATE_ON).shouldBeTrue()
     }
 
-    @Test
-    fun a_display_that_stays_on_does_not_count() {
-        assertFalse(turnedOn(Display.STATE_ON, Display.STATE_ON))
+    test("a display that stays on does not count") {
+        turnedOn(Display.STATE_ON, Display.STATE_ON).shouldBeFalse()
     }
 
-    @Test
-    fun a_display_going_off_does_not_count() {
-        assertFalse(turnedOn(Display.STATE_ON, Display.STATE_OFF))
+    test("a display going off does not count") {
+        turnedOn(Display.STATE_ON, Display.STATE_OFF).shouldBeFalse()
     }
 
-    @Test
-    fun a_display_that_stays_dozing_does_not_count() {
-        assertFalse(turnedOn(Display.STATE_DOZE, Display.STATE_DOZE))
+    test("a display that stays dozing does not count") {
+        turnedOn(Display.STATE_DOZE, Display.STATE_DOZE).shouldBeFalse()
     }
 }

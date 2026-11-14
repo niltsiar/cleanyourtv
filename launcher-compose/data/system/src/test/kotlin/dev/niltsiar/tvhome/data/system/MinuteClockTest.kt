@@ -1,6 +1,11 @@
 package dev.niltsiar.tvhome.data.system
 
 import app.cash.turbine.test
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testScope
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.emptyFlow
@@ -8,104 +13,99 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
-import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Test
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class MinuteClockTest {
-    private val zone = { ZoneOffset.UTC }
-    private val valid = TIME_VALID_AFTER_MS + 30_000L
+val MinuteClockTest by testSuite(testConfig = TestConfig.testScope(isEnabled = true)) {
+    val zone = { ZoneOffset.UTC }
+    val valid = TIME_VALID_AFTER_MS + 30_000L
 
     /** The wall clock as [start] plus the test's virtual time, so a delay moves it like real time. */
-    private fun TestScope.wallClock(start: Long) = { start + testScheduler.currentTime }
+    fun TestScope.wallClock(start: Long) = { start + testScheduler.currentTime }
 
-    private fun at(millis: Long): LocalDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), ZoneOffset.UTC)
+    fun at(millis: Long): LocalDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), ZoneOffset.UTC)
 
-    @Test
-    fun a_time_before_2025_is_hidden_and_looked_at_again_each_second_until_it_is_set() =
-        runTest {
+    test("a time before 2025 is hidden and looked at again each second until it is set") {
+        with(testScope) {
             var now = 0L
             minuteClock(emptyFlow(), emptyFlow(), { now }, zone).test {
-                assertNull(awaitItem())
+                awaitItem().shouldBeNull()
                 advanceTimeBy(1_001)
-                assertNull(awaitItem())
+                awaitItem().shouldBeNull()
 
                 now = valid
                 advanceTimeBy(1_000)
-                assertEquals(at(valid), awaitItem())
+                awaitItem() shouldBe at(valid)
                 cancelAndIgnoreRemainingEvents()
             }
         }
+    }
 
-    @Test
-    fun a_valid_time_is_emitted_now_and_again_at_the_next_minute_start() =
-        runTest {
+    test("a valid time is emitted now and again at the next minute start") {
+        with(testScope) {
             minuteClock(emptyFlow(), emptyFlow(), wallClock(valid), zone).test {
-                assertEquals(at(valid), awaitItem())
+                awaitItem() shouldBe at(valid)
                 advanceTimeBy(30_001)
-                assertEquals(at(valid + 30_000), awaitItem())
+                awaitItem() shouldBe at(valid + 30_000)
                 cancelAndIgnoreRemainingEvents()
             }
         }
+    }
 
-    @Test
-    fun a_time_change_reads_the_time_again_at_once() =
-        runTest {
+    test("a time change reads the time again at once") {
+        with(testScope) {
             var now = valid
             val changes = MutableSharedFlow<Unit>()
             minuteClock(changes, emptyFlow(), { now }, zone).test {
-                assertEquals(at(valid), awaitItem())
+                awaitItem() shouldBe at(valid)
 
                 now = valid + 3_600_000L
                 changes.emit(Unit)
 
-                assertEquals(at(valid + 3_600_000L), awaitItem())
+                awaitItem() shouldBe at(valid + 3_600_000L)
                 cancelAndIgnoreRemainingEvents()
             }
         }
+    }
 
-    @Test
-    fun the_display_coming_on_reads_the_time_again_without_waiting_for_the_pending_minute() =
-        runTest {
+    test("the display coming on reads the time again without waiting for the pending minute") {
+        with(testScope) {
             var now = valid
             val displayOn = MutableSharedFlow<Unit>()
             minuteClock(emptyFlow(), displayOn, { now }, zone).test {
-                assertEquals(at(valid), awaitItem())
+                awaitItem() shouldBe at(valid)
 
                 // The set slept: the wall clock moved on while the pending delay stood still.
                 now = valid + 600_000L
                 displayOn.emit(Unit)
 
-                assertEquals(at(valid + 600_000L), awaitItem())
+                awaitItem() shouldBe at(valid + 600_000L)
                 cancelAndIgnoreRemainingEvents()
             }
         }
+    }
 
-    @Test
-    fun a_time_change_updates_the_shared_time_at_once_without_waiting_for_the_next_minute() =
-        runTest {
+    test("a time change updates the shared time at once without waiting for the next minute") {
+        with(testScope) {
             var now = valid
             val changes = MutableSharedFlow<Unit>()
             val clock = MinuteClock(changes, emptyFlow(), backgroundScope, { now }, zone)
             backgroundScope.launch { clock.now.collect {} }
             runCurrent()
-            assertEquals(at(valid), clock.now.value)
+            clock.now.value shouldBe at(valid)
 
             now = valid + 3_600_000L
             changes.emit(Unit)
             runCurrent()
 
-            assertEquals(at(valid + 3_600_000L), clock.now.value)
+            clock.now.value shouldBe at(valid + 3_600_000L)
         }
+    }
 
-    @Test
-    fun every_collector_shares_one_timer() =
-        runTest {
+    test("every collector shares one timer") {
+        with(testScope) {
             var reads = 0
             val clock =
                 MinuteClock(emptyFlow(), emptyFlow(), backgroundScope, {
@@ -115,6 +115,7 @@ class MinuteClockTest {
             repeat(3) { backgroundScope.launch { clock.now.collect {} } }
             runCurrent()
 
-            assertEquals(1, reads)
+            reads shouldBe 1
         }
+    }
 }

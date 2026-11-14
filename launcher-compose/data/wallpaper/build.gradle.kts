@@ -1,5 +1,6 @@
 plugins {
     id("tvhome.android.library")
+    id("tvhome.android.testballoon")
 }
 
 android {
@@ -7,6 +8,8 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
+        // TestBalloon does not read @GraphicsMode; the wallpaper picture tests draw and decode real bitmaps.
+        unitTests.all { it.systemProperty("robolectric.graphicsMode", "NATIVE") }
     }
 }
 

@@ -1,24 +1,23 @@
 package dev.niltsiar.tvhome.data.apps
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.floats.plusOrMinus
+import io.kotest.matchers.shouldBe
 
-class VividColorTest {
-    private fun art(
+val VividColorTest by testSuite {
+    fun art(
         fill: Int,
         vararg at: Pair<Int, Int>,
     ) = IntArray(VIVID_SIDE * VIVID_SIDE) { fill }.also { px -> at.forEach { (i, color) -> px[i] = color } }
 
-    @Test
-    fun the_most_saturated_pixel_wins_a_little_more_saturated() {
+    test("the most saturated pixel wins a little more saturated") {
         val pixels = art(0xFF808080.toInt(), 5 to 0xFFC82828.toInt())
 
         // saturation 0.8 becomes 0.88; the value stays 200/255
-        assertEquals(0xFFC81818.toInt(), vividColor(pixels))
+        vividColor(pixels) shouldBe 0xFFC81818.toInt()
     }
 
-    @Test
-    fun the_edge_colour_is_the_average_of_the_border_pixels_and_ignores_the_middle() {
+    test("the edge colour is the average of the border pixels and ignores the middle") {
         val middle = 5 * VIVID_SIDE + 5
         val blueEdge = art(0xFF288BFF.toInt(), middle to 0xFFFF0000.toInt())
         val halfAndHalf =
@@ -32,37 +31,33 @@ class VividColorTest {
                 }
             }
 
-        assertEquals(0xFF288BFF.toInt(), edgeColor(blueEdge))
-        assertEquals(0xFF7F7F7F.toInt(), edgeColor(halfAndHalf))
+        edgeColor(blueEdge) shouldBe 0xFF288BFF.toInt()
+        edgeColor(halfAndHalf) shouldBe 0xFF7F7F7F.toInt()
     }
 
-    @Test
-    fun a_dark_saturated_colour_is_lifted_to_half_brightness() {
-        assertEquals(0xFF000080.toInt(), vividColor(art(0xFF000032.toInt())))
+    test("a dark saturated colour is lifted to half brightness") {
+        vividColor(art(0xFF000032.toInt())) shouldBe 0xFF000080.toInt()
     }
 
-    @Test
-    fun art_with_no_vivid_pixel_gives_its_average_lifted_to_55_percent_brightness() {
-        assertEquals(0xFF8C8C8C.toInt(), vividColor(art(0xFF404040.toInt())))
-        assertEquals(0xFFFFFFFF.toInt(), vividColor(art(0xFFFFFFFF.toInt())))
+    test("art with no vivid pixel gives its average lifted to 55 percent brightness") {
+        vividColor(art(0xFF404040.toInt())) shouldBe 0xFF8C8C8C.toInt()
+        vividColor(art(0xFFFFFFFF.toInt())) shouldBe 0xFFFFFFFF.toInt()
     }
 
-    @Test
-    fun hue_saturation_and_value_round_trip_through_rgb() {
+    test("hue saturation and value round trip through rgb") {
         val hsv = FloatArray(3)
         rgbToHsv(0xFF00FF80.toInt(), hsv)
 
-        assertEquals(150f, hsv[0], 0.2f)
-        assertEquals(1f, hsv[1], 0f)
-        assertEquals(1f, hsv[2], 0f)
-        assertEquals(0xFF00FF80.toInt(), hsvToRgb(hsv))
+        hsv[0] shouldBe (150f plusOrMinus 0.2f)
+        hsv[1] shouldBe (1f plusOrMinus 0f)
+        hsv[2] shouldBe (1f plusOrMinus 0f)
+        hsvToRgb(hsv) shouldBe 0xFF00FF80.toInt()
     }
 
-    @Test
-    fun a_hue_below_zero_wraps_to_magenta_side_of_red() {
+    test("a hue below zero wraps to magenta side of red") {
         val hsv = FloatArray(3)
         rgbToHsv(0xFFFF0040.toInt(), hsv)
 
-        assertEquals(345f, hsv[0], 0.2f)
+        hsv[0] shouldBe (345f plusOrMinus 0.2f)
     }
 }

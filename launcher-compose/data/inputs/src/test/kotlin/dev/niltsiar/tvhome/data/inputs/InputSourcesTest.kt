@@ -1,44 +1,39 @@
 package dev.niltsiar.tvhome.data.inputs
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.shouldBe
 
-class InputSourcesTest {
-    @Test
-    fun maps_the_last_input_component() {
-        assertEquals(25, mappedSource(listOf("HW7=25"), "service/.Hdmi/HW7"))
+val InputSourcesTest by testSuite {
+    test("maps the last input component") {
+        mappedSource(listOf("HW7=25"), "service/.Hdmi/HW7") shouldBe 25
     }
 
-    @Test
-    fun trims_mapping_whitespace() {
-        assertEquals(25, mappedSource(listOf(" HW7 = 25 "), "service/.Hdmi/HW7"))
+    test("trims mapping whitespace") {
+        mappedSource(listOf(" HW7 = 25 "), "service/.Hdmi/HW7") shouldBe 25
     }
 
-    @Test
-    fun a_dash_hides_an_input() {
-        assertEquals(-1, mappedSource(listOf("HW8=-"), "service/.Hdmi/HW8"))
+    test("a dash hides an input") {
+        mappedSource(listOf("HW8=-"), "service/.Hdmi/HW8") shouldBe -1
     }
 
-    @Test
-    fun an_unknown_or_malformed_input_is_not_mapped() {
-        assertNull(mappedSource(listOf("HW5=23", "HW7=nope"), "service/.Hdmi/HW6"))
-        assertNull(mappedSource(listOf("HW7=nope"), "service/.Hdmi/HW7"))
-        assertNull(mappedSource(emptyList(), "service/.Hdmi/HW7"))
+    test("an unknown or malformed input is not mapped") {
+        mappedSource(listOf("HW5=23", "HW7=nope"), "service/.Hdmi/HW6").shouldBeNull()
+        mappedSource(listOf("HW7=nope"), "service/.Hdmi/HW7").shouldBeNull()
+        mappedSource(emptyList(), "service/.Hdmi/HW7").shouldBeNull()
     }
 
-    @Test
-    fun an_activity_is_a_component_and_an_action_is_not() {
-        assertTrue(isComponent("com.xiaomi.mitv.tvplayer/.ExternalSourceActivity"))
-        assertTrue(isComponent("com.xiaomi.mitv.tvplayer/com.xiaomi.mitv.tvplayer.ExternalSourceActivity"))
-        assertFalse(isComponent("com.xgimi.action.hdmiPlayer"))
-        assertFalse(isComponent("com.xiaomi.mitv.tvplayer.EXTSRC_PLAY"))
-        assertFalse(isComponent(""))
-        assertFalse(isComponent(null))
-        assertFalse(isComponent("/.Activity"))
-        assertFalse(isComponent("com.example/"))
-        assertFalse(isComponent("a/b/c"))
+    test("an activity is a component and an action is not") {
+        isComponent("com.xiaomi.mitv.tvplayer/.ExternalSourceActivity").shouldBeTrue()
+        isComponent("com.xiaomi.mitv.tvplayer/com.xiaomi.mitv.tvplayer.ExternalSourceActivity").shouldBeTrue()
+        isComponent("com.xgimi.action.hdmiPlayer").shouldBeFalse()
+        isComponent("com.xiaomi.mitv.tvplayer.EXTSRC_PLAY").shouldBeFalse()
+        isComponent("").shouldBeFalse()
+        isComponent(null).shouldBeFalse()
+        isComponent("/.Activity").shouldBeFalse()
+        isComponent("com.example/").shouldBeFalse()
+        isComponent("a/b/c").shouldBeFalse()
     }
 }

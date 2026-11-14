@@ -44,6 +44,8 @@ through the JUnit 4 runner on Android host tests.
 | a class nested in the test class | a local class at the top of the suite or content lambda |
 | `@RunWith(RobolectricTestRunner::class)` and `@Config(...)` | `robolectricTestSuite<FooTestContent>(name, testConfig = TestConfig.robolectric { ... })` |
 | `@Config(...)` on one test | a second `robolectricTestSuite` with its own content class and settings |
+| `fun the_thing() = runTest { ... }` | see [Coroutine tests](#coroutine-tests) |
+| `fun the_thing() = runBlocking { ... }` | `test("the thing") { runBlocking { ... } }`, so the body keeps its own event loop on the test thread |
 
 The test name keeps the words of the old method name, with spaces in place of underscores.
 
@@ -153,6 +155,35 @@ val rules: RuleChain =
 two. `MainActivityConfigTest.kt` has the rule chain, and `ConfigRepositoryTest.kt` in `core/config` has `init` and
 `closeWith`.
 
+### Coroutine tests
+
+In a plain JVM suite, a `runTest` body moves into a test of a suite with `TestConfig.testScope(isEnabled = true)`.
+TestBalloon then runs each test inside `runTest`, and `testScope` is that `TestScope`. Wrap the old body in
+`with(testScope) { ... }`, so `advanceTimeBy`, `runCurrent`, `backgroundScope` and `launch` mean what they meant
+before. Turbine's `flow.test { ... }` works unchanged inside it (`MinuteClockTest.kt` in `data/system`):
+
+```kotlin
+val MinuteClockTest by testSuite(testConfig = TestConfig.testScope(isEnabled = true)) {
+    test("a valid time is emitted now and again at the next minute start") {
+        with(testScope) {
+            minuteClock(emptyFlow(), emptyFlow(), wallClock(valid), zone).test {
+                awaitItem() shouldBe at(valid)
+                advanceTimeBy(30_001)
+                awaitItem() shouldBe at(valid + 30_000)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+    }
+}
+```
+
+In a Robolectric suite, keep `runTest { ... }` inside the test instead. With `TestConfig.testScope`, TestBalloon makes
+the `TestScope` outside the Robolectric sandbox, and the first test fails with `LinkageError: loader constraint
+violation ... kotlinx.coroutines.test.TestScope` (`OpenOnStartTest.kt` in `data/inputs`).
+
+A test inside `asContextForEach` has the fixture as its receiver and the `Test.ExecutionScope` as its lambda
+parameter, so `testScope` and `launch` are `it.testScope` and `it.launch` there.
+
 ## Assertions
 
 | JUnit 4 | Kotest |
@@ -166,6 +197,12 @@ two. `MainActivityConfigTest.kt` has the rule chain, and `ConfigRepositoryTest.k
 | `assertTrue(a < b)` | `a shouldBeLessThan b` |
 | `assertEquals(e, a, delta)` | `a shouldBe (e plusOrMinus delta)` |
 | `assertSame(e, a)` | `a shouldBeSameInstanceAs e` |
+| `assertArrayEquals(e, a)` | `a shouldBe e` (Kotest compares arrays by content) |
+| `assertThrows(E::class.java) { ... }`, or `try { ...; fail() } catch (e: E) {}` | `shouldThrow<E> { ... }` |
+| `assertTrue(x in a..b)` | `x shouldBeInRange a..b` |
+
+A JUnit assert with three arguments is either `(message, expected, actual)` or `(expected, actual, delta)`: read the
+types before you convert it.
 
 A bare `shouldBeTrue()` fails with only `false should equal true`. Keep the old assert message as a `withClue`, or use
 a matcher that names the values, such as `shouldContain` or `shouldBeLessThan`.

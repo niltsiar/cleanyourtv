@@ -1,151 +1,140 @@
 package dev.niltsiar.tvhome.data.apps
 
+import de.infix.testBalloon.framework.core.testSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import io.kotest.matchers.shouldBe
 
-class AppListRulesTest {
-    private val config = TvConfig(dockApps = listOf("b", "a"), hiddenApps = listOf("hidden"))
+val AppListRulesTest by testSuite {
+    testFixture {
+        object {
+            val config = TvConfig(dockApps = listOf("b", "a"), hiddenApps = listOf("hidden"))
 
-    private fun candidate(
-        pkg: String,
-        label: String = pkg.uppercase(),
-        activity: String = ".Main",
-        exported: Boolean = true,
-    ) = Candidate("$pkg/$activity", pkg, label, exported)
+            fun candidate(
+                pkg: String,
+                label: String = pkg.uppercase(),
+                activity: String = ".Main",
+                exported: Boolean = true,
+            ) = Candidate("$pkg/$activity", pkg, label, exported)
 
-    private fun arrange(
-        vararg candidates: Candidate,
-        config: TvConfig = this.config,
-        order: Order? = null,
-        tv: Set<String> = candidates.map { it.packageName }.toSet(),
-        choices: LibraryChoices = LibraryChoices(added = config.libraryApps.toSet()),
-        ownPackage: String = "own",
-    ) = arrange(candidates.toList(), tv, config, order, ownPackage = ownPackage, choices = choices)
+            fun arrange(
+                vararg candidates: Candidate,
+                config: TvConfig = this.config,
+                order: Order? = null,
+                tv: Set<String> = candidates.map { it.packageName }.toSet(),
+                choices: LibraryChoices = LibraryChoices(added = config.libraryApps.toSet()),
+                ownPackage: String = "own",
+            ) = arrange(candidates.toList(), tv, config, order, ownPackage = ownPackage, choices = choices)
 
-    private fun Arrangement.keys() = tiles.map { it.candidate.packageName }
+            fun Arrangement.keys() = tiles.map { it.candidate.packageName }
+        }
+    } asContextForEach {
+        test("no build of this launcher gets a tile whichever one is running") {
+            val builds = arrayOf(candidate("own"), candidate("own.benchmark"), candidate("owner"), candidate("com.vendor.home"))
 
-    @Test
-    fun no_build_of_this_launcher_gets_a_tile_whichever_one_is_running() {
-        val builds = arrayOf(candidate("own"), candidate("own.benchmark"), candidate("owner"), candidate("com.vendor.home"))
+            arrange(*builds, ownPackage = "own").keys() shouldBe listOf("com.vendor.home", "owner")
+            arrange(*builds, ownPackage = "own.benchmark").keys() shouldBe listOf("com.vendor.home", "owner")
+        }
 
-        assertEquals(listOf("com.vendor.home", "owner"), arrange(*builds, ownPackage = "own").keys())
-        assertEquals(listOf("com.vendor.home", "owner"), arrange(*builds, ownPackage = "own.benchmark").keys())
-    }
+        test("dock apps come first in dock apps order then the rest by name") {
+            val result = arrange(candidate("z"), candidate("a"), candidate("c", "banana"), candidate("b"), candidate("d", "Apple"))
 
-    @Test
-    fun dock_apps_come_first_in_dock_apps_order_then_the_rest_by_name() {
-        val result = arrange(candidate("z"), candidate("a"), candidate("c", "banana"), candidate("b"), candidate("d", "Apple"))
+            result.keys() shouldBe listOf("b", "a", "d", "c", "z")
+            result.docked shouldBe 2
+        }
 
-        assertEquals(listOf("b", "a", "d", "c", "z"), result.keys())
-        assertEquals(2, result.docked)
-    }
+        test("the saved order goes before dock apps and names") {
+            val order = Order(Order.dockKey(config.dockApps), listOf("z/.Main", "c/.Main"))
 
-    @Test
-    fun the_saved_order_goes_before_dock_apps_and_names() {
-        val order = Order(Order.dockKey(config.dockApps), listOf("z/.Main", "c/.Main"))
+            val result = arrange(candidate("c"), candidate("a"), candidate("z"), candidate("b"), order = order)
 
-        val result = arrange(candidate("c"), candidate("a"), candidate("z"), candidate("b"), order = order)
+            result.keys() shouldBe listOf("z", "c", "b", "a")
+        }
 
-        assertEquals(listOf("z", "c", "b", "a"), result.keys())
-    }
+        test("a saved order made under other dock apps is ignored") {
+            val order = Order(Order.dockKey(listOf("x")), listOf("z/.Main", "c/.Main"))
 
-    @Test
-    fun a_saved_order_made_under_other_dock_apps_is_ignored() {
-        val order = Order(Order.dockKey(listOf("x")), listOf("z/.Main", "c/.Main"))
+            val result = arrange(candidate("c"), candidate("a"), candidate("z"), candidate("b"), order = order)
 
-        val result = arrange(candidate("c"), candidate("a"), candidate("z"), candidate("b"), order = order)
+            result.keys() shouldBe listOf("b", "a", "c", "z")
+        }
 
-        assertEquals(listOf("b", "a", "c", "z"), result.keys())
-    }
+        test("a saved dock size decides which leading tiles are docked") {
+            val order = Order(Order.dockKey(config.dockApps), listOf("z/.Main", "b/.Main", "a/.Main"), docked = 1)
 
-    @Test
-    fun a_saved_dock_size_decides_which_leading_tiles_are_docked() {
-        val order = Order(Order.dockKey(config.dockApps), listOf("z/.Main", "b/.Main", "a/.Main"), docked = 1)
+            val result = arrange(candidate("a"), candidate("b"), candidate("z"), order = order)
 
-        val result = arrange(candidate("a"), candidate("b"), candidate("z"), order = order)
+            result.keys() shouldBe listOf("z", "b", "a")
+            result.docked shouldBe 1
+        }
 
-        assertEquals(listOf("z", "b", "a"), result.keys())
-        assertEquals(1, result.docked)
-    }
+        test("hidden unexported and own activities are not shown") {
+            val result =
+                arrange(candidate("hidden"), candidate("closed", exported = false), candidate("own"), candidate("shown"))
 
-    @Test
-    fun hidden_unexported_and_own_activities_are_not_shown() {
-        val result =
-            arrange(candidate("hidden"), candidate("closed", exported = false), candidate("own"), candidate("shown"))
+            result.keys() shouldBe listOf("shown")
+        }
 
-        assertEquals(listOf("shown"), result.keys())
-    }
+        test("a phone app shows only when library apps adds its package") {
+            val candidates = arrayOf(candidate("phone"), candidate("tv"))
+            val tv = setOf("tv")
 
-    @Test
-    fun a_phone_app_shows_only_when_library_apps_adds_its_package() {
-        val candidates = arrayOf(candidate("phone"), candidate("tv"))
-        val tv = setOf("tv")
+            arrange(*candidates, tv = tv).keys() shouldBe listOf("tv")
+            arrange(*candidates, tv = tv, config = config.copy(libraryApps = listOf("phone"))).keys() shouldBe listOf("phone", "tv")
+        }
 
-        assertEquals(listOf("tv"), arrange(*candidates, tv = tv).keys())
-        assertEquals(listOf("phone", "tv"), arrange(*candidates, tv = tv, config = config.copy(libraryApps = listOf("phone"))).keys())
-    }
+        test("a library app shows even when hidden apps lists it") {
+            val result = arrange(candidate("hidden"), config = config.copy(libraryApps = listOf("hidden")), tv = setOf("hidden"))
 
-    @Test
-    fun a_library_app_shows_even_when_hidden_apps_lists_it() {
-        val result = arrange(candidate("hidden"), config = config.copy(libraryApps = listOf("hidden")), tv = setOf("hidden"))
+            result.keys() shouldBe listOf("hidden")
+        }
 
-        assertEquals(listOf("hidden"), result.keys())
-    }
+        test("a package the owner added in the library shows like one from library apps") {
+            val candidates = arrayOf(candidate("phone"), candidate("hidden"), candidate("tv"))
+            val tv = setOf("hidden", "tv")
 
-    @Test
-    fun a_package_the_owner_added_in_the_library_shows_like_one_from_library_apps() {
-        val candidates = arrayOf(candidate("phone"), candidate("hidden"), candidate("tv"))
-        val tv = setOf("hidden", "tv")
+            val result = arrange(*candidates, tv = tv, choices = LibraryChoices(added = setOf("phone", "hidden")))
 
-        val result = arrange(*candidates, tv = tv, choices = LibraryChoices(added = setOf("phone", "hidden")))
+            result.keys().toSet() shouldBe setOf("phone", "hidden", "tv")
+        }
 
-        assertEquals(setOf("phone", "hidden", "tv"), result.keys().toSet())
-    }
+        test("a package the owner removed never shows whatever else adds it") {
+            val candidates = arrayOf(candidate("tv"), candidate("docked", "Docked"), candidate("seeded"), candidate("kept"))
+            val choices = LibraryChoices(added = setOf("seeded", "docked"), removed = setOf("tv", "docked", "seeded"))
 
-    @Test
-    fun a_package_the_owner_removed_never_shows_whatever_else_adds_it() {
-        val candidates = arrayOf(candidate("tv"), candidate("docked", "Docked"), candidate("seeded"), candidate("kept"))
-        val choices = LibraryChoices(added = setOf("seeded", "docked"), removed = setOf("tv", "docked", "seeded"))
+            val result = arrange(*candidates, config = config.copy(libraryApps = listOf("seeded")), choices = choices)
 
-        val result = arrange(*candidates, config = config.copy(libraryApps = listOf("seeded")), choices = choices)
+            result.keys() shouldBe listOf("kept")
+        }
 
-        assertEquals(listOf("kept"), result.keys())
-    }
+        test("app labels rename a tile") {
+            val result = arrange(candidate("c", "Cee"), config = config.copy(appLabels = mapOf("c" to "Channel")))
 
-    @Test
-    fun app_labels_rename_a_tile() {
-        val result = arrange(candidate("c", "Cee"), config = config.copy(appLabels = mapOf("c" to "Channel")))
+            result.tiles.single().label shouldBe "Channel"
+        }
 
-        assertEquals("Channel", result.tiles.single().label)
-    }
+        test("two activities with one package and name are one tile but two names are two") {
+            val result =
+                arrange(
+                    candidate("c", "Clock", ".First"),
+                    candidate("c", "Clock", ".Second"),
+                    candidate("c", "Timers", ".Third"),
+                )
 
-    @Test
-    fun two_activities_with_one_package_and_name_are_one_tile_but_two_names_are_two() {
-        val result =
-            arrange(
-                candidate("c", "Clock", ".First"),
-                candidate("c", "Clock", ".Second"),
-                candidate("c", "Timers", ".Third"),
-            )
+            result.tiles.map { it.candidate.key } shouldBe listOf("c/.First", "c/.Third")
+        }
 
-        assertEquals(listOf("c/.First", "c/.Third"), result.tiles.map { it.candidate.key })
-    }
+        test("a label cannot redraw itself with control characters") {
+            cleanLabel("‮evil name\n", "pkg") shouldBe "evil name"
+        }
 
-    @Test
-    fun a_label_cannot_redraw_itself_with_control_characters() {
-        assertEquals("evil name", cleanLabel("‮evil name\n", "pkg"))
-    }
+        test("a label is cut at 40 characters without splitting a surrogate pair") {
+            val label = "x".repeat(39) + "😀"
 
-    @Test
-    fun a_label_is_cut_at_40_characters_without_splitting_a_surrogate_pair() {
-        val label = "x".repeat(39) + "😀"
+            cleanLabel(label, "pkg") shouldBe "x".repeat(39)
+        }
 
-        assertEquals("x".repeat(39), cleanLabel(label, "pkg"))
-    }
-
-    @Test
-    fun a_label_with_nothing_visible_falls_back_to_the_package() {
-        assertEquals("pkg", cleanLabel(" ​\n", "pkg"))
+        test("a label with nothing visible falls back to the package") {
+            cleanLabel(" ​\n", "pkg") shouldBe "pkg"
+        }
     }
 }
