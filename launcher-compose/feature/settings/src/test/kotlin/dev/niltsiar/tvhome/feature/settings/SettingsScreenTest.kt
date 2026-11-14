@@ -462,7 +462,9 @@ class SettingsScreenTestContent :
                 settings.skippedAt shouldBe emptyList<String?>()
             }
 
-            test("the shelf sources row follows app shelf, its picker ticks the chosen sources and ok ticks one more without closing") {
+            test(
+                "the apps and channels row follows app highlights, its picker ticks the chosen sources and ok ticks one more without closing",
+            ) {
                 show(
                     """{"app_shelf": true, "app_shelf_sources": ["org.smarttube.stable/history"]}""",
                     shelfPublishers =
@@ -518,12 +520,12 @@ class SettingsScreenTestContent :
             val pickerReturns =
                 listOf(
                     PickerReturn(
-                        "back from the shelf sources picker without a tick",
+                        "back from the apps and channels picker without a tick",
                         "settings:shelf_sources",
                         false,
                         shelfOpen,
                     ) { back() },
-                    PickerReturn("back from the shelf sources picker after a tick", "settings:shelf_sources", false, shelfOpen) {
+                    PickerReturn("back from the apps and channels picker after a tick", "settings:shelf_sources", false, shelfOpen) {
                         press(Key.DirectionCenter)
                         waitUntilIdle { settings.state.shelfSources == OptionLabel.Text("1") }
                         compose.waitForIdle()
@@ -1012,7 +1014,7 @@ private class SettingsScreenFixture : JUnit4RulesContext() {
             .config[SemanticsProperties.VerticalScrollAxisRange]
             .value()
 
-    /** The page with the Wallpaper, Open on start and Shelf sources rows, none of them chosen. */
+    /** The page with the Wallpaper, Open on start and Apps and channels rows, none of them chosen. */
     fun showEveryPickerRow() {
         show(EVERY_PICKER, wallpapers = pictures, shelfPublishers = listOf(ShelfPublisher("com.plezy", "Plezy", 20, emptyList())))
         waitUntilIdle { settings.state.let { it.wallpaper != null && it.openOnStart != null && it.shelfSources != null } }

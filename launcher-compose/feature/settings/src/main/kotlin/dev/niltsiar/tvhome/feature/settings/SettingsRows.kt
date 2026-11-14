@@ -39,6 +39,9 @@ internal class ChoiceRow<T>(
     ) {
         if (option != row(repository.config.value).selected) repository.set(choice, options[option].value)
     }
+
+    /** The value the option at [option] stores. */
+    fun valueAt(option: Int): T = options[option].value
 }
 
 internal class Group(
@@ -158,25 +161,35 @@ internal fun settingsSections(config: TvConfig): List<SettingsSection> =
         )
     }
 
-/** True when the option at [option] of the [row] turns its setting on: the App shelf row's first option is On. */
+/** True when the option at [option] of the [row] is the App highlights row's On. */
 internal fun turnsShelfOn(
     row: SettingsRowId,
     option: Int,
-): Boolean = row == SettingsRowId.AppShelf && option == 0
+): Boolean = row == SettingsRowId.AppShelf && rowOf(row).valueAt(option) == true
 
-/** The value of the Shelf sources row; null while app_shelf is off, when the row is not there. */
+/**
+ * The value of the Apps and channels row: how many ticked sources the picker [listed], None for none, and empty while the
+ * listing loads. Null while app_shelf is off, when the row is not there.
+ */
 internal fun shelfSourcesLabel(
     config: TvConfig,
     access: Boolean,
-): OptionLabel? =
-    when {
+    listed: Set<String>?,
+): OptionLabel? {
+    val shown = listed?.let { config.appShelfSources.count(it::contains) }
+    return when {
         !config.appShelf -> null
         !access -> res(R.string.settings_shelf_no_access)
-        config.appShelfSources.isEmpty() -> res(R.string.settings_shelf_none)
-        else -> text(config.appShelfSources.size)
+        config.appShelfSources.isEmpty() || shown == 0 -> res(R.string.settings_shelf_none)
+        shown == null -> OptionLabel.Text("")
+        else -> text(shown)
     }
+}
 
-/** The shelf picker's entries: for each app by label, its Watch Next rows when it has any, then each of its preview channels. */
+/**
+ * The Apps and channels picker's entries: for each app by label, its Watch Next rows when it has any, then each of its preview
+ * channels.
+ */
 internal fun shelfEntries(publishers: List<ShelfPublisher>): List<ShelfSourceEntry> =
     publishers.flatMap { app ->
         val watchNext =

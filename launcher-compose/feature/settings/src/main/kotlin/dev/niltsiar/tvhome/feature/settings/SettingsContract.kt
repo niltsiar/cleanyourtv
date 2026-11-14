@@ -81,8 +81,8 @@ public data class WallpaperPicker(
 )
 
 /**
- * One source of the shelf picker: the Watch Next rows of the app [packageName] when [channel] is null, else its preview channel
- * of that display name. [source] is the app_shelf_sources entry it ticks, and [items] how many rows it holds.
+ * One source of the Apps and channels picker: the Watch Next rows of the app [packageName] when [channel] is null, else its
+ * preview channel of that display name. [source] is the app_shelf_sources entry it ticks, and [items] how many rows it holds.
  */
 @Immutable
 public data class ShelfSourceEntry(
@@ -93,7 +93,7 @@ public data class ShelfSourceEntry(
     val items: Int,
 )
 
-/** The shelf sources picker over the page: [entries] in order, each ticked when its source is in [ticked]. */
+/** The Apps and channels picker over the page: [entries] in order, each ticked when its source is in [ticked]. */
 @Immutable
 public data class ShelfPicker(
     val entries: List<ShelfSourceEntry>,
@@ -106,9 +106,10 @@ public data class ShelfPicker(
  * (the picked app's label, its package when it is gone, Off, or empty while the label loads); it is there with
  * open_on_start_choice, and [picker] is set while its picker is open. [wallpaper] is the value of the Wallpaper row, which
  * follows the Clock row (the picked picture's name, None, or Theme default); it is there when the theme has a picture, and
- * [wallpaperPicker] is set while its picker is open. [shelfSources] is the value of the Shelf sources row, which follows the App
- * shelf row while app_shelf is on (No access without READ_TV_LISTINGS, None, or how many are ticked), and [shelfPicker] is set
- * while its picker is open. [backdrop] is what Home draws where it has no picture: the theme's background_color.
+ * [wallpaperPicker] is set while its picker is open. [shelfSources] is the value of the Apps and channels row, which follows
+ * the App highlights row while app_shelf is on (No access without READ_TV_LISTINGS, None, how many of the ticked sources its
+ * picker lists, or empty while they load), and [shelfPicker] is set while its picker is open. [backdrop] is what Home draws
+ * where it has no picture: the theme's background_color.
  */
 @Immutable
 public data class SettingsUiState(
@@ -161,7 +162,7 @@ public sealed interface SettingsEffect {
     /** The shelf needs READ_TV_LISTINGS, which Home lacks: the host asks for it and then calls [SettingsActions.onShelfAccessAnswered]. */
     public data object AskShelfAccess : SettingsEffect
 
-    /** The shelf sources picker has nothing to list: no installed app publishes rows. */
+    /** The Apps and channels picker has nothing to list: no installed app publishes rows. */
     public data object NoShelfSources : SettingsEffect
 }
 
@@ -192,7 +193,7 @@ internal sealed interface SettingsEvent {
 
     data object OpenShelfPicker : SettingsEvent
 
-    /** Ticks or unticks the source of the shelf picker's entry at an index. */
+    /** Ticks or unticks the source of the Apps and channels picker's entry at an index. */
     data class ToggleShelfSource(
         val index: Int,
     ) : SettingsEvent

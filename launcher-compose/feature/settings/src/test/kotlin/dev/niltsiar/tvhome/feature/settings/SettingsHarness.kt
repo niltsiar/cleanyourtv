@@ -39,8 +39,8 @@ import kotlin.coroutines.EmptyCoroutineContext
  * calling thread as the app does: a list that came back at once would be stored while the first composition applies, and
  * Molecule's immediate recompositions on the UI thread would stall. [awaitApplied] waits for a wallpaper pick that was stored,
  * [awaitSaveFailed] for a write the store refused. The pickers show [art], and Home shows [themeDefault] for the theme default.
- * The shelf picker lists [shelfPublishers], each listing counted in [shelfListings], and [shelfAccess] says whether Home holds
- * READ_TV_LISTINGS; [awaitAskedShelfAccess] and [awaitNoShelfSources] wait for the effects that report them.
+ * The Apps and channels picker lists [shelfPublishers], each listing counted in [shelfListings], and [shelfAccess] says whether
+ * Home holds READ_TV_LISTINGS; [awaitAskedShelfAccess] and [awaitNoShelfSources] wait for the effects that report them.
  */
 internal class SettingsHarness(
     private val app: Application,
@@ -122,10 +122,10 @@ internal class SettingsHarness(
     /** Waits for the next request for READ_TV_LISTINGS. */
     fun awaitAskedShelfAccess() = runBlocking { withTimeout(30_000) { askedShelfAccess.receive() } }
 
-    /** True when no request for READ_TV_LISTINGS comes within a short wait. */
-    fun noShelfAccessAsked(): Boolean = runBlocking { withTimeoutOrNull(300) { askedShelfAccess.receive() } == null }
+    /** True when READ_TV_LISTINGS was asked for and not yet awaited: effects arrive in order, so await a later one first. */
+    fun shelfAccessAsked(): Boolean = askedShelfAccess.tryReceive().isSuccess
 
-    /** Waits for the report that the shelf picker has nothing to list. */
+    /** Waits for the report that the Apps and channels picker has nothing to list. */
     fun awaitNoShelfSources() = runBlocking { withTimeout(30_000) { noShelfSources.receive() } }
 
     /** True when the theme still decides after a short wait: no stored choice turned [SettingsUiState.followsTheme] off. */

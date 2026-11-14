@@ -38,8 +38,9 @@ private val THEME_SIGNATURE = stringPreferencesKey("theme_signature")
  * The config as a flow: the theme's config.json overlaid with the choices stored on the TV.
  *
  * The store sits in credential-protected storage, so it opens only once the user is unlocked. While the user is locked,
- * [config] holds the theme alone and switches when the unlock arrives, and [set], [clear] and [followTheme] wait for the
- * store. A caller whose first value must carry the choices builds the repository after the unlock, as the key service does.
+ * [config] holds the theme alone and switches when the unlock arrives, and [set], [clear], [toggleShelfSource] and
+ * [followTheme] wait for the store. A caller whose first value must carry the choices builds the repository after the unlock,
+ * as the key service does.
  * When the user is already unlocked, the constructor reads the store once, so the first value carries the choices.
  * A pushed theme is told from the last one by [ThemeDirectory.signature] and clears the choices except open on start; that is
  * compared only while external storage is mounted, which looks like a reset otherwise.

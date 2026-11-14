@@ -186,8 +186,8 @@ private data object TvSettingsItem : Focusable {
 }
 
 /**
- * Java's order: the Wallpaper row follows the Clock row, the Open on start row follows the first section's rows. The Shelf
- * sources row follows the App shelf row.
+ * Java's order: the Wallpaper row follows the Clock row, the Open on start row follows the first section's rows. The Apps and
+ * channels row follows the App highlights row.
  */
 private fun pageItems(ui: SettingsUiState): List<PageItem> =
     buildList {

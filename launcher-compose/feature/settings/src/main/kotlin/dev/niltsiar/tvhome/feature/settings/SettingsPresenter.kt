@@ -20,11 +20,12 @@ import java.io.IOException
 /**
  * The settings screen's state logic: the rows are the repository's config read through [settingsGroups], nothing is
  * kept apart from it, and a pick or Follow theme goes to the repository, which answers through the same flow.
- * Only the open pickers, the theme's pictures, the picked app's label and whether Home holds READ_TV_LISTINGS are kept
- * here. [onEffect] gets [SettingsEffect.SaveFailed] when the store refuses a write, [SettingsEffect.WallpaperApplied] after a
- * picture or None was stored as the wallpaper, [SettingsEffect.AskShelfAccess] when App shelf is turned on or its sources
- * picker opened without that permission, and [SettingsEffect.NoShelfSources] when that picker would list nothing. That picker
- * closes when App shelf turns off, which takes its row away.
+ * Only the open pickers, the theme's pictures, the picked app's label, whether Home holds READ_TV_LISTINGS and the sources
+ * the Apps and channels picker lists are kept here. [onEffect] gets [SettingsEffect.SaveFailed] when the store refuses a
+ * write, [SettingsEffect.WallpaperApplied] after a picture or None was stored as the wallpaper, [SettingsEffect.AskShelfAccess]
+ * when App highlights is turned on or the Apps and channels picker opened without that permission, and
+ * [SettingsEffect.NoShelfSources] when that picker would list nothing. That picker closes when App highlights turns off, which
+ * takes its row away.
  */
 @Composable
 internal fun settingsPresenter(
@@ -39,6 +40,7 @@ internal fun settingsPresenter(
     var themeDefault by remember { mutableStateOf<WallpaperPicture?>(null) }
     var shelfAccess by remember { mutableStateOf(sources.shelfAccess()) }
     var shelfEntries by remember { mutableStateOf<List<ShelfSourceEntry>?>(null) }
+    var shelfListed by remember { mutableStateOf<Set<String>?>(null) }
     val pictures by produceState(emptyList<WallpaperPicture>(), sources) { value = sources.wallpaperPictures() }
     val currentPictures by rememberUpdatedState(pictures)
     LaunchedEffect(events, repository, sources) {
@@ -87,6 +89,7 @@ internal fun settingsPresenter(
                             currentOnEffect(SettingsEffect.AskShelfAccess)
                         } else {
                             val entries = shelfEntries(sources.shelfPublishers())
+                            shelfListed = entries.mapTo(HashSet()) { it.source }
                             if (entries.isEmpty()) currentOnEffect(SettingsEffect.NoShelfSources) else shelfEntries = entries
                         }
                     }
@@ -138,7 +141,11 @@ internal fun settingsPresenter(
         remember(wallpaperOpen, pictures, wallpaperChoice, themeDefault) {
             if (wallpaperOpen) wallpaperPicker(pictures, wallpaperChoice, themeDefault) else null
         }
-    val shelfRow = remember(config, shelfAccess) { shelfSourcesLabel(config, shelfAccess) }
+    LaunchedEffect(config.appShelf, shelfAccess) {
+        shelfListed = null
+        if (config.appShelf && shelfAccess) shelfListed = shelfEntries(sources.shelfPublishers()).mapTo(HashSet()) { it.source }
+    }
+    val shelfRow = remember(config, shelfAccess, shelfListed) { shelfSourcesLabel(config, shelfAccess, shelfListed) }
     LaunchedEffect(config.appShelf) { if (!config.appShelf) shelfEntries = null }
     val ticked = config.appShelfSources
     val shelfPicker = remember(shelfEntries, ticked) { shelfEntries?.let { ShelfPicker(it, ticked.toSet()) } }
