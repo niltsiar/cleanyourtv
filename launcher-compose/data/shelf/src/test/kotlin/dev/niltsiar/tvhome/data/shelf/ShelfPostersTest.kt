@@ -107,5 +107,19 @@ class ShelfPostersTestContent :
 
                 opened.getValue("content://app.posters/4") shouldBe reads
             }
+
+            test("the ten card posters of two apps all stay in the cache") {
+                val uris = (1..20).map { "content://app${it % 2}.posters/$it" }
+                val picture = png(1920, 1080)
+                uris.forEach { uri ->
+                    serve(uri, picture)
+                    poster(uri).shouldNotBeNull()
+                }
+                val reads = opened.toMap()
+
+                uris.forEach { poster(it).shouldNotBeNull() }
+
+                opened shouldBe reads
+            }
         }
     })

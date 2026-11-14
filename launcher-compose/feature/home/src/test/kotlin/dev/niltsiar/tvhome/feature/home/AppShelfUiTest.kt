@@ -43,6 +43,7 @@ import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.core.model.ShelfKind
 import io.kotest.assertions.withClue
 import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.ranges.shouldBeIn
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -104,6 +105,44 @@ class AppShelfUiTestContent :
                 compose.waitForIdle()
 
                 compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+            }
+
+            test("down from the last card scrolls the row back to its first card as it moves along the cards") {
+                items += (1..7).map { items[1].copy(title = "Show $it") }
+                showHome()
+                hold()
+                press(Key.DirectionUp)
+                val start = firstCardLeft()
+                repeat(9) { press(Key.DirectionRight) }
+                compose.onNodeWithTag("shelf:card:9").assertIsFocused()
+                withClue("scrolled to the last card") { firstCardLeft() shouldBeLessThan start }
+
+                compose.mainClock.autoAdvance = false
+                press(Key.DirectionDown, settle = false)
+                step(16)
+                withClue("one frame after down") { firstCardLeft() shouldBeLessThan start }
+                compose.mainClock.autoAdvance = true
+                compose.waitForIdle()
+
+                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                firstCardLeft() shouldBe start
+            }
+
+            test("with reduced_motion back from the last card puts the row at its first card at once") {
+                items += (1..7).map { items[1].copy(title = "Show $it") }
+                showHome(motion = Motion(reducedMotion = true))
+                hold()
+                press(Key.DirectionUp)
+                val start = firstCardLeft()
+                repeat(9) { press(Key.DirectionRight) }
+                withClue("scrolled to the last card") { firstCardLeft() shouldBeLessThan start }
+
+                compose.mainClock.autoAdvance = false
+                compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+                step(16)
+
+                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                firstCardLeft() shouldBe start
             }
 
             test("up from a card goes to the top bar, as up from the dock does") {
@@ -449,4 +488,10 @@ private class AppShelfUiTestFixture : JUnit4RulesContext() {
         }
         return width.toFloat()
     }
+
+    fun firstCardLeft(): Float =
+        compose
+            .onNodeWithTag("shelf:card:0")
+            .getBoundsInRoot()
+            .left.value
 }

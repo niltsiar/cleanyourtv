@@ -129,7 +129,8 @@ internal class ShelfCardsState {
  * The app shelf's cards between the title and the dock, in a row that starts under the title and scrolls sideways; their
  * bottom is [band]'s clear over the dock panel, whose top is [shelfBottom] drawn [groupShift] lower. They fade in over
  * [SHELF_FADE_MS] while [visible] and out as fast, at once without motion, and take focus only while [visible]. Left and Right
- * stop at the ends; Down and Back return to the dock tile; Up leaves for the top bar, as from the dock ([upToOffer]).
+ * stop at the ends; Down and Back return to the dock tile, and the row scrolls back to its first card, at once without motion;
+ * Up leaves for the top bar, as from the dock ([upToOffer]).
  * OK opens a card's item through [onOpen]; with [HomeLayout.pressFeedback] the card dips unless an app is launching.
  * A card shows its poster, or, for none that decodes, the app's [AppEntry.image] dimmed under the item's title.
  */
@@ -178,10 +179,17 @@ internal fun AppShelfCards(
     ) {
         ScrollsClearOfEdge(ScreenMargin) {
             key(shown.key) {
+                val scroll = rememberScrollState()
+                LaunchedEffect(scroll, animated) {
+                    snapshotFlow { cards.focused < 0 }.collectLatest { left ->
+                        if (!left) return@collectLatest
+                        if (animated) scroll.animateScrollTo(0) else scroll.scrollTo(0)
+                    }
+                }
                 Row(
                     Modifier
                         .fillMaxSize()
-                        .horizontalScroll(rememberScrollState())
+                        .horizontalScroll(scroll)
                         .padding(horizontal = ScreenMargin, vertical = band.clear)
                         .upToOffer(input, layout),
                     horizontalArrangement = Arrangement.spacedBy(TileGap),

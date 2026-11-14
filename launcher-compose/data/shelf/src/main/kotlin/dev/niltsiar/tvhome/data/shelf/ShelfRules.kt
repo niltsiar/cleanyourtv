@@ -5,7 +5,7 @@ import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.core.model.ShelfKind
 
 /** The most items one app's shelf shows. */
-internal const val SHELF_MAX: Int = 5
+internal const val SHELF_MAX: Int = 10
 
 /** An item engaged with longer ago than this is dropped. */
 internal const val SHELF_MAX_AGE_MS: Long = 30L * 24 * 60 * 60 * 1000

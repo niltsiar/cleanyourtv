@@ -20,8 +20,11 @@ import kotlin.math.roundToInt
 
 private const val TAG = "TvHome.Shelf"
 
-/** How many bytes of decoded posters stay in memory, about five cards of two apps at 1080p. */
-internal const val POSTER_CACHE_BYTES: Int = 6 * 1024 * 1024
+/**
+ * How many bytes of decoded posters stay in memory: the ten cards of two apps at 1080p, 480 x 270 pixels of 4 bytes each, with
+ * room to spare. Posters keep ARGB_8888, as RGB_565 bands the dark gradients of key art.
+ */
+internal const val POSTER_CACHE_BYTES: Int = 12 * 1024 * 1024
 
 /**
  * Decodes the posters of shelf items for Home's cards, on [io] and one at a time, and keeps them in an LRU of

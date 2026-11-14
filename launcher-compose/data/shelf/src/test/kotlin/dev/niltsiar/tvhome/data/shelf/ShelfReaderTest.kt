@@ -367,11 +367,13 @@ class ShelfReaderTestContent :
                 items(PLEZY).map { it.title to it.episodeNumber } shouldBe listOf("Severance" to "4", "New name" to null)
             }
 
-            test("at most five items per app, the most recently engaged first") {
-                listOf(4, 1, 7, 2, 6, 3, 5).forEach { days -> provider.watchNext += plezy("$days days", NOW - days * DAY) }
+            test("at most ten items per app, the most recently engaged first") {
+                listOf(4, 11, 1, 7, 12, 2, 9, 6, 3, 10, 5, 8).forEach { days ->
+                    provider.watchNext += plezy("$days days", NOW - days * DAY)
+                }
                 tick(PLEZY)
 
-                titles(PLEZY) shouldBe listOf("1 days", "2 days", "3 days", "4 days", "5 days")
+                titles(PLEZY) shouldBe (1..10).map { "$it days" }
             }
 
             test("the publishers are the installed apps by label, with their watch next and channel counts") {
