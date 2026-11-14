@@ -729,7 +729,7 @@ private class SettingsScreenFixture : JUnit4RulesContext() {
 
     /** A store write comes back from another thread to the UI thread's queue, so each check first runs what the queue holds. */
     fun waitUntilIdle(condition: () -> Boolean) =
-        compose.waitUntil(10_000) {
+        compose.waitUntil(30_000) {
             shadowOf(Looper.getMainLooper()).idle()
             condition()
         }

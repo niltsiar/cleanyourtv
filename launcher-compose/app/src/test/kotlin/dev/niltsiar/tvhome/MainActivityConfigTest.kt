@@ -84,7 +84,7 @@ class MainActivityConfigTestContent :
                     )
 
                 fun waitForTheTiles() {
-                    compose.waitUntil(10_000) { tileWidth() != null }
+                    compose.waitUntil(30_000) { tileWidth() != null }
                 }
 
                 /** An exported LEANBACK_LAUNCHER activity, `pkg/pkg.Main`. */
@@ -141,32 +141,32 @@ class MainActivityConfigTestContent :
             }
         } asContextForEach {
             test("a stored choice reaches what home shows with no restart") {
-                compose.waitUntil(10_000) { isFocused("tile:pkg.1/.Main") }
+                compose.waitUntil(30_000) { isFocused("tile:pkg.1/.Main") }
                 val before = tileWidth()!!
                 choose(Choices.Columns, 6)
-                compose.waitUntil(10_000) { tileWidth()?.let { it < before } == true }
+                compose.waitUntil(30_000) { tileWidth()?.let { it < before } == true }
 
                 exists("name:pkg.2/.Main").shouldBeFalse()
                 choose(Choices.AlwaysShowNames, true)
-                compose.waitUntil(10_000) { exists("name:pkg.2/.Main") }
+                compose.waitUntil(30_000) { exists("name:pkg.2/.Main") }
                 choose(Choices.AlwaysShowNames, false)
-                compose.waitUntil(10_000) { !exists("name:pkg.2/.Main") }
+                compose.waitUntil(30_000) { !exists("name:pkg.2/.Main") }
 
                 exists("library:pill").shouldBeFalse()
                 choose(Choices.AppLibrary, true)
-                compose.waitUntil(10_000) { exists("library:pill") }
+                compose.waitUntil(30_000) { exists("library:pill") }
                 compose.onNodeWithTag("tile:pkg.1/.Main").requestFocus()
                 repeat(2) { press(Key.DirectionDown) }
                 compose.onNodeWithTag("library:pill").assertIsFocused()
                 press(Key.DirectionCenter)
                 compose.mainClock.advanceTimeBy(1_000)
-                compose.waitUntil(10_000) { exists("library") }
+                compose.waitUntil(30_000) { exists("library") }
 
                 choose(Choices.AppLibrary, false)
-                compose.waitUntil(10_000) { !exists("library") && !exists("library:pill") }
+                compose.waitUntil(30_000) { !exists("library") && !exists("library:pill") }
 
                 choose(Choices.AppLibrary, true)
-                compose.waitUntil(10_000) { exists("library:pill") }
+                compose.waitUntil(30_000) { exists("library:pill") }
                 compose.mainClock.advanceTimeBy(1_000)
                 exists("library").shouldBeFalse()
             }

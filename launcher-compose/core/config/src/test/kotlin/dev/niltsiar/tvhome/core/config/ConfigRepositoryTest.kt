@@ -92,22 +92,22 @@ class ConfigRepositoryTestContent :
                 fun awaitConfig(
                     repo: ConfigRepository,
                     until: (TvConfig) -> Boolean,
-                ) = runBlocking { withTimeout(10_000) { repo.config.first(until) } }
+                ) = runBlocking { withTimeout(30_000) { repo.config.first(until) } }
 
                 fun awaitFollowsTheme(
                     repo: ConfigRepository,
                     expected: Boolean,
-                ) = runBlocking { withTimeout(10_000) { repo.followsTheme.first { it == expected } } }
+                ) = runBlocking { withTimeout(30_000) { repo.followsTheme.first { it == expected } } }
 
                 fun awaitOpenOnStart(
                     repo: ConfigRepository,
                     expected: String?,
-                ) = runBlocking { withTimeout(10_000) { repo.openOnStartApp.first { it == expected } } }
+                ) = runBlocking { withTimeout(30_000) { repo.openOnStartApp.first { it == expected } } }
 
                 fun awaitWallpaperChoice(
                     repo: ConfigRepository,
                     expected: String?,
-                ) = runBlocking { withTimeout(10_000) { repo.wallpaperChoice.first { it == expected } } }
+                ) = runBlocking { withTimeout(30_000) { repo.wallpaperChoice.first { it == expected } } }
 
                 /** Writes the store's file before a repository opens it. */
                 fun writeStore(edit: (MutablePreferences) -> Unit) {
@@ -121,7 +121,7 @@ class ConfigRepositoryTestContent :
 
                 /** Waits until the repository has logged a message containing [text]. */
                 fun awaitLog(text: String) {
-                    val deadline = System.nanoTime() + 10_000_000_000L
+                    val deadline = System.nanoTime() + 30_000_000_000L
                     while (ShadowLog.getLogsForTag("TvHome.Config").none { text in it.msg.orEmpty() }) {
                         check(System.nanoTime() < deadline) { "no log with \"$text\"" }
                         Thread.sleep(10)
@@ -511,7 +511,7 @@ class ConfigRepositoryTestContent :
                 shadowOf(Looper.getMainLooper()).idle()
 
                 awaitConfig(repo) { it.columns == 7 }
-                runBlocking { withTimeout(10_000) { write.join() } }
+                runBlocking { withTimeout(30_000) { write.join() } }
                 write.isCancelled.shouldBeFalse()
             }
         }

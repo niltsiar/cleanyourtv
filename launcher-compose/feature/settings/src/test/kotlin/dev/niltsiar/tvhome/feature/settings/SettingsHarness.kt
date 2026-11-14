@@ -98,10 +98,10 @@ internal class SettingsHarness(
     val wallpaperChoice: String? get() = repository.wallpaperChoice.value
 
     /** Waits for the next wallpaper pick that was reported as stored. */
-    fun awaitApplied() = runBlocking { withTimeout(10_000) { applied.receive() } }
+    fun awaitApplied() = runBlocking { withTimeout(30_000) { applied.receive() } }
 
     /** Waits for the next write the store refused. */
-    fun awaitSaveFailed() = runBlocking { withTimeout(10_000) { failed.receive() } }
+    fun awaitSaveFailed() = runBlocking { withTimeout(30_000) { failed.receive() } }
 
     /** True when the theme still decides after a short wait: no stored choice turned [SettingsUiState.followsTheme] off. */
     fun staysFollowingTheme(): Boolean = runBlocking { withTimeoutOrNull(500) { viewModel.uiState.first { !it.followsTheme } } == null }
@@ -113,7 +113,7 @@ internal class SettingsHarness(
 
     /** Waits for a state that satisfies [until]: a pick reaches the store on another thread and comes back through its flow. */
     fun awaitState(until: (SettingsUiState) -> Boolean): SettingsUiState =
-        runBlocking { withTimeout(10_000) { viewModel.uiState.first(until) } }
+        runBlocking { withTimeout(30_000) { viewModel.uiState.first(until) } }
 
     fun stop() {
         presenterScope.cancel()

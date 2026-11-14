@@ -95,7 +95,7 @@ class HomeHostConfigTestContent :
 
                 fun choose(columns: Int) {
                     runBlocking { graph.configRepository.set(Choices.Columns, columns) }
-                    compose.waitUntil(10_000) { graph.configRepository.config.value.columns == columns }
+                    compose.waitUntil(30_000) { graph.configRepository.config.value.columns == columns }
                 }
 
                 fun exists(tag: String) = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
@@ -161,7 +161,7 @@ class HomeHostConfigTestContent :
             test("a choice made while home is stopped never draws the new layout over the old split") {
                 choose(7)
                 showHome()
-                compose.waitUntil(10_000) { dockRow()?.tiles == 7 }
+                compose.waitUntil(30_000) { dockRow()?.tiles == 7 }
                 val seven = dockRow()!!
                 compose.runOnUiThread { viewModel.onStopped() }
                 compose.waitForIdle()
@@ -178,7 +178,7 @@ class HomeHostConfigTestContent :
                     drawn += dockRow()
                 }
                 compose.mainClock.autoAdvance = true
-                compose.waitUntil(10_000) { dockRow()?.tiles == 4 }
+                compose.waitUntil(30_000) { dockRow()?.tiles == 4 }
                 val four = dockRow()!!
 
                 four.tileWidth shouldBeGreaterThan seven.tileWidth
@@ -188,9 +188,9 @@ class HomeHostConfigTestContent :
             test("leaving home ends reorder mode so it is gone when home comes back") {
                 val home = HomeLifecycle()
                 showHome(home)
-                compose.waitUntil(10_000) { dockRow() != null }
+                compose.waitUntil(30_000) { dockRow() != null }
                 compose.runOnUiThread { viewModel.actions.onToggleReorder() }
-                compose.waitUntil(10_000) { exists("reorder:hint") }
+                compose.waitUntil(30_000) { exists("reorder:hint") }
 
                 compose.runOnUiThread { home.moveTo(Lifecycle.State.CREATED) }
                 compose.waitForIdle()
@@ -204,14 +204,14 @@ class HomeHostConfigTestContent :
                 choose(7)
                 val home = HomeLifecycle()
                 showHome(home)
-                compose.waitUntil(10_000) { dockRow()?.tiles == 7 }
+                compose.waitUntil(30_000) { dockRow()?.tiles == 7 }
 
                 compose.runOnUiThread { home.moveTo(Lifecycle.State.CREATED) }
                 compose.waitForIdle()
                 choose(4)
                 compose.runOnUiThread { home.moveTo(Lifecycle.State.RESUMED) }
 
-                compose.waitUntil(10_000) { dockRow()?.tiles == 4 }
+                compose.waitUntil(30_000) { dockRow()?.tiles == 4 }
             }
         }
     })

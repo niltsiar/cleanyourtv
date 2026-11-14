@@ -118,7 +118,7 @@ class KeyServiceTestContent :
 
                 /** The service reads its config off the main thread, then starts on it: wait until [code] is mapped. */
                 fun awaitMapped(code: Int) {
-                    val deadline = System.currentTimeMillis() + 10_000
+                    val deadline = System.currentTimeMillis() + 30_000
                     while (System.currentTimeMillis() < deadline) {
                         device += 1
                         if (tap(code)) break

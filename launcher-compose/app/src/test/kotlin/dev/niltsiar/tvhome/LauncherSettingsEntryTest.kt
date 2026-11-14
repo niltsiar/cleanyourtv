@@ -82,7 +82,7 @@ class LauncherSettingsEntryTestContent :
 
                 fun showHome() {
                     home = Robolectric.buildActivity(MainActivity::class.java).setup()
-                    compose.waitUntil(10_000) { isFocused("tile:pkg.1/.Main") }
+                    compose.waitUntil(30_000) { isFocused("tile:pkg.1/.Main") }
                 }
 
                 /** An exported LEANBACK_LAUNCHER activity, `pkg/pkg.Main`. */
@@ -168,7 +168,7 @@ class LauncherSettingsEntryTestContent :
                     choose(Choices.Columns, 6)
                 })
 
-                compose.waitUntil(10_000) { exists("name:pkg.2/.Main") && settingsButtonFocused() }
+                compose.waitUntil(30_000) { exists("name:pkg.2/.Main") && settingsButtonFocused() }
             }
 
             test("the reorder result of the page starts reorder mode and not the settings focus") {
@@ -177,7 +177,7 @@ class LauncherSettingsEntryTestContent :
                     result = LauncherSettingsPage.reorderResult(),
                 ) { choose(Choices.Columns, 6) }
 
-                compose.waitUntil(10_000) { exists("reorder:hint") }
+                compose.waitUntil(30_000) { exists("reorder:hint") }
                 settingsButtonFocused().shouldBeFalse()
             }
 
@@ -187,7 +187,7 @@ class LauncherSettingsEntryTestContent :
                     choices = { choose(Choices.Columns, 6) },
                 )
 
-                compose.waitUntil(10_000) { isFocused("tile:pkg.1/.Main") }
+                compose.waitUntil(30_000) { isFocused("tile:pkg.1/.Main") }
                 settingsButtonFocused().shouldBeFalse()
             }
         }

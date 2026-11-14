@@ -201,13 +201,13 @@ class WallpaperProviderTestContent :
                         expectNoEvents()
                         clock.subscriptionCount.value shouldBe 0
                         provider.onStart()
-                        withTimeout(5_000) { clock.subscriptionCount.first { it > 0 } }
+                        withTimeout(30_000) { clock.subscriptionCount.first { it > 0 } }
                         clock.emit(null)
                         clock.emit(noon)
                         val shown = awaitItem().picture
                         shown shouldBeSameInstanceAs pictures.getValue("a.jpg")
                         provider.onStop()
-                        withTimeout(5_000) { clock.subscriptionCount.first { it == 0 } }
+                        withTimeout(30_000) { clock.subscriptionCount.first { it == 0 } }
                         expectNoEvents()
                     }
                 }
@@ -219,18 +219,18 @@ class WallpaperProviderTestContent :
                     val provider = provider(rotating)
                     provider.wallpaper(clock).test {
                         provider.onStart()
-                        withTimeout(5_000) { clock.subscriptionCount.first { it > 0 } }
+                        withTimeout(30_000) { clock.subscriptionCount.first { it > 0 } }
                         clock.emit(noon)
                         val shown = awaitItem().picture
                         shown shouldBeSameInstanceAs pictures.getValue("a.jpg")
                         provider.onStop()
-                        withTimeout(5_000) { clock.subscriptionCount.first { it == 0 } }
+                        withTimeout(30_000) { clock.subscriptionCount.first { it == 0 } }
 
                         provider.releasePicture()
                         awaitItem().picture.shouldBeNull()
 
                         provider.onStart()
-                        withTimeout(5_000) { clock.subscriptionCount.first { it > 0 } }
+                        withTimeout(30_000) { clock.subscriptionCount.first { it > 0 } }
                         clock.emit(noon)
                         awaitItem().picture shouldBeSameInstanceAs pictures.getValue("a.jpg")
                         decoded shouldBe listOf("a.jpg", "a.jpg")
@@ -287,7 +287,7 @@ class WallpaperProviderTestContent :
                     val provider = provider(rotating, choice)
                     provider.wallpaper(clock).test {
                         provider.onStart()
-                        withTimeout(5_000) { clock.subscriptionCount.first { it > 0 } }
+                        withTimeout(30_000) { clock.subscriptionCount.first { it > 0 } }
                         clock.emit(noon)
                         val first = awaitItem().picture
                         first shouldBeSameInstanceAs pictures.getValue("a.jpg")

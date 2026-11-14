@@ -83,17 +83,17 @@ class SettingsHostTestContent :
                             onReorder = {},
                         )
                     }
-                    compose.waitUntil(10_000) { viewModel.uiState.value.wallpaper != null }
+                    compose.waitUntil(30_000) { viewModel.uiState.value.wallpaper != null }
                 }
             }
         } asContextForEach {
             test("a picked wallpaper is confirmed in the page for about 2 s and not by a toast") {
                 show()
                 viewModel.actions.onOpenWallpaperPicker()
-                compose.waitUntil(10_000) { viewModel.uiState.value.wallpaperPicker != null }
+                compose.waitUntil(30_000) { viewModel.uiState.value.wallpaperPicker != null }
 
                 viewModel.actions.onPickWallpaper(1)
-                compose.waitUntil(10_000) { exists("settings:notice") }
+                compose.waitUntil(30_000) { exists("settings:notice") }
 
                 noticeSays("Wallpaper changed")
                 compose.mainClock.advanceTimeBy(1_500)

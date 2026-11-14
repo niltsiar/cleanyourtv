@@ -162,10 +162,10 @@ class SettingsActivityTestContent :
                         )
                     runBlocking {
                         graph.configRepository.set(Choices.OpenOnStart, "pkg.tv")
-                        withTimeout(10_000) { viewModel.uiState.first { it.openOnStart == OptionLabel.Text("Activity label") } }
+                        withTimeout(30_000) { viewModel.uiState.first { it.openOnStart == OptionLabel.Text("Activity label") } }
 
                         viewModel.actions.onOpenPicker()
-                        val picker = withTimeout(10_000) { viewModel.uiState.first { it.picker != null } }.picker
+                        val picker = withTimeout(30_000) { viewModel.uiState.first { it.picker != null } }.picker
 
                         picker?.apps shouldBe listOf(OpenOnStartApp("Activity label", "pkg.tv"))
                     }

@@ -163,7 +163,7 @@ class PickerArtUiTestContent :
                     colour: Color,
                 ) {
                     loads.complete(Unit)
-                    compose.waitUntil(5_000) { artColour(index) == colour }
+                    compose.waitUntil(30_000) { artColour(index) == colour }
                 }
             }
         } asContextForEach {

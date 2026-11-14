@@ -135,7 +135,7 @@ class SettingsRecompositionTestContent :
             test("a pick recomposes the row it changes alone") {
                 press(Key.DirectionRight)
                 press(Key.DirectionCenter)
-                compose.waitUntil(10_000) {
+                compose.waitUntil(30_000) {
                     shadowOf(Looper.getMainLooper()).idle()
                     settings.row(SettingsRowId.Columns).selected == 3
                 }

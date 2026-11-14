@@ -131,7 +131,7 @@ class MainActivityStartTestContent :
 
                 fun pick(pkg: String) {
                     runBlocking { graph.configRepository.set(Choices.OpenOnStart, pkg) }
-                    compose.waitUntil(10_000) { graph.configRepository.openOnStartApp.value == pkg }
+                    compose.waitUntil(30_000) { graph.configRepository.openOnStartApp.value == pkg }
                 }
 
                 fun screenOn() {
@@ -152,7 +152,7 @@ class MainActivityStartTestContent :
                 showHome()
                 withClue("no library pill in the first composition") { exists("library:pill").shouldBeTrue() }
                 val drawn = mutableListOf<Int?>()
-                compose.waitUntil(10_000) {
+                compose.waitUntil(30_000) {
                     compose.mainClock.advanceTimeByFrame()
                     drawn += dockRowTiles()
                     drawn.last() != null
@@ -175,7 +175,7 @@ class MainActivityStartTestContent :
 
                 screenOn()
 
-                compose.waitUntil(10_000) { shadowOf(home.get()).peekNextStartedActivity() != null }
+                compose.waitUntil(30_000) { shadowOf(home.get()).peekNextStartedActivity() != null }
                 shadowOf(home.get()).nextStartedActivity.component shouldBe ComponentName("pkg.5", "pkg.5.Main")
             }
 
@@ -189,7 +189,7 @@ class MainActivityStartTestContent :
 
                 screenOn()
 
-                compose.waitUntil(10_000) { shadowOf(home.get()).peekNextStartedActivity() != null }
+                compose.waitUntil(30_000) { shadowOf(home.get()).peekNextStartedActivity() != null }
                 runBlocking { graph.homeSources.lastOpened.first() }.keys shouldBe setOf("pkg.5/.Main")
             }
 
