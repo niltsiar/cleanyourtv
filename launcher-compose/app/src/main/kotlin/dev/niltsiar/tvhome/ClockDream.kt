@@ -1,5 +1,6 @@
 package dev.niltsiar.tvhome
 
+import android.content.Context
 import android.service.dreams.DreamService
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.Lifecycle
@@ -25,6 +26,10 @@ class ClockDream :
 
     override val lifecycle: Lifecycle get() = registry
     override val savedStateRegistry: SavedStateRegistry get() = savedState.savedStateRegistry
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(launcherContext(newBase))
+    }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()

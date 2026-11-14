@@ -1,5 +1,7 @@
 package dev.niltsiar.tvhome.core.config
 
+import java.util.Locale
+
 /** clock_format: the 12- or 24-hour clock whatever the TV is set to, or [System] for the TV's own. */
 public enum class ClockFormat(
     internal val jsonValue: String,
@@ -231,6 +233,8 @@ public data class TvConfig(
     /** Percent, 0 to 90. */
     val clockWallpaperDim: Int = 50,
     val clockGlow: Boolean = true,
+    /** The language the launcher shows itself in instead of the TV's; null follows the TV. */
+    val locale: Locale? = null,
 )
 
 /** A point on Earth: [latitude] -90 to 90 and [longitude] -180 to 180, in degrees. */

@@ -5,6 +5,7 @@ import io.kotest.assertions.withClue
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.shouldBe
+import java.util.Locale
 
 val TvConfigParserTest by testSuite {
     /** What a theme that sets nothing gives: the defaults, with the Java launcher's icon_only_buttons and icon_only_inputs false. */
@@ -356,6 +357,35 @@ val TvConfigParserTest by testSuite {
         }
     }
 
+    test("locale takes a language tag with its script region and extension subtags") {
+        for (tag in listOf("vi", "pt-BR", "sr-Latn", "ar-EG-u-nu-latn", "fil")) {
+            val parsed = parseTvConfig("""{"locale": "$tag"}""")
+            withClue(tag) { parsed.config.locale shouldBe Locale.forLanguageTag(tag) }
+            withClue(tag) { parsed.rejectedKeys + parsed.unknownKeys + parsed.unsupportedKeys shouldBe emptyList<String>() }
+        }
+        parseTvConfig("""{"locale": "ar-EG-u-nu-latn"}""").config.locale?.getUnicodeLocaleType("nu") shouldBe "latn"
+    }
+
+    test("an empty or blank locale follows the tv and is no error") {
+        for (blank in listOf("\"\"", "\"   \"")) {
+            val parsed = parseTvConfig("""{"locale": $blank}""")
+            withClue(blank) { parsed.config.locale shouldBe null }
+            withClue(blank) { parsed.rejectedKeys shouldBe emptyList<String>() }
+        }
+    }
+
+    test("a malformed locale follows the tv and is rejected") {
+        for (bad in listOf("\"EN\"", "\"english\"", "\"en_US\"", "\"e\"", "\"en--US\"", "\"en-\"", "\"en-toolongsubtag\"", "true", "5")) {
+            val parsed = parseTvConfig("""{"locale": $bad}""")
+            withClue(bad) { parsed.config.locale shouldBe null }
+            withClue(bad) { parsed.rejectedKeys shouldBe listOf("locale") }
+        }
+    }
+
+    test("spaces around a locale tag are dropped") {
+        parseTvConfig("""{"locale": "  pt-BR\t"}""").config.locale shouldBe Locale.forLanguageTag("pt-BR")
+    }
+
     test("dock opacity takes 30 to 100 and anything else keeps the guarded default") {
         parseTvConfig("""{"dock_opacity": 30}""").config.dockOpacity shouldBe 30
         parseTvConfig("""{"dock_opacity": 100.9}""").config.dockOpacity shouldBe 100
@@ -511,7 +541,7 @@ val TvConfigParserTest by testSuite {
     }
 
     test("keys with no reader in this launcher are unsupported and change nothing") {
-        val keys = listOf("app_banners", "locale")
+        val keys = listOf("app_banners", "lunar_date")
         val parsed = parseTvConfig(keys.joinToString(prefix = "{", postfix = "}") { "\"$it\": true" })
 
         parsed.unsupportedKeys shouldBe keys
@@ -631,6 +661,7 @@ val TvConfigParserTest by testSuite {
             "clock_wallpaper" to ("true" to defaults.copy(clockWallpaper = true)),
             "clock_wallpaper_dim" to ("20" to defaults.copy(clockWallpaperDim = 20)),
             "clock_glow" to ("false" to defaults.copy(clockGlow = false)),
+            "locale" to (""""en"""" to defaults.copy(locale = Locale.ENGLISH)),
         )
 
     test("every supported key at a non default value changes exactly its own field") {

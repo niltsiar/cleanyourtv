@@ -2,6 +2,7 @@ package dev.niltsiar.tvhome
 
 import android.app.Activity
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
@@ -15,6 +16,10 @@ import dev.niltsiar.tvhome.feature.settings.R as SettingsR
  */
 class HomeSettingsActivity : Activity() {
     private var left = false
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(launcherContext(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

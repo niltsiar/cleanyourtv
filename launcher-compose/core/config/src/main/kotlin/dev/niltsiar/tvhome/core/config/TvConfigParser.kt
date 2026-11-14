@@ -6,9 +6,13 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import java.util.Locale
 
 private const val LATITUDE = "latitude"
 private const val LONGITUDE = "longitude"
+
+/** The reference launcher's locale tags: a lower-case language, then any subtags, so "sr-Latn" passes too. */
+private val languageTag = Regex("[a-z]{2,3}(-[A-Za-z0-9]{1,8})*")
 
 /** The largest config.json that is read, in bytes; a bigger one is ignored as a whole. */
 internal const val MAX_CONFIG_BYTES: Int = 64 * 1024
@@ -31,7 +35,6 @@ private val unsupportedKeys: Set<String> =
         "greeting",
         "header_white",
         "icon_only_vpn",
-        "locale",
         "lunar_date",
         "lunar_utc_offset",
         "module_cards",
@@ -181,6 +184,7 @@ public fun parseTvConfig(json: String): ParsedConfig {
             clockWallpaper = o.bool("clock_wallpaper", d.clockWallpaper),
             clockWallpaperDim = o.int("clock_wallpaper_dim", d.clockWallpaperDim, 0..90),
             clockGlow = o.bool("clock_glow", d.clockGlow),
+            locale = o.locale("locale", d.locale),
         )
     return ParsedConfig(
         config = config,
@@ -266,6 +270,15 @@ private class Overlay(
         val element = root[key] ?: return default
         val text = (element as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return default.also { rejected += key }
         return text.trim().ifEmpty { null }
+    }
+
+    /** A language tag such as "vi", "pt-BR" or "ar-EG-u-nu-latn", trimmed; blank is null, and a malformed tag is rejected. */
+    fun locale(
+        key: String,
+        default: Locale?,
+    ): Locale? {
+        val tag = optionalString(key, null) ?: return default
+        return if (languageTag.matches(tag)) Locale.forLanguageTag(tag) else default.also { rejected += key }
     }
 
     /** An array's string items, trimmed; items that are not strings, or are blank, are skipped. */

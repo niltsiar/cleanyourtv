@@ -36,6 +36,10 @@ class SettingsActivity : ComponentActivity() {
         viewModelFactory { initializer { MoleculeSettingsViewModel(graph.configRepository, graph.settingsSources) } }
     }
 
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(launcherContext(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         hideSystemBars()

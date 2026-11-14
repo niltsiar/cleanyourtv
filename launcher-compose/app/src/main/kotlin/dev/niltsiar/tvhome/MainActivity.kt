@@ -2,6 +2,7 @@ package dev.niltsiar.tvhome
 
 import android.annotation.SuppressLint
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -80,6 +81,10 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(launcherContext(newBase))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

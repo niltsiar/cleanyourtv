@@ -1,6 +1,7 @@
 package dev.niltsiar.tvhome
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -15,6 +16,10 @@ import androidx.activity.compose.setContent
  */
 class ClockActivity : ComponentActivity() {
     private val graph get() = (application as TvHomeApplication).graph
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(launcherContext(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
