@@ -4,10 +4,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.dependencies
 
-/**
- * TestBalloon with Kotest assertions for a module's local unit tests. JUnit 4 classes in the same module keep running
- * beside the suites, so a module can move one class at a time.
- */
+/** TestBalloon with Kotest assertions for a module's local unit tests (docs/adr/0004-unit-tests-on-testballoon.md). */
 class AndroidTestBalloonConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) =
         with(target) {

@@ -10,7 +10,7 @@ import org.gradle.api.Project
 import org.gradle.kotlin.dsl.configure
 
 /**
- * Spotless with ktlint on every project, plus Android lint on Android modules. Applied by the other
+ * Spotless with ktlint on every project, plus Android lint and [CheckNoJUnitTests] on app and library modules. Applied by the other
  * convention plugins; the root project applies it directly to cover build-logic and the build scripts.
  */
 class QualityConventionPlugin : Plugin<Project> {
@@ -44,9 +44,11 @@ class QualityConventionPlugin : Plugin<Project> {
                         tasks.named("check") { dependsOn("lint${variant.name.replaceFirstChar(Char::titlecase)}") }
                     }
                 }
+                checkNoJUnitTests()
             }
             pluginManager.withPlugin("com.android.library") {
                 extensions.configure<LibraryExtension> { lint.configureLint() }
+                checkNoJUnitTests()
             }
         }
 }
