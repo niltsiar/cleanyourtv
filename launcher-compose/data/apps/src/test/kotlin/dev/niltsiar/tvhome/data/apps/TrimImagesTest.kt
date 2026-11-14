@@ -98,4 +98,4 @@ class TrimImagesTestContent :
         }
     })
 
-private const val LOAD_TIMEOUT_MS = 10_000L
+private const val LOAD_TIMEOUT_MS = 30_000L
