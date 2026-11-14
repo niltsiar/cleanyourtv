@@ -34,7 +34,8 @@ val AppShelfPresenterTest by testSuite(testConfig = TestConfig.testScope(isEnabl
             val published = mapOf("pkg.2" to listOf(item("Severance"), item("Andor")), "pkg.3" to emptyList())
             val config = MutableStateFlow(SixColumns.copy(appShelf = true, appShelfSources = listOf("pkg.2", "pkg.3/history", "pkg.8")))
 
-            fun TestScope.home(): StateFlow<HomeUiState> {
+            /** Home with a layout that has [room] for the cards, which the screen reports as it first lays out. */
+            fun TestScope.home(room: Boolean = true): StateFlow<HomeUiState> {
                 val sources =
                     sources(shelfItems = { pkg ->
                         reads += pkg
@@ -44,6 +45,7 @@ val AppShelfPresenterTest by testSuite(testConfig = TestConfig.testScope(isEnabl
                     moleculeFlow(RecompositionMode.Immediate) {
                         homePresenter(events.receiveAsFlow(), sources, config, { effects += it }, Locale.ENGLISH, "EEEE d MMMM")
                     }
+                if (room) events.trySend(HomeEvent.ShelfRoom(true))
                 return flow.stateIn(backgroundScope, SharingStarted.Eagerly, HomeUiState()).also { runCurrent() }
             }
 
@@ -107,6 +109,29 @@ val AppShelfPresenterTest by testSuite(testConfig = TestConfig.testScope(isEnabl
         test("with app_shelf off a held dock tile reads nothing and shows no shelf") {
             with(it.testScope) {
                 configure { copy(appShelf = false) }
+                val home = home()
+                focus("pkg.2")
+                pass(10 * SHELF_HOLD_MS)
+
+                reads.shouldBeEmpty()
+                home.value.appShelf.shouldBeNull()
+            }
+        }
+
+        test("until the screen says the layout has room for the cards, a held dock tile reads nothing") {
+            with(it.testScope) {
+                val home = home(room = false)
+                focus("pkg.2")
+                pass(10 * SHELF_HOLD_MS)
+
+                reads.shouldBeEmpty()
+                home.value.appShelf.shouldBeNull()
+            }
+        }
+
+        test("a dock tile whose launch_actions switch to an input reads nothing, its app's sources ticked or not") {
+            with(it.testScope) {
+                configure { copy(launchActions = mapOf("pkg.2" to "input:HW2")) }
                 val home = home()
                 focus("pkg.2")
                 pass(10 * SHELF_HOLD_MS)

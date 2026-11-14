@@ -14,6 +14,8 @@ import dev.niltsiar.tvhome.core.model.InputRow
 import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.ShelfItem
+import dev.niltsiar.tvhome.core.model.inputIdOf
+import dev.niltsiar.tvhome.core.model.shelfSourceOf
 import kotlinx.coroutines.delay
 
 /** A saved order, applied over the list [base] it was made from until the app list changes (the next load reads the file). */
@@ -142,15 +144,19 @@ internal class HomeInteraction(
     var shelfReads by mutableIntStateOf(0)
         private set
 
-    /** Whether the layout on screen has room for the cards; until the screen says, it is taken to have. */
-    private var shelfRoom by mutableStateOf(true)
+    /** Whether the layout on screen has room for the cards; until the screen says, it is taken to have none. */
+    private var shelfRoom by mutableStateOf(false)
 
-    /** The dock tile [key] when app_shelf is on, the layout has room and the tile's app has app_shelf_sources ticked, else null. */
+    /**
+     * The dock tile [key] when app_shelf is on, the layout has room and the tile's app has app_shelf_sources ticked, else null.
+     * A tile whose launch_actions switch to an input opens no app, so it has no shelf.
+     */
     fun shelfTile(key: String?): AppEntry? {
-        if (!config.value.appShelf || !shelfRoom) return null
+        val current = config.value
+        if (!current.appShelf || !shelfRoom) return null
         val tile = shown.dock.firstOrNull { it.key == key } ?: return null
-        val prefix = "${tile.packageName}/"
-        return tile.takeIf { _ -> config.value.appShelfSources.any { it == tile.packageName || it.startsWith(prefix) } }
+        if (inputIdOf(current.launchActions[tile.packageName]) != null) return null
+        return tile.takeIf { _ -> current.appShelfSources.any { shelfSourceOf(it).packageName == tile.packageName } }
     }
 
     /**
