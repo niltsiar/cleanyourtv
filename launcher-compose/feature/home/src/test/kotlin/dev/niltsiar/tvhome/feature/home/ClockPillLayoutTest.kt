@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -13,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -21,6 +23,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import de.infix.testBalloon.framework.core.JUnit4RulesContext
 import de.infix.testBalloon.framework.core.TestConfig
@@ -30,6 +33,7 @@ import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
+import io.kotest.assertions.withClue
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.ints.shouldBeInRange
@@ -126,6 +130,34 @@ class ClockPillLayoutTestContent :
                 below.box(below.lines[1], columns = date.left until date.left + 12).bottom shouldBeInRange 93..94
             }
 
+            test("in a right to left language the clock's digits keep their order in both looks") {
+                for (below in listOf(true, false)) {
+                    val (ltr, rtl) =
+                        listOf(LayoutDirection.Ltr, LayoutDirection.Rtl).map {
+                            direction = it
+                            show(
+                                LocalDateTime.of(2026, 9, 30, 15, 42),
+                                Locale.ENGLISH,
+                                "EEEE, MMMM d",
+                                showGreeting = false,
+                                dateBelowClock = below,
+                            )
+                            state = state.copy(date = "")
+                            compose.waitForIdle()
+                            ink().run { pattern(box(0 until height)) }
+                        }
+                    val differing = ltr.zip(rtl).sumOf { (a, b) -> a.zip(b).count { (x, y) -> x != y } }
+                    // Edge pixels can anti-alias apart; a clock with its digits reversed differs in far more than 1 in 100.
+                    withClue(
+                        "date below the clock: $below, $differing differ, ${ltr.size} by ${ltr[0].length} px against ${rtl.size} by ${rtl[0].length}",
+                    ) {
+                        rtl.size shouldBe ltr.size
+                        rtl[0].length shouldBe ltr[0].length
+                        differing shouldBeLessThan ltr.size * ltr[0].length / 100
+                    }
+                }
+            }
+
             test("with the date beside the clock the pill keeps its look") {
                 show(LocalDateTime.of(2026, 9, 30, 15, 42), Locale.ENGLISH, "EEEE, MMMM d", dateBelowClock = false)
                 val ink = ink()
@@ -186,6 +218,10 @@ private class PillInk(
 
     fun parts(rows: IntRange): List<InkBox> = parts(0 until width, rows)
 
+    /** The ink in [box], one string per row with `#` for an inked pixel and `.` for a bare one. */
+    fun pattern(box: InkBox): List<String> =
+        (box.top..box.bottom).map { y -> (box.left..box.right).joinToString("") { x -> if (inked[y][x]) "#" else "." } }
+
     fun box(
         rows: IntRange,
         columns: IntRange = 0 until width,
@@ -201,6 +237,8 @@ private class ClockPillLayoutFixture : JUnit4RulesContext() {
     var state by mutableStateOf(HomeUiState())
 
     var dateBelow by mutableStateOf(true)
+
+    var direction by mutableStateOf(LayoutDirection.Ltr)
 
     lateinit var measurer: TextMeasurer
 
@@ -225,9 +263,11 @@ private class ClockPillLayoutFixture : JUnit4RulesContext() {
                 TvTheme {
                     measurer = rememberTextMeasurer()
                     dateStyle = TvTheme.typography.dateCompact
-                    Box(Modifier.fillMaxSize().background(Color.Black)) {
-                        Row(Modifier.padding(start = 40.dp, top = TopBarTop).height(TopBarHeight)) {
-                            ClockPill(rememberGlassState(), { state }, dateBelow)
+                    CompositionLocalProvider(LocalLayoutDirection provides direction) {
+                        Box(Modifier.fillMaxSize().background(Color.Black)) {
+                            Row(Modifier.padding(start = 40.dp, top = TopBarTop).height(TopBarHeight)) {
+                                ClockPill(rememberGlassState(), { state }, dateBelow)
+                            }
                         }
                     }
                 }

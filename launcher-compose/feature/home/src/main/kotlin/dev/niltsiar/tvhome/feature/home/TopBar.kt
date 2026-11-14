@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
@@ -58,6 +59,7 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -65,6 +67,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.config.TvConfig
@@ -458,16 +461,19 @@ private fun ClockTime(
 }
 
 /**
- * The clock's characters, each in a slot of its own width. One that changes rises into place and fades in again; the
- * others stay. A time with a one-digit hour gets an empty slot in front, so the pill is as wide as with two.
+ * The clock's characters, each in a slot of its own width, left to right in a right-to-left layout too. One that changes
+ * rises into place and fades in again; the others stay. A time with a one-digit hour gets an empty slot in front, so the
+ * pill is as wide as with two.
  */
 @Composable
 private fun ClockDigits(
     text: String,
     style: TextStyle,
 ) {
-    Row {
-        text.padStart(CLOCK_SLOTS).forEachIndexed { index, char -> key(index) { ClockDigit(char, style) } }
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Row {
+            text.padStart(CLOCK_SLOTS).forEachIndexed { index, char -> key(index) { ClockDigit(char, style) } }
+        }
     }
 }
 

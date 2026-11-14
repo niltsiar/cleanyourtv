@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
@@ -25,8 +26,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import kotlin.random.Random
@@ -108,6 +111,7 @@ private fun SpotLayout(
     }
 }
 
+/** The time over the date. The hours, colon and minutes read left to right in a right-to-left layout too; the rest mirrors. */
 @Composable
 private fun ClockText(
     face: ClockFace,
@@ -118,9 +122,14 @@ private fun ClockText(
     Column {
         Row {
             val onBaseline = Modifier.alignByBaseline()
-            FadingText(face.hours, typography.screensaverClock, state, onBaseline)
-            FadingText(":", typography.screensaverClock, state, onBaseline, breath)
-            FadingText(face.minutes, typography.screensaverClock, state, onBaseline)
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                Row(onBaseline) {
+                    val digitsOnBaseline = Modifier.alignByBaseline()
+                    FadingText(face.hours, typography.screensaverClock, state, digitsOnBaseline)
+                    FadingText(":", typography.screensaverClock, state, digitsOnBaseline, breath)
+                    FadingText(face.minutes, typography.screensaverClock, state, digitsOnBaseline)
+                }
+            }
             if (face.amPm.isNotEmpty()) {
                 FadingText(face.amPm, typography.screensaverAmPm, state, onBaseline.padding(start = 14.dp))
             }
