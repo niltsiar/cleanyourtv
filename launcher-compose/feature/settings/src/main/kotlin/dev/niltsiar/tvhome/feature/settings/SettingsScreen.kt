@@ -287,7 +287,7 @@ public fun SettingsScreen(
         } else {
             returnTo?.let {
                 withFrameNanos { }
-                currentStops.getValue(it).entry.requestFocus()
+                currentStops[it]?.entry?.requestFocus()
                 returnTo = null
             }
         }
@@ -304,7 +304,7 @@ public fun SettingsScreen(
                     .focusProperties {
                         exit = { FocusRequester.Cancel }
                         // A closing picker drops focus back into this group; entering on the first row would scroll the list to it.
-                        enter = { returnTo?.let { currentStops.getValue(it).entry } ?: FocusRequester.Default }
+                        enter = { returnTo?.let { currentStops[it]?.entry } ?: FocusRequester.Default }
                     }.focusGroup(),
             contentAlignment = Alignment.Center,
         ) {

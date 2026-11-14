@@ -23,7 +23,8 @@ import java.io.IOException
  * Only the open pickers, the theme's pictures, the picked app's label and whether Home holds READ_TV_LISTINGS are kept
  * here. [onEffect] gets [SettingsEffect.SaveFailed] when the store refuses a write, [SettingsEffect.WallpaperApplied] after a
  * picture or None was stored as the wallpaper, [SettingsEffect.AskShelfAccess] when App shelf is turned on or its sources
- * picker opened without that permission, and [SettingsEffect.NoShelfSources] when that picker would list nothing.
+ * picker opened without that permission, and [SettingsEffect.NoShelfSources] when that picker would list nothing. That picker
+ * closes when App shelf turns off, which takes its row away.
  */
 @Composable
 internal fun settingsPresenter(
@@ -138,6 +139,7 @@ internal fun settingsPresenter(
             if (wallpaperOpen) wallpaperPicker(pictures, wallpaperChoice, themeDefault) else null
         }
     val shelfRow = remember(config, shelfAccess) { shelfSourcesLabel(config, shelfAccess) }
+    LaunchedEffect(config.appShelf) { if (!config.appShelf) shelfEntries = null }
     val ticked = config.appShelfSources
     val shelfPicker = remember(shelfEntries, ticked) { shelfEntries?.let { ShelfPicker(it, ticked.toSet()) } }
     return remember(config, followsTheme, startRow, picker, wallpaperRow, wallpaperPicker, shelfRow, shelfPicker) {

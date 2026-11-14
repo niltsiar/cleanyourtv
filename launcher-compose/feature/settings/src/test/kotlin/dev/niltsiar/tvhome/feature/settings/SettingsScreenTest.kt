@@ -570,6 +570,22 @@ class SettingsScreenTestContent :
                 }
             }
 
+            test("app highlights turned off while its sources picker is open closes the picker and focus stays on the page") {
+                showEveryPickerRow()
+                moveTo("settings:shelf_sources", Key.DirectionDown)
+                press(Key.DirectionCenter)
+                waitUntilIdle { settings.state.shelfPicker != null }
+                compose.waitForIdle()
+
+                runBlocking { settings.repository.set(Choices.AppShelf, false) }
+                waitUntilIdle { settings.state.shelfSources == null && settings.state.shelfPicker == null }
+                compose.waitForIdle()
+
+                compose.onAllNodesWithTag("settings:picker").fetchSemanticsNodes().size shouldBe 0
+                compose.onAllNodesWithTag("settings:shelf_sources").fetchSemanticsNodes().size shouldBe 0
+                compose.onAllNodes(isFocused()).fetchSemanticsNodes().size shouldBe 1
+            }
+
             test("the wallpaper row sits between clock and animations") {
                 showWallpaperRow()
 
