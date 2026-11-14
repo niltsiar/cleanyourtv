@@ -62,7 +62,8 @@
 # old does not touch app-ops: they are harmless and belong to the package.
 #
 # Each value is printed before and after. It never enables, disables, uninstalls or force-stops a package. new also grants the
-# launcher its location permission, which the Wi-Fi name needs. Both launchers stay installed and enabled, so each switch
+# launcher its location permission, which the Wi-Fi name needs, and READ_TV_LISTINGS, which App highlights (app_shelf) reads
+# the TV provider with, so Launcher settings need not ask for it. Both launchers stay installed and enabled, so each switch
 # can be undone with the other argument.
 set -euo pipefail
 
@@ -443,6 +444,8 @@ if [ "$1" = new ]; then
   # Reading the Wi-Fi name needs it and the launcher never asks; a TV that refuses leaves the network button without a name.
   echo "== Grant location (for the Wi-Fi name)"
   adb_tv shell pm grant "$PACKAGE" android.permission.ACCESS_FINE_LOCATION > /dev/null 2>&1 || echo "not granted; the network button will not show the Wi-Fi name"
+  echo "== Grant TV listings (for App highlights)"
+  adb_tv shell pm grant "$PACKAGE" android.permission.READ_TV_LISTINGS > /dev/null 2>&1 || echo "not granted; Launcher settings asks for it when App highlights is turned on"
   # The grant follows the switch on every run: it survives a reinstall, so a run without the switch takes it back.
   echo "== Secure settings permission (restore_key_services, GUARD)"
   if [ "${RESTORE_KEY_SERVICES:-0}" = 1 ] || [ "${GUARD:-0}" = 1 ]; then

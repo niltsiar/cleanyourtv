@@ -27,6 +27,7 @@ OLD_HOME_KEY = f"{OLD}/.HomeKeyService"
 OLD_INPUT_KEY = f"{OLD}/.InputKeyService"
 SERIAL = "192.168.1.50:5555"
 SECURE_SETTINGS = "android.permission.WRITE_SECURE_SETTINGS"
+TV_LISTINGS = "android.permission.READ_TV_LISTINGS"
 GUARD_CONFIG = f"{NEW}/.service.keys.GuardConfig"
 GUARD_LISTENER = f"{NEW}/.service.keys.GuardRevival"
 ALT = "com.example.home"
@@ -86,7 +87,9 @@ elif args[:1] == ["shell"]:
     elif line.startswith("dumpsys meminfo"):
         out("       TOTAL PSS:    51200            TOTAL RSS:    90000")
     elif line.startswith("pm grant"):
-        pass
+        if cmd[3] in state.get("refused_grants", []):
+            sys.stderr.write(f"Exception occurred while executing 'grant': java.lang.SecurityException: {cmd[3]}\n")
+            sys.exit(1)
     elif line.startswith("pm revoke"):
         if state.get("revoke_fails"):
             sys.stderr.write("Security exception: Package has not requested permission\n")
@@ -260,6 +263,7 @@ class SwitchHomeTest(unittest.TestCase):
         self.assertEqual(state["settings"]["screensaver_components"], f"{ALT}/{NEW}.ClockDream")
         self.assertIn(["shell", f"test -f /sdcard/Android/data/{ALT}/files/config.json && echo present"], self.calls())
         self.assertIn(["shell", "pm", "grant", ALT, "android.permission.ACCESS_FINE_LOCATION"], self.calls())
+        self.assertIn(["shell", "pm", "grant", ALT, TV_LISTINGS], self.calls())
         self.assertIn(["shell", "pm", "path", ALT], self.calls())
 
     def test_new_with_another_application_id_aims_the_guard_at_it(self):
@@ -373,6 +377,19 @@ class SwitchHomeTest(unittest.TestCase):
 
     def secure_settings_calls(self, verb):
         return [call for call in self.calls() if call[1:3] == ["pm", verb] and call[-1] == SECURE_SETTINGS]
+
+    def test_new_grants_the_launcher_location_and_tv_listings(self):
+        result = self.run_script("new")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(["shell", "pm", "grant", NEW, "android.permission.ACCESS_FINE_LOCATION"], self.calls())
+        self.assertIn(["shell", "pm", "grant", NEW, TV_LISTINGS], self.calls())
+
+    def test_a_tv_listings_grant_the_tv_refuses_prints_a_note_and_the_switch_goes_on(self):
+        self.tv(refused_grants=[TV_LISTINGS])
+        result = self.run_script("new")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("not granted; Launcher settings asks for it when App highlights is turned on", result.stdout)
+        self.assertEqual(self.read_tv()["home"], f"{NEW}/.MainActivity")
 
     def test_new_with_restore_key_services_grants_write_secure_settings_and_revokes_nothing(self):
         result = self.run_script("new", RESTORE_KEY_SERVICES="1")
