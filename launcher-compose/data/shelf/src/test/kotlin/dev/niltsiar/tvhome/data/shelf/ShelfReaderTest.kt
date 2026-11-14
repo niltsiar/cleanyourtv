@@ -395,10 +395,20 @@ class ShelfReaderTestContent :
                             listOf(
                                 PublishedChannel(ShelfChannel("history", "Historial"), 3),
                                 PublishedChannel(ShelfChannel("recommended", "Recomendados"), 2),
-                                PublishedChannel(ShelfChannel("subscriptions", "Suscripciones"), 0),
                             ),
                         ),
                     )
+            }
+
+            test("a channel with no programs is not listed, nor an app whose channels all have none") {
+                install(SMARTTUBE, "SmartTube")
+                install(JELLYFIN, "Jellyfin")
+                smartTube()
+                provider.channels += channel(4, JELLYFIN, "Empty", "empty")
+                tick()
+
+                publishers().map { publisher -> publisher.packageName to publisher.channels.map { it.channel.key } } shouldBe
+                    listOf(SMARTTUBE to listOf("history", "recommended"))
             }
 
             test("a provider that refuses gives nothing") {

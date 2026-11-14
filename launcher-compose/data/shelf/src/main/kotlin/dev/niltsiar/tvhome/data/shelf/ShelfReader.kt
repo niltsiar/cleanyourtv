@@ -69,8 +69,9 @@ public class ShelfReader(
     }
 
     /**
-     * The installed apps with Watch Next rows or preview channels, by label, each with its count of Watch Next rows and its
-     * channels with their counts of programs, before any noise rule. Empty while app_shelf is off or without access.
+     * The installed apps with Watch Next rows or preview channels that have programs, by label, each with its count of Watch
+     * Next rows and those channels with their counts of programs, before any noise rule. Empty while app_shelf is off or
+     * without access.
      */
     public suspend fun publishers(): List<ShelfPublisher> {
         if (!config.value.appShelf || !hasAccess()) return emptyList()
@@ -87,7 +88,8 @@ public class ShelfReader(
             forEachRow(previewChannels(null), null) { row ->
                 val pkg = row.string(Channels.COLUMN_PACKAGE_NAME) ?: return@forEachRow
                 val (id, channel) = row.previewChannel() ?: return@forEachRow
-                channels.getOrPut(pkg) { ArrayList() } += PublishedChannel(channel, programs[id] ?: 0)
+                val count = programs[id] ?: return@forEachRow
+                channels.getOrPut(pkg) { ArrayList() } += PublishedChannel(channel, count)
             }
             (watchNext.keys + channels.keys)
                 .mapNotNull { pkg -> label(pkg)?.let { ShelfPublisher(pkg, it, watchNext[pkg] ?: 0, channels[pkg].orEmpty()) } }
