@@ -672,6 +672,7 @@ public fun HomeScreen(
                         onPick = input.actions.onMenuPick,
                         dockTile = menuDockTile,
                         dockPadding = dockPadding.top,
+                        focus = open.focus,
                     )
                 }
             }

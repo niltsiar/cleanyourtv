@@ -306,9 +306,8 @@ class MainActivity : ComponentActivity() {
         Toast.makeText(this, message, length).show()
     }
 
-    private fun launchLibraryApp(app: AppEntry) {
-        if (!graph.appLauncher.openFromLibrary(app)) cantOpen(app.label)
-    }
+    /** Opens a library card's app; false when it could not. */
+    private fun launchLibraryApp(app: AppEntry): Boolean = graph.appLauncher.openFromLibrary(app).also { if (!it) cantOpen(app.label) }
 
     private fun librarySaveFailed() {
         toast(FeatureR.string.library_save_failed, Toast.LENGTH_LONG)

@@ -24,13 +24,15 @@ public enum class MenuRow {
 
 /**
  * The open menu. [tileKey] is the tile it belongs to, or null for the Settings button's menu; [rows] are its rows
- * from top to bottom. [parent] is the menu Back returns to, for a list that a row of it opened.
+ * from top to bottom. [parent] is the menu Back returns to, for a list that a row of it opened. [focus] is the row that
+ * takes focus when the menu opens, the first when null.
  */
 @Immutable
 public data class HomeMenu(
     val tileKey: String?,
     val rows: List<MenuRow>,
     val parent: HomeMenu? = null,
+    val focus: MenuRow? = null,
 )
 
 /** The places "Move to" offers, in the order it lists them. */

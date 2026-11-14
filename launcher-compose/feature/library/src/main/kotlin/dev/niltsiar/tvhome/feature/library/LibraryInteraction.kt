@@ -16,12 +16,19 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.text.Collator
 
+/** An app the card [key] started, still opening (press_feedback). Each start has its own [token]. */
+internal data class LibraryLaunch(
+    val key: String,
+    val token: Int,
+)
+
 /**
  * The library's state and what each event does to it. Opening starts a load, and so does each change of the installed
  * apps or of the Home choices while it is open; [LibraryLoads] lets only the latest fill the cards, and the panel
  * appears once, when the latest first has. With library_least_used the MENU key switches [order] and sorts the loaded
  * catalogue again; focus stays on its app. While no app of the catalogue has an open time, no card gets an opened line
- * and [noUsageYet] says so.
+ * and [noUsageYet] says so. With press_feedback an app a card starts leaves the library open and is [launching] until Home
+ * stops, the host starts no app or [OPENING_MAX_MS] pass; no card takes OK and nothing else starts meanwhile.
  */
 internal class LibraryInteraction(
     private val sources: LibrarySources,
@@ -48,6 +55,9 @@ internal class LibraryInteraction(
         private set
     var noUsageYet by mutableStateOf(false)
         private set
+    var launching by mutableStateOf<LibraryLaunch?>(null)
+        private set
+    private var launches = 0
 
     private var catalogue = emptyList<LibraryApp>()
     private var record = OpenedRecord()
@@ -78,7 +88,18 @@ internal class LibraryInteraction(
             LibraryEvent.Back -> back()
             LibraryEvent.ToggleOrder -> toggleOrder()
             LibraryEvent.Close -> close()
+            LibraryEvent.Stopped -> stopped()
+            is LibraryEvent.AppNotStarted -> if (launching?.key == event.key) launching = null
         }
+    }
+
+    fun launchEnded(token: Int) {
+        if (launching?.token == token) launching = null
+    }
+
+    private fun stopped() {
+        launching = null
+        close()
     }
 
     /** The installed apps or the Home choices changed. */
@@ -139,6 +160,7 @@ internal class LibraryInteraction(
     ) = CardOpened(record.times[key]?.let { OpenedAt(it, now, sources.hour24()) })
 
     private fun click(key: String) {
+        if (layout.pressFeedback && launching != null) return
         val card = cards.firstOrNull { it.app.key == key } ?: return
         if (okOpens(layout.selection, layout.okOpens, card.onHome)) launch(card) else toggle(card, add = !card.onHome)
     }
@@ -164,6 +186,7 @@ internal class LibraryInteraction(
         when (row) {
             LibraryRow.Open -> {
                 launch(card)
+                if (open) focus(card.app.key)
             }
 
             LibraryRow.AddToHome -> {
@@ -192,8 +215,14 @@ internal class LibraryInteraction(
     }
 
     private fun launch(card: LibraryCard) {
+        if (!layout.pressFeedback) {
+            effect(LibraryEffect.LaunchApp(card.app))
+            close()
+            return
+        }
+        if (launching != null) return
+        launching = LibraryLaunch(card.app.key, ++launches)
         effect(LibraryEffect.LaunchApp(card.app))
-        close()
     }
 
     /**

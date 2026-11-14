@@ -159,14 +159,14 @@ val HomeMoveToTest by testSuite(testConfig = TestConfig.testScope(isEnabled = tr
             }
         }
 
-        test("back from the places returns to the tile menu and back again closes it") {
+        test("back from the places returns to the tile menu on move to and back again closes it") {
             with(it.testScope) {
                 presenter().test {
                     awaitMatching { it.dock.isNotEmpty() }
                     places("pkg.8")
                     events.send(HomeEvent.Back)
                     awaitMatching { it.menu?.parent == null }.menu shouldBe
-                        HomeMenu("pkg.8", listOf(MenuRow.AddToDock, MenuRow.Move, MenuRow.MoveTo, MenuRow.AppInfo))
+                        HomeMenu("pkg.8", listOf(MenuRow.AddToDock, MenuRow.Move, MenuRow.MoveTo, MenuRow.AppInfo), focus = MenuRow.MoveTo)
 
                     events.send(HomeEvent.Back)
                     awaitMatching { it.menu == null }.focusRequest?.target shouldBe "pkg.8"

@@ -533,6 +533,7 @@ private fun Cards(
     // Read here, not in the grid's content, so a focus move does not rebuild what the grid lists.
     val cards = remember(state) { derivedStateOf { state().cards } }.value
     val statusFree = remember(cards, layout) { cards.none { it.hasStatusLine(layout) } }
+    val launching = remember(state) { { state().launching } }
     LaunchedEffect(gridState) {
         snapshotFlow { state().focusRequest }.filterNotNull().collect { request ->
             val index = state().cards.indexOfFirst { it.app.key == request.key }
@@ -577,6 +578,7 @@ private fun Cards(
                         hold = hold,
                         anchor = anchor,
                         requester = focus.requester(card.app.key),
+                        launching = launching,
                         modifier =
                             Modifier.animateItem(
                                 fadeInSpec = null,

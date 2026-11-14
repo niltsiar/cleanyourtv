@@ -15,7 +15,8 @@ import kotlinx.coroutines.flow.Flow
  * How the library behaves, from the theme. [selection] is app_library_selection: OK changes an app's Home shortcut and
  * a held OK opens nothing. [okOpens] is library_ok_opens, which selection overrides. [appGlow] and [whiteFocus] decide the
  * colour of a focused card's ring as they do in Home's grid. [animated] is false for a theme without animations or with
- * reduced motion. [leastUsed] is library_least_used: the MENU key switches to the least used first order.
+ * reduced motion. [leastUsed] is library_least_used: the MENU key switches to the least used first order. [pressFeedback]
+ * is press_feedback: OK on a card dips it and lights its ring, and the library stays open while an app it started opens.
  */
 @Immutable
 public data class LibraryLayout(
@@ -25,6 +26,7 @@ public data class LibraryLayout(
     val whiteFocus: Boolean = false,
     val animated: Boolean = true,
     val leastUsed: Boolean = false,
+    val pressFeedback: Boolean = false,
 )
 
 /** The ring of a focused card whose art gives [art] and shows [edge] at the card's edge. */
@@ -41,6 +43,7 @@ public fun TvConfig.libraryLayout(): LibraryLayout =
         whiteFocus = cinematicWhiteFocus,
         animated = animations && !reducedMotion,
         leastUsed = libraryLeastUsed,
+        pressFeedback = pressFeedback,
     )
 
 /** What the host feeds the library: its catalogue and the choices it saves. */
@@ -127,7 +130,7 @@ public data class LibraryFocus(
  * What the screen shows. [open] is true from asking to open until closing; [shown] once the catalogue first loaded,
  * which is when the panel appears. [cards] are in the library's [order]; [focusedKey] is the card with focus.
  * [noUsageYet] is true in the least used order while Home has no open time for any app of the catalogue; no card has an
- * opened line then.
+ * opened line then. [launching] is true while an app a card started is opening (press_feedback): no card takes OK then.
  */
 @Immutable
 public data class LibraryUiState(
@@ -140,11 +143,12 @@ public data class LibraryUiState(
     val focusRequest: LibraryFocus? = null,
     val order: LibraryOrder = LibraryOrder.Usual,
     val noUsageYet: Boolean = false,
+    val launching: Boolean = false,
 )
 
 /** One-shot results the host handles outside the UI state. */
 public sealed interface LibraryEffect {
-    /** Open the app. The library has closed. */
+    /** Open the app. The library has closed, or with press_feedback stays open until Home stops. */
     public data class LaunchApp(
         val app: AppEntry,
     ) : LibraryEffect
@@ -183,6 +187,14 @@ internal sealed interface LibraryEvent {
     /** The MENU key: the other order. */
     data object ToggleOrder : LibraryEvent
 
-    /** Home left the screen or the Home key was pressed. */
+    /** The Home key was pressed, the Inputs list was asked for, or app_library turned off. */
     data object Close : LibraryEvent
+
+    /** Home left the screen: the library closes, and an app it started has opened. */
+    data object Stopped : LibraryEvent
+
+    /** The host started no app for the card [key]. */
+    data class AppNotStarted(
+        val key: String,
+    ) : LibraryEvent
 }

@@ -9,10 +9,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import dev.niltsiar.tvhome.core.config.TvConfig
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import java.text.Collator
 import java.util.Locale
+
+/** How long after a card starts its app the library gives up waiting for it and takes OK again, as Home does. */
+internal const val OPENING_MAX_MS = 10_000L
 
 /**
  * The library's state logic for any host that runs a composable: Molecule today. It uses the Compose runtime only. It
@@ -40,6 +44,13 @@ internal fun libraryPresenter(
     LaunchedEffect(interaction.open) {
         if (interaction.open) sources.changes.collect { interaction.reload() }
     }
+    val launching = interaction.launching
+    LaunchedEffect(interaction, launching?.token) {
+        if (launching != null) {
+            delay(OPENING_MAX_MS)
+            interaction.launchEnded(launching.token)
+        }
+    }
     return LibraryUiState(
         open = interaction.open,
         shown = interaction.shown,
@@ -50,5 +61,6 @@ internal fun libraryPresenter(
         focusRequest = interaction.focusRequest,
         order = interaction.order,
         noUsageYet = interaction.noUsageYet,
+        launching = launching != null,
     )
 }

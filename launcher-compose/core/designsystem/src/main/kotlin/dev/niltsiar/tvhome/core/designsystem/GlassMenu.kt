@@ -92,9 +92,9 @@ public class BesideAnchor(
  * [edgeMargin] from the side of the screen it grows towards and the other edge keeps it inside; or [beside] it. Each
  * row is [rowHeight] tall, shows the string [label] gives and carries the test tag [rowTag]; the panel's own tag is
  * `menu`, [padding] inside its edge, and the rows' corners are concentric with the panel's. It rises and fades in with
- * a spring and takes focus on its first row, and never goes above [topLimit]; focus cannot leave it. A [title] is a
- * header row over the rows, tagged `menu:title`. A row for which [dividerBefore] is true, and that is not the first,
- * has a [MenuDivider] above it. A row for which [warn] is true draws its text in coral (dark red on the light surface)
+ * a spring and takes focus on the row at [focusRow], the first by default, and never goes above [topLimit]; focus cannot
+ * leave it. A [title] is a header row over the rows, tagged `menu:title`. A row for which [dividerBefore] is true, and
+ * that is not the first, has a [MenuDivider] above it. A row for which [warn] is true draws its text in coral (dark red on the light surface)
  * until it has focus, and the line above it is white 0.18. [above], [anchorGap], [columnGap] and [edgeMargin] are
  * [GlassDropdown]'s.
  */
@@ -118,13 +118,14 @@ public fun <T> GlassMenu(
     edgeMargin: Dp = 0.dp,
     dividerBefore: (T) -> Boolean = { false },
     warn: (T) -> Boolean = { false },
+    focusRow: Int = 0,
 ) {
-    val first = remember { FocusRequester() }
+    val opening = remember { FocusRequester() }
     val rowShape = remember(padding) { menuRowShape(padding) }
     GlassDropdown(
         anchor,
         alignEnd,
-        first,
+        opening,
         modifier,
         edgeMargin = edgeMargin,
         topLimit = topLimit,
@@ -138,7 +139,7 @@ public fun <T> GlassMenu(
         rows.forEachIndexed { index, row ->
             val warned = warn(row)
             if (index > 0 && dividerBefore(row)) MenuDivider(alpha = if (warned) WARN_DIVIDER_ALPHA else DIVIDER_ALPHA)
-            val focus = if (index == 0) Modifier.focusRequester(first) else Modifier
+            val focus = if (index == focusRow) Modifier.focusRequester(opening) else Modifier
             MenuItem(label(row), rowTag(row), { onPick(row) }, rowHeight, rowShape, focus, warned)
         }
     }

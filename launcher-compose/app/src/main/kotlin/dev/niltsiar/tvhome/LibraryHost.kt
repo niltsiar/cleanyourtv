@@ -15,12 +15,15 @@ import dev.niltsiar.tvhome.feature.library.LibraryOverlay
 import dev.niltsiar.tvhome.feature.library.MoleculeLibraryViewModel
 import dev.niltsiar.tvhome.feature.library.libraryLayout
 
-/** The App library, for Home's overlay host: its state comes from the Molecule-hosted presenter. */
+/**
+ * The App library, for Home's overlay host: its state comes from the Molecule-hosted presenter. [onLaunchApp] opens a card's
+ * app and says whether it started.
+ */
 @Composable
 internal fun LibraryHost(
     graph: AppGraph,
     viewModel: MoleculeLibraryViewModel,
-    onLaunchApp: (AppEntry) -> Unit,
+    onLaunchApp: (AppEntry) -> Boolean,
     onOpenAppInfo: (String) -> Unit,
     onSaveFailed: () -> Unit,
 ) {
@@ -29,13 +32,13 @@ internal fun LibraryHost(
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
             when (effect) {
-                is LibraryEffect.LaunchApp -> onLaunchApp(effect.app)
+                is LibraryEffect.LaunchApp -> if (!onLaunchApp(effect.app)) viewModel.onAppNotStarted(effect.app.key)
                 is LibraryEffect.OpenAppInfo -> onOpenAppInfo(effect.packageName)
                 LibraryEffect.SaveFailed -> onSaveFailed()
             }
         }
     }
-    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.onClose() }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.onStopped() }
     val state = viewModel.uiState.collectAsStateWithLifecycle()
     val config = graph.configRepository.config.collectAsStateWithLifecycle()
     val layout by config.derived(TvConfig::libraryLayout)

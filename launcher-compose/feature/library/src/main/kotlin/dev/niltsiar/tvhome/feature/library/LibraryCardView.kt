@@ -73,6 +73,7 @@ import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.holdOk
 import dev.niltsiar.tvhome.core.designsystem.popsOver
+import dev.niltsiar.tvhome.core.designsystem.pressDip
 import dev.niltsiar.tvhome.core.designsystem.ringBlendsWith
 import dev.niltsiar.tvhome.core.model.LibraryArt
 import dev.niltsiar.tvhome.core.model.describeLastOpened
@@ -131,7 +132,8 @@ private const val OFF_HOME_MS = 150
  * card keeps its fill. It rises in once per opening, with the delay [CardEntrance] gives it, and when its
  * Home shortcut changes pops a little, or in the chooser pulses its mark. Both run in the layer lambda. The status slot keeps
  * its place while the card grows, so it stays level with the cards beside it. [widthPx] is the narrowest the card can be. When
- * no card of the grid has a status line, [statusFree] is true and the art and name take the whole card, centred.
+ * no card of the grid has a status line, [statusFree] is true and the art and name take the whole card, centred. With
+ * [LibraryLayout.pressFeedback] OK dips the card and lights its ring, unless an app is [launching].
  */
 @Composable
 internal fun LibraryCardView(
@@ -147,6 +149,7 @@ internal fun LibraryCardView(
     hold: OkHold,
     anchor: (Rect) -> Unit,
     requester: FocusRequester,
+    launching: () -> Boolean,
     modifier: Modifier = Modifier,
 ) {
     val key = card.app.key
@@ -206,8 +209,12 @@ internal fun LibraryCardView(
                 scaleY = scale
             },
     ) {
+        val press = if (layout.pressFeedback) remember { Animatable(0f) } else null
         FocusSurface(
-            onClick = { actions.onClick(key) },
+            onClick = {
+                if (press != null && !launching()) scope.launch { press.pressDip(motion) }
+                actions.onClick(key)
+            },
             onFocused = { actions.onFocus(key) },
             shape = CardShape,
             glow = false,
@@ -215,6 +222,7 @@ internal fun LibraryCardView(
             ring = { ring },
             ringBlends = ringBlends,
             plate = ink,
+            press = press,
             modifier =
                 Modifier
                     .fillMaxSize()

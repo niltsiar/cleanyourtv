@@ -69,19 +69,29 @@ class MoveToUiTestContent :
                 (moved.left < dock.left) shouldBe true
             }
 
-            test("back from the places list returns to the tile menu") {
+            test("back from the places list returns to the tile menu with focus on move to") {
                 showHome()
 
                 openPlaces()
                 back()
 
-                compose.onNodeWithTag("menu:MoveTo").assertExists()
                 compose.onNodeWithTag("menu:DockEnd").assertDoesNotExist()
-                compose.onNodeWithTag("menu:ReplaceInDock").assertIsFocused()
+                compose.onNodeWithTag("menu:MoveTo").assertIsFocused()
                 back()
                 compose.onNodeWithTag("menu").assertDoesNotExist()
                 compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
                 saved shouldBe emptyList()
+            }
+
+            test("the tile menu opens on its first row again after back from the places list") {
+                showHome()
+                openPlaces()
+                back()
+                back()
+
+                press(Key.Menu)
+
+                compose.onNodeWithTag("menu:ReplaceInDock").assertIsFocused()
             }
         }
     })

@@ -423,7 +423,7 @@ internal class HomeInteraction(
 
             MenuRow.MoveTo -> {
                 val places = key?.let(::movePlaces).orEmpty()
-                if (places.isEmpty()) focus(key) else menu = HomeMenu(key, places, parent = open)
+                if (places.isEmpty()) focus(key) else menu = HomeMenu(key, places, parent = open.copy(focus = MenuRow.MoveTo))
             }
 
             MenuRow.DockStart, MenuRow.DockEnd, MenuRow.GridStart, MenuRow.GridEnd -> {

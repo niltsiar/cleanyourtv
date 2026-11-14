@@ -74,8 +74,18 @@ public class MoleculeLibraryViewModel(
         events.trySend(LibraryEvent.Open)
     }
 
-    /** Home left the screen or the Home key was pressed: close the library. */
+    /** The Home key was pressed or the Inputs list was asked for: close the library. */
     public fun onClose() {
         events.trySend(LibraryEvent.Close)
+    }
+
+    /** Home left the screen: close the library; an app it started has opened. */
+    public fun onStopped() {
+        events.trySend(LibraryEvent.Stopped)
+    }
+
+    /** The host started no app for the card [key]. */
+    public fun onAppNotStarted(key: String) {
+        events.trySend(LibraryEvent.AppNotStarted(key))
     }
 }

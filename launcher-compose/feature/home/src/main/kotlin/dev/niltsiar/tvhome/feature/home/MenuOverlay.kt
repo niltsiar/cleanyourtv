@@ -46,7 +46,7 @@ private val TrayClearance = 20.dp
  * the app's name, which heads it) opens above the tile with shorter rows, ending [TrayClearance] above the dock's panel, which
  * starts [dockPadding] above the tile; a grid tile's sits beside it and under [bandBottom], the bottom of the band over the grid, when it fits there. The
  * Settings menu hangs from the Settings button with shorter rows, so it ends clear of the dock, and a line sets its
- * restart row apart, which draws its text in coral.
+ * restart row apart, which draws its text in coral. Focus starts on the row [focus], the first when it is null.
  */
 @Composable
 internal fun MenuOverlay(
@@ -58,7 +58,9 @@ internal fun MenuOverlay(
     modifier: Modifier = Modifier,
     dockTile: String? = null,
     dockPadding: Dp = TileGap,
+    focus: MenuRow? = null,
 ) {
+    val focusRow = rows.indexOf(focus).coerceAtLeast(0)
     if (tileMenu) {
         GlassMenu(
             rows,
@@ -86,6 +88,7 @@ internal fun MenuOverlay(
             rowHeight = if (dockTile != null) DockMenuRowHeight else TileRowHeight,
             columnGap = TileGap,
             edgeMargin = ScreenMargin,
+            focusRow = focusRow,
         )
     } else {
         GlassMenu(
@@ -100,6 +103,7 @@ internal fun MenuOverlay(
             rowHeight = SettingsRowHeight,
             dividerBefore = { it == MenuRow.PowerMenu },
             warn = { it == MenuRow.PowerMenu },
+            focusRow = focusRow,
         )
     }
 }
