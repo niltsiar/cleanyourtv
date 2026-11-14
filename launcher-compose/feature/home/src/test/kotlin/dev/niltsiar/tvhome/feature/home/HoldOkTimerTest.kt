@@ -12,27 +12,49 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.unit.dp
+import de.infix.testBalloon.framework.core.JUnit4RulesContext
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectric
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.holdOk
-import org.junit.Assert.assertEquals
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-import org.robolectric.annotation.GraphicsMode
+import io.kotest.matchers.shouldBe
 
-@RunWith(RobolectricTestRunner::class)
-@GraphicsMode(GraphicsMode.Mode.LEGACY)
-@Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
-class HoldOkTimerTest {
-    @get:Rule
-    val compose = createComposeRule()
+val HoldOkTimerTest by testSuite {
+    robolectricTestSuite<HoldOkTimerTestContent>(
+        "sdk 31, 960x540 dp",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "w960dp-h540dp-xhdpi"
+            },
+    )
+}
 
-    private val requester = FocusRequester()
-    private var held = 0
+class HoldOkTimerTestContent :
+    RobolectricTestSuiteContent({
+        testFixture { HoldOkTimerTestFixture() } asContextForEach {
+            test("the timer of a remote that never repeats opens the menu when the holds own time is up") {
+                holdOk(holdMs = 200)
 
-    private fun holdOk(holdMs: Long) {
+                compose.mainClock.advanceTimeBy(150)
+                held shouldBe 0
+                compose.mainClock.advanceTimeBy(100)
+                held shouldBe 1
+            }
+        }
+    })
+
+private class HoldOkTimerTestFixture : JUnit4RulesContext() {
+    val compose = rule(createComposeRule())
+
+    val requester = FocusRequester()
+
+    var held = 0
+
+    fun holdOk(holdMs: Long) {
         compose.mainClock.autoAdvance = false
         compose.setContent {
             Box(
@@ -48,15 +70,5 @@ class HoldOkTimerTest {
         compose.runOnUiThread { requester.requestFocus() }
         compose.mainClock.advanceTimeByFrame()
         compose.onNodeWithTag("tile").performKeyInput { keyDown(Key.DirectionCenter) }
-    }
-
-    @Test
-    fun the_timer_of_a_remote_that_never_repeats_opens_the_menu_when_the_holds_own_time_is_up() {
-        holdOk(holdMs = 200)
-
-        compose.mainClock.advanceTimeBy(150)
-        assertEquals(0, held)
-        compose.mainClock.advanceTimeBy(100)
-        assertEquals(1, held)
     }
 }

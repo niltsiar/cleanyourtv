@@ -1,165 +1,160 @@
 package dev.niltsiar.tvhome.feature.home
 
 import androidx.compose.ui.unit.dp
+import de.infix.testBalloon.framework.core.testSuite
 import dev.niltsiar.tvhome.core.model.AppEntry
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import io.kotest.assertions.withClue
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.comparables.shouldBeLessThan
+import io.kotest.matchers.floats.plusOrMinus
+import io.kotest.matchers.shouldBe
 
-class HomeLayoutTest {
-    private val gridWidth = 880f
-    private val height = 324f
-    private val gap = 14f
+val HomeLayoutTest by testSuite {
+    testFixture {
+        object {
+            val gridWidth = 880f
 
-    /** The height of the dock panel and [rows] rows when the grid uses [share] of its width. */
-    private fun needed(
-        share: Float,
-        rows: Int,
-        columns: Int = 6,
-        dockPadding: Float = gap,
-    ): Float {
-        val inner = gridWidth * share
-        val dockTile = (inner - (columns + 1) * gap) / columns * 9 / 16
-        val gridTile = (inner - (columns - 1) * gap) / columns * 9 / 16
-        return dockTile + 2 * dockPadding + rows * (gridTile + gap)
-    }
+            val height = 324f
 
-    @Test
-    fun no_rows_below_the_dock_keep_the_full_width() {
-        assertEquals(1f, tileWidthShare(gridWidth, height, columns = 6, rowsBelowDock = 0, gap = gap), 0f)
-    }
+            val gap = 14f
 
-    @Test
-    fun rows_that_already_fit_keep_the_full_width() {
-        assertEquals(1f, tileWidthShare(gridWidth, height, columns = 6, rowsBelowDock = 1, gap = gap), 0f)
-    }
+            /** The height of the dock panel and [rows] rows when the grid uses [share] of its width. */
+            fun needed(
+                share: Float,
+                rows: Int,
+                columns: Int = 6,
+                dockPadding: Float = gap,
+            ): Float {
+                val inner = gridWidth * share
+                val dockTile = (inner - (columns + 1) * gap) / columns * 9 / 16
+                val gridTile = (inner - (columns - 1) * gap) / columns * 9 / 16
+                return dockTile + 2 * dockPadding + rows * (gridTile + gap)
+            }
 
-    @Test
-    fun rows_that_do_not_fit_shrink_the_tiles_until_they_do() {
-        val share = tileWidthShare(gridWidth, height, columns = 6, rowsBelowDock = 3, gap = gap)
-        assertTrue("share $share", share < 1f && share > 0.85f)
-        assertEquals(height, needed(share, rows = 3), 0.5f)
-    }
+            fun tiles(n: Int) = (1..n).map { AppEntry(key = "t$it", packageName = "t$it", label = "T$it") }
+        }
+    } asContextForEach {
+        test("no rows below the dock keep the full width") {
+            tileWidthShare(gridWidth, height, columns = 6, rowsBelowDock = 0, gap = gap) shouldBe (1f plusOrMinus 0f)
+        }
 
-    @Test
-    fun a_dock_panel_padded_more_than_a_gap_shrinks_the_tiles_further_so_the_rows_still_fit() {
-        val padded = tileWidthShare(gridWidth, height, columns = 6, rowsBelowDock = 3, gap = gap, dockTop = 15f, dockBottom = 15f)
+        test("rows that already fit keep the full width") {
+            tileWidthShare(gridWidth, height, columns = 6, rowsBelowDock = 1, gap = gap) shouldBe (1f plusOrMinus 0f)
+        }
 
-        assertTrue(padded < tileWidthShare(gridWidth, height, columns = 6, rowsBelowDock = 3, gap = gap))
-        assertEquals(height, needed(padded, rows = 3, dockPadding = 15f), 0.5f)
-    }
+        test("rows that do not fit shrink the tiles until they do") {
+            val share = tileWidthShare(gridWidth, height, columns = 6, rowsBelowDock = 3, gap = gap)
+            withClue("share $share") { (share < 1f && share > 0.85f).shouldBeTrue() }
+            needed(share, rows = 3) shouldBe (height plusOrMinus 0.5f)
+        }
 
-    @Test
-    fun names_do_not_change_how_wide_the_tiles_are_though_the_rows_under_the_dock_do_not_fit() {
-        val bare = HomeLayout(columns = 4, rowsBelowDock = 3, singleRow = false, fillDock = true)
+        test("a dock panel padded more than a gap shrinks the tiles further so the rows still fit") {
+            val padded = tileWidthShare(gridWidth, height, columns = 6, rowsBelowDock = 3, gap = gap, dockTop = 15f, dockBottom = 15f)
 
-        fun share(layout: HomeLayout) = gridShare(layout, gridWidth = 880.dp, windowHeight = 540.dp, shelfBottom = 245.dp)
+            padded shouldBeLessThan tileWidthShare(gridWidth, height, columns = 6, rowsBelowDock = 3, gap = gap)
+            needed(padded, rows = 3, dockPadding = 15f) shouldBe (height plusOrMinus 0.5f)
+        }
 
-        assertTrue("share ${share(bare)}", share(bare) < 1f)
-        assertEquals(share(bare), share(bare.copy(showNames = true)), 0f)
-    }
+        test("names do not change how wide the tiles are though the rows under the dock do not fit") {
+            val bare = HomeLayout(columns = 4, rowsBelowDock = 3, singleRow = false, fillDock = true)
 
-    @Test
-    fun the_tiles_never_shrink_below_the_floor() {
-        assertEquals(0.85f, tileWidthShare(gridWidth, 200f, columns = 6, rowsBelowDock = 3, gap = gap), 0f)
-    }
+            fun share(layout: HomeLayout) = gridShare(layout, gridWidth = 880.dp, windowHeight = 540.dp, shelfBottom = 245.dp)
 
-    @Test
-    fun an_unknown_window_size_keeps_the_full_width() {
-        assertEquals(1f, tileWidthShare(gridWidth, 0f, columns = 6, rowsBelowDock = 3, gap = gap), 0f)
-    }
+            withClue("share ${share(bare)}") { share(bare) shouldBeLessThan 1f }
+            share(bare.copy(showNames = true)) shouldBe (share(bare) plusOrMinus 0f)
+        }
 
-    @Test
-    fun dock_focus_lowers_the_dock_by_120_dp_for_the_peek_and_by_what_is_left_under_the_rows_that_must_fit() {
-        fun lowering(
-            gridRows: Int,
-            rowsBelowDock: Int,
-        ) = dockLowering(
-            windowHeight = 540f,
-            shelfBottom = 245f,
-            tileHeight = 70f,
-            gap = 24f,
-            gridRows = gridRows,
-            rowsBelowDock = rowsBelowDock,
-        )
+        test("the tiles never shrink below the floor") {
+            tileWidthShare(gridWidth, 200f, columns = 6, rowsBelowDock = 3, gap = gap) shouldBe (0.85f plusOrMinus 0f)
+        }
 
-        assertEquals(120f, lowering(gridRows = 3, rowsBelowDock = 0), 0f)
-        assertEquals(540f - 48f - (245f + 70f + 48f + 94f), lowering(gridRows = 3, rowsBelowDock = 1), 0.01f)
-        assertEquals(0f, lowering(gridRows = 3, rowsBelowDock = 3), 0f)
-        assertEquals(lowering(gridRows = 3, rowsBelowDock = 1), lowering(gridRows = 1, rowsBelowDock = 3), 0.01f)
-    }
+        test("an unknown window size keeps the full width") {
+            tileWidthShare(gridWidth, 0f, columns = 6, rowsBelowDock = 3, gap = gap) shouldBe (1f plusOrMinus 0f)
+        }
 
-    @Test
-    fun a_dock_panel_padded_more_than_a_gap_lowers_the_dock_by_twice_the_extra_less() {
-        fun lowering(dockPadding: Float) =
-            dockLowering(
-                windowHeight = 600f,
+        test("dock focus lowers the dock by 120 dp for the peek and by what is left under the rows that must fit") {
+            fun lowering(
+                gridRows: Int,
+                rowsBelowDock: Int,
+            ) = dockLowering(
+                windowHeight = 540f,
                 shelfBottom = 245f,
                 tileHeight = 70f,
                 gap = 24f,
-                dockTop = dockPadding,
-                dockBottom = dockPadding,
-                gridRows = 3,
-                rowsBelowDock = 1,
+                gridRows = gridRows,
+                rowsBelowDock = rowsBelowDock,
             )
 
-        assertEquals(lowering(24f) - 2 * 5.8f, lowering(29.8f), 0.01f)
-    }
+            lowering(gridRows = 3, rowsBelowDock = 0) shouldBe (120f plusOrMinus 0f)
+            lowering(gridRows = 3, rowsBelowDock = 1) shouldBe (540f - 48f - (245f + 70f + 48f + 94f) plusOrMinus 0.01f)
+            lowering(gridRows = 3, rowsBelowDock = 3) shouldBe (0f plusOrMinus 0f)
+            lowering(gridRows = 1, rowsBelowDock = 3) shouldBe (lowering(gridRows = 3, rowsBelowDock = 1) plusOrMinus 0.01f)
+        }
 
-    @Test
-    fun the_names_under_the_rows_that_must_fit_lower_the_dock_by_less() {
-        fun lowering(nameRoom: Float) =
-            dockLowering(
-                windowHeight = 600f,
-                shelfBottom = 245f,
-                tileHeight = 70f,
-                gap = 24f,
-                gridRows = 3,
-                rowsBelowDock = 1,
-                nameRoom = nameRoom,
-            )
+        test("a dock panel padded more than a gap lowers the dock by twice the extra less") {
+            fun lowering(dockPadding: Float) =
+                dockLowering(
+                    windowHeight = 600f,
+                    shelfBottom = 245f,
+                    tileHeight = 70f,
+                    gap = 24f,
+                    dockTop = dockPadding,
+                    dockBottom = dockPadding,
+                    gridRows = 3,
+                    rowsBelowDock = 1,
+                )
 
-        assertEquals(lowering(nameRoom = 0f) - 2 * 36f, lowering(nameRoom = 36f), 0.01f)
-    }
+            lowering(29.8f) shouldBe (lowering(24f) - 2 * 5.8f plusOrMinus 0.01f)
+        }
 
-    private fun tiles(n: Int) = (1..n).map { AppEntry(key = "t$it", packageName = "t$it", label = "T$it") }
+        test("the names under the rows that must fit lower the dock by less") {
+            fun lowering(nameRoom: Float) =
+                dockLowering(
+                    windowHeight = 600f,
+                    shelfBottom = 245f,
+                    tileHeight = 70f,
+                    gap = 24f,
+                    gridRows = 3,
+                    rowsBelowDock = 1,
+                    nameRoom = nameRoom,
+                )
 
-    @Test
-    fun down_from_a_tile_with_no_cell_below_goes_to_the_last_tile_so_the_pill_does_not_capture_it() {
-        // Seven grid tiles in 3 columns: rows 0 1 2 / 3 4 5 / 6.
-        assertEquals(6, gridDownOverride(row = 1, column = 1, gridCount = 7, columns = 3))
-        assertEquals(6, gridDownOverride(row = 1, column = 2, gridCount = 7, columns = 3))
-        assertEquals(null, gridDownOverride(row = 1, column = 0, gridCount = 7, columns = 3))
-        assertEquals(null, gridDownOverride(row = 0, column = 1, gridCount = 7, columns = 3))
-        assertEquals(null, gridDownOverride(row = 2, column = 0, gridCount = 7, columns = 3))
-    }
+            lowering(nameRoom = 36f) shouldBe (lowering(nameRoom = 0f) - 2 * 36f plusOrMinus 0.01f)
+        }
 
-    @Test
-    fun down_from_a_dock_tile_over_a_short_first_row_goes_to_the_last_grid_tile() {
-        assertEquals(1, gridDownOverride(row = -1, column = 2, gridCount = 2, columns = 4))
-        assertEquals(null, gridDownOverride(row = -1, column = 1, gridCount = 2, columns = 4))
-        assertEquals(null, gridDownOverride(row = -1, column = 0, gridCount = 0, columns = 4))
-    }
+        test("down from a tile with no cell below goes to the last tile so the pill does not capture it") {
+            // Seven grid tiles in 3 columns: rows 0 1 2 / 3 4 5 / 6.
+            gridDownOverride(row = 1, column = 1, gridCount = 7, columns = 3) shouldBe 6
+            gridDownOverride(row = 1, column = 2, gridCount = 7, columns = 3) shouldBe 6
+            gridDownOverride(row = 1, column = 0, gridCount = 7, columns = 3) shouldBe null
+            gridDownOverride(row = 0, column = 1, gridCount = 7, columns = 3) shouldBe null
+            gridDownOverride(row = 2, column = 0, gridCount = 7, columns = 3) shouldBe null
+        }
 
-    @Test
-    fun up_from_the_pill_returns_to_the_last_row_under_the_column_that_had_focus() {
-        val dock = tiles(3)
-        val grid = (4..12).map { AppEntry(key = "t$it", packageName = "t$it", label = "T$it") }
+        test("down from a dock tile over a short first row goes to the last grid tile") {
+            gridDownOverride(row = -1, column = 2, gridCount = 2, columns = 4) shouldBe 1
+            gridDownOverride(row = -1, column = 1, gridCount = 2, columns = 4) shouldBe null
+            gridDownOverride(row = -1, column = 0, gridCount = 0, columns = 4) shouldBe null
+        }
 
-        assertEquals("t11", pillUpKey(dock, grid, columns = 3, singleRow = false, focusedKey = "t5"))
-        assertEquals("t12", pillUpKey(dock, grid, columns = 3, singleRow = false, focusedKey = "t9"))
-        assertEquals("t12", pillUpKey(dock, grid, columns = 3, singleRow = false, focusedKey = "t3"))
-        assertEquals("t10", pillUpKey(dock, grid, columns = 3, singleRow = false, focusedKey = null))
-        assertEquals("t10", pillUpKey(dock, grid.take(7), columns = 3, singleRow = false, focusedKey = "t5"))
-    }
+        test("up from the pill returns to the last row under the column that had focus") {
+            val dock = tiles(3)
+            val grid = (4..12).map { AppEntry(key = "t$it", packageName = "t$it", label = "T$it") }
 
-    @Test
-    fun up_from_the_pill_with_no_grid_goes_to_the_dock_and_in_a_single_row_to_the_tile_that_had_focus() {
-        val dock = tiles(4)
+            pillUpKey(dock, grid, columns = 3, singleRow = false, focusedKey = "t5") shouldBe "t11"
+            pillUpKey(dock, grid, columns = 3, singleRow = false, focusedKey = "t9") shouldBe "t12"
+            pillUpKey(dock, grid, columns = 3, singleRow = false, focusedKey = "t3") shouldBe "t12"
+            pillUpKey(dock, grid, columns = 3, singleRow = false, focusedKey = null) shouldBe "t10"
+            pillUpKey(dock, grid.take(7), columns = 3, singleRow = false, focusedKey = "t5") shouldBe "t10"
+        }
 
-        assertEquals("t2", pillUpKey(dock, emptyList(), columns = 4, singleRow = false, focusedKey = "t2"))
-        assertEquals("t3", pillUpKey(dock, emptyList(), columns = 2, singleRow = true, focusedKey = "t3"))
-        assertEquals("t4", pillUpKey(dock, emptyList(), columns = 2, singleRow = true, focusedKey = null))
-        assertEquals(null, pillUpKey(emptyList(), emptyList(), columns = 4, singleRow = false, focusedKey = null))
+        test("up from the pill with no grid goes to the dock and in a single row to the tile that had focus") {
+            val dock = tiles(4)
+
+            pillUpKey(dock, emptyList(), columns = 4, singleRow = false, focusedKey = "t2") shouldBe "t2"
+            pillUpKey(dock, emptyList(), columns = 2, singleRow = true, focusedKey = "t3") shouldBe "t3"
+            pillUpKey(dock, emptyList(), columns = 2, singleRow = true, focusedKey = null) shouldBe "t4"
+            pillUpKey(emptyList(), emptyList(), columns = 4, singleRow = false, focusedKey = null) shouldBe null
+        }
     }
 }

@@ -31,55 +31,261 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
+import de.infix.testBalloon.framework.core.JUnit4RulesContext
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectric
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.HeaderScrim
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
 import dev.niltsiar.tvhome.core.model.Wallpaper
+import io.kotest.assertions.withClue
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.comparables.shouldBeGreaterThan
+import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
+import io.kotest.matchers.comparables.shouldBeLessThan
+import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
+import io.kotest.matchers.floats.plusOrMinus
+import io.kotest.matchers.ranges.shouldBeIn
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
-import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-import org.robolectric.annotation.GraphicsMode
 import kotlin.math.abs
+
+/** The biggest darkening change, in 255ths per 10 dp, the scrim may make along the title and down its end. */
+private const val LIMIT_ALONG = 13f
+private const val LIMIT_DOWN = 11f
+
+/** The biggest darkening change, in 255ths between two neighbouring pixels, the smooth falloff makes across the scrim's end. */
+private const val LIMIT_EDGE = 3
 
 /**
  * The hero block's local scrim over a bright picture: its extent follows the title's cross-fade, and its edges have no
  * step a viewer can see, read from the rendered pixels.
  */
+val HeroScrimUiTest by testSuite {
+    robolectricTestSuite<HeroScrimUiTestContent>(
+        "sdk 31, 960x540 dp",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "w960dp-h540dp-xhdpi"
+            },
+    )
+}
+
 @OptIn(InternalComposeTracingApi::class, ExperimentalComposeRuntimeApi::class)
-@RunWith(RobolectricTestRunner::class)
-@GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
-class HeroScrimUiTest {
-    private companion object {
-        /** The biggest darkening change, in 255ths per 10 dp, the scrim may make along the title and down its end. */
-        const val LIMIT_ALONG = 13f
-        const val LIMIT_DOWN = 11f
+class HeroScrimUiTestContent :
+    RobolectricTestSuiteContent({
+        testFixture { HeroScrimUiTestFixture() } closeWith { Composer.setTracer(NotTracing) } asContextForEach {
+            test("a longer band title fading in leaves no hard edge in the scrim on any frame") {
+                assertNoHardEdgeWhileMoving(cinematic = false, key = Key.DirectionRight)
+            }
 
-        /** The biggest darkening change, in 255ths between two neighbouring pixels, the smooth falloff makes across the scrim's end. */
-        const val LIMIT_EDGE = 3
-    }
+            test("a shorter band title fading in leaves no hard edge in the scrim on any frame") {
+                assertNoHardEdgeWhileMoving(cinematic = false, key = Key.DirectionLeft)
+            }
 
-    @get:Rule
-    val compose = createAndroidComposeRule<ComponentActivity>()
+            test("a longer shelf name fading in leaves no hard edge in the scrim on any frame") {
+                assertNoHardEdgeWhileMoving(cinematic = true, key = Key.DirectionRight)
+            }
 
-    private val bodies = mutableMapOf<String, Int>()
+            test("a shorter shelf name fading in leaves no hard edge in the scrim on any frame") {
+                assertNoHardEdgeWhileMoving(cinematic = true, key = Key.DirectionLeft)
+            }
 
-    private val scrimMode = mutableStateOf(HeaderScrim.Auto)
+            test("the local scrim grows with a longer band title over its cross fade and does not jump") {
+                growing(cinematic = false)
+            }
 
-    private val appList = MutableStateFlow(AppList(emptyList()))
+            test("the local scrim shrinks with a shorter band title over its cross fade and does not jump") {
+                shrinking(cinematic = false)
+            }
+
+            test("the local scrim grows with a longer shelf name over its cross fade and does not jump") {
+                growing(cinematic = true)
+            }
+
+            test("the local scrim shrinks with a shorter shelf name over its cross fade and does not jump") {
+                shrinking(cinematic = true)
+            }
+
+            test("over the bright sky the scrims darkening steps by no more than the limit per 10 dp") {
+                val (along, down) = stepsOver("bright")
+
+                withClue(
+                    "along the title $along/255, down the title's end $down/255",
+                ) { (along <= LIMIT_ALONG && down <= LIMIT_DOWN).shouldBeTrue() }
+            }
+
+            test("over the busy light forest the scrims darkening steps by no more than the limit per 10 dp") {
+                val (along, down) = stepsOver("busy")
+
+                withClue(
+                    "along the title $along/255, down the title's end $down/255",
+                ) { (along <= LIMIT_ALONG && down <= LIMIT_DOWN).shouldBeTrue() }
+            }
+
+            test("over the bright sky the background behind the hero title glyphs has a 90th percentile luminance of at most 016") {
+                val p90 = heroBackgroundP90("bright")
+
+                withClue("the 90th percentile behind the hero title is $p90") { p90 shouldBeLessThanOrEqualTo 0.16f }
+            }
+
+            test("over the busy light forest the background behind the hero title glyphs has a 90th percentile luminance of at most 016") {
+                val p90 = heroBackgroundP90("busy")
+
+                withClue("the 90th percentile behind the hero title is $p90") { p90 shouldBeLessThanOrEqualTo 0.16f }
+            }
+
+            test("over the bright sky the background behind the hero title is neither near black nor too light for white text") {
+                showCouncil("bright")
+                val luminance = heroBackground()
+
+                withClue("the background behind the hero title has relative luminance $luminance") { luminance shouldBeIn 0.08f..0.16f }
+            }
+
+            test("over the busy light forest the background behind the hero title is neither near black nor too light for white text") {
+                showCouncil("busy")
+                val luminance = heroBackground()
+
+                withClue("the background behind the hero title has relative luminance $luminance") { luminance shouldBeIn 0.08f..0.16f }
+            }
+
+            test("the hero scrim is none up to a luminance of 012 and at most half strong over a white picture") {
+                heroScrimDarkening(0f) shouldBe (0f plusOrMinus 0f)
+                heroScrimDarkening(0.10f) shouldBe (0f plusOrMinus 0f)
+                heroScrimDarkening(0.12f) shouldBe (0f plusOrMinus 0.01f)
+                withClue("over a half-bright picture ${heroScrimDarkening(0.5f)}") { heroScrimDarkening(0.5f) shouldBeIn 0.4f..0.5f }
+                heroScrimDarkening(1f) shouldBe (0.5f plusOrMinus 0f)
+                val steps = (0..100).map { heroScrimDarkening(it / 100f) }
+                withClue("the strength falls somewhere: $steps") { (steps.zipWithNext().all { (a, b) -> b >= a }).shouldBeTrue() }
+            }
+
+            test("a dark picture gets no hero scrim so the screen is the same with header scrim off") {
+                val dark = solid(0.3f).let { Wallpaper(picture = it, thumbnail = it) }
+                showHome(cinematic = false, dark)
+                val auto = compose.onRoot().captureToImage().toPixelMap()
+                scrimMode.value = HeaderScrim.Off
+                settle()
+                val off = compose.onRoot().captureToImage().toPixelMap()
+
+                val differing = (0 until auto.width).sumOf { x -> (0 until auto.height).count { y -> auto[x, y] != off[x, y] } }
+                withClue("pixels that differ with the hero scrim possible") { differing shouldBe 0 }
+            }
+
+            test("the band title has a tight shadow while the hero scrim is on") {
+                assertTightShadowOnBright(cinematic = false)
+            }
+
+            test("the shelf name has a tight shadow while the hero scrim is on") {
+                assertTightShadowOnBright(cinematic = true)
+            }
+
+            test("the band title keeps its wide shadow without a hero scrim") {
+                assertWideShadowOnDark(cinematic = false)
+            }
+
+            test("the shelf name keeps its wide shadow without a hero scrim") {
+                assertWideShadowOnDark(cinematic = true)
+            }
+
+            test("while a tile menu is open the subtitle pill does not show past its edge and it comes back after") {
+                showCouncil("bright", cinematic = true)
+                withClue("the pill's stroke is ${pillStroke()} brighter") { pillStroke() shouldBeGreaterThan 0.05f }
+
+                pressMenuKey()
+                compose.mainClock.advanceTimeBy(160)
+                compose.waitForIdle()
+                val menu = compose.onNodeWithTag("menu").getBoundsInRoot()
+                withClue("the menu starts at ${menu.left}, the pill's end is 10 dp before 44") { menu.left.value shouldBeGreaterThan 36f }
+                withClue("the pill's stroke is ${pillStroke()} brighter") { pillStroke() shouldBeLessThan 0.02f }
+
+                compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+                compose.mainClock.advanceTimeBy(160)
+                compose.waitForIdle()
+                withClue("the pill's stroke is ${pillStroke()} brighter") { pillStroke() shouldBeGreaterThan 0.05f }
+            }
+
+            test("the shelf subtitle pill keeps its round ends while a new name fades in") {
+                assertPillKeepsItsRoundEndsInASwap(cinematic = true, tag = "shelf:meta")
+            }
+
+            test("the band subtitle pill keeps its round ends while a new title fades in") {
+                assertPillKeepsItsRoundEndsInASwap(cinematic = false, tag = "shelf:title-meta")
+            }
+
+            test("the shelf name keeps its shadow past its box while a tile menu fades it out") {
+                assertShadowKeptWhileTheTitleFades(cinematic = true, tag = "shelf:name")
+            }
+
+            test("the band title keeps its shadow past its box while a tile menu fades it out") {
+                assertShadowKeptWhileTheTitleFades(cinematic = false, tag = "shelf:title")
+            }
+
+            test("a title swap does not draw the hero scrims body again on any frame of its cross fade") {
+                showHome(cinematic = false)
+                compose.onRoot().captureToImage()
+                var draws = 0
+                onHeroBodyDraw = { draws++ }
+                try {
+                    compose.mainClock.autoAdvance = false
+                    compose.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
+                    repeat(30) {
+                        compose.mainClock.advanceTimeByFrame()
+                        // Rendering the frame is what draws the layers.
+                        compose.onRoot().captureToImage()
+                    }
+                    compose.mainClock.autoAdvance = true
+                    settle()
+                } finally {
+                    onHeroBodyDraw = {}
+                }
+
+                withClue("the body was drawn again") { draws shouldBe 0 }
+            }
+
+            test("a title change recomposes nothing on the first frames of its cross fade and the scrim never") {
+                showHome(cinematic = false)
+                Composer.setTracer(tracer)
+                compose.mainClock.autoAdvance = false
+                compose.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
+                compose.mainClock.advanceTimeByFrame()
+                compose.mainClock.advanceTimeByFrame()
+                val first = bodies.toMap()
+                repeat(4) { compose.mainClock.advanceTimeByFrame() }
+                val later = bodies.toMap()
+                compose.mainClock.autoAdvance = true
+                settle()
+
+                withClue("the cross-fade recomposed") { later shouldBe first }
+                withClue("the header recomposed ${bodies["HeroTitle"]} times") { (bodies["HeroTitle"] ?: 0) shouldBeLessThanOrEqualTo 2 }
+                withClue("the title slots recomposed ${bodies["TitleSlots"]} times") {
+                    (bodies["TitleSlots"] ?: 0) shouldBeLessThanOrEqualTo
+                        2
+                }
+                withClue("the scrim recomposed") { (bodies["HeroScrim"] ?: 0) shouldBe 0 }
+            }
+        }
+    })
+
+@OptIn(InternalComposeTracingApi::class, ExperimentalComposeRuntimeApi::class)
+private class HeroScrimUiTestFixture : JUnit4RulesContext() {
+    val compose = rule(createAndroidComposeRule<ComponentActivity>())
+
+    val bodies = mutableMapOf<String, Int>()
+
+    val scrimMode = mutableStateOf(HeaderScrim.Auto)
+
+    val appList = MutableStateFlow(AppList(emptyList()))
 
     /** Counts, by composable, the bodies that run; the compiler calls it for each composable that does not skip. */
-    private val tracer =
+    val tracer =
         object : CompositionTracer {
             override fun isTraceInProgress() = true
 
@@ -96,19 +302,16 @@ class HeroScrimUiTest {
             override fun traceEventEnd() = Unit
         }
 
-    @After
-    fun stopCounting() {
-        Composer.setTracer(NotTracing)
-    }
-
-    private fun solid(level: Float) =
+    fun solid(level: Float) =
         ImageBitmap(16, 9).also { Canvas(it).drawRect(Rect(0f, 0f, 16f, 9f), Paint().apply { color = Color(level, level, level) }) }
 
-    private val shortName = AppEntry(key = "pkg.1", packageName = "pkg.1", label = "Hi")
-    private val longName = AppEntry(key = "pkg.2", packageName = "pkg.2", label = "A long app name here")
-    private val apps = listOf(shortName, longName) + NineApps.drop(2)
+    val shortName = AppEntry(key = "pkg.1", packageName = "pkg.1", label = "Hi")
 
-    private fun showHome(
+    val longName = AppEntry(key = "pkg.2", packageName = "pkg.2", label = "A long app name here")
+
+    val apps = listOf(shortName, longName) + NineApps.drop(2)
+
+    fun showHome(
         cinematic: Boolean,
         wallpaper: Wallpaper = solid(1f).let { Wallpaper(picture = it, thumbnail = it) },
         shown: List<AppEntry> = apps,
@@ -145,39 +348,39 @@ class HeroScrimUiTest {
         compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
     }
 
-    private fun settle() {
+    fun settle() {
         compose.mainClock.advanceTimeBy(1_000)
         compose.waitForIdle()
     }
 
-    private fun press(key: Key) {
+    fun press(key: Key) {
         compose.onRoot().performKeyInput { pressKey(key) }
         settle()
     }
 
-    private fun titleTag(cinematic: Boolean) = if (cinematic) "shelf:name" else "shelf:title"
+    fun titleTag(cinematic: Boolean) = if (cinematic) "shelf:name" else "shelf:title"
 
-    private fun redAt(point: Offset): Int {
+    fun redAt(point: Offset): Int {
         val pixels = compose.onRoot().captureToImage().toPixelMap()
         val density = compose.activity.resources.displayMetrics.density
         return Math.round(pixels[(point.x * density).toInt(), (point.y * density).toInt()].red * 255)
     }
 
-    private fun titleBounds(tag: String): DpRect = compose.onNodeWithTag(tag).getBoundsInRoot()
+    fun titleBounds(tag: String): DpRect = compose.onNodeWithTag(tag).getBoundsInRoot()
 
     /** A point of the row under the title that the long name's scrim holds and the short name's, which fades out 240 dp past it, has left. */
-    private fun probe(cinematic: Boolean): Offset {
+    fun probe(cinematic: Boolean): Offset {
         press(Key.DirectionRight)
         val long = titleBounds(titleTag(cinematic))
         press(Key.DirectionLeft)
         val short = titleBounds(titleTag(cinematic))
         val at = Offset(short.right.value + 270f, long.bottom.value + 3f)
-        assertTrue("the long name ends at ${long.right}, the short one at ${short.right}", at.x < long.right.value - 20f)
+        withClue("the long name ends at ${long.right}, the short one at ${short.right}") { at.x shouldBeLessThan long.right.value - 20f }
         return at
     }
 
     /** The red at [at] before a key press and on each of the 24 frames after it, then once the move has settled. */
-    private fun redsWhileMoving(
+    fun redsWhileMoving(
         key: Key,
         at: Offset,
     ): Triple<Int, List<Int>, Int> {
@@ -194,34 +397,38 @@ class HeroScrimUiTest {
         return Triple(start, frames, redAt(at))
     }
 
-    private fun assertMovesSmoothly(moved: Triple<Int, List<Int>, Int>) {
+    fun assertMovesSmoothly(moved: Triple<Int, List<Int>, Int>) {
         val (start, frames, end) = moved
         val total = abs(end - start)
-        assertTrue("the scrim at the probe went from $start to $end", total > 40)
+        withClue("the scrim at the probe went from $start to $end") { total shouldBeGreaterThan 40 }
         val steps = (listOf(start) + frames).zipWithNext { a, b -> abs(b - a) }
-        assertTrue("the biggest step in a frame is ${steps.max()} of $total: $frames", steps.max() <= 0.6f * total)
+        withClue("the biggest step in a frame is ${steps.max()} of $total: $frames") {
+            steps.max().toFloat() shouldBeLessThanOrEqualTo
+                0.6f * total
+        }
         val between = frames.count { abs(it - start) in (0.1f * total).toInt()..(0.9f * total).toInt() }
-        assertTrue("$between frames between the two ends: $frames", between >= 2)
+        withClue("$between frames between the two ends: $frames") { between shouldBeGreaterThanOrEqualTo 2 }
     }
 
-    private fun growing(cinematic: Boolean) {
+    fun growing(cinematic: Boolean) {
         showHome(cinematic)
         val at = probe(cinematic)
         assertMovesSmoothly(redsWhileMoving(Key.DirectionRight, at))
     }
 
-    private fun shrinking(cinematic: Boolean) {
+    fun shrinking(cinematic: Boolean) {
         showHome(cinematic)
         val at = probe(cinematic)
         press(Key.DirectionRight)
         assertMovesSmoothly(redsWhileMoving(Key.DirectionLeft, at))
     }
 
-    private val shortTitled = AppEntry(key = "pkg.1", packageName = "pkg.1", label = "Plezy")
-    private val longTitled = AppEntry(key = "pkg.2", packageName = "pkg.2", label = "SmartTube")
+    val shortTitled = AppEntry(key = "pkg.1", packageName = "pkg.1", label = "Plezy")
+
+    val longTitled = AppEntry(key = "pkg.2", packageName = "pkg.2", label = "SmartTube")
 
     /** The biggest change in red between two neighbouring pixels of pixel row [row], from pixel [from] on, on the screen now. */
-    private fun sharpestStepAlong(
+    fun sharpestStepAlong(
         row: Int,
         from: Int,
     ): Int {
@@ -237,7 +444,7 @@ class HeroScrimUiTest {
      * Moves the focus [key] between a short and a long name and reads, on each frame of the swap, the row through the title
      * past the end of the longer text block, where only the scrim is drawn.
      */
-    private fun assertNoHardEdgeWhileMoving(
+    fun assertNoHardEdgeWhileMoving(
         cinematic: Boolean,
         key: Key,
     ) {
@@ -258,53 +465,25 @@ class HeroScrimUiTest {
             }
         compose.mainClock.autoAdvance = true
         settle()
-        assertTrue("the sharpest step in a frame, in 255ths between two pixels: $steps", steps.all { it <= LIMIT_EDGE })
+        withClue("the sharpest step in a frame, in 255ths between two pixels: $steps") { (steps.all { it <= LIMIT_EDGE }).shouldBeTrue() }
         val under = ((long[1].bottom.value + 5f) * density).toInt()
-        assertTrue(
-            "the whole row under the settled block has a step of ${sharpestStepAlong(under, 0)}",
-            sharpestStepAlong(under, 0) <= LIMIT_EDGE,
-        )
+        withClue("the whole row under the settled block has a step of ${sharpestStepAlong(under, 0)}") {
+            sharpestStepAlong(under, 0) shouldBeLessThanOrEqualTo
+                LIMIT_EDGE
+        }
     }
 
-    @Test
-    fun a_longer_band_title_fading_in_leaves_no_hard_edge_in_the_scrim_on_any_frame() =
-        assertNoHardEdgeWhileMoving(cinematic = false, key = Key.DirectionRight)
-
-    @Test
-    fun a_shorter_band_title_fading_in_leaves_no_hard_edge_in_the_scrim_on_any_frame() =
-        assertNoHardEdgeWhileMoving(cinematic = false, key = Key.DirectionLeft)
-
-    @Test
-    fun a_longer_shelf_name_fading_in_leaves_no_hard_edge_in_the_scrim_on_any_frame() =
-        assertNoHardEdgeWhileMoving(cinematic = true, key = Key.DirectionRight)
-
-    @Test
-    fun a_shorter_shelf_name_fading_in_leaves_no_hard_edge_in_the_scrim_on_any_frame() =
-        assertNoHardEdgeWhileMoving(cinematic = true, key = Key.DirectionLeft)
-
-    @Test
-    fun the_local_scrim_grows_with_a_longer_band_title_over_its_cross_fade_and_does_not_jump() = growing(cinematic = false)
-
-    @Test
-    fun the_local_scrim_shrinks_with_a_shorter_band_title_over_its_cross_fade_and_does_not_jump() = shrinking(cinematic = false)
-
-    @Test
-    fun the_local_scrim_grows_with_a_longer_shelf_name_over_its_cross_fade_and_does_not_jump() = growing(cinematic = true)
-
-    @Test
-    fun the_local_scrim_shrinks_with_a_shorter_shelf_name_over_its_cross_fade_and_does_not_jump() = shrinking(cinematic = true)
-
-    private val titled = AppEntry(key = "pkg.1", packageName = "pkg.1", label = "Prime Video")
+    val titled = AppEntry(key = "pkg.1", packageName = "pkg.1", label = "Prime Video")
 
     /** The council's wallpaper [name] at half size (960 by 540), which is one pixel to 2 of the screen's. */
-    private fun council(name: String): Bitmap =
+    fun council(name: String): Bitmap =
         checkNotNull(javaClass.getResourceAsStream("/wallpaper/$name.jpg")).use { BitmapFactory.decodeStream(it) }
 
     /**
      * How much black the screen puts over [picture]: 1 less the render's channels over the picture's, summed over [rows] of
      * pixels at each column, and over [columns] of pixels at each row.
      */
-    private fun darkening(
+    fun darkening(
         picture: Bitmap,
         rows: IntRange,
         columns: IntRange,
@@ -330,14 +509,14 @@ class HeroScrimUiTest {
     }
 
     /** The biggest change, in 255ths, of [profile] from pixel [from] to [to], 20 pixels (10 dp) apart. */
-    private fun biggestStep(
+    fun biggestStep(
         profile: FloatArray,
         from: Int,
         to: Int,
     ): Float = (from until minOf(to, profile.size) - 20).maxOf { abs(profile[it + 20] - profile[it]) } * 255f
 
     /** Home over the council's wallpaper [name], with [titled] focused; returns the picture. */
-    private fun showCouncil(
+    fun showCouncil(
         name: String,
         cinematic: Boolean = false,
     ): Bitmap {
@@ -352,7 +531,7 @@ class HeroScrimUiTest {
     }
 
     /** The biggest step per 10 dp along the row under the subtitle and down the column just past the end of the title, over [name]. */
-    private fun stepsOver(name: String): Pair<Float, Float> {
+    fun stepsOver(name: String): Pair<Float, Float> {
         val picture = showCouncil(name)
         val density = compose.activity.resources.displayMetrics.density
         val screenWidth =
@@ -379,21 +558,7 @@ class HeroScrimUiTest {
             biggestStep(down, (80f * density).toInt(), ((dock.top.value - 5f) * density).toInt())
     }
 
-    @Test
-    fun over_the_bright_sky_the_scrims_darkening_steps_by_no_more_than_the_limit_per_10_dp() {
-        val (along, down) = stepsOver("bright")
-
-        assertTrue("along the title $along/255, down the title's end $down/255", along <= LIMIT_ALONG && down <= LIMIT_DOWN)
-    }
-
-    @Test
-    fun over_the_busy_light_forest_the_scrims_darkening_steps_by_no_more_than_the_limit_per_10_dp() {
-        val (along, down) = stepsOver("busy")
-
-        assertTrue("along the title $along/255, down the title's end $down/255", along <= LIMIT_ALONG && down <= LIMIT_DOWN)
-    }
-
-    private fun relativeLuminance(color: Color): Float {
+    fun relativeLuminance(color: Color): Float {
         fun linear(c: Float) = if (c <= 0.04045f) c / 12.92f else Math.pow(((c + 0.055f) / 1.055f).toDouble(), 2.4).toFloat()
         return 0.2126f * linear(color.red) + 0.7152f * linear(color.green) + 0.0722f * linear(color.blue)
     }
@@ -402,7 +567,7 @@ class HeroScrimUiTest {
      * The relative luminance of the background right behind the title: the median over the gap between the title's box and the
      * subtitle's pill, which has no glyph, and which the scrim holds at full strength.
      */
-    private fun heroBackground(): Float {
+    fun heroBackground(): Float {
         val density = compose.activity.resources.displayMetrics.density
         val title = titleBounds("shelf:title")
         val subtitle = titleBounds("shelf:title-meta")
@@ -420,7 +585,7 @@ class HeroScrimUiTest {
      * The 90th percentile of the relative luminance behind the hero title's glyphs: over the box of "Prime Video", once the title
      * is blank spaces wider than it, so that the scrim stays and no glyph or shadow is drawn.
      */
-    private fun heroBackgroundP90(name: String): Float {
+    fun heroBackgroundP90(name: String): Float {
         showCouncil(name)
         val density = compose.activity.resources.displayMetrics.density
         val box = titleBounds("shelf:title")
@@ -437,88 +602,22 @@ class HeroScrimUiTest {
         return values.sorted()[values.size * 9 / 10]
     }
 
-    @Test
-    fun over_the_bright_sky_the_background_behind_the_hero_title_glyphs_has_a_90th_percentile_luminance_of_at_most_016() {
-        val p90 = heroBackgroundP90("bright")
+    fun titleShadow(cinematic: Boolean) = compose.onNodeWithTag(titleTag(cinematic)).textStyle().shadow
 
-        assertTrue("the 90th percentile behind the hero title is $p90", p90 <= 0.16f)
-    }
-
-    @Test
-    fun over_the_busy_light_forest_the_background_behind_the_hero_title_glyphs_has_a_90th_percentile_luminance_of_at_most_016() {
-        val p90 = heroBackgroundP90("busy")
-
-        assertTrue("the 90th percentile behind the hero title is $p90", p90 <= 0.16f)
-    }
-
-    @Test
-    fun over_the_bright_sky_the_background_behind_the_hero_title_is_neither_near_black_nor_too_light_for_white_text() {
-        showCouncil("bright")
-        val luminance = heroBackground()
-
-        assertTrue("the background behind the hero title has relative luminance $luminance", luminance in 0.08f..0.16f)
-    }
-
-    @Test
-    fun over_the_busy_light_forest_the_background_behind_the_hero_title_is_neither_near_black_nor_too_light_for_white_text() {
-        showCouncil("busy")
-        val luminance = heroBackground()
-
-        assertTrue("the background behind the hero title has relative luminance $luminance", luminance in 0.08f..0.16f)
-    }
-
-    @Test
-    fun the_hero_scrim_is_none_up_to_a_luminance_of_012_and_at_most_half_strong_over_a_white_picture() {
-        assertEquals(0f, heroScrimDarkening(0f), 0f)
-        assertEquals(0f, heroScrimDarkening(0.10f), 0f)
-        assertEquals(0f, heroScrimDarkening(0.12f), 0.01f)
-        assertTrue("over a half-bright picture ${heroScrimDarkening(0.5f)}", heroScrimDarkening(0.5f) in 0.4f..0.5f)
-        assertEquals(0.5f, heroScrimDarkening(1f), 0f)
-        val steps = (0..100).map { heroScrimDarkening(it / 100f) }
-        assertTrue("the strength falls somewhere: $steps", steps.zipWithNext().all { (a, b) -> b >= a })
-    }
-
-    @Test
-    fun a_dark_picture_gets_no_hero_scrim_so_the_screen_is_the_same_with_header_scrim_off() {
-        val dark = solid(0.3f).let { Wallpaper(picture = it, thumbnail = it) }
-        showHome(cinematic = false, dark)
-        val auto = compose.onRoot().captureToImage().toPixelMap()
-        scrimMode.value = HeaderScrim.Off
-        settle()
-        val off = compose.onRoot().captureToImage().toPixelMap()
-
-        val differing = (0 until auto.width).sumOf { x -> (0 until auto.height).count { y -> auto[x, y] != off[x, y] } }
-        assertEquals("pixels that differ with the hero scrim possible", 0, differing)
-    }
-
-    private fun titleShadow(cinematic: Boolean) = compose.onNodeWithTag(titleTag(cinematic)).textStyle().shadow
-
-    private fun assertTightShadowOnBright(cinematic: Boolean) {
+    fun assertTightShadowOnBright(cinematic: Boolean) {
         val density = compose.activity.resources.displayMetrics.density
         showCouncil("bright", cinematic)
-        assertEquals(Shadow(Color.Black.copy(alpha = 0.55f), Offset(0f, 2 * density), 6 * density), titleShadow(cinematic))
+        titleShadow(cinematic) shouldBe Shadow(Color.Black.copy(alpha = 0.55f), Offset(0f, 2 * density), 6 * density)
     }
 
-    private fun assertWideShadowOnDark(cinematic: Boolean) {
+    fun assertWideShadowOnDark(cinematic: Boolean) {
         val density = compose.activity.resources.displayMetrics.density
         showHome(cinematic, solid(0.3f).let { Wallpaper(picture = it, thumbnail = it) })
-        assertEquals(9 * density, titleShadow(cinematic)?.blurRadius)
+        titleShadow(cinematic)?.blurRadius shouldBe 9 * density
     }
 
-    @Test
-    fun the_band_title_has_a_tight_shadow_while_the_hero_scrim_is_on() = assertTightShadowOnBright(cinematic = false)
-
-    @Test
-    fun the_shelf_name_has_a_tight_shadow_while_the_hero_scrim_is_on() = assertTightShadowOnBright(cinematic = true)
-
-    @Test
-    fun the_band_title_keeps_its_wide_shadow_without_a_hero_scrim() = assertWideShadowOnDark(cinematic = false)
-
-    @Test
-    fun the_shelf_name_keeps_its_wide_shadow_without_a_hero_scrim() = assertWideShadowOnDark(cinematic = true)
-
     /** How much brighter the pill's 1 dp stroke at the subtitle's left end is than the background just outside it, in 0 to 1. */
-    private fun pillStroke(): Float {
+    fun pillStroke(): Float {
         val density = compose.activity.resources.displayMetrics.density
         val meta = titleBounds("shelf:meta")
         val y = ((meta.top.value + meta.bottom.value) / 2 * density).toInt()
@@ -526,32 +625,14 @@ class HeroScrimUiTest {
         return pixels[((meta.left.value - 9.5f) * density).toInt(), y].red - pixels[((meta.left.value - 14f) * density).toInt(), y].red
     }
 
-    private fun pressMenuKey() = compose.onRoot().performKeyInput { pressKey(Key.Menu) }
-
-    @Test
-    fun while_a_tile_menu_is_open_the_subtitle_pill_does_not_show_past_its_edge_and_it_comes_back_after() {
-        showCouncil("bright", cinematic = true)
-        assertTrue("the pill's stroke is ${pillStroke()} brighter", pillStroke() > 0.05f)
-
-        pressMenuKey()
-        compose.mainClock.advanceTimeBy(160)
-        compose.waitForIdle()
-        val menu = compose.onNodeWithTag("menu").getBoundsInRoot()
-        assertTrue("the menu starts at ${menu.left}, the pill's end is 10 dp before 44", menu.left.value > 36f)
-        assertTrue("the pill's stroke is ${pillStroke()} brighter", pillStroke() < 0.02f)
-
-        compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
-        compose.mainClock.advanceTimeBy(160)
-        compose.waitForIdle()
-        assertTrue("the pill's stroke is ${pillStroke()} brighter", pillStroke() > 0.05f)
-    }
+    fun pressMenuKey() = compose.onRoot().performKeyInput { pressKey(Key.Menu) }
 
     /**
      * How much brighter, in the red channel, the pixel [across] dp right of the subtitle's box's left edge and [down] dp below its
      * top is than the picture 14 dp left of that edge, outside the pill. The pill is black over a scrim that is already near black,
      * so only its 1 dp white stroke shows.
      */
-    private fun pillStroke(
+    fun pillStroke(
         meta: DpRect,
         across: Float,
         down: Float,
@@ -562,7 +643,7 @@ class HeroScrimUiTest {
         return pixels[((meta.left.value + across) * density).toInt(), ((meta.top.value + down) * density).toInt()].red - outside
     }
 
-    private fun assertPillRound(
+    fun assertPillRound(
         meta: DpRect,
         moment: String,
     ) {
@@ -570,11 +651,11 @@ class HeroScrimUiTest {
         val end = pillStroke(meta, across = -9.5f, down = (meta.bottom.value - meta.top.value) / 2)
         // The corner of the pill's own box, which a round end leaves clear.
         val corner = pillStroke(meta, across = -9.5f, down = -2.5f)
-        assertTrue("$moment: the pill's left end is $end brighter", end > 0.05f)
-        assertTrue("$moment: the pill's top left corner is $corner brighter", corner < 0.02f)
+        withClue("$moment: the pill's left end is $end brighter") { end shouldBeGreaterThan 0.05f }
+        withClue("$moment: the pill's top left corner is $corner brighter") { corner shouldBeLessThan 0.02f }
     }
 
-    private fun assertPillKeepsItsRoundEndsInASwap(
+    fun assertPillKeepsItsRoundEndsInASwap(
         cinematic: Boolean,
         tag: String,
     ) {
@@ -594,19 +675,11 @@ class HeroScrimUiTest {
         }
     }
 
-    @Test
-    fun the_shelf_subtitle_pill_keeps_its_round_ends_while_a_new_name_fades_in() =
-        assertPillKeepsItsRoundEndsInASwap(cinematic = true, tag = "shelf:meta")
-
-    @Test
-    fun the_band_subtitle_pill_keeps_its_round_ends_while_a_new_title_fades_in() =
-        assertPillKeepsItsRoundEndsInASwap(cinematic = false, tag = "shelf:title-meta")
-
     /**
      * How much darker, in the red channel, the title's shadow makes the picture one pixel left of the title's box, at mid height,
      * than 12 dp left of it, where the shadow no longer reaches. The glyphs start 6 dp inside the box and the shadow blurs 9 dp.
      */
-    private fun shadowLeftOfTheTitle(tag: String): Float {
+    fun shadowLeftOfTheTitle(tag: String): Float {
         val density = compose.activity.resources.displayMetrics.density
         val title = titleBounds(tag)
         val y = ((title.top.value + title.bottom.value) / 2 * density).toInt()
@@ -614,74 +687,25 @@ class HeroScrimUiTest {
         return pixels[((title.left.value - 12f) * density).toInt(), y].red - pixels[(title.left.value * density).toInt() - 1, y].red
     }
 
-    private fun assertShadowKeptWhileTheTitleFades(
+    fun assertShadowKeptWhileTheTitleFades(
         cinematic: Boolean,
         tag: String,
     ) {
         showHome(cinematic, solid(1f).let { Wallpaper(picture = it, thumbnail = it) }, headerScrim = HeaderScrim.Off)
         val atRest = shadowLeftOfTheTitle(tag)
-        assertTrue("at rest the shadow darkens the picture by $atRest", atRest > 0.03f)
+        withClue("at rest the shadow darkens the picture by $atRest") { atRest shouldBeGreaterThan 0.03f }
 
         compose.mainClock.autoAdvance = false
         pressMenuKey()
         try {
             compose.mainClock.advanceTimeBy(48)
             val midFade = shadowLeftOfTheTitle(tag)
-            assertTrue("mid-fade the shadow darkens the picture by $midFade, at rest by $atRest", midFade > 0.25f * atRest)
+            withClue(
+                "mid-fade the shadow darkens the picture by $midFade, at rest by $atRest",
+            ) { midFade shouldBeGreaterThan 0.25f * atRest }
         } finally {
             compose.mainClock.autoAdvance = true
         }
-    }
-
-    @Test
-    fun the_shelf_name_keeps_its_shadow_past_its_box_while_a_tile_menu_fades_it_out() =
-        assertShadowKeptWhileTheTitleFades(cinematic = true, tag = "shelf:name")
-
-    @Test
-    fun the_band_title_keeps_its_shadow_past_its_box_while_a_tile_menu_fades_it_out() =
-        assertShadowKeptWhileTheTitleFades(cinematic = false, tag = "shelf:title")
-
-    @Test
-    fun a_title_swap_does_not_draw_the_hero_scrims_body_again_on_any_frame_of_its_cross_fade() {
-        showHome(cinematic = false)
-        compose.onRoot().captureToImage()
-        var draws = 0
-        onHeroBodyDraw = { draws++ }
-        try {
-            compose.mainClock.autoAdvance = false
-            compose.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
-            repeat(30) {
-                compose.mainClock.advanceTimeByFrame()
-                // Rendering the frame is what draws the layers.
-                compose.onRoot().captureToImage()
-            }
-            compose.mainClock.autoAdvance = true
-            settle()
-        } finally {
-            onHeroBodyDraw = {}
-        }
-
-        assertEquals("the body was drawn again", 0, draws)
-    }
-
-    @Test
-    fun a_title_change_recomposes_nothing_on_the_first_frames_of_its_cross_fade_and_the_scrim_never() {
-        showHome(cinematic = false)
-        Composer.setTracer(tracer)
-        compose.mainClock.autoAdvance = false
-        compose.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
-        compose.mainClock.advanceTimeByFrame()
-        compose.mainClock.advanceTimeByFrame()
-        val first = bodies.toMap()
-        repeat(4) { compose.mainClock.advanceTimeByFrame() }
-        val later = bodies.toMap()
-        compose.mainClock.autoAdvance = true
-        settle()
-
-        assertEquals("the cross-fade recomposed", first, later)
-        assertTrue("the header recomposed ${bodies["HeroTitle"]} times", (bodies["HeroTitle"] ?: 0) <= 2)
-        assertTrue("the title slots recomposed ${bodies["TitleSlots"]} times", (bodies["TitleSlots"] ?: 0) <= 2)
-        assertEquals("the scrim recomposed", 0, bodies["HeroScrim"] ?: 0)
     }
 }
 

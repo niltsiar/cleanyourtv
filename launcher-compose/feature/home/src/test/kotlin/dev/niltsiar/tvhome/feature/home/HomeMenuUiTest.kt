@@ -28,16 +28,27 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.infix.testBalloon.framework.core.JUnit4RulesContext
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectric
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
 import dev.niltsiar.tvhome.core.model.InputRow
 import dev.niltsiar.tvhome.core.model.InputsMenu
+import io.kotest.assertions.withClue
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
+import io.kotest.matchers.comparables.shouldBeLessThan
+import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
+import io.kotest.matchers.floats.plusOrMinus
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -48,21 +59,458 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /** Home on the real presenter: keys go in at the screen, the menus and modes come out of the state. */
+val HomeMenuUiTest by testSuite {
+    robolectricTestSuite<HomeMenuUiTestContent>(
+        "sdk 31, 960x540 dp",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "w960dp-h540dp-xhdpi"
+            },
+    )
+    robolectricTestSuite<HomeMenuUiNightTestContent>(
+        "sdk 31, night, 960x540 dp",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "w960dp-h540dp-night-xhdpi"
+            },
+    )
+    robolectricTestSuite<HomeMenuUiH360TestContent>(
+        "sdk 31, 960x360 dp",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "w960dp-h360dp-xhdpi"
+            },
+    )
+}
+
+class HomeMenuUiTestContent :
+    RobolectricTestSuiteContent({
+        testFixture { HomeMenuUiTestFixture() } asContextForEach {
+            test("holding ok on a tile opens its menu and back returns focus to the tile") {
+                showHome()
+
+                holdOk()
+                compose.onNodeWithTag("menu").assertExists()
+                compose.onNodeWithTag("menu:ReplaceInDock").assertIsFocused()
+
+                releaseOk()
+                compose.onNodeWithTag("menu").assertExists()
+                clicked shouldBe (emptyList<String>())
+
+                back()
+                compose.onNodeWithTag("menu").assertDoesNotExist()
+                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                clicked shouldBe (emptyList<String>())
+            }
+
+            test("the repeats and the release of a hold do not press the row the menu opened under them") {
+                showHome()
+
+                compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
+                compose.onRoot().performKeyInput { advanceEventTime(560) }
+                compose.waitForIdle()
+                compose.onNodeWithTag("menu:ReplaceInDock").assertIsFocused()
+                compose.onRoot().performKeyInput { advanceEventTime(200) }
+                compose.onRoot().performKeyInput { keyUp(Key.DirectionCenter) }
+                compose.waitForIdle()
+
+                compose.onNodeWithTag("menu").assertExists()
+                compose.onNodeWithTag("reorder:hint").assertDoesNotExist()
+                clicked shouldBe (emptyList<String>())
+            }
+
+            test("a short press opens the app and no menu") {
+                showHome()
+
+                holdOk(millis = 100)
+                releaseOk()
+
+                compose.onNodeWithTag("menu").assertDoesNotExist()
+                clicked shouldBe listOf("pkg.1")
+            }
+
+            test("the menu key opens the menu and a row fires on its own press") {
+                showHome()
+
+                press(Key.Menu)
+                compose.onNodeWithTag("menu").assertExists()
+
+                press(Key.DirectionDown)
+                compose.onNodeWithTag("menu:Move").assertIsFocused()
+                press(Key.DirectionCenter)
+
+                compose.onNodeWithTag("menu").assertDoesNotExist()
+                compose.onNodeWithTag("reorder:hint").assertExists()
+            }
+
+            test("without tile menu the menu key does nothing and a held ok asks for app info") {
+                showHome(SixColumns.copy(tileMenu = false))
+
+                press(Key.Menu)
+                compose.onNodeWithTag("menu").assertDoesNotExist()
+
+                holdOk()
+                releaseOk()
+
+                compose.onNodeWithTag("menu").assertDoesNotExist()
+                effects shouldBe (listOf<HomeEffect>(HomeEffect.OpenAppInfo("pkg.1")))
+                clicked shouldBe (emptyList<String>())
+            }
+
+            test("a grid tile carried into the dock keeps focus and the order is saved when the mode ends") {
+                showHome()
+                press(Key.DirectionDown)
+                compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+                holdOk()
+                releaseOk()
+                press(Key.DirectionDown)
+                compose.onNodeWithTag("menu:Move").assertIsFocused()
+                press(Key.DirectionCenter)
+                compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+
+                press(Key.DirectionUp)
+
+                compose.onNode(hasTestTag("tile:pkg.7") and hasAnyAncestor(hasTestTag("dock"))).assertIsFocused()
+                saved shouldBe emptyList<Pair<List<String>, Int>>()
+
+                press(Key.DirectionCenter)
+                back()
+
+                compose.onNodeWithTag("reorder:hint").assertDoesNotExist()
+                saved shouldBe listOf((listOf(7, 1, 2, 3, 4, 5, 6, 8, 9).map { "pkg.$it" }) to -1)
+            }
+
+            test("the settings button opens its menu on a held ok") {
+                showHome()
+                press(Key.DirectionUp)
+                repeat(2) { press(Key.DirectionRight) }
+
+                holdOk()
+
+                compose.onNodeWithTag("menu").assertExists()
+                compose.onNodeWithTag("menu:EditDock").assertExists()
+                compose.onNode(hasTestTag("menu:Reorder") and hasAnyAncestor(hasTestTag("menu"))).assertExists()
+            }
+
+            test("in reorder mode the hero title is the name of the app that moves") {
+                showHome()
+                press(Key.DirectionRight)
+                holdOk()
+                releaseOk()
+                press(Key.DirectionDown)
+                press(Key.DirectionCenter)
+                compose.onNodeWithTag("reorder:hint").assertExists()
+                compose.onNodeWithTag("shelf:title").assertTextEquals("App 2")
+
+                press(Key.DirectionRight)
+
+                compose.onNodeWithTag("shelf:title").assertTextEquals("App 2")
+            }
+
+            test("in edit dock mode the hero title stays choose dock apps") {
+                showHome()
+                press(Key.DirectionUp)
+                repeat(2) { press(Key.DirectionRight) }
+                holdOk()
+                releaseOk()
+                press(Key.DirectionDown)
+                press(Key.DirectionCenter)
+
+                compose.onNodeWithTag("reorder:hint").assertExists()
+                compose.onNodeWithTag("shelf:title").assertTextEquals("Choose dock apps")
+            }
+
+            test("once a dock place is chosen the hint names it of the dock places and the app in it now beside the ok and back chips") {
+                showHome()
+                press(Key.DirectionUp)
+                repeat(2) { press(Key.DirectionRight) }
+                holdOk()
+                releaseOk()
+                press(Key.DirectionDown)
+                press(Key.DirectionCenter)
+                repeat(2) { press(Key.DirectionRight) }
+
+                press(Key.DirectionCenter)
+
+                compose.onNodeWithTag("reorder:slot").assertTextEquals("Place 3 of 6 \u00B7 now App 3")
+                for ((chip, texts) in listOf(
+                    "reorder:chip:put" to listOf("OK", "put here"),
+                    "reorder:chip:other" to listOf("Back", "other place"),
+                )) {
+                    for (text in texts) {
+                        compose
+                            .onNode(
+                                hasText(text) and hasAnyAncestor(hasTestTag(chip) and hasAnyAncestor(hasTestTag("reorder:hint"))),
+                            ).assertExists()
+                    }
+                }
+            }
+
+            test("a dock tiles menu opens above its tile without covering the top bar") {
+                showHome()
+                val tile = boundsOf("tile:pkg.1")
+
+                holdOk()
+
+                val menu = boundsOf("menu")
+                withClue("menu $menu, tile $tile") { menu.bottom shouldBeLessThanOrEqualTo tile.top }
+                menu.top shouldBeGreaterThanOrEqualTo topBarBottom()
+            }
+
+            test("a grid tiles menu opens beside its tile without covering the top bar") {
+                showHome()
+                press(Key.DirectionDown)
+                val tile = boundsOf("tile:pkg.7")
+
+                holdOk()
+
+                val menu = boundsOf("menu")
+                withClue("menu $menu, tile $tile") { menu.left shouldBeGreaterThanOrEqualTo tile.right }
+                menu.top shouldBeGreaterThanOrEqualTo topBarBottom()
+            }
+
+            test("a dock tiles menu names its app in a header row and a grid tiles menu does not") {
+                showHome()
+
+                holdOk()
+                releaseOk()
+                compose.onNodeWithTag("menu:title").assertTextEquals("App 1")
+                back()
+                press(Key.DirectionDown)
+                holdOk()
+                releaseOk()
+
+                compose.onNodeWithTag("menu").assertExists()
+                compose.onNodeWithTag("menu:title").assertDoesNotExist()
+            }
+
+            test("a dock tiles menu header is the text colour at 65 percent on the light surface") {
+                showHome()
+
+                holdOk()
+                releaseOk()
+
+                val style = compose.onNodeWithTag("menu:title").textStyle()
+                style.color.alpha shouldBe (0.65f plusOrMinus 0.005f)
+                withClue("${style.color} is not dark") { style.color.luminance() shouldBeLessThan 0.2f }
+            }
+
+            test("a dock tiles menu is a whole number of tiles wide and starts at its tiles left edge") {
+                showHome()
+                val tile = boundsOf("tile:pkg.1")
+
+                holdOk()
+
+                val menu = boundsOf("menu")
+                assertWholeTiles(menu, tile)
+                menu.left shouldBe (tile.left plusOrMinus 1f)
+            }
+
+            test("a grid tiles menu starts where the next tile does") {
+                showHome(apps = (1..20).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") })
+                press(Key.DirectionDown)
+                val tile = boundsOf("tile:pkg.7")
+
+                holdOk()
+
+                val menu = boundsOf("menu")
+                assertWholeTiles(menu, tile)
+                menu.left shouldBe (boundsOf("tile:pkg.8").left plusOrMinus 1f)
+            }
+
+            test("the menu of a tile in the last column ends where the tile before it does") {
+                showHome(apps = (1..20).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") })
+                press(Key.DirectionDown)
+                repeat(5) { press(Key.DirectionRight) }
+                compose.onNodeWithTag("tile:pkg.12").assertIsFocused()
+                val tile = boundsOf("tile:pkg.12")
+
+                holdOk()
+
+                val menu = boundsOf("menu")
+                assertWholeTiles(menu, tile)
+                menu.right shouldBe (boundsOf("tile:pkg.11").right plusOrMinus 1f)
+            }
+
+            test("the reorder hint sits clear of every tile and inside the screen") {
+                showHome(apps = (1..40).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") })
+
+                press(Key.Menu)
+                press(Key.DirectionDown)
+                press(Key.DirectionCenter)
+
+                val hint = boundsOf("reorder:hint")
+                val tiles =
+                    compose
+                        .onAllNodes(
+                            SemanticsMatcher("is a tile") {
+                                it.config.getOrNull(SemanticsProperties.TestTag)?.startsWith("tile:") ==
+                                    true
+                            },
+                        ).fetchSemanticsNodes()
+                        .map { it.boundsInRoot }
+                        .filter { it.width > 0f && it.height > 0f }
+                tiles.isNotEmpty().shouldBeTrue()
+                tiles.filter { it.overlaps(hint) } shouldBe (emptyList<Rect>())
+                hint.bottom shouldBeLessThanOrEqualTo (
+                    compose
+                        .onRoot()
+                        .fetchSemanticsNode()
+                        .boundsInRoot.bottom - screenMargin()
+                )
+            }
+
+            test("the settings menu lists launcher settings first and opens the page with the key off") {
+                launcherSettingsRowIsFirstAndOpensThePage(SixColumns)
+            }
+
+            test("the settings menu lists launcher settings first and opens the page with the key on") {
+                launcherSettingsRowIsFirstAndOpensThePage(SixColumns.copy(launcherSettingsButton = true))
+            }
+
+            test("focus coming back into home goes to the dock after the home key closed a grid tile menu") {
+                showHome()
+                press(Key.DirectionDown)
+                repeat(2) { press(Key.DirectionRight) }
+                compose.onNodeWithTag("tile:pkg.9").assertIsFocused()
+                holdOk()
+                releaseOk()
+                compose.onNodeWithTag("menu").assertExists()
+                homePresses++
+                compose.waitForIdle()
+                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+
+                removeTheFocusedTile()
+
+                assertFocusInTheDock()
+            }
+
+            test("focus coming back into home goes to the dock after the home key closed the settings menu") {
+                showHome()
+                openSettingsMenu()
+                homePresses++
+                compose.waitForIdle()
+                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+
+                removeTheFocusedTile()
+
+                assertFocusInTheDock()
+            }
+
+            test("focus coming back into home goes to the dock after the inputs key closed the settings menu for a source panel") {
+                showHome()
+                openSettingsMenu()
+                inputsRequests++
+                compose.waitForIdle()
+                compose.onNodeWithTag("menu").assertDoesNotExist()
+                press(Key.DirectionDown)
+                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+
+                removeTheFocusedTile()
+
+                assertFocusInTheDock()
+            }
+
+            test("focus coming back into home goes to the dock after the inputs key closed a grid tile menu for a source panel") {
+                showHome()
+                press(Key.DirectionDown)
+                repeat(2) { press(Key.DirectionRight) }
+                compose.onNodeWithTag("tile:pkg.9").assertIsFocused()
+                holdOk()
+                releaseOk()
+                compose.onNodeWithTag("menu").assertExists()
+                inputsRequests++
+                compose.waitForIdle()
+                compose.onNodeWithTag("menu").assertDoesNotExist()
+                press(Key.DirectionUp)
+                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+
+                removeTheFocusedTile()
+
+                assertFocusInTheDock()
+            }
+        }
+    })
+
+class HomeMenuUiNightTestContent :
+    RobolectricTestSuiteContent({
+        testFixture { HomeMenuUiTestFixture() } asContextForEach {
+            test("a dock tiles menu header is 16 sp semi bold white at 65 percent on the dark surface") {
+                showHome()
+
+                holdOk()
+                releaseOk()
+
+                val style = compose.onNodeWithTag("menu:title").textStyle()
+                style.fontSize shouldBe 16.sp
+                style.fontWeight shouldBe FontWeight.SemiBold
+                style.color shouldBe Color.White.copy(alpha = 0.65f)
+            }
+        }
+    })
+
+class HomeMenuUiH360TestContent :
+    RobolectricTestSuiteContent({
+        testFixture { HomeMenuUiTestFixture() } asContextForEach {
+            test("a tile menu with no room below or above its tile still stays under the top bar") {
+                showHome()
+
+                holdOk()
+
+                boundsOf("menu").top shouldBeGreaterThanOrEqualTo topBarBottom()
+            }
+        }
+    })
+
+/**
+ * Holds in the legacy graphics mode only: with the native canvas's text metrics this menu is two tiles wide and ends 40 dp
+ * from the screen's right side, 3 dp past the tile.
+ */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.LEGACY)
 @Config(sdk = [31], qualifiers = "w960dp-h540dp-xhdpi")
-class HomeMenuUiTest {
+class HomeMenuLastDockTileTest {
+    private val fixture = HomeMenuUiTestFixture()
+
     @get:Rule
-    val compose = createAndroidComposeRule<ComponentActivity>()
+    val compose = fixture.compose
 
-    private val effects = mutableListOf<HomeEffect>()
-    private val saved = mutableListOf<Pair<List<String>, Int>>()
-    private val clicked = mutableListOf<String>()
-    private val installed = MutableStateFlow(AppList(NineApps))
-    private var homePresses by mutableIntStateOf(0)
-    private var inputsRequests by mutableIntStateOf(0)
+    @Test
+    fun the_menu_of_the_last_tile_of_the_dock_ends_at_its_tiles_right_edge() {
+        with(fixture) {
+            showHome()
+            repeat(5) { press(Key.DirectionRight) }
+            compose.onNodeWithTag("tile:pkg.6").assertIsFocused()
+            val tile = boundsOf("tile:pkg.6")
 
-    private fun showHome(
+            holdOk()
+
+            val menu = boundsOf("menu")
+            assertWholeTiles(menu, tile)
+            menu.right shouldBe (tile.right plusOrMinus 1f)
+        }
+    }
+}
+
+private class HomeMenuUiTestFixture : JUnit4RulesContext() {
+    val compose = rule(createAndroidComposeRule<ComponentActivity>())
+
+    val effects = mutableListOf<HomeEffect>()
+
+    val saved = mutableListOf<Pair<List<String>, Int>>()
+
+    val clicked = mutableListOf<String>()
+
+    val installed = MutableStateFlow(AppList(NineApps))
+
+    var homePresses by mutableIntStateOf(0)
+
+    var inputsRequests by mutableIntStateOf(0)
+
+    fun showHome(
         config: TvConfig = SixColumns,
         apps: List<AppEntry> = NineApps,
     ) {
@@ -76,6 +524,11 @@ class HomeMenuUiTest {
                     true
                 },
             )
+        // A TV has no touch screen; the native graphics mode starts in touch mode, where nothing takes key focus.
+        compose.runOnUiThread {
+            compose.activity.window.decorView
+                .requestFocusFromTouch()
+        }
         compose.setContent {
             TvTheme {
                 val viewModel = rememberHomeViewModel(sources, config, effects)
@@ -96,384 +549,58 @@ class HomeMenuUiTest {
         compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
     }
 
-    private fun press(key: Key) {
+    fun press(key: Key) {
         compose.onRoot().performKeyInput { pressKey(key) }
         compose.waitForIdle()
     }
 
-    private fun holdOk(millis: Long = 600) {
+    fun holdOk(millis: Long = 600) {
         compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
         compose.mainClock.advanceTimeBy(millis)
         compose.waitForIdle()
     }
 
-    private fun releaseOk() {
+    fun releaseOk() {
         compose.onRoot().performKeyInput { keyUp(Key.DirectionCenter) }
         compose.waitForIdle()
     }
 
-    private fun back() {
+    fun back() {
         compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
         compose.waitForIdle()
     }
 
-    @Test
-    fun holding_ok_on_a_tile_opens_its_menu_and_back_returns_focus_to_the_tile() {
-        showHome()
+    fun boundsOf(tag: String): Rect = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
 
-        holdOk()
-        compose.onNodeWithTag("menu").assertExists()
-        compose.onNodeWithTag("menu:ReplaceInDock").assertIsFocused()
-
-        releaseOk()
-        compose.onNodeWithTag("menu").assertExists()
-        assertEquals(emptyList<String>(), clicked)
-
-        back()
-        compose.onNodeWithTag("menu").assertDoesNotExist()
-        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-        assertEquals(emptyList<String>(), clicked)
-    }
-
-    @Test
-    fun the_repeats_and_the_release_of_a_hold_do_not_press_the_row_the_menu_opened_under_them() {
-        showHome()
-
-        compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
-        compose.onRoot().performKeyInput { advanceEventTime(560) }
-        compose.waitForIdle()
-        compose.onNodeWithTag("menu:ReplaceInDock").assertIsFocused()
-        compose.onRoot().performKeyInput { advanceEventTime(200) }
-        compose.onRoot().performKeyInput { keyUp(Key.DirectionCenter) }
-        compose.waitForIdle()
-
-        compose.onNodeWithTag("menu").assertExists()
-        compose.onNodeWithTag("reorder:hint").assertDoesNotExist()
-        assertEquals(emptyList<String>(), clicked)
-    }
-
-    @Test
-    fun a_short_press_opens_the_app_and_no_menu() {
-        showHome()
-
-        holdOk(millis = 100)
-        releaseOk()
-
-        compose.onNodeWithTag("menu").assertDoesNotExist()
-        assertEquals(listOf("pkg.1"), clicked)
-    }
-
-    @Test
-    fun the_menu_key_opens_the_menu_and_a_row_fires_on_its_own_press() {
-        showHome()
-
-        press(Key.Menu)
-        compose.onNodeWithTag("menu").assertExists()
-
-        press(Key.DirectionDown)
-        compose.onNodeWithTag("menu:Move").assertIsFocused()
-        press(Key.DirectionCenter)
-
-        compose.onNodeWithTag("menu").assertDoesNotExist()
-        compose.onNodeWithTag("reorder:hint").assertExists()
-    }
-
-    @Test
-    fun without_tile_menu_the_menu_key_does_nothing_and_a_held_ok_asks_for_app_info() {
-        showHome(SixColumns.copy(tileMenu = false))
-
-        press(Key.Menu)
-        compose.onNodeWithTag("menu").assertDoesNotExist()
-
-        holdOk()
-        releaseOk()
-
-        compose.onNodeWithTag("menu").assertDoesNotExist()
-        assertEquals(listOf<HomeEffect>(HomeEffect.OpenAppInfo("pkg.1")), effects)
-        assertEquals(emptyList<String>(), clicked)
-    }
-
-    @Test
-    fun a_grid_tile_carried_into_the_dock_keeps_focus_and_the_order_is_saved_when_the_mode_ends() {
-        showHome()
-        press(Key.DirectionDown)
-        compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
-        holdOk()
-        releaseOk()
-        press(Key.DirectionDown)
-        compose.onNodeWithTag("menu:Move").assertIsFocused()
-        press(Key.DirectionCenter)
-        compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
-
-        press(Key.DirectionUp)
-
-        compose.onNode(hasTestTag("tile:pkg.7") and hasAnyAncestor(hasTestTag("dock"))).assertIsFocused()
-        assertEquals(emptyList<Pair<List<String>, Int>>(), saved)
-
-        press(Key.DirectionCenter)
-        back()
-
-        compose.onNodeWithTag("reorder:hint").assertDoesNotExist()
-        assertEquals(listOf((listOf(7, 1, 2, 3, 4, 5, 6, 8, 9).map { "pkg.$it" }) to -1), saved)
-    }
-
-    @Test
-    fun the_settings_button_opens_its_menu_on_a_held_ok() {
-        showHome()
-        press(Key.DirectionUp)
-        repeat(2) { press(Key.DirectionRight) }
-
-        holdOk()
-
-        compose.onNodeWithTag("menu").assertExists()
-        compose.onNodeWithTag("menu:EditDock").assertExists()
-        compose.onNode(hasTestTag("menu:Reorder") and hasAnyAncestor(hasTestTag("menu"))).assertExists()
-    }
-
-    @Test
-    fun in_reorder_mode_the_hero_title_is_the_name_of_the_app_that_moves() {
-        showHome()
-        press(Key.DirectionRight)
-        holdOk()
-        releaseOk()
-        press(Key.DirectionDown)
-        press(Key.DirectionCenter)
-        compose.onNodeWithTag("reorder:hint").assertExists()
-        compose.onNodeWithTag("shelf:title").assertTextEquals("App 2")
-
-        press(Key.DirectionRight)
-
-        compose.onNodeWithTag("shelf:title").assertTextEquals("App 2")
-    }
-
-    @Test
-    fun in_edit_dock_mode_the_hero_title_stays_choose_dock_apps() {
-        showHome()
-        press(Key.DirectionUp)
-        repeat(2) { press(Key.DirectionRight) }
-        holdOk()
-        releaseOk()
-        press(Key.DirectionDown)
-        press(Key.DirectionCenter)
-
-        compose.onNodeWithTag("reorder:hint").assertExists()
-        compose.onNodeWithTag("shelf:title").assertTextEquals("Choose dock apps")
-    }
-
-    @Test
-    fun once_a_dock_place_is_chosen_the_hint_names_it_of_the_dock_places_and_the_app_in_it_now_beside_the_ok_and_back_chips() {
-        showHome()
-        press(Key.DirectionUp)
-        repeat(2) { press(Key.DirectionRight) }
-        holdOk()
-        releaseOk()
-        press(Key.DirectionDown)
-        press(Key.DirectionCenter)
-        repeat(2) { press(Key.DirectionRight) }
-
-        press(Key.DirectionCenter)
-
-        compose.onNodeWithTag("reorder:slot").assertTextEquals("Place 3 of 6 \u00B7 now App 3")
-        for ((chip, texts) in listOf(
-            "reorder:chip:put" to listOf("OK", "put here"),
-            "reorder:chip:other" to listOf("Back", "other place"),
-        )) {
-            for (text in texts) {
-                compose
-                    .onNode(
-                        hasText(text) and hasAnyAncestor(hasTestTag(chip) and hasAnyAncestor(hasTestTag("reorder:hint"))),
-                    ).assertExists()
-            }
-        }
-    }
-
-    private fun boundsOf(tag: String): Rect = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
-
-    @Test
-    fun a_dock_tiles_menu_opens_above_its_tile_without_covering_the_top_bar() {
-        showHome()
-        val tile = boundsOf("tile:pkg.1")
-
-        holdOk()
-
-        val menu = boundsOf("menu")
-        assertTrue("menu $menu, tile $tile", menu.bottom <= tile.top)
-        assertTrue(menu.top >= topBarBottom())
-    }
-
-    @Test
-    fun a_grid_tiles_menu_opens_beside_its_tile_without_covering_the_top_bar() {
-        showHome()
-        press(Key.DirectionDown)
-        val tile = boundsOf("tile:pkg.7")
-
-        holdOk()
-
-        val menu = boundsOf("menu")
-        assertTrue("menu $menu, tile $tile", menu.left >= tile.right)
-        assertTrue(menu.top >= topBarBottom())
-    }
-
-    @Test
-    fun a_dock_tiles_menu_names_its_app_in_a_header_row_and_a_grid_tiles_menu_does_not() {
-        showHome()
-
-        holdOk()
-        releaseOk()
-        compose.onNodeWithTag("menu:title").assertTextEquals("App 1")
-        back()
-        press(Key.DirectionDown)
-        holdOk()
-        releaseOk()
-
-        compose.onNodeWithTag("menu").assertExists()
-        compose.onNodeWithTag("menu:title").assertDoesNotExist()
-    }
-
-    @Test
-    @Config(qualifiers = "+night")
-    fun a_dock_tiles_menu_header_is_16_sp_semi_bold_white_at_65_percent_on_the_dark_surface() {
-        showHome()
-
-        holdOk()
-        releaseOk()
-
-        val style = compose.onNodeWithTag("menu:title").textStyle()
-        assertEquals(16.sp, style.fontSize)
-        assertEquals(FontWeight.SemiBold, style.fontWeight)
-        assertEquals(Color.White.copy(alpha = 0.65f), style.color)
-    }
-
-    @Test
-    fun a_dock_tiles_menu_header_is_the_text_colour_at_65_percent_on_the_light_surface() {
-        showHome()
-
-        holdOk()
-        releaseOk()
-
-        val style = compose.onNodeWithTag("menu:title").textStyle()
-        assertEquals(0.65f, style.color.alpha, 0.005f)
-        assertTrue("${style.color} is not dark", style.color.luminance() < 0.2f)
-    }
-
-    private fun gap() = with(compose.density) { TileGap.toPx() }
+    fun gap() = with(compose.density) { TileGap.toPx() }
 
     /** How many tiles and gaps wide [menu] is, as a count of tiles ([tile] wide, [gap] apart); whole for a menu that spans tiles. */
-    private fun tilesAcross(
+    fun tilesAcross(
         menu: Rect,
         tile: Rect,
     ): Float = (menu.width + gap()) / (tile.width + gap())
 
-    private fun assertWholeTiles(
+    fun assertWholeTiles(
         menu: Rect,
         tile: Rect,
     ) {
         val across = tilesAcross(menu, tile)
-        assertTrue("$across tiles across", abs(across - across.roundToInt()) < 0.01f && across.roundToInt() >= 1)
+        withClue("$across tiles across") { (abs(across - across.roundToInt()) < 0.01f && across.roundToInt() >= 1).shouldBeTrue() }
     }
 
-    @Test
-    fun a_dock_tiles_menu_is_a_whole_number_of_tiles_wide_and_starts_at_its_tiles_left_edge() {
-        showHome()
-        val tile = boundsOf("tile:pkg.1")
+    fun topBarBottom() = with(compose.density) { (TopBarTop + TopBarHeight).toPx() }
 
-        holdOk()
-
-        val menu = boundsOf("menu")
-        assertWholeTiles(menu, tile)
-        assertEquals(tile.left, menu.left, 1f)
-    }
-
-    @Test
-    fun the_menu_of_the_last_tile_of_the_dock_ends_at_its_tiles_right_edge() {
-        showHome()
-        repeat(5) { press(Key.DirectionRight) }
-        compose.onNodeWithTag("tile:pkg.6").assertIsFocused()
-        val tile = boundsOf("tile:pkg.6")
-
-        holdOk()
-
-        val menu = boundsOf("menu")
-        assertWholeTiles(menu, tile)
-        assertEquals(tile.right, menu.right, 1f)
-    }
-
-    @Test
-    fun a_grid_tiles_menu_starts_where_the_next_tile_does() {
-        showHome(apps = (1..20).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") })
-        press(Key.DirectionDown)
-        val tile = boundsOf("tile:pkg.7")
-
-        holdOk()
-
-        val menu = boundsOf("menu")
-        assertWholeTiles(menu, tile)
-        assertEquals(boundsOf("tile:pkg.8").left, menu.left, 1f)
-    }
-
-    @Test
-    fun the_menu_of_a_tile_in_the_last_column_ends_where_the_tile_before_it_does() {
-        showHome(apps = (1..20).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") })
-        press(Key.DirectionDown)
-        repeat(5) { press(Key.DirectionRight) }
-        compose.onNodeWithTag("tile:pkg.12").assertIsFocused()
-        val tile = boundsOf("tile:pkg.12")
-
-        holdOk()
-
-        val menu = boundsOf("menu")
-        assertWholeTiles(menu, tile)
-        assertEquals(boundsOf("tile:pkg.11").right, menu.right, 1f)
-    }
-
-    @Test
-    @Config(qualifiers = "w960dp-h360dp-xhdpi")
-    fun a_tile_menu_with_no_room_below_or_above_its_tile_still_stays_under_the_top_bar() {
-        showHome()
-
-        holdOk()
-
-        assertTrue(boundsOf("menu").top >= topBarBottom())
-    }
-
-    @Test
-    fun the_reorder_hint_sits_clear_of_every_tile_and_inside_the_screen() {
-        showHome(apps = (1..40).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") })
-
-        press(Key.Menu)
-        press(Key.DirectionDown)
-        press(Key.DirectionCenter)
-
-        val hint = boundsOf("reorder:hint")
-        val tiles =
-            compose
-                .onAllNodes(SemanticsMatcher("is a tile") { it.config.getOrNull(SemanticsProperties.TestTag)?.startsWith("tile:") == true })
-                .fetchSemanticsNodes()
-                .map { it.boundsInRoot }
-                .filter { it.width > 0f && it.height > 0f }
-        assertTrue(tiles.isNotEmpty())
-        assertEquals(emptyList<Rect>(), tiles.filter { it.overlaps(hint) })
-        assertTrue(
-            hint.bottom <= compose
-                .onRoot()
-                .fetchSemanticsNode()
-                .boundsInRoot.bottom - screenMargin(),
-        )
-    }
-
-    private fun topBarBottom() = with(compose.density) { (TopBarTop + TopBarHeight).toPx() }
-
-    private fun screenMargin() = with(compose.density) { 20.dp.toPx() }
+    fun screenMargin() = with(compose.density) { 20.dp.toPx() }
 
     /** The focused tile goes away, so focus comes back into Home from outside, as when the window regains it. */
-    private fun removeTheFocusedTile() {
+    fun removeTheFocusedTile() {
         installed.value = AppList(installed.value.apps.filterNot { it.key == "pkg.1" })
         compose.waitForIdle()
     }
 
-    private fun assertFocusInTheDock() = compose.onNode(isFocused() and hasAnyAncestor(hasTestTag("dock"))).assertIsFocused()
+    fun assertFocusInTheDock() = compose.onNode(isFocused() and hasAnyAncestor(hasTestTag("dock"))).assertIsFocused()
 
-    private fun openSettingsMenu() {
+    fun openSettingsMenu() {
         press(Key.DirectionUp)
         repeat(2) { press(Key.DirectionRight) }
         holdOk()
@@ -481,96 +608,20 @@ class HomeMenuUiTest {
         compose.onNodeWithTag("menu").assertExists()
     }
 
-    private fun launcherSettingsRowIsFirstAndOpensThePage(config: TvConfig) {
+    fun launcherSettingsRowIsFirstAndOpensThePage(config: TvConfig) {
         showHome(config)
         openSettingsMenu()
 
         val first = compose.onNodeWithTag("menu:LauncherSettings")
         first.assertTextEquals("Launcher settings")
-        assertTrue(first.getBoundsInRoot().top < compose.onNodeWithTag("menu:Reorder").getBoundsInRoot().top)
+        first.getBoundsInRoot().top shouldBeLessThan compose.onNodeWithTag("menu:Reorder").getBoundsInRoot().top
         first.assertIsFocused()
         press(Key.DirectionCenter)
 
-        assertEquals(listOf<HomeEffect>(HomeEffect.OpenLauncherSettings), effects)
+        effects shouldBe (listOf<HomeEffect>(HomeEffect.OpenLauncherSettings))
         compose.onNodeWithTag("menu").assertDoesNotExist()
         compose.onNodeWithContentDescription(config.settingsButtonLabel()).assertIsFocused()
     }
 
-    private fun TvConfig.settingsButtonLabel() = if (launcherSettingsButton) "Launcher settings" else "Settings"
-
-    @Test
-    fun the_settings_menu_lists_launcher_settings_first_and_opens_the_page_with_the_key_off() {
-        launcherSettingsRowIsFirstAndOpensThePage(SixColumns)
-    }
-
-    @Test
-    fun the_settings_menu_lists_launcher_settings_first_and_opens_the_page_with_the_key_on() {
-        launcherSettingsRowIsFirstAndOpensThePage(SixColumns.copy(launcherSettingsButton = true))
-    }
-
-    @Test
-    fun focus_coming_back_into_home_goes_to_the_dock_after_the_home_key_closed_a_grid_tile_menu() {
-        showHome()
-        press(Key.DirectionDown)
-        repeat(2) { press(Key.DirectionRight) }
-        compose.onNodeWithTag("tile:pkg.9").assertIsFocused()
-        holdOk()
-        releaseOk()
-        compose.onNodeWithTag("menu").assertExists()
-        homePresses++
-        compose.waitForIdle()
-        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-
-        removeTheFocusedTile()
-
-        assertFocusInTheDock()
-    }
-
-    @Test
-    fun focus_coming_back_into_home_goes_to_the_dock_after_the_home_key_closed_the_settings_menu() {
-        showHome()
-        openSettingsMenu()
-        homePresses++
-        compose.waitForIdle()
-        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-
-        removeTheFocusedTile()
-
-        assertFocusInTheDock()
-    }
-
-    @Test
-    fun focus_coming_back_into_home_goes_to_the_dock_after_the_inputs_key_closed_the_settings_menu_for_a_source_panel() {
-        showHome()
-        openSettingsMenu()
-        inputsRequests++
-        compose.waitForIdle()
-        compose.onNodeWithTag("menu").assertDoesNotExist()
-        press(Key.DirectionDown)
-        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-
-        removeTheFocusedTile()
-
-        assertFocusInTheDock()
-    }
-
-    @Test
-    fun focus_coming_back_into_home_goes_to_the_dock_after_the_inputs_key_closed_a_grid_tile_menu_for_a_source_panel() {
-        showHome()
-        press(Key.DirectionDown)
-        repeat(2) { press(Key.DirectionRight) }
-        compose.onNodeWithTag("tile:pkg.9").assertIsFocused()
-        holdOk()
-        releaseOk()
-        compose.onNodeWithTag("menu").assertExists()
-        inputsRequests++
-        compose.waitForIdle()
-        compose.onNodeWithTag("menu").assertDoesNotExist()
-        press(Key.DirectionUp)
-        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-
-        removeTheFocusedTile()
-
-        assertFocusInTheDock()
-    }
+    fun TvConfig.settingsButtonLabel() = if (launcherSettingsButton) "Launcher settings" else "Settings"
 }

@@ -1,38 +1,28 @@
 package dev.niltsiar.tvhome.feature.home
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.matchers.shouldBe
 
-class HeroSourceTest {
-    @Test
-    fun with_dock_title_on_the_focused_tile_is_the_line_when_nothing_else_claims_the_band() {
-        assertEquals(HeroSource.Tile, heroSource(dockTitle = true, hint = null, pillFocused = false, control = null))
+val HeroSourceTest by testSuite {
+    test("with dock title on the focused tile is the line when nothing else claims the band") {
+        heroSource(dockTitle = true, hint = null, pillFocused = false, control = null) shouldBe HeroSource.Tile
     }
 
-    @Test
-    fun with_dock_title_off_the_focused_tile_gets_no_line() {
-        assertEquals(HeroSource.Quiet, heroSource(dockTitle = false, hint = null, pillFocused = false, control = null))
+    test("with dock title off the focused tile gets no line") {
+        heroSource(dockTitle = false, hint = null, pillFocused = false, control = null) shouldBe HeroSource.Quiet
     }
 
-    @Test
-    fun a_reorder_hint_a_library_pill_and_a_bar_control_keep_their_line_with_dock_title_off() {
-        assertEquals(
-            HeroSource.Mode(ReorderHint.Reorder),
-            heroSource(dockTitle = false, hint = ReorderHint.Reorder, pillFocused = false, control = null),
-        )
-        assertEquals(HeroSource.Library, heroSource(dockTitle = false, hint = null, pillFocused = true, control = null))
-        assertEquals(
-            HeroSource.Bar(BarControl.Network),
-            heroSource(dockTitle = false, hint = null, pillFocused = false, control = BarControl.Network),
-        )
+    test("a reorder hint a library pill and a bar control keep their line with dock title off") {
+        heroSource(dockTitle = false, hint = ReorderHint.Reorder, pillFocused = false, control = null) shouldBe
+            HeroSource.Mode(ReorderHint.Reorder)
+        heroSource(dockTitle = false, hint = null, pillFocused = true, control = null) shouldBe HeroSource.Library
+        heroSource(dockTitle = false, hint = null, pillFocused = false, control = BarControl.Network) shouldBe
+            HeroSource.Bar(BarControl.Network)
     }
 
-    @Test
-    fun a_mode_beats_the_pill_and_the_pill_beats_a_bar_control() {
-        assertEquals(
-            HeroSource.Mode(ReorderHint.Reorder),
-            heroSource(dockTitle = true, hint = ReorderHint.Reorder, pillFocused = true, control = BarControl.Network),
-        )
-        assertEquals(HeroSource.Library, heroSource(dockTitle = true, hint = null, pillFocused = true, control = BarControl.Network))
+    test("a mode beats the pill and the pill beats a bar control") {
+        heroSource(dockTitle = true, hint = ReorderHint.Reorder, pillFocused = true, control = BarControl.Network) shouldBe
+            HeroSource.Mode(ReorderHint.Reorder)
+        heroSource(dockTitle = true, hint = null, pillFocused = true, control = BarControl.Network) shouldBe HeroSource.Library
     }
 }

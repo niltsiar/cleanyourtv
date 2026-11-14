@@ -152,7 +152,18 @@ compose.setContent { /* ... */ }
 A module that moves in several changes keeps JUnit classes beside its suites. A JUnit class without `@GraphicsMode` ran
 in the legacy mode; once the module sets the property it runs in the native mode, and its key focus checks fail. Give
 each such class `@GraphicsMode(GraphicsMode.Mode.LEGACY)` until it moves, as the annotation wins over the property
-(`HomeFocusTest.kt` in `feature/home`).
+(`HomeRefreshFocusTest.kt` in `feature/home`).
+
+A test that holds in the legacy mode only, such as a layout check that depends on the legacy text metrics, stays a
+JUnit class with that annotation in the suite's file. It reuses the suite's fixture, as `rule()` returns the rule it
+registers (`HomeMenuLastDockTileTest` in `HomeMenuUiTest.kt`):
+
+```kotlin
+private val fixture = HomeMenuUiTestFixture()
+
+@get:Rule
+val compose = fixture.compose
+```
 
 ### Compose UI
 
