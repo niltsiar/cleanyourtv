@@ -55,6 +55,7 @@ interface AppGraph {
     val inputLauncher: InputLauncher
     val openOnStart: OpenOnStart
     val settingsSources: SettingsSources
+    val shelfPosters: ShelfPosters
 
     @Provides
     @SingleIn(AppScope::class)

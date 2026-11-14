@@ -36,6 +36,8 @@ import dev.niltsiar.tvhome.service.keys.ServiceRepair
 import dev.niltsiar.tvhome.service.keys.VendorKeys
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 import dev.niltsiar.tvhome.feature.home.R as FeatureR
@@ -104,6 +106,9 @@ class MainActivity : ComponentActivity() {
             }
         }
         if (config.value.restoreKeyServices) ServiceRepair.restore(this)
+        lifecycleScope.launch {
+            config.map { it.appShelf }.distinctUntilChanged().collect { on -> if (!on) graph.shelfPosters.trim() }
+        }
         setContent {
             val current = config.collectAsStateWithLifecycle()
             val motion by current.derived(TvConfig::motion)
@@ -156,6 +161,7 @@ class MainActivity : ComponentActivity() {
         graph.networkMonitor.onStart()
         graph.timeChanges.onStart()
         graph.wallpaperProvider.onStart()
+        graph.shelfPosters.onStart()
     }
 
     override fun onStop() {
@@ -167,12 +173,16 @@ class MainActivity : ComponentActivity() {
         graph.wallpaperProvider.onStop()
     }
 
-    /** Another app needs the memory while Home is stopped: drop the artwork and the picture, which the next start loads again. */
+    /**
+     * Another app needs the memory while Home is stopped: drop the artwork, the picture and the shelf posters, which Home loads
+     * again when it shows them.
+     */
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         if (!shouldReleaseOnTrim(level, lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))) return
         graph.appsProvider.trimImages()
         graph.wallpaperProvider.releasePicture()
+        graph.shelfPosters.trim()
     }
 
     override fun onResume() {

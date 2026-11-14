@@ -15,6 +15,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -27,8 +28,16 @@ private const val TAG = "TvHome.Shelf"
 internal const val POSTER_CACHE_BYTES: Int = 12 * 1024 * 1024
 
 /**
+ * The most pixels a poster decodes into before its last scale: a 1080p frame, 8 MB at 4 bytes each. A 16:9 or 2:3 poster for a
+ * 1080p card stays under it, and so does a 16:9 one for a card of twice that size; a poster of an extreme aspect, which only
+ * the short side would shrink, goes over it and shows as a text card.
+ */
+internal const val POSTER_MAX_PIXELS: Long = 1920L * 1080L
+
+/**
  * Decodes the posters of shelf items for Home's cards, on [io] and one at a time, and keeps them in an LRU of
- * [POSTER_CACHE_BYTES]. Only a `content://` or `android.resource://` poster is read: Home has no network.
+ * [POSTER_CACHE_BYTES]. Only a `content://` or `android.resource://` poster is read: Home has no network. A poster that
+ * cannot be read or decoded is not tried again until the next [onStart].
  */
 public class ShelfPosters(
     private val context: Context,
@@ -42,10 +51,11 @@ public class ShelfPosters(
                 value: Bitmap,
             ): Int = value.allocationByteCount
         }
+    private val failed: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     /**
      * The poster at [uri], scaled while it decodes to the least size that covers [width] x [height] pixels. Null for a URI of
-     * another scheme, or one that cannot be opened or decoded.
+     * another scheme, one that cannot be opened or decoded, or one over [POSTER_MAX_PIXELS].
      */
     public suspend fun poster(
         uri: String,
@@ -57,10 +67,32 @@ public class ShelfPosters(
         if (width <= 0 || height <= 0) return null
         val key = "$uri@${width}x$height"
         cache.get(key)?.let { return it.asImageBitmap() }
+        if (key in failed) return null
         return decoding
             .withLock {
-                cache.get(key) ?: withContext(io) { decode(parsed, width, height) }?.also { cache.put(key, it) }
+                cache.get(key) ?: if (key in failed) null else load(key, parsed, width, height)
             }?.asImageBitmap()
+    }
+
+    /** Home came to the front: a poster that failed may be readable now, as after the app granted its URI again. */
+    public fun onStart() {
+        failed.clear()
+    }
+
+    /** Drops every decoded poster, for memory another app needs or when app_shelf turns off. */
+    public fun trim() {
+        cache.evictAll()
+    }
+
+    private suspend fun load(
+        key: String,
+        uri: Uri,
+        width: Int,
+        height: Int,
+    ): Bitmap? {
+        val bitmap = withContext(io) { decode(uri, width, height) }
+        if (bitmap == null) failed += key else cache.put(key, bitmap)
+        return bitmap
     }
 
     /** The app gave the URI, so any failure to read it counts as no poster. */
@@ -72,10 +104,11 @@ public class ShelfPosters(
         try {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
-            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+            val options = posterOptions(bounds.outWidth, bounds.outHeight, width, height)
+            if (options == null) {
+                Log.w(TAG, "poster $uri not decoded at ${bounds.outWidth} x ${bounds.outHeight}")
                 null
             } else {
-                val options = posterOptions(bounds.outWidth, bounds.outHeight, width, height)
                 context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
             }
         } catch (e: IOException) {
@@ -90,20 +123,25 @@ public class ShelfPosters(
 /**
  * Options that decode a [sourceWidth] x [sourceHeight] picture at the least size that covers [width] x [height]: the largest
  * power-of-two sample that keeps it at least that big, then a density scale for the rest. A smaller picture keeps its size.
+ * Null for a picture with no size, or one whose sampled size is over [POSTER_MAX_PIXELS].
  */
 internal fun posterOptions(
     sourceWidth: Int,
     sourceHeight: Int,
     width: Int,
     height: Int,
-): BitmapFactory.Options {
+): BitmapFactory.Options? {
+    if (sourceWidth <= 0 || sourceHeight <= 0) return null
     val cover = max(width.toFloat() / sourceWidth, height.toFloat() / sourceHeight)
     val options = BitmapFactory.Options()
-    if (cover >= 1f) return options
+    if (cover >= 1f) return options.takeIf { sourceWidth.toLong() * sourceHeight <= POSTER_MAX_PIXELS }
     val targetWidth = (sourceWidth * cover).roundToInt()
     val targetHeight = (sourceHeight * cover).roundToInt()
     var sample = 1
     while (sourceWidth / (sample * 2) >= targetWidth && sourceHeight / (sample * 2) >= targetHeight) sample *= 2
+    // A decoder may round a sampled side up.
+    val sampledPixels = ((sourceWidth + sample - 1) / sample).toLong() * ((sourceHeight + sample - 1) / sample)
+    if (sampledPixels > POSTER_MAX_PIXELS) return null
     options.inSampleSize = sample
     val sampledWidth = sourceWidth / sample
     if (sampledWidth > targetWidth) {
