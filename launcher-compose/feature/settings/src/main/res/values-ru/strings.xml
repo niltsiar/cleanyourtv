@@ -51,4 +51,5 @@
   <string name="settings_shelf_none">Нет</string>
   <string name="settings_shelf_watch_next">Продолжить просмотр · %1$d</string>
   <string name="settings_shelf_nothing">Ни одно приложение не делится материалами</string>
+  <string name="settings_shelf_allow_access">Разрешите доступ в разделе О приложении, Разрешения</string>
 </resources>

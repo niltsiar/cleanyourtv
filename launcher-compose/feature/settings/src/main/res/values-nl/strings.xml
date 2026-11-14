@@ -51,4 +51,5 @@
   <string name="settings_shelf_none">Geen</string>
   <string name="settings_shelf_watch_next">Verder kijken · %1$d</string>
   <string name="settings_shelf_nothing">Geen app deelt items</string>
+  <string name="settings_shelf_allow_access">Geef toegang in App-info, onder Rechten</string>
 </resources>

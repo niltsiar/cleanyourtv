@@ -51,4 +51,5 @@
   <string name="settings_shelf_none">Cap</string>
   <string name="settings_shelf_watch_next">Continua mirant · %1$d</string>
   <string name="settings_shelf_nothing">Cap app no comparteix elements</string>
+  <string name="settings_shelf_allow_access">Permet l\'accés a Informació de l\'aplicació, a Permisos</string>
 </resources>

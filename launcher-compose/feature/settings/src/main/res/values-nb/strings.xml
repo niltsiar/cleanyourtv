@@ -51,4 +51,5 @@
   <string name="settings_shelf_none">Ingen</string>
   <string name="settings_shelf_watch_next">Fortsett å se · %1$d</string>
   <string name="settings_shelf_nothing">Ingen apper deler noe å vise</string>
+  <string name="settings_shelf_allow_access">Gi tilgang i Appinformasjon under Tillatelser</string>
 </resources>

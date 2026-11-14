@@ -51,4 +51,5 @@
   <string name="settings_shelf_none">无</string>
   <string name="settings_shelf_watch_next">继续观看 · %1$d</string>
   <string name="settings_shelf_nothing">没有应用分享内容</string>
+  <string name="settings_shelf_allow_access">请在应用信息的权限中允许访问</string>
 </resources>

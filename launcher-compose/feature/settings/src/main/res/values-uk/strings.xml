@@ -51,4 +51,5 @@
   <string name="settings_shelf_none">Немає</string>
   <string name="settings_shelf_watch_next">Дивіться далі · %1$d</string>
   <string name="settings_shelf_nothing">Жоден застосунок не ділиться матеріалами</string>
+  <string name="settings_shelf_allow_access">Дозвольте доступ у розділі Про застосунок, Дозволи</string>
 </resources>

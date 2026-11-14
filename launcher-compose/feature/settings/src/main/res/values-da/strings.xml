@@ -51,4 +51,5 @@
   <string name="settings_shelf_none">Ingen</string>
   <string name="settings_shelf_watch_next">Se videre · %1$d</string>
   <string name="settings_shelf_nothing">Ingen app deler noget at vise</string>
+  <string name="settings_shelf_allow_access">Giv adgang i App-oplysninger under Tilladelser</string>
 </resources>

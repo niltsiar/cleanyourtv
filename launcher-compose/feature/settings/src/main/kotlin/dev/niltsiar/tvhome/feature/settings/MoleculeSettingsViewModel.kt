@@ -30,7 +30,7 @@ public class SettingsActions(
     public val onOpenShelfPicker: () -> Unit = {},
     /** The entry at an index of the shelf sources picker was ticked or unticked. */
     public val onToggleShelfSource: (Int) -> Unit = {},
-    /** The request for READ_TV_LISTINGS was answered, granted or not. */
+    /** Whether Home holds READ_TV_LISTINGS may have changed: the request for it was answered, or the page came back. */
     public val onShelfAccessAnswered: () -> Unit = {},
 )
 

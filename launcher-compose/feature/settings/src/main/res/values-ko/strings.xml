@@ -51,4 +51,5 @@
   <string name="settings_shelf_none">없음</string>
   <string name="settings_shelf_watch_next">이어서 시청하기 · %1$d</string>
   <string name="settings_shelf_nothing">항목을 공유하는 앱이 없습니다</string>
+  <string name="settings_shelf_allow_access">앱 정보의 권한에서 액세스를 허용하세요</string>
 </resources>

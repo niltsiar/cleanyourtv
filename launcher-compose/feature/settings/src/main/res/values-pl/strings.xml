@@ -51,4 +51,5 @@
   <string name="settings_shelf_none">Brak</string>
   <string name="settings_shelf_watch_next">Oglądaj dalej · %1$d</string>
   <string name="settings_shelf_nothing">Żadna aplikacja nie udostępnia elementów</string>
+  <string name="settings_shelf_allow_access">Zezwól na dostęp w Informacjach o aplikacji, w sekcji Uprawnienia</string>
 </resources>

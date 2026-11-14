@@ -51,4 +51,5 @@
   <string name="settings_shelf_none">Aucune</string>
   <string name="settings_shelf_watch_next">Continuer à regarder · %1$d</string>
   <string name="settings_shelf_nothing">Aucune appli ne partage de contenu</string>
+  <string name="settings_shelf_allow_access">Autorisez l\'accès dans Infos sur l\'application, sous Autorisations</string>
 </resources>

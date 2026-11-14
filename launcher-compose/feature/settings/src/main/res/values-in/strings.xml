@@ -51,4 +51,5 @@
   <string name="settings_shelf_none">Tidak ada</string>
   <string name="settings_shelf_watch_next">Teruskan menonton · %1$d</string>
   <string name="settings_shelf_nothing">Tidak ada aplikasi yang membagikan item</string>
+  <string name="settings_shelf_allow_access">Izinkan akses di Info aplikasi, bagian Izin</string>
 </resources>

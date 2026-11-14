@@ -51,4 +51,5 @@
   <string name="settings_shelf_none">Yoʻq</string>
   <string name="settings_shelf_watch_next">Tomoshani davom ettirish · %1$d</string>
   <string name="settings_shelf_nothing">Hech bir ilova element ulashmaydi</string>
+  <string name="settings_shelf_allow_access">Ilova haqida, Ruxsatlar boʻlimida ruxsat bering</string>
 </resources>

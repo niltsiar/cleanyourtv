@@ -51,4 +51,5 @@
   <string name="settings_shelf_none">Không có</string>
   <string name="settings_shelf_watch_next">Tiếp tục xem · %1$d</string>
   <string name="settings_shelf_nothing">Không ứng dụng nào chia sẻ mục</string>
+  <string name="settings_shelf_allow_access">Cho phép truy cập trong Thông tin ứng dụng, mục Quyền</string>
 </resources>

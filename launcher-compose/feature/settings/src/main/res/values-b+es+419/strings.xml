@@ -51,4 +51,5 @@
   <string name="settings_shelf_none">Ninguno</string>
   <string name="settings_shelf_watch_next">Seguir viendo · %1$d</string>
   <string name="settings_shelf_nothing">Ninguna app comparte elementos</string>
+  <string name="settings_shelf_allow_access">Permite el acceso en Información de la aplicación, en Permisos</string>
 </resources>
