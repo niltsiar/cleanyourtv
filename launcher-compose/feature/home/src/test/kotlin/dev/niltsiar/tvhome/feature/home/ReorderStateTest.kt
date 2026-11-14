@@ -215,6 +215,14 @@ val ReorderStateTest by testSuite {
         dockCount(keys, 4, dock) shouldBe 4
     }
 
+    test("a dock app pushed to the first place past the dock leaves it behind a grid app that slid in") {
+        val keys = listOf("my5", "tivimate", "jellyfin", "iplayer", "appletv", "vlc")
+        val dock = set("tivimate", "jellyfin", "iplayer", "appletv")
+
+        dockFirst(keys, 4, dock) shouldBe listOf("tivimate", "jellyfin", "iplayer", "my5", "appletv", "vlc")
+        dockCount(keys, 4, dock) shouldBe 3
+    }
+
     test("fewer tiles than dock slots still put the dock first") {
         dockFirst(listOf("a", "b"), 4, set("b")) shouldBe listOf("b", "a")
         dockCount(listOf("a", "b"), 4, set("b")) shouldBe 1

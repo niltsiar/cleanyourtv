@@ -68,6 +68,7 @@ import io.kotest.assertions.withClue
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldNotBeEmpty
+import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
 import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
@@ -407,6 +408,28 @@ class LibraryOverlayLookUiTestContent :
                 showLibrary(listOf(libraryApp("Aaa", onHome = true), libraryApp("Bbb"), libraryApp("Ccc")))
 
                 compose.onNodeWithTag("library:count").assertTextEquals("3 apps")
+            }
+
+            test("a recent install has a green dot in its top end corner unless it is on home") {
+                showLibrary(
+                    listOf(
+                        libraryApp("Aaa"),
+                        libraryApp("Beta", installedAt = NOW - DAY),
+                        libraryApp("Gamma", onHome = true, installedAt = NOW - DAY),
+                    ),
+                )
+
+                // How far, 0 to 255, green leads red in the greenest pixel of the card's top end 20 by 20 dp corner.
+                fun greenInCorner(name: String): Int {
+                    val card = card(name)
+                    val density = compose.activity.resources.displayMetrics.density
+                    val pixels = compose.onRoot().captureToImage().toPixelMap()
+                    val xs = ((card.right - 20.dp).value * density).toInt() until (card.right.value * density).toInt()
+                    val ys = (card.top.value * density).toInt() until ((card.top + 20.dp).value * density).toInt()
+                    return ys.maxOf { y -> xs.maxOf { x -> Math.round((pixels[x, y].green - pixels[x, y].red) * 255) } }
+                }
+                withClue("the recent install off home") { greenInCorner("Beta") shouldBeGreaterThan 60 }
+                withClue("the recent install on home") { greenInCorner("Gamma") shouldBeLessThan 20 }
             }
 
             test("the art of a one line card starts as far below the card top as the art of a two line card") {

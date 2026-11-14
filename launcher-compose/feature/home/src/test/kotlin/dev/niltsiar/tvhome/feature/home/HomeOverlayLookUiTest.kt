@@ -345,6 +345,18 @@ class HomeOverlayLookUiNightTestContent :
                 assertNear(255, redAt(centreOf("tile:pkg.2")), 2)
             }
 
+            test("without the dock band the dock draws at alpha 075 while focus is in the top bar") {
+                showHome(config = SixColumns.copy(dockBand = false))
+                val whole = redAt(centreOf("tile:pkg.2"))
+                press(Key.DirectionUp)
+                compose.onNodeWithContentDescription("Inputs").assertIsFocused()
+                val dimmed = redAt(centreOf("tile:pkg.2"))
+
+                assertNear(255, whole, 2)
+                // White art at alpha 0.75 over the dark Home: 255 * 0.75 plus a quarter of what is behind it.
+                withClue("a white tile reads $dimmed in top-bar focus") { dimmed shouldBeIn 191..200 }
+            }
+
             test("the inputs button is idle again once its list has closed") {
                 openInputs()
                 compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
@@ -539,6 +551,7 @@ private class HomeOverlayLookUiTestFixture : JUnit4RulesContext() {
                         actions = viewModel.actions,
                         libraryOpen = { libraryOpen },
                         inputsRequests = { inputsRequests },
+                        dockLook = config.dockLook(),
                     )
                 }
             }

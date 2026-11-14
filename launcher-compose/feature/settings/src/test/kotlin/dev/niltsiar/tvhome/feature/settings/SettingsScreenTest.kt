@@ -3,11 +3,19 @@ package dev.niltsiar.tvhome.feature.settings
 import android.app.Application
 import android.os.Looper
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
@@ -21,6 +29,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.dp
 import de.infix.testBalloon.framework.core.JUnit4RulesContext
 import de.infix.testBalloon.framework.core.TestConfig
 import de.infix.testBalloon.framework.core.testSuite
@@ -143,6 +152,49 @@ class SettingsScreenTestContent :
                     repeat(options) { press(Key.DirectionRight) }
                     option(row, options - 1).assertIsFocused()
                 }
+            }
+
+            test("left and right at a rows ends do not leave the screen for something focusable beside it") {
+                settings = SettingsHarness(app, uiThread = true, apps = installed)
+                leaveTouchMode()
+                compose.setContent {
+                    TvTheme(motion = Motion(animations = false)) {
+                        val state = settings.viewModel.uiState.collectAsState()
+                        Row(Modifier.fillMaxSize()) {
+                            Box(
+                                Modifier
+                                    .width(40.dp)
+                                    .fillMaxHeight()
+                                    .testTag("beside:start")
+                                    .focusable(),
+                            )
+                            SettingsScreen(
+                                { state.value },
+                                settings.viewModel.actions,
+                                onChooseDefaultHome = {},
+                                onOpenTvSettings = {},
+                                modifier = Modifier.weight(1f),
+                            )
+                            Box(
+                                Modifier
+                                    .width(40.dp)
+                                    .fillMaxHeight()
+                                    .testTag("beside:end")
+                                    .focusable(),
+                            )
+                        }
+                    }
+                }
+                compose.waitForIdle()
+                val last = settings.row(SettingsRowId.Columns).options.size - 1
+
+                press(Key.DirectionLeft)
+                option(SettingsRowId.Columns, 0).assertIsFocused()
+                compose.onNodeWithTag("beside:start").assertIsNotFocused()
+
+                repeat(last + 1) { press(Key.DirectionRight) }
+                option(SettingsRowId.Columns, last).assertIsFocused()
+                compose.onNodeWithTag("beside:end").assertIsNotFocused()
             }
 
             test("right then left returns to the same option") {

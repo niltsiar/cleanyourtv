@@ -43,6 +43,23 @@ val MinuteClockTest by testSuite(testConfig = TestConfig.testScope(isEnabled = t
         }
     }
 
+    test("a time not set yet is looked at again one second later and not before") {
+        with(testScope) {
+            var now = 0L
+            minuteClock(emptyFlow(), emptyFlow(), { now }, zone).test {
+                awaitItem().shouldBeNull()
+
+                now = valid
+                advanceTimeBy(999)
+                expectNoEvents()
+                advanceTimeBy(1)
+                runCurrent()
+                expectMostRecentItem() shouldBe at(valid)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+    }
+
     test("a valid time is emitted now and again at the next minute start") {
         with(testScope) {
             minuteClock(emptyFlow(), emptyFlow(), wallClock(valid), zone).test {

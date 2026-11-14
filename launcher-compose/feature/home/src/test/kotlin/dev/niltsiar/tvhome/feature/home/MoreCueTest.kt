@@ -108,6 +108,13 @@ val MoreCueTest by testSuite {
         short!!.centre shouldBe (SCREEN_HEIGHT - ROOM / 2f plusOrMinus 0.01f)
     }
 
+    test("with names a band of exactly the cues room under the names takes the cue and not the tiles") {
+        val rowHeight = TILE_HEIGHT + NAME_ROOM
+        val rows = gridRows(0..2, firstTop = 1032 - rowHeight - ROW_PITCH, height = rowHeight)
+
+        cue(rows, names = true)!!.centre shouldBe (SCREEN_HEIGHT - ROOM / 2f plusOrMinus 0.01f)
+    }
+
     test("a row that peeks past the bottom edge with apps below it gets the cue on the screen edge over it") {
         val peeking = cue(gridRows(0..1, firstTop = 600))
 

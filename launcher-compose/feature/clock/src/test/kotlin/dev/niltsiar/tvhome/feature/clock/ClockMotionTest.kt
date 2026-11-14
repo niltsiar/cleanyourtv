@@ -35,6 +35,10 @@ val ClockMotionTest by testSuite {
         screen.cornerAt(clock, Spot(0.9f, 0.9f)) shouldBe IntOffset(1098, 684)
     }
 
+    test("a spots x places the clock across and its y down") {
+        screen.cornerAt(clock, Spot(0.25f, 0.75f)) shouldBe IntOffset(305, 570)
+    }
+
     test("a clock wider than the screen stays at the origin") {
         IntSize(500, 300).cornerAt(IntSize(600, 400), Spot(0.8f, 0.8f)) shouldBe IntOffset(0, 0)
     }
