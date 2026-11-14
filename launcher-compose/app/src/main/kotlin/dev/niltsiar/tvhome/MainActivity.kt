@@ -29,7 +29,7 @@ import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.core.model.startActivitySafely
 import dev.niltsiar.tvhome.data.apps.LaunchResult
-import dev.niltsiar.tvhome.data.shelf.shelfIntent
+import dev.niltsiar.tvhome.data.shelf.startShelfItem
 import dev.niltsiar.tvhome.feature.library.MoleculeLibraryViewModel
 import dev.niltsiar.tvhome.service.keys.PowerMenu
 import dev.niltsiar.tvhome.service.keys.ServiceRepair
@@ -293,7 +293,7 @@ class MainActivity : ComponentActivity() {
         app: AppEntry,
         item: ShelfItem,
     ): Boolean {
-        val started = shelfIntent(item)?.let(::startActivitySafely) == true
+        val started = startShelfItem(item)
         if (started) graph.appLauncher.openedTile(app) else cantOpen(app.label)
         return started
     }

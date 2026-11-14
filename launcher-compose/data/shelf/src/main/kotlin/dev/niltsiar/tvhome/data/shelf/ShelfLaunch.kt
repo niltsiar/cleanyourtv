@@ -1,5 +1,6 @@
 package dev.niltsiar.tvhome.data.shelf
 
+import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -10,23 +11,31 @@ import java.net.URISyntaxException
 
 private const val TAG = "TvHome.Shelf"
 
-private const val GRANT_FLAGS =
-    Intent.FLAG_GRANT_READ_URI_PERMISSION or
-        Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
-        Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or
-        Intent.FLAG_GRANT_PREFIX_URI_PERMISSION
-
 /**
- * The intent that opens [item]: the one the app published when it opens an exported activity of that same app, or else the
- * app's own launch intent; null when the app has neither. Both start a new task.
+ * Opens [item] in a new task: the intent the app published when it opens an exported activity of that same app, or else, or
+ * when that one fails to start, the app's own launch intent. False when neither starts.
  */
-public fun Context.shelfIntent(item: ShelfItem): Intent? =
-    (publishedIntent(item) ?: packageManager.tvLaunchIntent(item.packageName))?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+public fun Context.startShelfItem(item: ShelfItem): Boolean =
+    publishedIntent(item)?.let(::startShelfIntent) == true ||
+        packageManager.tvLaunchIntent(item.packageName)?.let(::startShelfIntent) == true
 
 /**
- * The item's intent_uri as an intent bound to its publishing package, with no selector, no clip data and no URI grants, so
- * Home never passes its own URI permissions on. Null when it is missing or unreadable, names another app, or resolves to no
- * exported activity of the publishing app.
+ * The intent comes from another app's row, so any failure to start it counts as not started, such as an extra too big for the
+ * binder.
+ */
+private fun Context.startShelfIntent(intent: Intent): Boolean =
+    try {
+        startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        true
+    } catch (e: RuntimeException) {
+        Log.w(TAG, "cannot open $intent: $e")
+        false
+    }
+
+/**
+ * The item's intent_uri as an intent bound to its publishing package, with no selector and no URI grants, so Home never passes
+ * its own URI permissions on: `parseUri` without URI_ALLOW_UNSAFE drops the grant flags and sets no clip data. Null when it is
+ * missing or unreadable, names another app, carries `file:` data, or resolves to no exported activity of the publishing app.
  */
 internal fun Context.publishedIntent(item: ShelfItem): Intent? {
     val uri = item.intentUri ?: return null
@@ -43,11 +52,10 @@ internal fun Context.publishedIntent(item: ShelfItem): Intent? {
     if (component != null && component != pkg) return refused(pkg, "names $component")
     val target = intent.`package`
     if (target != null && target != pkg) return refused(pkg, "names $target")
+    if (intent.data?.scheme.equals(ContentResolver.SCHEME_FILE, ignoreCase = true)) return refused(pkg, "carries file: data")
     // Intent.setPackage throws while a selector is set.
     intent.selector = null
     intent.setPackage(pkg)
-    intent.clipData = null
-    intent.flags = intent.flags and GRANT_FLAGS.inv()
     val activity = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo
     if (activity == null || activity.packageName != pkg || !activity.exported) return refused(pkg, "opens no activity of it")
     return intent

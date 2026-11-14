@@ -1,12 +1,14 @@
 package dev.niltsiar.tvhome.data.shelf
 
 import android.content.ComponentName
+import android.content.ContextWrapper
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.net.Uri
+import android.os.TransactionTooLargeException
 import de.infix.testBalloon.framework.core.TestConfig
 import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
@@ -14,6 +16,7 @@ import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.core.model.ShelfKind
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -21,9 +24,14 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 
 private const val APP = "com.edde746.plezy"
+private const val GRANT_FLAGS =
+    Intent.FLAG_GRANT_READ_URI_PERMISSION or
+        Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+        Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or
+        Intent.FLAG_GRANT_PREFIX_URI_PERMISSION
 private const val OTHER = "com.other"
 
-/** Which intent OK on a shelf item sends: the app's own, only into that app, or else the app's launch intent. */
+/** Which intent OK on a shelf item starts: the app's own, only into that app, or else the app's launch intent. */
 val ShelfLaunchTest by testSuite {
     robolectricTestSuite<ShelfLaunchTestContent>("sdk 31", testConfig = TestConfig.robolectric { sdk = 31 })
 }
@@ -78,10 +86,27 @@ class ShelfLaunchTestContent :
                     )
                 }
 
+                val started = ArrayList<Intent>()
+
+                /** What startActivity throws for an intent, as the system would; null starts it. */
+                var failure: (Intent) -> RuntimeException? = { null }
+
+                val context =
+                    object : ContextWrapper(app) {
+                        override fun startActivity(intent: Intent) {
+                            failure(intent)?.let { throw it }
+                            started += Intent(intent)
+                        }
+                    }
+
+                /** The intent OK on an item with [intentUri] starts, null when none starts. */
                 fun open(
                     intentUri: String?,
                     pkg: String = APP,
-                ): Intent? = app.shelfIntent(ShelfItem(pkg, "Severance", ShelfKind.Continue, intentUri = intentUri))
+                ): Intent? {
+                    val opened = context.startShelfItem(ShelfItem(pkg, "Severance", ShelfKind.Continue, intentUri = intentUri))
+                    return if (opened) started.last() else null
+                }
 
                 /** The intent was refused: the app's launch intent stands in for it. */
                 fun Intent?.isLaunchIntent() {
@@ -145,6 +170,45 @@ class ShelfLaunchTestContent :
             test("an item without an intent opens the app, and an app without a launch entry opens nothing") {
                 open(null).isLaunchIntent()
                 open("plezy://play", pkg = "com.gone").shouldBeNull()
+            }
+
+            test("an intent with file: data is refused") {
+                activity(
+                    ComponentName(APP, "$APP.Files"),
+                    filter =
+                        IntentFilter(Intent.ACTION_VIEW).apply {
+                            addCategory(Intent.CATEGORY_DEFAULT)
+                            addDataScheme("file")
+                        },
+                )
+
+                open("intent:///sdcard/movie.mkv#Intent;scheme=file;action=android.intent.action.VIEW;end").isLaunchIntent()
+            }
+
+            test("an intent that asks for URI grants opens without them, so Home passes none of its own on") {
+                val uri =
+                    Intent(Intent.ACTION_VIEW, Uri.parse("plezy://play"))
+                        .addFlags(GRANT_FLAGS or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        .toUri(Intent.URI_INTENT_SCHEME)
+
+                val intent = open(uri).shouldNotBeNull()
+
+                intent.data shouldBe Uri.parse("plezy://play")
+                (intent.flags and GRANT_FLAGS) shouldBe 0
+                (intent.flags and Intent.FLAG_ACTIVITY_CLEAR_TOP) shouldBe Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+
+            test("an intent that fails to start, such as one too big for the binder, opens the app instead") {
+                failure = { if (it.data != null) RuntimeException(TransactionTooLargeException()) else null }
+
+                open("plezy://play").isLaunchIntent()
+            }
+
+            test("when the launch intent fails to start too, nothing opens") {
+                failure = { SecurityException("Permission Denial") }
+
+                open("plezy://play").shouldBeNull()
+                started.shouldBeEmpty()
             }
         }
     })
