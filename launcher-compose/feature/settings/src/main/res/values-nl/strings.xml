@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">Verder kijken · %1$d</string>
   <string name="settings_shelf_nothing">Geen app deelt items</string>
   <string name="settings_shelf_allow_access">Geef toegang in App-info, onder Rechten</string>
+  <string name="settings_web_posters">Afbeeldingen van het web</string>
+  <string name="settings_lan_posters">Afbeeldingen uit je netwerk</string>
+  <string name="settings_poster_helper_missing">Helper niet geïnstalleerd</string>
+  <string name="settings_poster_helper_other_key">Helper ondertekend met andere sleutel</string>
 </resources>

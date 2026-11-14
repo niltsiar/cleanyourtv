@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">দেখা চালিয়ে যান · %1$d</string>
   <string name="settings_shelf_nothing">কোনো অ্যাপ দেখানোর মতো কিছু শেয়ার করে না</string>
   <string name="settings_shelf_allow_access">অ্যাপের তথ্যে, অনুমতি অংশে অ্যাক্সেস দিন</string>
+  <string name="settings_web_posters">ওয়েব থেকে ছবি</string>
+  <string name="settings_lan_posters">আপনার নেটওয়ার্ক থেকে ছবি</string>
+  <string name="settings_poster_helper_missing">সহায়ক ইনস্টল করা নেই</string>
+  <string name="settings_poster_helper_other_key">সহায়ক অন্য কী দিয়ে স্বাক্ষরিত</string>
 </resources>

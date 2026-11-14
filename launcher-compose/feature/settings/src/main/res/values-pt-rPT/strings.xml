@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">Continuar a ver · %1$d</string>
   <string name="settings_shelf_nothing">Nenhuma app partilha itens</string>
   <string name="settings_shelf_allow_access">Permita o acesso em Informações da app, em Autorizações</string>
+  <string name="settings_web_posters">Imagens da Web</string>
+  <string name="settings_lan_posters">Imagens da sua rede</string>
+  <string name="settings_poster_helper_missing">Auxiliar não instalado</string>
+  <string name="settings_poster_helper_other_key">Auxiliar assinado com outra chave</string>
 </resources>

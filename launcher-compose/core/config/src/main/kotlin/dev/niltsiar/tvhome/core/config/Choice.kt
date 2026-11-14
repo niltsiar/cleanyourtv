@@ -110,6 +110,9 @@ public object Choices {
             prefs.stored(AppShelfSourcesKey)?.let { config.copy(appShelfSources = it.sorted()) } ?: config
         }
 
+    public val AppShelfWebPosters: Choice<Boolean> = boolChoice("app_shelf_web_posters") { copy(appShelfWebPosters = it) }
+    public val AppShelfLanPosters: Choice<Boolean> = boolChoice("app_shelf_lan_posters") { copy(appShelfLanPosters = it) }
+
     internal val all: List<Choice<*>> =
         listOf(
             Columns,
@@ -136,6 +139,8 @@ public object Choices {
             InputArrival,
             AppShelf,
             AppShelfSources,
+            AppShelfWebPosters,
+            AppShelfLanPosters,
         )
 
     /** The choices a pushed theme resets: all but open on start. */

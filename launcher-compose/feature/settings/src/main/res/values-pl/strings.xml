@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">Oglądaj dalej · %1$d</string>
   <string name="settings_shelf_nothing">Żadna aplikacja nie udostępnia elementów</string>
   <string name="settings_shelf_allow_access">Zezwól na dostęp w Informacjach o aplikacji, w sekcji Uprawnienia</string>
+  <string name="settings_web_posters">Obrazy z internetu</string>
+  <string name="settings_lan_posters">Obrazy z sieci domowej</string>
+  <string name="settings_poster_helper_missing">Pomocnik nie jest zainstalowany</string>
+  <string name="settings_poster_helper_other_key">Pomocnik podpisany innym kluczem</string>
 </resources>

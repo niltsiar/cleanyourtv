@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">继续观看 · %1$d</string>
   <string name="settings_shelf_nothing">没有应用分享内容</string>
   <string name="settings_shelf_allow_access">请在应用信息的权限中允许访问</string>
+  <string name="settings_web_posters">来自互联网的图片</string>
+  <string name="settings_lan_posters">来自局域网的图片</string>
+  <string name="settings_poster_helper_missing">未安装辅助应用</string>
+  <string name="settings_poster_helper_other_key">辅助应用的签名密钥不同</string>
 </resources>

@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">Fortsätt titta · %1$d</string>
   <string name="settings_shelf_nothing">Ingen app delar något att visa</string>
   <string name="settings_shelf_allow_access">Ge åtkomst i Appinfo under Behörigheter</string>
+  <string name="settings_web_posters">Bilder från webben</string>
+  <string name="settings_lan_posters">Bilder från hemnätverket</string>
+  <string name="settings_poster_helper_missing">Hjälpen är inte installerad</string>
+  <string name="settings_poster_helper_other_key">Hjälpen är signerad med en annan nyckel</string>
 </resources>

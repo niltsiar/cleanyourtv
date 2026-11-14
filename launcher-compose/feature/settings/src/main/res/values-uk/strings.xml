@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">Дивіться далі · %1$d</string>
   <string name="settings_shelf_nothing">Жоден застосунок не ділиться матеріалами</string>
   <string name="settings_shelf_allow_access">Дозвольте доступ у розділі Про застосунок, Дозволи</string>
+  <string name="settings_web_posters">Зображення з інтернету</string>
+  <string name="settings_lan_posters">Зображення з домашньої мережі</string>
+  <string name="settings_poster_helper_missing">Помічник не встановлено</string>
+  <string name="settings_poster_helper_other_key">Помічник підписано іншим ключем</string>
 </resources>

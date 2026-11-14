@@ -8,10 +8,12 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.TvConfig
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
@@ -72,7 +74,7 @@ class ShelfPostersTestContent :
         testFixture {
             object {
                 val app = RuntimeEnvironment.getApplication()
-                val posters = ShelfPosters(app, Dispatchers.Unconfined)
+                val posters = ShelfPosters(app, MutableStateFlow(TvConfig()), Dispatchers.Unconfined)
                 val opened = HashMap<String, Int>()
 
                 fun serve(

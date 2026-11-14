@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">Continua mirant · %1$d</string>
   <string name="settings_shelf_nothing">Cap app no comparteix elements</string>
   <string name="settings_shelf_allow_access">Permet l\'accés a Informació de l\'aplicació, a Permisos</string>
+  <string name="settings_web_posters">Imatges del web</string>
+  <string name="settings_lan_posters">Imatges de la teva xarxa</string>
+  <string name="settings_poster_helper_missing">Ajudant no instal·lat</string>
+  <string name="settings_poster_helper_other_key">Ajudant signat amb una altra clau</string>
 </resources>

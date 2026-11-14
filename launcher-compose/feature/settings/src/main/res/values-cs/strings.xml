@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">Pokračovat ve sledování · %1$d</string>
   <string name="settings_shelf_nothing">Žádná aplikace nesdílí položky</string>
   <string name="settings_shelf_allow_access">Povolte přístup v Informacích o aplikaci, v části Oprávnění</string>
+  <string name="settings_web_posters">Obrázky z webu</string>
+  <string name="settings_lan_posters">Obrázky z vaší sítě</string>
+  <string name="settings_poster_helper_missing">Pomocník není nainstalován</string>
+  <string name="settings_poster_helper_other_key">Pomocník podepsaný jiným klíčem</string>
 </resources>

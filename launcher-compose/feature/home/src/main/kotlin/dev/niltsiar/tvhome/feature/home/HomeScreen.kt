@@ -163,9 +163,11 @@ import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
@@ -408,8 +410,9 @@ internal const val GRID_ITEMS_BEFORE = 2
  * that opened the Settings menu or the input list. While the library is open
  * every layer of Home above the wallpaper fades out, so only the wallpaper and the library's scrim are behind its panel.
  * With app_shelf, the focused dock tile's [HomeUiState.appShelf] shows as cards between the title and the dock ([AppShelfCards]),
- * which [onOpenShelfItem] opens and whose posters [shelfPoster] decodes; the title block rises to make room, and a layout without
- * room for cards of [ShelfCardMinHeight] shows none and says so through [onShelfRoom], so nothing is read for it.
+ * which [onOpenShelfItem] opens and whose posters [shelfPoster] decodes, again on [shelfPosterChanges]; the title block
+ * rises to make room, and a layout without room for cards of [ShelfCardMinHeight] shows none and says so through
+ * [onShelfRoom], so nothing is read for it.
  */
 @Composable
 public fun HomeScreen(
@@ -435,6 +438,7 @@ public fun HomeScreen(
     inputsRequests: () -> Int = { 0 },
     onOpenShelfItem: (String, ShelfItem) -> Unit = { _, _ -> },
     shelfPoster: suspend (String, Int, Int) -> ImageBitmap? = { _, _, _ -> null },
+    shelfPosterChanges: Flow<Int> = emptyFlow(),
     onShelfRoom: (Boolean) -> Unit = {},
     overlays: @Composable () -> Unit = {},
 ) {
@@ -629,6 +633,7 @@ public fun HomeScreen(
                     shelfBottom = shelfBottom,
                     groupShift = dim::lowPx,
                     poster = shelfPoster,
+                    posterChanges = shelfPosterChanges,
                     layout = layout,
                     input = input,
                     onOpen = onOpenShelfItem,

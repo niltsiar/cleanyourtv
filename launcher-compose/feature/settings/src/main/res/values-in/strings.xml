@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">Teruskan menonton · %1$d</string>
   <string name="settings_shelf_nothing">Tidak ada aplikasi yang membagikan item</string>
   <string name="settings_shelf_allow_access">Izinkan akses di Info aplikasi, bagian Izin</string>
+  <string name="settings_web_posters">Gambar dari web</string>
+  <string name="settings_lan_posters">Gambar dari jaringan Anda</string>
+  <string name="settings_poster_helper_missing">Aplikasi bantu tidak terpasang</string>
+  <string name="settings_poster_helper_other_key">Aplikasi bantu ditandatangani kunci lain</string>
 </resources>

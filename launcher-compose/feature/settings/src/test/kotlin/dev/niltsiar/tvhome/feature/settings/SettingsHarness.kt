@@ -8,6 +8,7 @@ import dev.niltsiar.tvhome.core.config.ConfigRepository
 import dev.niltsiar.tvhome.core.config.ThemeDirectory
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
+import dev.niltsiar.tvhome.core.model.PosterHelper
 import dev.niltsiar.tvhome.core.model.ShelfPublisher
 import dev.niltsiar.tvhome.core.model.WallpaperPicture
 import kotlinx.coroutines.CoroutineScope
@@ -41,6 +42,7 @@ import kotlin.coroutines.EmptyCoroutineContext
  * [awaitSaveFailed] for a write the store refused. The pickers show [art], and Home shows [themeDefault] for the theme default.
  * The Apps and channels picker lists [shelfPublishers], each listing counted in [shelfListings], and [shelfAccess] says whether
  * Home holds READ_TV_LISTINGS; [awaitAskedShelfAccess] and [awaitNoShelfSources] wait for the effects that report them.
+ * [posterHelper] is the poster helper's status.
  */
 internal class SettingsHarness(
     private val app: Application,
@@ -53,6 +55,7 @@ internal class SettingsHarness(
     themeDefault: WallpaperPicture? = null,
     shelfPublishers: List<ShelfPublisher> = emptyList(),
     shelfAccess: () -> Boolean = { false },
+    posterHelper: () -> PosterHelper = { PosterHelper.Missing },
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val presenterScope = if (uiThread) CoroutineScope(SupervisorJob() + Dispatchers.Main) else scope
@@ -84,6 +87,7 @@ internal class SettingsHarness(
                     withContext(Dispatchers.Default) { shelfPublishers }
                 },
                 shelfAccess,
+                posterHelper,
             )
         viewModel = MoleculeSettingsViewModel(repository, sources, presenterScope, RecompositionMode.Immediate, EmptyCoroutineContext)
         scope.launch {

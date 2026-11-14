@@ -120,6 +120,7 @@ internal fun HomeHost(
         inputsRequests = inputsRequests,
         onOpenShelfItem = viewModel::onOpenShelfItem,
         shelfPoster = graph.homeSources.shelfPoster,
+        shelfPosterChanges = graph.homeSources.shelfPosterChanges,
         onShelfRoom = viewModel::onShelfRoom,
         overlays = overlays,
     )

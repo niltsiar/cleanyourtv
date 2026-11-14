@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">Nastavite da gledate · %1$d</string>
   <string name="settings_shelf_nothing">Nijedna aplikacija ne deli stavke</string>
   <string name="settings_shelf_allow_access">Dozvolite pristup u Informacijama o aplikaciji, pod Dozvole</string>
+  <string name="settings_web_posters">Slike sa veba</string>
+  <string name="settings_lan_posters">Slike iz vaše mreže</string>
+  <string name="settings_poster_helper_missing">Pomoćnik nije instaliran</string>
+  <string name="settings_poster_helper_other_key">Pomoćnik potpisan drugim ključem</string>
 </resources>

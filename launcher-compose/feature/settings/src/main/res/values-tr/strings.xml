@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">İzlemeye devam edin · %1$d</string>
   <string name="settings_shelf_nothing">Hiçbir uygulama öğe paylaşmıyor</string>
   <string name="settings_shelf_allow_access">Uygulama bilgileri, İzinler bölümünden erişime izin verin</string>
+  <string name="settings_web_posters">Web\'den görseller</string>
+  <string name="settings_lan_posters">Ağınızdan görseller</string>
+  <string name="settings_poster_helper_missing">Yardımcı yüklü değil</string>
+  <string name="settings_poster_helper_other_key">Yardımcı başka bir anahtarla imzalanmış</string>
 </resources>

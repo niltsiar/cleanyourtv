@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">Tomoshani davom ettirish · %1$d</string>
   <string name="settings_shelf_nothing">Hech bir ilova element ulashmaydi</string>
   <string name="settings_shelf_allow_access">Ilova haqida, Ruxsatlar boʻlimida ruxsat bering</string>
+  <string name="settings_web_posters">Internetdan rasmlar</string>
+  <string name="settings_lan_posters">Uy tarmogʻidan rasmlar</string>
+  <string name="settings_poster_helper_missing">Yordamchi oʻrnatilmagan</string>
+  <string name="settings_poster_helper_other_key">Yordamchi boshqa kalit bilan imzolangan</string>
 </resources>

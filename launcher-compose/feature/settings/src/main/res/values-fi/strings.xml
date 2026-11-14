@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">Jatka katselua · %1$d</string>
   <string name="settings_shelf_nothing">Mikään sovellus ei jaa kohteita</string>
   <string name="settings_shelf_allow_access">Salli käyttö kohdassa Sovelluksen tiedot, Käyttöoikeudet</string>
+  <string name="settings_web_posters">Kuvat verkosta</string>
+  <string name="settings_lan_posters">Kuvat kotiverkosta</string>
+  <string name="settings_poster_helper_missing">Apuri ei asennettu</string>
+  <string name="settings_poster_helper_other_key">Apuri allekirjoitettu eri avaimella</string>
 </resources>

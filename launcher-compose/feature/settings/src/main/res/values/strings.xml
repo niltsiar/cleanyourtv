@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">Continue watching · %1$d</string>
   <string name="settings_shelf_nothing">No app shares items to show</string>
   <string name="settings_shelf_allow_access">Allow access in App info, under Permissions</string>
+  <string name="settings_web_posters">Pictures from the web</string>
+  <string name="settings_lan_posters">Pictures from your network</string>
+  <string name="settings_poster_helper_missing">Helper not installed</string>
+  <string name="settings_poster_helper_other_key">Helper signed with another key</string>
 </resources>

@@ -226,6 +226,8 @@ public class HomeSources(
     public val shelfItems: suspend (String) -> List<ShelfItem> = { emptyList() },
     /** A shelf item's poster at a URI, decoded to cover a card of the given width and height in pixels; null when it has none. */
     public val shelfPoster: suspend (String, Int, Int) -> ImageBitmap? = { _, _, _ -> null },
+    /** Rises each time posters that gave none may have arrived; collected only while the shelf's cards show. */
+    public val shelfPosterChanges: Flow<Int> = emptyFlow(),
 )
 
 internal sealed interface HomeEvent {

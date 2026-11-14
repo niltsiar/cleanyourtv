@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.IntState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
@@ -62,6 +63,7 @@ import dev.niltsiar.tvhome.core.designsystem.pressDip
 import dev.niltsiar.tvhome.core.designsystem.ringBlendsWith
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.ShelfItem
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlin.math.ceil
@@ -133,7 +135,8 @@ internal class ShelfCardsState {
  * stop at the ends; Down and Back return to the dock tile, and the row scrolls back to its first card, at once without motion;
  * Up leaves for the top bar, as from the dock ([upToOffer]).
  * OK opens a card's item through [onOpen]; with [HomeLayout.pressFeedback] the card dips unless an app is launching.
- * A card shows its poster, or, for none that decodes, the app's [AppEntry.image] dimmed under the item's title.
+ * A card shows its poster, or, for none that decodes, the app's [AppEntry.image] dimmed under the item's title; while the cards
+ * are [visible], a card without a picture asks [poster] again each time [posterChanges] rises.
  */
 @Composable
 internal fun AppShelfCards(
@@ -146,11 +149,16 @@ internal fun AppShelfCards(
     shelfBottom: Dp,
     groupShift: () -> Float,
     poster: suspend (String, Int, Int) -> ImageBitmap?,
+    posterChanges: Flow<Int>,
     layout: HomeLayout,
     input: HomeInput,
     onOpen: (String, ShelfItem) -> Unit,
 ) {
     val animated = TvTheme.motion.animated
+    val posterGeneration = remember { mutableIntStateOf(0) }
+    LaunchedEffect(posterChanges, visible) {
+        snapshotFlow { visible.value }.collectLatest { on -> if (on) posterChanges.collect { posterGeneration.intValue = it } }
+    }
     LaunchedEffect(cards, animated, input) {
         snapshotFlow { visible.value }.collectLatest { on ->
             // Cards that go while one has focus (a new read found nothing) hand focus back to the dock tile.
@@ -204,6 +212,7 @@ internal fun AppShelfCards(
                             accent = owner.accent,
                             band = band,
                             poster = poster,
+                            posterGeneration = posterGeneration,
                             pressFeedback = layout.pressFeedback,
                             launching = input.launching,
                             onClick = { onOpen(shown.key, item) },
@@ -239,6 +248,7 @@ private fun ShelfCard(
     accent: Color,
     band: ShelfBand,
     poster: suspend (String, Int, Int) -> ImageBitmap?,
+    posterGeneration: IntState,
     pressFeedback: Boolean,
     launching: State<Boolean>,
     onClick: () -> Unit,
@@ -247,8 +257,17 @@ private fun ShelfCard(
     val density = LocalDensity.current
     val width = with(density) { band.cardWidth.roundToPx() }
     val height = with(density) { band.cardHeight.roundToPx() }
-    val picture by produceState<ImageBitmap?>(null, item.posterUri, width, height) {
-        value = item.posterUri?.let { poster(it, width, height) }
+    val picture by produceState<ImageBitmap?>(null, item.posterUri, width, height, posterGeneration) {
+        val uri = item.posterUri
+        var asked = posterGeneration.intValue
+        value = uri?.let { poster(it, width, height) }
+        if (uri == null) return@produceState
+        snapshotFlow { posterGeneration.intValue }.collect { now ->
+            if (value == null && now != asked) {
+                asked = now
+                value = poster(uri, width, height)
+            }
+        }
     }
     val motion = TvTheme.motion
     val scope = rememberCoroutineScope()

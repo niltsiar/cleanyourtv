@@ -364,6 +364,32 @@ class AppShelfUiTestContent :
                 textOf("shelf:card-title", unmerged = true) shouldBe "Andor"
             }
 
+            test("after a poster change a card without a picture asks for its poster again and a card with one does not") {
+                showHome()
+                hold()
+                val asked = posterAsks.toList()
+
+                posterChanges.value += 1
+                compose.waitForIdle()
+
+                asked.sorted() shouldBe
+                    listOf("content://pkg.1/poster/severance", "content://pkg.1/poster/silo", "https://example.com/andor.jpg")
+                posterAsks shouldBe asked + "https://example.com/andor.jpg"
+            }
+
+            test("the cards watch for poster changes only while they show") {
+                showHome()
+                posterChanges.subscriptionCount.value shouldBe 0
+                hold()
+                posterChanges.subscriptionCount.value shouldBe 1
+
+                press(Key.DirectionRight)
+                hold()
+
+                compose.onNodeWithTag("shelf:card:0").assertDoesNotExist()
+                posterChanges.subscriptionCount.value shouldBe 0
+            }
+
             test("with rows_below_dock 2 the layout has no room for the cards: nothing is read and up goes to the top bar") {
                 showHome(Cinematic.copy(rowsBelowDock = 2))
                 hold()
@@ -387,6 +413,10 @@ private class AppShelfUiTestFixture : JUnit4RulesContext() {
     val inputs = MutableStateFlow(FourPorts)
 
     val reads = mutableListOf<String>()
+
+    val posterAsks = mutableListOf<String>()
+
+    val posterChanges = MutableStateFlow(0)
 
     lateinit var viewModel: MoleculeHomeViewModel
 
@@ -425,7 +455,10 @@ private class AppShelfUiTestFixture : JUnit4RulesContext() {
                     reads += pkg
                     items.toList()
                 },
-                shelfPoster = { uri, _, _ -> if (uri.startsWith("content://")) red else null },
+                shelfPoster = { uri, _, _ ->
+                    posterAsks += uri
+                    if (uri.startsWith("content://")) red else null
+                },
             )
         compose.setContent {
             TvTheme(motion = motion) {
@@ -442,6 +475,7 @@ private class AppShelfUiTestFixture : JUnit4RulesContext() {
                     actions = viewModel.actions,
                     onOpenShelfItem = viewModel::onOpenShelfItem,
                     shelfPoster = sources.shelfPoster,
+                    shelfPosterChanges = posterChanges,
                     onShelfRoom = viewModel::onShelfRoom,
                 )
             }

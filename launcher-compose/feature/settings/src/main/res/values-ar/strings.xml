@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">متابعة المشاهدة · %1$d</string>
   <string name="settings_shelf_nothing">لا يوجد تطبيق يشارك عناصر لعرضها</string>
   <string name="settings_shelf_allow_access">اسمح بالوصول في معلومات التطبيق، ضمن الأذونات</string>
+  <string name="settings_web_posters">صور من الويب</string>
+  <string name="settings_lan_posters">صور من شبكتك</string>
+  <string name="settings_poster_helper_missing">المساعد غير مثبّت</string>
+  <string name="settings_poster_helper_other_key">المساعد موقّع بمفتاح آخر</string>
 </resources>

@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">繼續觀看 · %1$d</string>
   <string name="settings_shelf_nothing">沒有應用程式分享內容</string>
   <string name="settings_shelf_allow_access">請在應用程式資訊的權限中允許存取</string>
+  <string name="settings_web_posters">來自網際網路的圖片</string>
+  <string name="settings_lan_posters">來自區域網路的圖片</string>
+  <string name="settings_poster_helper_missing">未安裝輔助應用程式</string>
+  <string name="settings_poster_helper_other_key">輔助應用程式的簽署金鑰不同</string>
 </resources>

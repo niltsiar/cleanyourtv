@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">Tiếp tục xem · %1$d</string>
   <string name="settings_shelf_nothing">Không ứng dụng nào chia sẻ mục</string>
   <string name="settings_shelf_allow_access">Cho phép truy cập trong Thông tin ứng dụng, mục Quyền</string>
+  <string name="settings_web_posters">Hình ảnh từ web</string>
+  <string name="settings_lan_posters">Hình ảnh từ mạng của bạn</string>
+  <string name="settings_poster_helper_missing">Chưa cài trình trợ giúp</string>
+  <string name="settings_poster_helper_other_key">Trình trợ giúp ký bằng khóa khác</string>
 </resources>

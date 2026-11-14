@@ -14,6 +14,7 @@ import dev.niltsiar.tvhome.data.inputs.InputsProvider
 import dev.niltsiar.tvhome.data.inputs.OpenOnStart
 import dev.niltsiar.tvhome.data.shelf.ShelfPosters
 import dev.niltsiar.tvhome.data.shelf.ShelfReader
+import dev.niltsiar.tvhome.data.shelf.posterHelper
 import dev.niltsiar.tvhome.data.system.MinuteClock
 import dev.niltsiar.tvhome.data.system.NetworkMonitor
 import dev.niltsiar.tvhome.data.system.SystemSettings
@@ -146,7 +147,10 @@ interface AppGraph {
 
     @Provides
     @SingleIn(AppScope::class)
-    fun provideShelfPosters(application: Application): ShelfPosters = ShelfPosters(application)
+    fun provideShelfPosters(
+        application: Application,
+        repository: ConfigRepository,
+    ): ShelfPosters = ShelfPosters(application, repository.config)
 
     @Provides
     @SingleIn(AppScope::class)
@@ -166,6 +170,7 @@ interface AppGraph {
             { wallpaperProvider.themeDefault() },
             shelfReader::publishers,
             shelfReader::hasAccess,
+            { posterHelper(application) },
         )
     }
 
@@ -234,6 +239,7 @@ interface AppGraph {
             libraryCount = libraryCatalog.counts,
             shelfItems = shelfReader::items,
             shelfPoster = shelfPosters::poster,
+            shelfPosterChanges = shelfPosters.changes,
         )
 
     @Provides

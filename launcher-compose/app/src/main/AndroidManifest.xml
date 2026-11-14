@@ -74,6 +74,8 @@
         <!-- Coocaa OS sources for the Inputs menu (coocaa_sources); see CoocaaSources. -->
         <provider android:authorities="com.skyworth.tv.provider" />
         <provider android:authorities="com.skyworth.tv.sdk.provider" />
+        <!-- The poster helper app (app_shelf_web_posters): Home checks its package and signature before it sends a poster URL. -->
+        <provider android:authorities="dev.niltsiar.tvhome.posters" />
     </queries>
 
     <application

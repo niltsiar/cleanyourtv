@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">Продолжить просмотр · %1$d</string>
   <string name="settings_shelf_nothing">Ни одно приложение не делится материалами</string>
   <string name="settings_shelf_allow_access">Разрешите доступ в разделе О приложении, Разрешения</string>
+  <string name="settings_web_posters">Изображения из интернета</string>
+  <string name="settings_lan_posters">Изображения из домашней сети</string>
+  <string name="settings_poster_helper_missing">Помощник не установлен</string>
+  <string name="settings_poster_helper_other_key">Помощник подписан другим ключом</string>
 </resources>

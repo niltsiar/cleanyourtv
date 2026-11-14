@@ -5,6 +5,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
+import dev.niltsiar.tvhome.core.model.PosterHelper
 import dev.niltsiar.tvhome.core.model.ShelfPublisher
 import dev.niltsiar.tvhome.core.model.WallpaperPicture
 
@@ -20,6 +21,8 @@ public enum class SettingsRowId {
     DateBelowClock,
     MoveToMenu,
     AppShelf,
+    WebPosters,
+    LanPosters,
     AppLibrary,
     LibraryLeastUsed,
     UnusedFadeDays,
@@ -141,6 +144,8 @@ public class SettingsSources(
     public val shelfPublishers: suspend () -> List<ShelfPublisher> = { emptyList() },
     /** True when Home holds READ_TV_LISTINGS, which the shelf needs. */
     public val shelfAccess: () -> Boolean = { false },
+    /** Whether the poster helper can serve pictures from the web, read when the page starts. */
+    public val posterHelper: () -> PosterHelper = { PosterHelper.Missing },
 )
 
 /** The art beside the pickers' entries, loaded off the main thread at a width and height in pixels; null when there is none. */

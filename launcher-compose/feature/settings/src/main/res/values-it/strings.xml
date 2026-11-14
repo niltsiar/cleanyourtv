@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">Continua a guardare · %1$d</string>
   <string name="settings_shelf_nothing">Nessuna app condivide contenuti</string>
   <string name="settings_shelf_allow_access">Consenti l\'accesso in Info app, sotto Autorizzazioni</string>
+  <string name="settings_web_posters">Immagini dal web</string>
+  <string name="settings_lan_posters">Immagini dalla tua rete</string>
+  <string name="settings_poster_helper_missing">Assistente non installato</string>
+  <string name="settings_poster_helper_other_key">Assistente firmato con un\'altra chiave</string>
 </resources>

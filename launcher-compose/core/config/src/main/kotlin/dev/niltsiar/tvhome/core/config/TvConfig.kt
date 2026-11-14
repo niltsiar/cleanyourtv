@@ -195,6 +195,13 @@ public data class TvConfig(
      * one of its preview channels, the key being the channel's internal_provider_id or, without one, its row id.
      */
     val appShelfSources: List<String> = emptyList(),
+    /**
+     * With [appShelf]: a card whose poster is an `https` URL asks the poster helper app for that picture. Only the URL leaves
+     * Home, and only while the helper is installed and signed with Home's key.
+     */
+    val appShelfWebPosters: Boolean = false,
+    /** With [appShelfWebPosters]: an `http` poster, such as a media server's on the home network, is asked for too. */
+    val appShelfLanPosters: Boolean = false,
     /** OK on an app tile dips it and brightens its ring; a slow start says the app is opening and takes no second OK. */
     val pressFeedback: Boolean = false,
     /** Days, 0 to 3650: a grid tile whose app Home has not opened for more than this many days is drawn faded; 0 fades none. */

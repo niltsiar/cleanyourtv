@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">Siguir viendo · %1$d</string>
   <string name="settings_shelf_nothing">Nenguna aplicación comparte elementos</string>
   <string name="settings_shelf_allow_access">Permite l\'accesu n\'Información de l\'aplicación, en Permisos</string>
+  <string name="settings_web_posters">Imáxenes d\'internet</string>
+  <string name="settings_lan_posters">Imáxenes de la to rede</string>
+  <string name="settings_poster_helper_missing">Ayudante nun instaláu</string>
+  <string name="settings_poster_helper_other_key">Ayudante robláu con otra clave</string>
 </resources>

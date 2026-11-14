@@ -6,6 +6,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.model.PosterHelper
 import dev.niltsiar.tvhome.core.model.PublishedChannel
 import dev.niltsiar.tvhome.core.model.ShelfChannel
 import dev.niltsiar.tvhome.core.model.ShelfPublisher
@@ -49,7 +50,14 @@ class ShelfSettingsTestContent :
                 fun settings(
                     theme: String = SHELF_ON,
                     listed: List<ShelfPublisher> = publishers,
-                ) = SettingsHarness(app, theme, shelfPublishers = listed, shelfAccess = { granted.get() }).also { harness = it }
+                    helper: PosterHelper = PosterHelper.Missing,
+                ): SettingsHarness {
+                    harness?.stop()
+                    return SettingsHarness(app, theme, shelfPublishers = listed, shelfAccess = { granted.get() }, posterHelper = { helper })
+                        .also { harness = it }
+                }
+
+                fun SettingsUiState.homeRows() = sections[1].rows.map { it.id }
 
                 fun SettingsHarness.openShelfPicker(): ShelfPicker {
                     viewModel.actions.onOpenShelfPicker()
@@ -171,6 +179,47 @@ class ShelfSettingsTestContent :
                 settings.viewModel.actions.onToggleShelfSource(2)
                 settings.awaitState { it.shelfPicker?.ticked == setOf("com.plezy") }
                 settings.config.appShelfSources shouldBe listOf("com.plezy")
+            }
+
+            test("pictures from the web shows only while app highlights is on, and pictures from your network only while both are") {
+                val settings = settings("{}")
+                settings.state.homeRows().last() shouldBe SettingsRowId.AppShelf
+
+                settings.pick(SettingsRowId.AppShelf, 0)
+                settings.awaitState { it.homeRows().takeLast(2) == listOf(SettingsRowId.AppShelf, SettingsRowId.WebPosters) }
+                settings.pick(SettingsRowId.WebPosters, 0)
+                settings.awaitState { it.homeRows().takeLast(2) == listOf(SettingsRowId.WebPosters, SettingsRowId.LanPosters) }
+                settings.pick(SettingsRowId.LanPosters, 0)
+                settings.awaitState { it.row(SettingsRowId.LanPosters).selected == 0 }
+                (settings.config.appShelfWebPosters && settings.config.appShelfLanPosters).shouldBeTrue()
+
+                settings.pick(SettingsRowId.WebPosters, 1)
+                settings.awaitState { it.homeRows().last() == SettingsRowId.WebPosters }
+                settings.pick(SettingsRowId.AppShelf, 1)
+                settings.awaitState { it.homeRows().last() == SettingsRowId.AppShelf }
+                settings.config.appShelfLanPosters.shouldBeTrue()
+            }
+
+            test("while on, pictures from the web says when the helper is not installed or signed with another key") {
+                val on = """{"app_shelf": true, "app_shelf_web_posters": true}"""
+                val said =
+                    PosterHelper.entries.associateWith { helper ->
+                        settings(
+                            on,
+                            helper = helper,
+                        ).awaitState { SettingsRowId.WebPosters in it.homeRows() }.row(SettingsRowId.WebPosters).options
+                    }
+
+                said shouldBe
+                    mapOf(
+                        PosterHelper.Missing to
+                            listOf(OptionLabel.Res(R.string.settings_poster_helper_missing), OptionLabel.Res(R.string.settings_off)),
+                        PosterHelper.OtherKey to
+                            listOf(OptionLabel.Res(R.string.settings_poster_helper_other_key), OptionLabel.Res(R.string.settings_off)),
+                        PosterHelper.Ready to listOf(OptionLabel.Res(R.string.settings_on), OptionLabel.Res(R.string.settings_off)),
+                    )
+                val off = settings(SHELF_ON, helper = PosterHelper.Missing).awaitState { SettingsRowId.WebPosters in it.homeRows() }
+                off.row(SettingsRowId.WebPosters).options.first() shouldBe OptionLabel.Res(R.string.settings_on)
             }
 
             test("with nothing to list the picker does not open and the page says so") {

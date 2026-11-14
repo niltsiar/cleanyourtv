@@ -211,6 +211,20 @@ val TvConfigParserTest by testSuite {
         wrong.rejectedKeys shouldBe listOf("settings_key_clear_task")
     }
 
+    test("pictures from the web and from the network are off unless the theme turns each on, and a wrong type keeps them off") {
+        val none = parseTvConfig("{}").config
+        none.appShelfWebPosters.shouldBeFalse()
+        none.appShelfLanPosters.shouldBeFalse()
+        val on = parseTvConfig("""{"app_shelf_web_posters": true, "app_shelf_lan_posters": true}""")
+        (on.config.appShelfWebPosters && on.config.appShelfLanPosters).shouldBeTrue()
+        on.unsupportedKeys + on.unknownKeys + on.rejectedKeys shouldBe emptyList<String>()
+
+        val wrong = parseTvConfig("""{"app_shelf_web_posters": "yes", "app_shelf_lan_posters": 1}""")
+        wrong.config.appShelfWebPosters.shouldBeFalse()
+        wrong.config.appShelfLanPosters.shouldBeFalse()
+        wrong.rejectedKeys shouldBe listOf("app_shelf_web_posters", "app_shelf_lan_posters")
+    }
+
     test("settings key panel stays unsupported because the panel does not exist") {
         val parsed = parseTvConfig("""{"settings_key_panel": true}""")
         parsed.unsupportedKeys shouldBe listOf("settings_key_panel")
@@ -638,6 +652,8 @@ val TvConfigParserTest by testSuite {
             "habit_hint" to ("true" to defaults.copy(habitHint = true)),
             "app_shelf" to ("true" to defaults.copy(appShelf = true)),
             "app_shelf_sources" to ("""["com.a", "com.b/7", "com.a"]""" to defaults.copy(appShelfSources = listOf("com.a", "com.b/7"))),
+            "app_shelf_web_posters" to ("true" to defaults.copy(appShelfWebPosters = true)),
+            "app_shelf_lan_posters" to ("true" to defaults.copy(appShelfLanPosters = true)),
             "press_feedback" to ("true" to defaults.copy(pressFeedback = true)),
             "unused_fade_days" to ("60" to defaults.copy(unusedFadeDays = 60)),
             "handle_view_inputs" to ("true" to defaults.copy(handleViewInputs = true)),

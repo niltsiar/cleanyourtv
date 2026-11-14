@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">Se videre · %1$d</string>
   <string name="settings_shelf_nothing">Ingen app deler noget at vise</string>
   <string name="settings_shelf_allow_access">Giv adgang i App-oplysninger under Tilladelser</string>
+  <string name="settings_web_posters">Billeder fra nettet</string>
+  <string name="settings_lan_posters">Billeder fra dit netværk</string>
+  <string name="settings_poster_helper_missing">Hjælper ikke installeret</string>
+  <string name="settings_poster_helper_other_key">Hjælper signeret med en anden nøgle</string>
 </resources>

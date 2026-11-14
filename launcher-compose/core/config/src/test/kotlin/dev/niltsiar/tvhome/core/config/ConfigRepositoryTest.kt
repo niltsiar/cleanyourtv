@@ -192,6 +192,8 @@ class ConfigRepositoryTestContent :
                 repo.choose(Choices.HabitHint, true)
                 repo.choose(Choices.AppShelf, true)
                 repo.choose(Choices.AppShelfSources, setOf("com.b/7", "com.a"))
+                repo.choose(Choices.AppShelfWebPosters, true)
+                repo.choose(Choices.AppShelfLanPosters, true)
                 repo.choose(Choices.InputArrival, true)
                 awaitConfig(repo) { it.inputArrival }
 
@@ -214,6 +216,8 @@ class ConfigRepositoryTestContent :
                         inputArrival = true,
                         appShelf = true,
                         appShelfSources = listOf("com.a", "com.b/7"),
+                        appShelfWebPosters = true,
+                        appShelfLanPosters = true,
                     )
             }
 

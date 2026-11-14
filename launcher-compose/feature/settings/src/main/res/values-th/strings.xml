@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">รับชมต่อ · %1$d</string>
   <string name="settings_shelf_nothing">ไม่มีแอปที่แชร์รายการ</string>
   <string name="settings_shelf_allow_access">อนุญาตการเข้าถึงในข้อมูลแอป ในส่วนสิทธิ์</string>
+  <string name="settings_web_posters">รูปภาพจากเว็บ</string>
+  <string name="settings_lan_posters">รูปภาพจากเครือข่ายของคุณ</string>
+  <string name="settings_poster_helper_missing">ไม่ได้ติดตั้งตัวช่วย</string>
+  <string name="settings_poster_helper_other_key">ตัวช่วยลงนามด้วยคีย์อื่น</string>
 </resources>

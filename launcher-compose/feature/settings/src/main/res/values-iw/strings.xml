@@ -52,4 +52,8 @@
   <string name="settings_shelf_watch_next">המשך צפייה · %1$d</string>
   <string name="settings_shelf_nothing">אף אפליקציה לא משתפת פריטים</string>
   <string name="settings_shelf_allow_access">אפשרו גישה בפרטי האפליקציה, תחת הרשאות</string>
+  <string name="settings_web_posters">תמונות מהאינטרנט</string>
+  <string name="settings_lan_posters">תמונות מהרשת הביתית</string>
+  <string name="settings_poster_helper_missing">העוזר לא מותקן</string>
+  <string name="settings_poster_helper_other_key">העוזר חתום במפתח אחר</string>
 </resources>

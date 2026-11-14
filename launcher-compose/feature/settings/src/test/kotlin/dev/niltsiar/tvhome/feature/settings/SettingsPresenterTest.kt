@@ -130,7 +130,11 @@ class SettingsPresenterTestContent :
                         settings.awaitState { it.row(spec.id).selected == index }
 
                         withClue("${spec.id} option $index") { spec.read(settings.config) shouldBe value }
-                        withClue("${spec.id} option $index leaves the other rows") { (settings.selections() - spec.id) shouldBe others }
+                        // App highlights shows and hides the rows that depend on it (ShelfSettingsTest); the rows in both stay as they were.
+                        val now = settings.selections() - spec.id
+                        withClue("${spec.id} option $index leaves the other rows") {
+                            now.filterKeys(others::containsKey) shouldBe others.filterKeys(now::containsKey)
+                        }
                     }
                     withClue("${spec.id} lists its options") { settings.row(spec.id).options.size shouldBe spec.values.size }
                 }

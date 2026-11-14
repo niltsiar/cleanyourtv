@@ -171,6 +171,7 @@ class MainActivity : ComponentActivity() {
         graph.networkMonitor.onStop()
         graph.timeChanges.onStop()
         graph.wallpaperProvider.onStop()
+        graph.shelfPosters.onStop()
     }
 
     /**

@@ -8,6 +8,7 @@ import dev.niltsiar.tvhome.core.config.ClockFormat
 import dev.niltsiar.tvhome.core.config.ConfigRepository
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
+import dev.niltsiar.tvhome.core.model.PosterHelper
 import dev.niltsiar.tvhome.core.model.ShelfPublisher
 import dev.niltsiar.tvhome.core.model.WallpaperPicture
 import dev.niltsiar.tvhome.core.model.channelSource
@@ -19,12 +20,16 @@ internal class Option<T>(
     val value: T,
 )
 
-/** A row bound to its [choice]: what the config holds shows as the selected option, and a pick stores that option's value. */
+/**
+ * A row bound to its [choice]: what the config holds shows as the selected option, and a pick stores that option's value. The
+ * page lists it only while [shown].
+ */
 internal class ChoiceRow<T>(
     val id: SettingsRowId,
     @StringRes private val label: Int,
     private val choice: Choice<T>,
     private val options: List<Option<T>>,
+    val shown: (TvConfig) -> Boolean = { true },
     private val current: (TvConfig) -> T,
 ) {
     fun row(config: TvConfig): SettingsRow {
@@ -61,8 +66,9 @@ private fun onOff(
     id: SettingsRowId,
     @StringRes label: Int,
     choice: Choice<Boolean>,
+    shown: (TvConfig) -> Boolean = { true },
     current: (TvConfig) -> Boolean,
-) = ChoiceRow(id, label, choice, listOf(Option(res(R.string.settings_on), true), Option(res(R.string.settings_off), false)), current)
+) = ChoiceRow(id, label, choice, listOf(Option(res(R.string.settings_on), true), Option(res(R.string.settings_off), false)), shown, current)
 
 /** Java's rows first, then ours in groups, in the order the screen lists them. */
 internal val settingsGroups: List<Group> =
@@ -104,6 +110,15 @@ internal val settingsGroups: List<Group> =
                     onOff(SettingsRowId.DateBelowClock, R.string.settings_date_below, Choices.DateBelowClock) { it.dateBelowClock },
                     onOff(SettingsRowId.MoveToMenu, R.string.settings_move_to_menu, Choices.MoveToMenu) { it.moveToMenu },
                     onOff(SettingsRowId.AppShelf, R.string.settings_app_shelf, Choices.AppShelf) { it.appShelf },
+                    onOff(SettingsRowId.WebPosters, R.string.settings_web_posters, Choices.AppShelfWebPosters, { it.appShelf }) {
+                        it.appShelfWebPosters
+                    },
+                    onOff(
+                        SettingsRowId.LanPosters,
+                        R.string.settings_lan_posters,
+                        Choices.AppShelfLanPosters,
+                        { it.appShelf && it.appShelfWebPosters },
+                    ) { it.appShelfLanPosters },
                 ),
         ),
         Group(
@@ -151,14 +166,35 @@ private val rowsById: Map<SettingsRowId, ChoiceRow<*>> = settingsGroups.flatMap 
 
 internal fun rowOf(id: SettingsRowId): ChoiceRow<*> = rowsById.getValue(id)
 
-internal fun settingsSections(config: TvConfig): List<SettingsSection> =
+/**
+ * The rows [settingsGroups] lists for [config]. While the Pictures from the web row is On, its On option says what keeps the
+ * [helper] from serving, if anything does.
+ */
+internal fun settingsSections(
+    config: TvConfig,
+    helper: PosterHelper = PosterHelper.Ready,
+): List<SettingsSection> =
     settingsGroups.map { group ->
         SettingsSection(
             group.heading,
-            group.rows.map {
-                it.row(config)
+            group.rows.filter { it.shown(config) }.map { choice ->
+                val row = choice.row(config)
+                val status = helperStatus(helper)
+                if (row.id == SettingsRowId.WebPosters && row.selected == 0 && status != null) {
+                    row.copy(options = listOf(status) + row.options.drop(1))
+                } else {
+                    row
+                }
             },
         )
+    }
+
+/** What the Pictures from the web row's On says when the [helper] cannot serve; null when it can. */
+internal fun helperStatus(helper: PosterHelper): OptionLabel? =
+    when (helper) {
+        PosterHelper.Missing -> res(R.string.settings_poster_helper_missing)
+        PosterHelper.OtherKey -> res(R.string.settings_poster_helper_other_key)
+        PosterHelper.Ready -> null
     }
 
 /** True when the option at [option] of the [row] is the App highlights row's On. */

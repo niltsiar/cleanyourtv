@@ -9,11 +9,15 @@ import android.util.Log
 import android.util.LruCache
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import dev.niltsiar.tvhome.core.config.TvConfig
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.FileNotFoundException
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
@@ -36,13 +40,18 @@ internal const val POSTER_MAX_PIXELS: Long = 1920L * 1080L
 
 /**
  * Decodes the posters of shelf items for Home's cards, on [io] and one at a time, and keeps them in an LRU of
- * [POSTER_CACHE_BYTES]. Only a `content://` or `android.resource://` poster is read: Home has no network. A poster that
- * cannot be read or decoded is not tried again until the next [onStart].
+ * [POSTER_CACHE_BYTES]. A `content://` or `android.resource://` poster is read as it is; Home has no network, so an `https`
+ * or `http` one is read through the poster helper app as [WebPosters] allows, else not at all. A poster that cannot be read
+ * or decoded is not tried again until the next [onStart], except one the helper has not fetched yet: [changes] rises when
+ * it may have.
  */
 public class ShelfPosters(
     private val context: Context,
+    config: StateFlow<TvConfig>,
     private val io: CoroutineDispatcher = Dispatchers.IO,
 ) {
+    private val web = WebPosters(context, config)
+
     private val decoding = Mutex()
     private val cache =
         object : LruCache<String, Bitmap>(POSTER_CACHE_BYTES) {
@@ -54,8 +63,15 @@ public class ShelfPosters(
     private val failed: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     /**
+     * Rises each time a poster the helper had not fetched may have arrived; a card without a picture then asks again. While
+     * collected, it watches the helper once Home has asked it for a poster, and stops watching when Home stops.
+     */
+    public val changes: Flow<Int> = web.changes
+
+    /**
      * The poster at [uri], scaled while it decodes to the least size that covers [width] x [height] pixels. Null for a URI of
-     * another scheme, one that cannot be opened or decoded, or one over [POSTER_MAX_PIXELS].
+     * another scheme, a web one the helper does not serve now, one that cannot be opened or decoded, or one over
+     * [POSTER_MAX_PIXELS].
      */
     public suspend fun poster(
         uri: String,
@@ -63,20 +79,31 @@ public class ShelfPosters(
         height: Int,
     ): ImageBitmap? {
         val parsed = Uri.parse(uri)
-        if (parsed.scheme != ContentResolver.SCHEME_CONTENT && parsed.scheme != ContentResolver.SCHEME_ANDROID_RESOURCE) return null
+        val local = parsed.scheme == ContentResolver.SCHEME_CONTENT || parsed.scheme == ContentResolver.SCHEME_ANDROID_RESOURCE
+        if (!local && !web.serves(parsed.scheme)) return null
         if (width <= 0 || height <= 0) return null
         val key = "$uri@${width}x$height"
         cache.get(key)?.let { return it.asImageBitmap() }
         if (key in failed) return null
         return decoding
             .withLock {
-                cache.get(key) ?: if (key in failed) null else load(key, parsed, width, height)
+                cache.get(key) ?: when {
+                    key in failed -> null
+                    local -> load(key, parsed, width, height, helper = false)
+                    else -> load(key, web.request(uri, parsed.scheme == "http", width, height), width, height, helper = true)
+                }
             }?.asImageBitmap()
     }
 
     /** Home came to the front: a poster that failed may be readable now, as after the app granted its URI again. */
     public fun onStart() {
         failed.clear()
+        web.onStart()
+    }
+
+    /** Home went to the back: it stops watching the helper. */
+    public fun onStop() {
+        web.onStop()
     }
 
     /** Drops every decoded poster, for memory another app needs or when app_shelf turns off. */
@@ -84,18 +111,27 @@ public class ShelfPosters(
         cache.evictAll()
     }
 
+    /** A [helper] poster that is not there yet is not counted as failed: the helper fetches it and notifies [changes]. */
     private suspend fun load(
         key: String,
         uri: Uri,
         width: Int,
         height: Int,
+        helper: Boolean,
     ): Bitmap? {
-        val bitmap = withContext(io) { decode(uri, width, height) }
+        val bitmap =
+            try {
+                withContext(io) { decode(uri, width, height) }
+            } catch (e: FileNotFoundException) {
+                if (helper) return null
+                Log.w(TAG, "cannot read poster $uri: $e")
+                null
+            }
         if (bitmap == null) failed += key else cache.put(key, bitmap)
         return bitmap
     }
 
-    /** The app gave the URI, so any failure to read it counts as no poster. */
+    /** The app gave the URI, so any failure to read it counts as no poster; a missing file is left to [load]. */
     private fun decode(
         uri: Uri,
         width: Int,
@@ -111,6 +147,8 @@ public class ShelfPosters(
             } else {
                 context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
             }
+        } catch (e: FileNotFoundException) {
+            throw e
         } catch (e: IOException) {
             Log.w(TAG, "cannot read poster $uri: $e")
             null
