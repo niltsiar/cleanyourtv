@@ -7,7 +7,7 @@ description: Audits, detects gaps, and remediates Android permissions and IPC co
 license: Complete terms in LICENSE.txt
 metadata:
   author: Google LLC
-  last-updated: '2026-10-28'
+  last-updated: '2026-11-08'
   keywords:
   - recipe
   - Android
@@ -199,12 +199,20 @@ object UriPermissionManager {
         return context.contentResolver.persistedUriPermissions
     }
 
-    /** Revokes temporary URI access when data transfer completes. */
-    fun revokeScopedUriAccess(context: Context, uri: Uri) {
-        context.revokeUriPermission(
-            uri,
-            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-        )
+    /** Revokes temporary URI access for a specific partner package when data transfer completes. */
+    fun revokeScopedUriAccess(context: Context, targetPackage: String, uri: Uri) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.revokeUriPermission(
+                targetPackage,
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+        } else {
+            context.revokeUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+        }
     }
 }
 ```
@@ -398,13 +406,23 @@ class RuntimePermissionsActivity : ComponentActivity() {
                 startCameraPreview()
             }
             shouldShowRequestPermissionRationale(permission) -> {
-                showSnackbar("Camera permission is needed to preview camera feed.")
-                cameraLauncher.launch(permission)
+                showRationaleDialog(permission)
             }
             else -> {
                 cameraLauncher.launch(permission)
             }
         }
+    }
+
+    private fun showRationaleDialog(permission: String) {
+        AlertDialog.Builder(this)
+            .setTitle("Camera permission required")
+            .setMessage("Camera permission is needed to preview the camera feed.")
+            .setPositiveButton("Continue") { _, _ ->
+                cameraLauncher.launch(permission)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun startCameraPreview() {
@@ -529,21 +547,22 @@ options:
 val intent = Intent("com.example.snippets.permission.ACTION_SECRET_UPDATE").apply {
     setPackage("com.example.partner") // Explicit target
 }
-val isUdc = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
-val options = if (isUdc) {
-    BroadcastOptions.makeBasic().apply {
+if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+    val options = BroadcastOptions.makeBasic().apply {
         setShareIdentityEnabled(true)
     }.toBundle()
-} else null
-
-sendBroadcast(intent, "com.example.snippets.permission.RECEIVE_SECRET_UPDATE", options)
+    sendBroadcast(intent, "com.example.snippets.permission.RECEIVE_SECRET_UPDATE", options)
+} else {
+    sendBroadcast(intent, "com.example.snippets.permission.RECEIVE_SECRET_UPDATE")
+}
 ```
 
 <br />
 
 
 ```kotlin
-// Receiver: Validate sender on Android 14+
+// Receiver: Validate sender on Android 14+ (on API 33 and lower, restrict access
+// by declaring android:permission with a signature or knownSigner permission on <receiver>)
 class ProtectedReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == "com.example.snippets.permission.ACTION_SECRET_UPDATE") {

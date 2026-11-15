@@ -32,7 +32,7 @@ Third-party files in this folder keep their own licences, not the repository's M
 
 ### .agents/skills/
 
-- Title: Android Skills, version 1.1.16717390, from the Android CLI: android-permissions-security, android-profiler, jetpack-compose-performance, leanback-to-compose-tv-migration, r8-analyzer and testing-setup
+- Title: Android Skills, version 1.1.16919734, from the Android CLI: android-intent-security, android-permissions-security, android-profiler, jetpack-compose-performance, leanback-to-compose-tv-migration, r8-analyzer and testing-setup
 - Author: Google LLC
 - Licence: Apache License 2.0, https://www.apache.org/licenses/LICENSE-2.0 . The full text is in `.agents/skills/LICENSE.txt`.
 - Source: the skills bundled with the Android CLI
