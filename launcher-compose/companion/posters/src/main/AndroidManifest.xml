@@ -4,6 +4,11 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Home declares the same permission, so either app can be installed first. -->
+    <permission
+        android:name="dev.niltsiar.tvhome.posters.permission.READ_POSTERS"
+        android:protectionLevel="signature" />
+
     <!-- Cleartext is on for the app because a network security config cannot say "private addresses only": the code
          allows http only for a request with lan=1, whose every address must be private. -->
     <application
@@ -12,11 +17,13 @@
         android:label="@string/app_name"
         android:usesCleartextTraffic="true">
 
-        <!-- Exported to Home, another package: PosterProvider serves only a caller signed with this app's key. -->
+        <!-- Exported to Home, another package. The signature permission keeps out every app signed with another key, also
+             from watching or notifying its changes; PosterProvider checks the caller's key again in openFile. -->
         <provider
             android:name=".PosterProvider"
             android:authorities="dev.niltsiar.tvhome.posters"
             android:exported="true"
+            android:permission="dev.niltsiar.tvhome.posters.permission.READ_POSTERS"
             tools:ignore="ExportedContentProvider" />
     </application>
 </manifest>

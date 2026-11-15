@@ -15,9 +15,11 @@ adb install -r companion/posters/build/outputs/apk/release/posters-release.apk
 ```
 
 Both release builds are signed with the machine's debug key. Home sends poster URLs only to a helper signed with its own
-key, and the helper answers only a caller signed with its key, so a helper built on another machine gets no URLs and
-Launcher settings says Helper signed with another key. Uninstall the helper to go back to text cards; Clear storage in its
-App info empties its cache.
+key. The helper's provider requires a `signature` permission that both apps declare, so only an app signed with that key
+can open it or watch and notify its changes, and the helper also checks the key of each caller that opens a poster. A
+helper signed with another key does not install next to Home, nor Home next to it: `adb install` fails with
+`INSTALL_FAILED_DUPLICATE_PERMISSION`. Uninstall the helper to go back to text cards; Clear storage in its App info
+empties its cache.
 
 ## What it sends where
 

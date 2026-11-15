@@ -137,7 +137,7 @@ before you run it. To push another theme, run the `tools/theme.sh` line again fr
 
 Optional: for App highlights posters from the web, build and install the poster helper in `launcher-compose`. Build it
 in the same checkout, on the same machine, as TV Home: Home sends poster addresses only to a helper signed with its own
-key.
+key, and a helper signed with another key does not install next to it.
 
 ```bash
 ./gradlew :companion:posters:assembleRelease

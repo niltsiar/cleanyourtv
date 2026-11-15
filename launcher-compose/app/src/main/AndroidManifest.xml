@@ -33,6 +33,11 @@
     <!-- YaOS (Yandex TV OS): HDMI, AV and the tuner all play in com.yandex.tv.live, whose activities require
          this permission (protection level normal, so it is granted at install). Ignored on other TVs. -->
     <uses-permission android:name="yandex.tv.permission.ACCESS_TV_SOURCE" />
+    <!-- The poster helper's provider requires it. Home declares it too, so either app can be installed first. -->
+    <permission
+        android:name="dev.niltsiar.tvhome.posters.permission.READ_POSTERS"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="dev.niltsiar.tvhome.posters.permission.READ_POSTERS" />
 
     <queries>
         <!-- The standard settings handlers, so package visibility doesn't hide them and send the pills to a vendor fallback by mistake. -->
