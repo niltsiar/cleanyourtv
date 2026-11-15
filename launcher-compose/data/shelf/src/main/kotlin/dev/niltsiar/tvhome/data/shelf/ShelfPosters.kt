@@ -75,7 +75,7 @@ public class ShelfPosters(
     /**
      * The poster at [uri] for a card of [width] x [height] pixels, scaled while it decodes as [posterOptions] says; a poster
      * the card [drawsWhole] comes with its [posterFill]. Null for a URI of another scheme, a web one the helper does not serve
-     * now, one that cannot be opened or decoded, or one over [POSTER_MAX_PIXELS].
+     * now, a content one of the helper's authority, one that cannot be opened or decoded, or one over [POSTER_MAX_PIXELS].
      */
     public suspend fun poster(
         uri: String,
@@ -85,6 +85,11 @@ public class ShelfPosters(
         val parsed = Uri.parse(uri)
         val local = parsed.scheme == ContentResolver.SCHEME_CONTENT || parsed.scheme == ContentResolver.SCHEME_ANDROID_RESOURCE
         if (!local && !web.serves(parsed.scheme)) return null
+        // Home opens a content poster as itself, so one aimed at the helper would pass its signature check. The resolver drops
+        // a `<user>@` prefix from the authority before it looks the provider up.
+        if (parsed.scheme == ContentResolver.SCHEME_CONTENT && parsed.authority?.substringAfterLast('@') == POSTER_HELPER_AUTHORITY) {
+            return null
+        }
         if (width <= 0 || height <= 0) return null
         val key = "$uri@${width}x$height"
         cache.get(key)?.let { return it }

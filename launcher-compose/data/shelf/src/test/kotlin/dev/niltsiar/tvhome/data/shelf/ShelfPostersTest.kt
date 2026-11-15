@@ -12,6 +12,7 @@ import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
+import io.kotest.assertions.withClue
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -165,6 +166,17 @@ class ShelfPostersTestContent :
                 serve("https://i.ytimg.com/vi/x/hqdefault.jpg", png(480, 270))
 
                 poster("https://i.ytimg.com/vi/x/hqdefault.jpg").shouldBeNull()
+
+                opened.size shouldBe 0
+            }
+
+            test("a content poster aimed at the poster helper gives none, and the helper is never opened") {
+                val query = "$POSTER_HELPER_PATH?u=http%3A%2F%2F192.168.1.1%2F&w=480&h=270&lan=1"
+                listOf("content://$POSTER_HELPER_AUTHORITY/$query", "content://0@$POSTER_HELPER_AUTHORITY/$query").forEach { uri ->
+                    serve(uri, png(480, 270))
+
+                    withClue(uri) { poster(uri).shouldBeNull() }
+                }
 
                 opened.size shouldBe 0
             }
