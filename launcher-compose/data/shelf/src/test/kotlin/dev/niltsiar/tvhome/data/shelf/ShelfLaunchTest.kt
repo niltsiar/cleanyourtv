@@ -7,6 +7,7 @@ import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
+import android.content.pm.ResolveInfo
 import android.net.Uri
 import android.os.TransactionTooLargeException
 import de.infix.testBalloon.framework.core.TestConfig
@@ -22,6 +23,9 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Implementation
+import org.robolectric.annotation.Implements
+import org.robolectric.shadows.ShadowApplicationPackageManager
 
 private const val APP = "com.edde746.plezy"
 private const val GRANT_FLAGS =
@@ -30,10 +34,34 @@ private const val GRANT_FLAGS =
         Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or
         Intent.FLAG_GRANT_PREFIX_URI_PERMISSION
 private const val OTHER = "com.other"
+private const val TOO_BIG = "too_big"
+
+/** Fails to resolve an intent with a [TOO_BIG] extra, as the binder call fails for an intent over its buffer. */
+@Implements(className = "android.app.ApplicationPackageManager", isInAndroidSdk = false)
+class ShadowBinderLimit : ShadowApplicationPackageManager() {
+    @Implementation
+    override fun resolveActivity(
+        intent: Intent,
+        flags: Int,
+    ): ResolveInfo? {
+        if (intent.hasExtra(TOO_BIG)) throw RuntimeException(TransactionTooLargeException())
+        return super.resolveActivity(intent, flags)
+    }
+}
+
+private object OwnSandbox
 
 /** Which intent OK on a shelf item starts: the app's own, only into that app, or else the app's launch intent. */
 val ShelfLaunchTest by testSuite {
-    robolectricTestSuite<ShelfLaunchTestContent>("sdk 31", testConfig = TestConfig.robolectric { sdk = 31 })
+    robolectricTestSuite<ShelfLaunchTestContent>(
+        "sdk 31",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                shadows += ShadowBinderLimit::class
+                portableClasses += OwnSandbox::class
+            },
+    )
 }
 
 class ShelfLaunchTestContent :
@@ -123,6 +151,7 @@ class ShelfLaunchTestContent :
                 intent.action shouldBe Intent.ACTION_VIEW
                 intent.data shouldBe Uri.parse("plezy://play?content_id=plezy_srv_1")
                 intent.`package` shouldBe APP
+                intent.component shouldBe player
                 (intent.flags and Intent.FLAG_ACTIVITY_NEW_TASK) shouldBe Intent.FLAG_ACTIVITY_NEW_TASK
             }
 
@@ -196,6 +225,10 @@ class ShelfLaunchTestContent :
                 intent.data shouldBe Uri.parse("plezy://play")
                 (intent.flags and GRANT_FLAGS) shouldBe 0
                 (intent.flags and Intent.FLAG_ACTIVITY_CLEAR_TOP) shouldBe Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+
+            test("an intent that fails to resolve, such as one too big for the binder, opens the app instead") {
+                open("intent://play#Intent;scheme=plezy;S.$TOO_BIG=x;end").isLaunchIntent()
             }
 
             test("an intent that fails to start, such as one too big for the binder, opens the app instead") {
