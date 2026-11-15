@@ -64,6 +64,7 @@ Home layout:
 - **App highlights.** When a dock app keeps focus, cards of that app's own items show above the dock, from its Continue
   watching row and its preview channels. OK on a card opens it. The Apps and channels row picks which apps and channels
   give cards. For this, Home reads the TV's program listings, which needs the `READ_TV_LISTINGS` permission.
+- **Cards per app.** App highlights shows up to 5, 10 or 20 cards for each app. 10 is the default.
 - **Pictures from the web.** App highlights cards show their poster pictures from the web, which the poster helper app
   fetches. Without the helper, such a card shows text on the app's banner.
 - **Pictures from your network.** With Pictures from the web on, App highlights cards also show poster pictures from a

@@ -19,6 +19,9 @@ public fun ClockFormat.is24Hour(system: () -> Boolean): Boolean =
         ClockFormat.System -> system()
     }
 
+/** The values app_shelf_cards takes. */
+public val SHELF_CARD_COUNTS: List<Int> = listOf(5, 10, 20)
+
 /** wallpaper_order: how a wallpaper collection rotates. */
 public enum class WallpaperOrder(
     internal val jsonValue: String,
@@ -202,6 +205,8 @@ public data class TvConfig(
     val appShelfWebPosters: Boolean = false,
     /** With [appShelfWebPosters]: an `http` poster, such as a media server's on the home network, is asked for too. */
     val appShelfLanPosters: Boolean = false,
+    /** With [appShelf]: the most cards one app's shelf shows, one of [SHELF_CARD_COUNTS]. */
+    val appShelfCards: Int = 10,
     /** OK on an app tile dips it and brightens its ring; a slow start says the app is opening and takes no second OK. */
     val pressFeedback: Boolean = false,
     /** Days, 0 to 3650: a grid tile whose app Home has not opened for more than this many days is drawn faded; 0 fades none. */

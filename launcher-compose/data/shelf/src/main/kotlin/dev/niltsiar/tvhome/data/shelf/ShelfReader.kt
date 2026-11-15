@@ -51,8 +51,8 @@ public class ShelfReader(
     /**
      * The shelf of [packageName] from its ticked app_shelf_sources: its browsable Watch Next rows by last engagement, newest
      * first, then the programs of each ticked preview channel in the provider's channel order, each channel's by weight, after
-     * the noise rules of [shelf]. Empty when no source of the package is ticked. A ticked preview channel is read whether it
-     * is browsable or not.
+     * the noise rules of [shelf], up to app_shelf_cards items. Empty when no source of the package is ticked. A ticked preview
+     * channel is read whether it is browsable or not.
      */
     public suspend fun items(packageName: String): List<ShelfItem> {
         val current = config.value
@@ -64,7 +64,7 @@ public class ShelfReader(
             val rows = ArrayList<ShelfRow>()
             if (watchNext) rows += watchNextRows(packageName)
             if (channelKeys.isNotEmpty()) rows += channelRows(packageName, channelKeys)
-            shelf(rows, now())
+            shelf(rows, now(), current.appShelfCards)
         }
     }
 

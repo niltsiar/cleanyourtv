@@ -43,6 +43,8 @@ import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.core.model.ShelfKind
 import dev.niltsiar.tvhome.core.model.ShelfPoster
 import io.kotest.assertions.withClue
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.ranges.shouldBeIn
@@ -83,6 +85,32 @@ class AppShelfUiTestContent :
                 compose.onNodeWithTag("shelf:card:2").assertIsFocused()
                 repeat(3) { press(Key.DirectionLeft) }
                 compose.onNodeWithTag("shelf:card:0").assertIsFocused()
+            }
+
+            test("with 20 cards right 19 times reaches the last card and one more right stays on it") {
+                twentyItems()
+                showHome()
+                hold()
+                press(Key.DirectionUp)
+
+                repeat(19) { press(Key.DirectionRight) }
+                compose.onNodeWithTag("shelf:card:19").assertIsFocused()
+                press(Key.DirectionRight)
+
+                compose.onNodeWithTag("shelf:card:19").assertIsFocused()
+            }
+
+            test("with 20 cards only the cards near the screen ask for their posters until the row scrolls to the others") {
+                twentyItems()
+                showHome()
+                hold()
+
+                withClue("asked $posterAsks") { posterAsks.size shouldBeIn 1..10 }
+                (items.last().posterUri in posterAsks).shouldBeFalse()
+                press(Key.DirectionUp)
+                repeat(19) { press(Key.DirectionRight) }
+
+                (items.last().posterUri in posterAsks).shouldBeTrue()
             }
 
             test("down from a card returns focus to its dock tile") {
@@ -464,6 +492,20 @@ private class AppShelfUiTestFixture : JUnit4RulesContext() {
             ShelfItem(packageName = "pkg.1", title = "Andor", kind = ShelfKind.Next, posterUri = "https://example.com/andor.jpg"),
             ShelfItem(packageName = "pkg.1", title = "Silo", kind = ShelfKind.Next, posterUri = "content://pkg.1/poster/silo"),
         )
+
+    /** Twenty items, each with its own poster. */
+    fun twentyItems() {
+        items.clear()
+        items +=
+            (1..20).map {
+                ShelfItem(
+                    packageName = "pkg.1",
+                    title = "Show $it",
+                    kind = ShelfKind.Next,
+                    posterUri = "content://pkg.1/poster/$it",
+                )
+            }
+    }
 
     fun showHome(
         config: TvConfig = Cinematic,

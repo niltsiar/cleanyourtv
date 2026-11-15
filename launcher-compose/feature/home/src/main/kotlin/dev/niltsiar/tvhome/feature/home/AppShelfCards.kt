@@ -5,19 +5,21 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.IntState
 import androidx.compose.runtime.LaunchedEffect
@@ -47,6 +49,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.LocalPinnableContainer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -192,23 +195,24 @@ internal fun AppShelfCards(
     ) {
         ScrollsClearOfEdge(ScreenMargin) {
             key(shown.key) {
-                val scroll = rememberScrollState()
-                LaunchedEffect(scroll, animated) {
+                val row = rememberLazyListState()
+                LaunchedEffect(row, animated) {
                     snapshotFlow { cards.focused < 0 }.collectLatest { left ->
                         if (!left) return@collectLatest
-                        if (animated) scroll.animateScrollTo(0) else scroll.scrollTo(0)
+                        if (animated) row.animateScrollToItem(0) else row.scrollToItem(0)
                     }
                 }
-                Row(
-                    Modifier
-                        .fillMaxSize()
-                        .horizontalScroll(scroll)
-                        .padding(horizontal = ScreenMargin, vertical = band.clear)
-                        .upToOffer(input, layout),
+                val colour = ring(owner)
+                val keys = remember(shown.items) { cardKeys(shown.items) }
+                LazyRow(
+                    state = row,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = ScreenMargin, vertical = band.clear),
                     horizontalArrangement = Arrangement.spacedBy(TileGap),
                 ) {
-                    val colour = ring(owner)
-                    shown.items.forEachIndexed { index, item ->
+                    itemsIndexed(shown.items, key = { index, _ -> keys[index] }) { index, item ->
+                        // The dock tile's Up asks for the first card, so it stays composed while the row is scrolled away.
+                        if (index == 0) PinnedWhileShown()
                         ShelfCard(
                             item = item,
                             art = owner.image,
@@ -224,6 +228,7 @@ internal fun AppShelfCards(
                                 Modifier
                                     .testTag("shelf:card:$index")
                                     .then(if (index == 0) Modifier.focusRequester(cards.first) else Modifier)
+                                    .upToOffer(input, layout)
                                     .focusProperties {
                                         canFocus = visible.value
                                         if (index == 0) left = FocusRequester.Cancel
@@ -241,6 +246,25 @@ internal fun AppShelfCards(
                 }
             }
         }
+    }
+}
+
+/** Keeps the lazy item it is called in composed while it is scrolled out of view. */
+@Composable
+private fun PinnedWhileShown() {
+    val container = LocalPinnableContainer.current
+    DisposableEffect(container) {
+        val handle = container?.pin()
+        onDispose { handle?.release() }
+    }
+}
+
+/** A key per card that stays with its item when a new read moves it; items with the same key get their place among them. */
+private fun cardKeys(items: List<ShelfItem>): List<String> {
+    val seen = HashMap<String, Int>()
+    return items.map { item ->
+        val key = "${item.intentUri}|${item.posterUri}|${item.title}"
+        "${seen.merge(key, 1, Int::plus)}|$key"
     }
 }
 

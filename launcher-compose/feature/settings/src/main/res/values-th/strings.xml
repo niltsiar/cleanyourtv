@@ -47,6 +47,7 @@
   <string name="wallpaper_theme_picture">รูปภาพของธีม</string>
   <string name="settings_app_shelf">ไฮไลต์ของแอป</string>
   <string name="settings_shelf_sources">แอปและช่อง</string>
+  <string name="settings_shelf_cards">การ์ดต่อแอป</string>
   <string name="settings_shelf_no_access">ไม่มีสิทธิ์เข้าถึง</string>
   <string name="settings_shelf_none">ไม่มี</string>
   <string name="settings_shelf_watch_next">รับชมต่อ · %1$d</string>

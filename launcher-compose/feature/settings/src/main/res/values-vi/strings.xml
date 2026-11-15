@@ -47,6 +47,7 @@
   <string name="wallpaper_theme_picture">Ảnh của theme</string>
   <string name="settings_app_shelf">Nổi bật từ ứng dụng</string>
   <string name="settings_shelf_sources">Ứng dụng và kênh</string>
+  <string name="settings_shelf_cards">Số thẻ mỗi ứng dụng</string>
   <string name="settings_shelf_no_access">Không có quyền</string>
   <string name="settings_shelf_none">Không có</string>
   <string name="settings_shelf_watch_next">Tiếp tục xem · %1$d</string>

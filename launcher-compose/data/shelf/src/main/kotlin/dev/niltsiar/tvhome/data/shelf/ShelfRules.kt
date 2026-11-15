@@ -4,9 +4,6 @@ import android.media.tv.TvContract.WatchNextPrograms
 import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.core.model.ShelfKind
 
-/** The most items one app's shelf shows. */
-internal const val SHELF_MAX: Int = 10
-
 /** An item engaged with longer ago than this is dropped. */
 internal const val SHELF_MAX_AGE_MS: Long = 30L * 24 * 60 * 60 * 1000
 
@@ -23,11 +20,12 @@ internal class ShelfRow(
 /**
  * The noise rules over [rows] in the order the app gives them: live programs, channel and event programs and watchlist entries
  * go, so do "continue" items at [SHELF_DONE_FRACTION] or more and items engaged with more than [SHELF_MAX_AGE_MS] before
- * [now]. Of the rest, the first of each series stays, up to [SHELF_MAX].
+ * [now]. Of the rest, the first of each series stays, up to [max].
  */
 internal fun shelf(
     rows: List<ShelfRow>,
     now: Long,
+    max: Int,
 ): List<ShelfItem> {
     val series = HashSet<String>()
     return rows
@@ -38,7 +36,7 @@ internal fun shelf(
         .filterNot { row -> row.item.lastEngagementMs?.let { now - it > SHELF_MAX_AGE_MS } == true }
         .filter { series.add(it.series) }
         .map { it.item }
-        .take(SHELF_MAX)
+        .take(max)
         .toList()
 }
 

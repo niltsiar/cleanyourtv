@@ -47,6 +47,7 @@
   <string name="wallpaper_theme_picture">صورة السمة</string>
   <string name="settings_app_shelf">أبرز محتوى التطبيق</string>
   <string name="settings_shelf_sources">التطبيقات والقنوات</string>
+  <string name="settings_shelf_cards">البطاقات لكل تطبيق</string>
   <string name="settings_shelf_no_access">لا يوجد إذن</string>
   <string name="settings_shelf_none">لا شيء</string>
   <string name="settings_shelf_watch_next">متابعة المشاهدة · %1$d</string>

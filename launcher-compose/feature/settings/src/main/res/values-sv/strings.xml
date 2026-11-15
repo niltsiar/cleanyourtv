@@ -47,6 +47,7 @@
   <string name="wallpaper_theme_picture">Temats bild</string>
   <string name="settings_app_shelf">Höjdpunkter från appen</string>
   <string name="settings_shelf_sources">Appar och kanaler</string>
+  <string name="settings_shelf_cards">Kort per app</string>
   <string name="settings_shelf_no_access">Ingen åtkomst</string>
   <string name="settings_shelf_none">Inga</string>
   <string name="settings_shelf_watch_next">Fortsätt titta · %1$d</string>

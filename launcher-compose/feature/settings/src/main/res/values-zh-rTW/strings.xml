@@ -47,6 +47,7 @@
   <string name="wallpaper_theme_picture">主題圖片</string>
   <string name="settings_app_shelf">應用程式內推薦</string>
   <string name="settings_shelf_sources">應用程式和頻道</string>
+  <string name="settings_shelf_cards">每個應用程式的卡片數</string>
   <string name="settings_shelf_no_access">無權限</string>
   <string name="settings_shelf_none">無</string>
   <string name="settings_shelf_watch_next">繼續觀看 · %1$d</string>

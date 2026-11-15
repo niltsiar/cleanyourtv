@@ -6,6 +6,7 @@ import dev.niltsiar.tvhome.core.config.Choice
 import dev.niltsiar.tvhome.core.config.Choices
 import dev.niltsiar.tvhome.core.config.ClockFormat
 import dev.niltsiar.tvhome.core.config.ConfigRepository
+import dev.niltsiar.tvhome.core.config.SHELF_CARD_COUNTS
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
 import dev.niltsiar.tvhome.core.model.PosterHelper
@@ -110,6 +111,13 @@ internal val settingsGroups: List<Group> =
                     onOff(SettingsRowId.DateBelowClock, R.string.settings_date_below, Choices.DateBelowClock) { it.dateBelowClock },
                     onOff(SettingsRowId.MoveToMenu, R.string.settings_move_to_menu, Choices.MoveToMenu) { it.moveToMenu },
                     onOff(SettingsRowId.AppShelf, R.string.settings_app_shelf, Choices.AppShelf) { it.appShelf },
+                    ChoiceRow(
+                        SettingsRowId.ShelfCards,
+                        R.string.settings_shelf_cards,
+                        Choices.AppShelfCards,
+                        numbers(*SHELF_CARD_COUNTS.toIntArray()),
+                        { it.appShelf },
+                    ) { it.appShelfCards },
                     onOff(SettingsRowId.WebPosters, R.string.settings_web_posters, Choices.AppShelfWebPosters, { it.appShelf }) {
                         it.appShelfWebPosters
                     },

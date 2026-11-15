@@ -47,6 +47,7 @@
   <string name="wallpaper_theme_picture">Tema görseli</string>
   <string name="settings_app_shelf">Uygulamadan öne çıkanlar</string>
   <string name="settings_shelf_sources">Uygulamalar ve kanallar</string>
+  <string name="settings_shelf_cards">Uygulama başına kart</string>
   <string name="settings_shelf_no_access">Erişim yok</string>
   <string name="settings_shelf_none">Hiçbiri</string>
   <string name="settings_shelf_watch_next">İzlemeye devam edin · %1$d</string>

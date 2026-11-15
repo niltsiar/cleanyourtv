@@ -47,6 +47,7 @@
   <string name="wallpaper_theme_picture">Afbeelding van het thema</string>
   <string name="settings_app_shelf">Uitgelicht in de app</string>
   <string name="settings_shelf_sources">Apps en kanalen</string>
+  <string name="settings_shelf_cards">Kaarten per app</string>
   <string name="settings_shelf_no_access">Geen toegang</string>
   <string name="settings_shelf_none">Geen</string>
   <string name="settings_shelf_watch_next">Verder kijken · %1$d</string>

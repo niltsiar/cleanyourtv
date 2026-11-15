@@ -47,6 +47,7 @@
   <string name="wallpaper_theme_picture">Temaets bilde</string>
   <string name="settings_app_shelf">Høydepunkter fra appen</string>
   <string name="settings_shelf_sources">Apper og kanaler</string>
+  <string name="settings_shelf_cards">Kort per app</string>
   <string name="settings_shelf_no_access">Ingen tilgang</string>
   <string name="settings_shelf_none">Ingen</string>
   <string name="settings_shelf_watch_next">Fortsett å se · %1$d</string>

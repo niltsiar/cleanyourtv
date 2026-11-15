@@ -47,6 +47,7 @@
   <string name="wallpaper_theme_picture">Mavzu rasmi</string>
   <string name="settings_app_shelf">Ilovadan tavsiyalar</string>
   <string name="settings_shelf_sources">Ilovalar va kanallar</string>
+  <string name="settings_shelf_cards">Har bir ilova uchun kartalar</string>
   <string name="settings_shelf_no_access">Ruxsat yoʻq</string>
   <string name="settings_shelf_none">Yoʻq</string>
   <string name="settings_shelf_watch_next">Tomoshani davom ettirish · %1$d</string>

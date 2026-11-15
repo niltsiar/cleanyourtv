@@ -371,6 +371,20 @@ class ShelfReaderTestContent :
                 titles(PLEZY) shouldBe (1..10).map { "$it days" }
             }
 
+            test("with app_shelf_cards 5 at most five items per app, the most recently engaged first") {
+                (25 downTo 1).forEach { days -> provider.watchNext += plezy("$days days", NOW - days * DAY) }
+                config.value = TvConfig(appShelf = true, appShelfSources = listOf(PLEZY), appShelfCards = 5)
+
+                titles(PLEZY) shouldBe (1..5).map { "$it days" }
+            }
+
+            test("with app_shelf_cards 20 at most twenty items per app, the most recently engaged first") {
+                (25 downTo 1).forEach { days -> provider.watchNext += plezy("$days days", NOW - days * DAY) }
+                config.value = TvConfig(appShelf = true, appShelfSources = listOf(PLEZY), appShelfCards = 20)
+
+                titles(PLEZY) shouldBe (1..20).map { "$it days" }
+            }
+
             test("the publishers are the installed apps by label, with their watch next and channel counts") {
                 install(PLEZY, "Plezy")
                 install(DAZN, "DAZN")

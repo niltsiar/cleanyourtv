@@ -113,6 +113,14 @@ public object Choices {
     public val AppShelfWebPosters: Choice<Boolean> = boolChoice("app_shelf_web_posters") { copy(appShelfWebPosters = it) }
     public val AppShelfLanPosters: Choice<Boolean> = boolChoice("app_shelf_lan_posters") { copy(appShelfLanPosters = it) }
 
+    /** One of [SHELF_CARD_COUNTS]. */
+    public val AppShelfCards: Choice<Int> =
+        intPreferencesKey("app_shelf_cards").let { key ->
+            Choice(key, { prefs, value -> prefs[key] = value }) { config, prefs ->
+                prefs.stored(key)?.takeIf { it in SHELF_CARD_COUNTS }?.let { config.copy(appShelfCards = it) } ?: config
+            }
+        }
+
     internal val all: List<Choice<*>> =
         listOf(
             Columns,
@@ -141,6 +149,7 @@ public object Choices {
             AppShelfSources,
             AppShelfWebPosters,
             AppShelfLanPosters,
+            AppShelfCards,
         )
 
     /** The choices a pushed theme resets: all but open on start. */

@@ -47,6 +47,7 @@
   <string name="wallpaper_theme_picture">테마 이미지</string>
   <string name="settings_app_shelf">앱 하이라이트</string>
   <string name="settings_shelf_sources">앱 및 채널</string>
+  <string name="settings_shelf_cards">앱당 카드 수</string>
   <string name="settings_shelf_no_access">권한 없음</string>
   <string name="settings_shelf_none">없음</string>
   <string name="settings_shelf_watch_next">이어서 시청하기 · %1$d</string>

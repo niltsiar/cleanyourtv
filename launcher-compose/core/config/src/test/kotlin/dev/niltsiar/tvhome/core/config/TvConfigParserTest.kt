@@ -225,6 +225,19 @@ val TvConfigParserTest by testSuite {
         wrong.rejectedKeys shouldBe listOf("app_shelf_web_posters", "app_shelf_lan_posters")
     }
 
+    test("app shelf cards is 10 unless the theme sets 5, 10 or 20") {
+        parseTvConfig("{}").config.appShelfCards shouldBe 10
+        listOf(5, 10, 20).forEach { parseTvConfig("""{"app_shelf_cards": $it}""").config.appShelfCards shouldBe it }
+    }
+
+    test("app shelf cards at any other number or type keeps 10 and is rejected") {
+        for (value in listOf("7", "0", "40", "-5", "\"20\"", "true")) {
+            val wrong = parseTvConfig("""{"app_shelf_cards": $value}""")
+            withClue(value) { wrong.config.appShelfCards shouldBe 10 }
+            withClue(value) { wrong.rejectedKeys shouldBe listOf("app_shelf_cards") }
+        }
+    }
+
     test("settings key panel stays unsupported because the panel does not exist") {
         val parsed = parseTvConfig("""{"settings_key_panel": true}""")
         parsed.unsupportedKeys shouldBe listOf("settings_key_panel")
@@ -654,6 +667,7 @@ val TvConfigParserTest by testSuite {
             "app_shelf_sources" to ("""["com.a", "com.b/7", "com.a"]""" to defaults.copy(appShelfSources = listOf("com.a", "com.b/7"))),
             "app_shelf_web_posters" to ("true" to defaults.copy(appShelfWebPosters = true)),
             "app_shelf_lan_posters" to ("true" to defaults.copy(appShelfLanPosters = true)),
+            "app_shelf_cards" to ("20" to defaults.copy(appShelfCards = 20)),
             "press_feedback" to ("true" to defaults.copy(pressFeedback = true)),
             "unused_fade_days" to ("60" to defaults.copy(unusedFadeDays = 60)),
             "handle_view_inputs" to ("true" to defaults.copy(handleViewInputs = true)),

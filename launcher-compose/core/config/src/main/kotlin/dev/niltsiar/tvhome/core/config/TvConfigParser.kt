@@ -163,6 +163,7 @@ public fun parseTvConfig(json: String): ParsedConfig {
             appShelfSources = o.stringList("app_shelf_sources", d.appShelfSources).distinct(),
             appShelfWebPosters = o.bool("app_shelf_web_posters", d.appShelfWebPosters),
             appShelfLanPosters = o.bool("app_shelf_lan_posters", d.appShelfLanPosters),
+            appShelfCards = o.int("app_shelf_cards", d.appShelfCards, SHELF_CARD_COUNTS),
             pressFeedback = o.bool("press_feedback", d.pressFeedback),
             unusedFadeDays = o.int("unused_fade_days", d.unusedFadeDays, 0..3650),
             handleViewInputs = o.bool("handle_view_inputs", d.handleViewInputs),
@@ -234,6 +235,13 @@ private class Overlay(
         default: Int,
         range: IntRange,
     ): Int = value(key, default) { it.asInt()?.takeIf { n -> n in range } }
+
+    /** An int that is one of [allowed]. */
+    fun int(
+        key: String,
+        default: Int,
+        allowed: List<Int>,
+    ): Int = value(key, default) { it.asInt()?.takeIf { n -> n in allowed } }
 
     /** An int in [range], or null when the key is absent, not a number or out of range (the last two reject it). */
     fun optionalInt(

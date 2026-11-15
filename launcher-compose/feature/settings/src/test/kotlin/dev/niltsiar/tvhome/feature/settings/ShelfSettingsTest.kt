@@ -186,7 +186,9 @@ class ShelfSettingsTestContent :
                 settings.state.homeRows().last() shouldBe SettingsRowId.AppShelf
 
                 settings.pick(SettingsRowId.AppShelf, 0)
-                settings.awaitState { it.homeRows().takeLast(2) == listOf(SettingsRowId.AppShelf, SettingsRowId.WebPosters) }
+                settings.awaitState {
+                    it.homeRows().takeLast(3) == listOf(SettingsRowId.AppShelf, SettingsRowId.ShelfCards, SettingsRowId.WebPosters)
+                }
                 settings.pick(SettingsRowId.WebPosters, 0)
                 settings.awaitState { it.homeRows().takeLast(2) == listOf(SettingsRowId.WebPosters, SettingsRowId.LanPosters) }
                 settings.pick(SettingsRowId.LanPosters, 0)
@@ -198,6 +200,22 @@ class ShelfSettingsTestContent :
                 settings.pick(SettingsRowId.AppShelf, 1)
                 settings.awaitState { it.homeRows().last() == SettingsRowId.AppShelf }
                 settings.config.appShelfLanPosters.shouldBeTrue()
+            }
+
+            test("cards per app shows only while app highlights is on, offers 5, 10 and 20 with 10 held, and a pick stores it") {
+                val settings = settings("{}")
+                (SettingsRowId.ShelfCards in settings.state.homeRows()).shouldBeFalse()
+
+                settings.pick(SettingsRowId.AppShelf, 0)
+                val cards = settings.awaitState { SettingsRowId.ShelfCards in it.homeRows() }.row(SettingsRowId.ShelfCards)
+                cards.options shouldBe listOf("5", "10", "20").map(OptionLabel::Text)
+                cards.selected shouldBe 1
+                settings.pick(SettingsRowId.ShelfCards, 2)
+                settings.awaitState { it.row(SettingsRowId.ShelfCards).selected == 2 }
+                settings.config.appShelfCards shouldBe 20
+
+                settings.pick(SettingsRowId.AppShelf, 1)
+                settings.awaitState { SettingsRowId.ShelfCards !in it.homeRows() }
             }
 
             test("while on, pictures from the web says when the helper is not installed or signed with another key") {

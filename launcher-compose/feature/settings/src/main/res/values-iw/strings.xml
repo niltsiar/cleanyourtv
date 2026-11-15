@@ -47,6 +47,7 @@
   <string name="wallpaper_theme_picture">התמונה של ערכת הנושא</string>
   <string name="settings_app_shelf">תוכן מועדף מהאפליקציה</string>
   <string name="settings_shelf_sources">אפליקציות וערוצים</string>
+  <string name="settings_shelf_cards">כרטיסים לכל אפליקציה</string>
   <string name="settings_shelf_no_access">אין גישה</string>
   <string name="settings_shelf_none">ללא</string>
   <string name="settings_shelf_watch_next">המשך צפייה · %1$d</string>

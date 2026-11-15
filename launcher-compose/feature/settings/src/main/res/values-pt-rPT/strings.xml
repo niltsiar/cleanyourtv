@@ -47,6 +47,7 @@
   <string name="wallpaper_theme_picture">Imagem do tema</string>
   <string name="settings_app_shelf">Destaques da app</string>
   <string name="settings_shelf_sources">Apps e canais</string>
+  <string name="settings_shelf_cards">Cartões por app</string>
   <string name="settings_shelf_no_access">Sem acesso</string>
   <string name="settings_shelf_none">Nenhum</string>
   <string name="settings_shelf_watch_next">Continuar a ver · %1$d</string>

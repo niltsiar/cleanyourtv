@@ -47,6 +47,7 @@
   <string name="wallpaper_theme_picture">Imaxe del tema</string>
   <string name="settings_app_shelf">Destacaos de l\'aplicación</string>
   <string name="settings_shelf_sources">Aplicaciones y canales</string>
+  <string name="settings_shelf_cards">Tarxetes per aplicación</string>
   <string name="settings_shelf_no_access">Ensin accesu</string>
   <string name="settings_shelf_none">Nengunu</string>
   <string name="settings_shelf_watch_next">Siguir viendo · %1$d</string>

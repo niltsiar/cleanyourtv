@@ -21,6 +21,7 @@ public enum class SettingsRowId {
     DateBelowClock,
     MoveToMenu,
     AppShelf,
+    ShelfCards,
     WebPosters,
     LanPosters,
     AppLibrary,
