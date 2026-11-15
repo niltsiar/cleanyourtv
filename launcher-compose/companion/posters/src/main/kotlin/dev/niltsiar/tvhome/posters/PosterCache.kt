@@ -12,7 +12,7 @@ internal const val CACHE_CAP_BYTES = 24L * 1024 * 1024
 internal val STALE_AFTER_MILLIS = TimeUnit.DAYS.toMillis(7)
 
 private const val JPEG_QUALITY = 85
-private val NAME = Regex("""([0-9a-f]{64})-(\d+)\.jpg""")
+private val NAME = Regex("""([0-9a-f]{64})-(\d+)-whole\.jpg""")
 
 /** A cached poster opened for reading, and whether it was fetched more than [STALE_AFTER_MILLIS] ago. */
 internal class CachedPoster(
@@ -21,8 +21,10 @@ internal class CachedPoster(
 )
 
 /**
- * The posters in [dir], one JPEG per request key, named `<key>-<fetch time>.jpg`. A file's modification time is its last use;
- * the least recently used go first when the files pass [capBytes]. The system may delete any file at any time.
+ * The posters in [dir], one JPEG per request key, named `<key>-<fetch time>-whole.jpg` as each keeps the whole picture; a
+ * file of any other name, such as a stray temp file or a cropped picture, is deleted when the index is first read. A file's
+ * modification time is its last use; the least recently used go first when the files pass [capBytes]. The system may delete
+ * any file at any time.
  */
 internal class PosterCache(
     private val dir: File,
@@ -66,7 +68,7 @@ internal class PosterCache(
         synchronized(this) { entries() }
         dir.mkdirs()
         val temp = File.createTempFile(key, ".tmp", dir)
-        val file = File(dir, "$key-$now.jpg")
+        val file = File(dir, "$key-$now-whole.jpg")
         try {
             FileOutputStream(temp).use { out ->
                 if (!picture.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)) throw IOException("JPEG encode failed")
@@ -93,7 +95,7 @@ internal class PosterCache(
         }
     }
 
-    /** The index, read from [dir] on first use; stray temp files and older copies of a key are deleted. */
+    /** The index, read from [dir] on first use; files of another name and older copies of a key are deleted. */
     private fun entries(): HashMap<String, Entry> =
         loaded ?: HashMap<String, Entry>().also { entries ->
             for (file in dir.listFiles().orEmpty()) {

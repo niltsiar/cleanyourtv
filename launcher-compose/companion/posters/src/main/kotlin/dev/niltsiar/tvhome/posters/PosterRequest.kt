@@ -25,22 +25,22 @@ internal const val PARAM_LAN = "lan"
 
 internal const val MAX_URL_LENGTH = 2048
 
-/** The largest picture the helper stores: Home's size is scaled down to fit in it. */
+/** The largest size a stored poster is scaled to cover: Home's size is scaled down to fit in it. */
 internal const val MAX_WIDTH = 640
 internal const val MAX_HEIGHT = 360
 
-/** A poster Home asked for, whose [url] passed the rules of its mode, to store at [width] x [height] pixels. */
+/** A poster Home asked for, whose [url] passed the rules of its mode, to cover [width] x [height] pixels. */
 internal data class PosterRequest(
     val url: HttpUrl,
     val lan: Boolean,
     val width: Int,
     val height: Int,
 ) {
-    /** The cache key of the URL and the size. */
+    /** The cache key of the URL and the size, for the picture kept whole. */
     val key: String =
         MessageDigest
             .getInstance("SHA-256")
-            .digest("$url ${width}x$height".toByteArray())
+            .digest("whole $url ${width}x$height".toByteArray())
             .joinToString("") { "%02x".format(it) }
 }
 

@@ -6,15 +6,32 @@ import io.kotest.assertions.withClue
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import okhttp3.Dns
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import java.net.InetAddress
 import java.net.UnknownHostException
+import java.security.MessageDigest
 
 /** The contract Home's `WebPosters.kt` holds the other side of. */
 val PosterContractTest by testSuite {
     test("the authority, path and query parameters are the ones Home sends") {
         listOf(POSTER_AUTHORITY, POSTER_PATH, PARAM_URL, PARAM_WIDTH, PARAM_HEIGHT, PARAM_LAN) shouldBe
             listOf("dev.niltsiar.tvhome.posters", "poster", "u", "w", "h", "lan")
+    }
+}
+
+/** The cache key of a poster request. */
+val PosterKeyTest by testSuite {
+    test("the cache key of a URL and size differs from the key of the cropped pictures") {
+        val url = "https://posters.test/p.jpg".toHttpUrl()
+        val croppedKey =
+            MessageDigest
+                .getInstance("SHA-256")
+                .digest("$url 640x360".toByteArray())
+                .joinToString("") { "%02x".format(it) }
+
+        PosterRequest(url, lan = false, width = 640, height = 360).key shouldNotBe croppedKey
     }
 }
 

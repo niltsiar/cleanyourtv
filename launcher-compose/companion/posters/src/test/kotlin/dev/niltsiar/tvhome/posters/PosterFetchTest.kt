@@ -2,6 +2,9 @@ package dev.niltsiar.tvhome.posters
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
 import android.net.Uri
 import de.infix.testBalloon.framework.core.TestConfig
 import de.infix.testBalloon.framework.core.testSuite
@@ -11,7 +14,8 @@ import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
-import io.kotest.matchers.ints.shouldBeLessThanOrEqual
+import io.kotest.matchers.ints.shouldBeGreaterThan
+import io.kotest.matchers.ints.shouldBeLessThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import mockwebserver3.MockResponse
@@ -197,16 +201,51 @@ class PosterFetchTestContent :
                 fetches.size shouldBe 1
             }
 
-            test("a good JPEG lands at most 640 x 360 and is served on the next open") {
-                serve(image(picture(1600, 1200)))
+            test("a 16:9 picture larger than asked lands at the asked 640 x 360 and is served on the next open") {
+                serve(image(picture(1600, 900)))
                 shouldThrow<FileNotFoundException> { open() }
 
                 runFetches()
                 val stored = opened()
 
-                stored.width shouldBeLessThanOrEqual 640
-                stored.height shouldBeLessThanOrEqual 360
                 (stored.width to stored.height) shouldBe (640 to 360)
+            }
+
+            test("a square picture asked at 16:9 lands square and whole, at the 640 x 640 that covers the asked size") {
+                val square = Bitmap.createBitmap(1000, 1000, Bitmap.Config.ARGB_8888)
+                square.eraseColor(Color.BLUE)
+                Canvas(square).drawRect(0f, 0f, 1000f, 150f, Paint().apply { color = Color.RED })
+                val out = ByteArrayOutputStream()
+                square.compress(Bitmap.CompressFormat.PNG, 100, out)
+                serve(image(out.toByteArray(), type = "image/png"))
+                shouldThrow<FileNotFoundException> { open() }
+
+                runFetches()
+                val stored = opened()
+
+                (stored.width to stored.height) shouldBe (640 to 640)
+                Color.red(stored.getPixel(320, 20)) shouldBeGreaterThan 200
+                Color.blue(stored.getPixel(320, 20)) shouldBeLessThan 60
+            }
+
+            test("a picture smaller than asked lands at its own size") {
+                serve(image(picture(320, 180)))
+                shouldThrow<FileNotFoundException> { open() }
+
+                runFetches()
+                val stored = opened()
+
+                (stored.width to stored.height) shouldBe (320 to 180)
+            }
+
+            test("a long strip lands bounded at twice the asked width") {
+                serve(image(picture(4000, 100)))
+                shouldThrow<FileNotFoundException> { open() }
+
+                runFetches()
+                val stored = opened()
+
+                (stored.width to stored.height) shouldBe (1280 to 32)
             }
 
             test("a landed fetch notifies the URI Home watches") {

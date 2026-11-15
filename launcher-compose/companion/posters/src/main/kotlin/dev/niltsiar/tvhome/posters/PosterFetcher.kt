@@ -2,7 +2,6 @@ package dev.niltsiar.tvhome.posters
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Matrix
 import okhttp3.CookieJar
 import okhttp3.Dns
 import okhttp3.OkHttpClient
@@ -10,6 +9,7 @@ import okhttp3.Request
 import java.io.IOException
 import java.net.Proxy
 import java.util.concurrent.TimeUnit
+import kotlin.math.roundToInt
 
 internal const val MAX_BODY_BYTES = 2L * 1024 * 1024
 internal const val MIN_SIDE = 16
@@ -45,7 +45,7 @@ internal class PosterFetcher(
             .callTimeout(15, TimeUnit.SECONDS)
             .build()
 
-    /** The poster of [request], re-encoded as a picture of at most its size; an [IOException] for any refusal. */
+    /** The poster of [request], whole, at the size [posterPicture] gives; an [IOException] for any refusal. */
     fun picture(request: PosterRequest): Bitmap = posterPicture(download(request), request.width, request.height)
 
     private fun download(request: PosterRequest): ByteArray {
@@ -68,8 +68,9 @@ internal class PosterFetcher(
 }
 
 /**
- * [bytes] decoded and cropped at the centre to the aspect of [width] x [height], then scaled down to that size, never up.
- * A picture with a side under [MIN_SIDE] or over [MAX_SIDE] pixels is refused before its pixels are decoded.
+ * [bytes] decoded whole and scaled down, never up, to the least size that covers [width] x [height], with no side over twice
+ * the asked one, so the caller decides whether to crop or fit it. A picture with a side under [MIN_SIDE] or over [MAX_SIDE]
+ * pixels is refused before its pixels are decoded.
  */
 internal fun posterPicture(
     bytes: ByteArray,
@@ -83,35 +84,15 @@ internal fun posterPicture(
     if (sourceWidth !in MIN_SIDE..MAX_SIDE || sourceHeight !in MIN_SIDE..MAX_SIDE) {
         throw IOException("picture of $sourceWidth x $sourceHeight")
     }
-    val (cropWidth, cropHeight) = crop(sourceWidth, sourceHeight, width, height)
+    val widthScale = width / sourceWidth.toFloat()
+    val heightScale = height / sourceHeight.toFloat()
+    val scale = minOf(1f, maxOf(widthScale, heightScale), 2 * widthScale, 2 * heightScale)
+    val targetWidth = (sourceWidth * scale).roundToInt().coerceAtLeast(1)
+    val targetHeight = (sourceHeight * scale).roundToInt().coerceAtLeast(1)
     var sample = 1
-    while (cropWidth / (sample * 2) >= width && cropHeight / (sample * 2) >= height) sample *= 2
+    while (sourceWidth / (sample * 2) >= targetWidth && sourceHeight / (sample * 2) >= targetHeight) sample *= 2
     val sampled =
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
             ?: throw IOException("picture does not decode")
-    val (sampledWidth, sampledHeight) = crop(sampled.width, sampled.height, width, height)
-    val scale = minOf(1f, width / sampledWidth.toFloat(), height / sampledHeight.toFloat())
-    return Bitmap
-        .createBitmap(
-            sampled,
-            (sampled.width - sampledWidth) / 2,
-            (sampled.height - sampledHeight) / 2,
-            sampledWidth,
-            sampledHeight,
-            Matrix().apply { setScale(scale, scale) },
-            true,
-        ).also { if (it !== sampled) sampled.recycle() }
+    return Bitmap.createScaledBitmap(sampled, targetWidth, targetHeight, true).also { if (it !== sampled) sampled.recycle() }
 }
-
-/** The largest region of a [sourceWidth] x [sourceHeight] picture with the aspect of [width] x [height]. */
-private fun crop(
-    sourceWidth: Int,
-    sourceHeight: Int,
-    width: Int,
-    height: Int,
-): Pair<Int, Int> =
-    if (sourceWidth.toLong() * height > sourceHeight.toLong() * width) {
-        (sourceHeight.toLong() * width / height).toInt().coerceAtLeast(1) to sourceHeight
-    } else {
-        sourceWidth to (sourceWidth.toLong() * height / width).toInt().coerceAtLeast(1)
-    }

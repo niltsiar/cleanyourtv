@@ -40,7 +40,8 @@ proxy, no redirect followed. The host sees the TV's address and the poster URL, 
 - The response must be status 200 with `Content-Type` `image/jpeg`, `image/png` or `image/webp`, at most 2 MiB, and a
   picture between 16 and 4096 pixels a side.
 
-The helper crops the picture to the card's shape, scales it down to the card's size within 640 x 360 pixels, and stores it
-as a JPEG in its cache: 24 MiB at most, least recently used first out. A picture older than 7 days is still served and
-fetched again. It runs 2 fetches at a time with at most 32 waiting, and a URL whose fetch failed waits 1 hour before the
-next try.
+The helper keeps the whole picture, in its own shape. It scales it down, never up, to the least size that covers the
+card's size within 640 x 360 pixels, with no side over twice that size, and stores it as a JPEG in its cache: 24 MiB at
+most, least recently used first out. Home then crops it to the card or shows it whole, as it does a local poster. A
+picture older than 7 days is still served and fetched again. It runs 2 fetches at a time with at most 32 waiting, and a
+URL whose fetch failed waits 1 hour before the next try.

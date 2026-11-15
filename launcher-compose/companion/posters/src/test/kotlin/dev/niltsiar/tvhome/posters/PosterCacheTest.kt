@@ -9,6 +9,7 @@ import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import io.kotest.matchers.longs.shouldBeLessThanOrEqual
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
 import org.robolectric.RuntimeEnvironment
 import java.io.File
 import kotlin.random.Random
@@ -43,5 +44,16 @@ class PosterCacheTestContent :
             cache.open(first, 6).shouldNotBeNull()
             cache.open(third, 6).shouldNotBeNull()
             cache.open(fourth, 6).shouldNotBeNull()
+        }
+
+        test("a cropped poster stored under the old name is deleted when the index is first read") {
+            val app = RuntimeEnvironment.getApplication()
+            val dir = File(app.cacheDir, "cropped")
+            dir.mkdirs()
+            val cropped = File(dir, "${"a".repeat(64)}-1.jpg").apply { writeBytes(byteArrayOf(1)) }
+
+            PosterCache(dir).open("a".repeat(64), 2).shouldBeNull()
+
+            cropped.exists() shouldBe false
         }
     })
