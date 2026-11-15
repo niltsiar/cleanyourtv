@@ -19,31 +19,88 @@ TV Home is a rewrite of that home screen, in [`launcher-compose/`](/launcher-com
 It installs beside the Java launcher, and a script switches which one is Home. So far it is tested on one TV, a Sony
 Bravia with Android TV 12.
 
-The difference is the code, not the goal:
-
 | | Upstream launcher | TV Home |
 |---|---|---|
 | Language | Java | Kotlin |
 | UI | Android Views | Jetpack Compose |
 | Structure | One app module | Feature, data, core and service modules, with [Molecule](https://github.com/cashapp/molecule) presenters and [Metro](https://github.com/ZacSweers/metro) dependency injection |
-| Network | No `INTERNET` permission | No `INTERNET` permission yet; a future feature may add it, off by default |
+| Network | No `INTERNET` permission | No `INTERNET` permission. An optional helper app, whose only permission is `INTERNET`, fetches poster pictures for it ([below](#the-poster-helper)) |
 | Minimum Android | 8.0 (API 26) | 8.0 (API 26) |
 
 Themes written for the Java launcher load in TV Home without changes: it reads the same `config.json` keys with the
-same meaning. A few defaults differ, so a theme can look slightly different. For example, a tile that takes focus does not
-bounce past its final size unless the theme sets `focus_overshoot`. [ADR 0003](/launcher-compose/docs/adr/0003-theme-keys-and-the-original-launcher.md)
-lists every difference and every key TV Home adds.
-
-TV Home has a Launcher settings page on the TV with 13 options that the Java launcher's page does not offer. Each new
-feature is off until a theme or that page turns it on, for example:
-
-- an App library page with every installed app, and an option to show least used apps first;
-- a clock screen after a set idle time, or from the Back key;
-- a mark under the app you usually open at this time of day;
-- a notice when you connect a device to an HDMI port while Home shows.
+same meaning, the cinematic Home (`cinematic_home`) included. A few defaults differ, so a theme can look slightly
+different. For example, a tile that takes focus does not bounce past its final size unless the theme sets
+`focus_overshoot`. TV Home also adds theme keys of its own, such as the light that the focused dock tile casts on the
+dock's rim. [ADR 0003](/launcher-compose/docs/adr/0003-theme-keys-and-the-original-launcher.md) lists every difference
+and every key TV Home adds.
 
 The remote's Home, Input, Settings and app keys go through one accessibility service, which the install script below
 turns on ([ADR 0001](/launcher-compose/docs/adr/0001-one-key-service.md)).
+
+### Launcher settings
+
+TV Home has a Launcher settings page on the TV. To open it, hold OK on the Settings button of the top bar and pick
+Launcher settings. A choice that you make on the page wins over the theme's. The next theme push clears every such
+choice except Open on start.
+
+The General group has the rows that the Java launcher's page has too: apps per row, rows below the dock, the dock band's
+opacity, the clock format and animations, then Wallpaper and Open on start when the theme offers them. The groups below
+are TV Home's own. Every option in them stays off until a theme or the page turns it on. Greeting is the one exception:
+it starts on.
+
+Home layout:
+
+- **Names under every tile.** Each app's name shows under its tile, in the dock and in the grid.
+- **Greeting.** The greeting shows with the clock.
+- **Date below the clock.** The date gets its own line under the clock.
+- **Quick move in tile menu.** The tile menu gets a Move to row, which puts the app at the start or the end of the dock
+  or the grid in one step.
+- **App highlights.** When a dock app keeps focus, cards of that app's own items show above the dock, from its Continue
+  watching row and its preview channels. OK on a card opens it. The Apps and channels row picks which apps and channels
+  give cards. For this, Home reads the TV's program listings, which needs the `READ_TV_LISTINGS` permission.
+- **Pictures from the web.** App highlights cards show their poster pictures from the web, which the poster helper app
+  fetches. Without the helper, such a card shows text on the app's banner.
+- **Pictures from your network.** With Pictures from the web on, App highlights cards also show poster pictures from a
+  media server on your home network.
+
+App library:
+
+- **Show App library.** An App library pill under Home's rows opens a page with every installed app, where you add an app
+  to Home or take it off.
+- **Least used first.** The MENU key in the App library switches to an order with the least used apps first, and each
+  card says when Home last opened its app.
+- **Fade unused apps after (days).** A grid tile looks faded when Home has not opened its app for 30, 60 or 90 days.
+
+Clock screen:
+
+- **Clock after idle (minutes).** When nobody touches Home for 5, 10, 30 or 60 minutes, a clock screensaver shows. Any
+  key goes back to Home.
+- **Back opens the clock.** Back on Home opens the clock screensaver.
+- **Wallpaper behind the clock.** The clock screensaver shows over Home's wallpaper, not over black.
+
+Motion and hints:
+
+- **Reduced motion.** Animations are calmer and shorter, for TVs with a weak graphics chip.
+- **Focus overshoot.** A tile that takes focus grows a little past its size, then settles.
+- **Press feedback.** OK on a tile dips it and brightens its ring. When the app is slow to start, the line under the title
+  says that it is opening.
+- **Habit hint.** A small mark shows under the app that you usually open at this time of day. For this, Home keeps a
+  private log of the apps it opens. With the option off, Home logs nothing.
+- **Input arrival.** When you switch on a device on an HDMI port while Home shows, the Inputs button names the device and
+  its port. OK on the button switches to that input. Home never switches input by itself.
+
+The System group at the end resets the page's choices to the theme's, opens the TV's home picker and opens the TV's own
+settings.
+
+### The poster helper
+
+TV Home has no `INTERNET` permission. The poster helper is a separate, optional app, package
+`dev.niltsiar.tvhome.posters`, whose only permission is `INTERNET`. When Pictures from the web is on, Home sends it the
+poster addresses of the cards about to show, and the helper fetches those pictures. It fetches `https` pictures only from
+hosts whose addresses are all public. It fetches pictures from private addresses on your home network, over `http` or
+`https`, only when Pictures from your network is on too. Home sends addresses only to a helper signed with Home's own
+key, so build both on the same machine. [companion/posters/README.md](/launcher-compose/companion/posters/README.md) gives
+its full rules and limits.
 
 ## Screenshots
 
@@ -61,18 +118,31 @@ These come from a Sony Bravia, with the launcher's English text.
 
 You need JDK 21, the Android SDK and ADB access to the TV (the upstream [PROMPT.md](/PROMPT.md) sets that up).
 
+Build and install TV Home, push a theme to it, then make it Home:
+
 ```bash
 cd launcher-compose
 ./gradlew :app:assembleRelease
 adb -s <tv ip>:5555 install -r app/build/outputs/apk/release/app-release.apk
+cd ..
+TV_PACKAGE=dev.niltsiar.tvhome TV_HOST=<tv ip> tools/theme.sh themes/aurora
+cd launcher-compose
 TV_SERIAL=<tv ip>:5555 scripts/switch-home.sh new
 ```
 
-`switch-home.sh new` makes TV Home the TV's Home, and `scripts/switch-home.sh old` makes the Java launcher Home again. Read the first lines of the script for its options
-before you run it.
+`switch-home.sh new` changes nothing until TV Home has a theme, because the theme holds the remote's key remaps.
+It makes TV Home the TV's Home, and grants the permissions that the Wi-Fi name and App highlights need.
+`scripts/switch-home.sh old` makes the Java launcher Home again. Read the first lines of the script for its options
+before you run it. To push another theme, run the `tools/theme.sh` line again from the repository root.
 
-To push a theme to TV Home, run upstream's theme tool from the repository root with the package name:
-`TV_PACKAGE=dev.niltsiar.tvhome TV_HOST=<tv ip> tools/theme.sh themes/aurora`.
+Optional: for App highlights posters from the web, build and install the poster helper in `launcher-compose`. Build it
+in the same checkout, on the same machine, as TV Home: Home sends poster addresses only to a helper signed with its own
+key.
+
+```bash
+./gradlew :companion:posters:assembleRelease
+adb -s <tv ip>:5555 install -r companion/posters/build/outputs/apk/release/posters-release.apk
+```
 
 ## Credit and licence
 
