@@ -89,8 +89,8 @@ internal class WebPosters(
     private val started = MutableStateFlow(false)
 
     /**
-     * Rises each time the helper may have new pictures. While collected, and once Home asked the helper for a poster, it
-     * watches the helper's notifications until Home stops.
+     * Rises each time the helper may have new pictures, and on an [onStart] to retry. While collected, and once Home asked
+     * the helper for a poster, it watches the helper's notifications until Home stops.
      */
     val changes: Flow<Int> =
         channelFlow {
@@ -121,10 +121,13 @@ internal class WebPosters(
         return helperPosterUri(poster, width, height, lan)
     }
 
-    /** Home came to the front: the helper may have been installed, removed, or have fetched pictures meanwhile. */
-    fun onStart() {
+    /**
+     * Home came to the front: the helper may have been installed, removed, or have fetched pictures meanwhile. [retry], for a
+     * poster that failed and may be readable now, raises [changes] even when the helper was never asked.
+     */
+    fun onStart(retry: Boolean) {
         helper = null
-        if (asked.value) generation.update { it + 1 }
+        if (asked.value || retry) generation.update { it + 1 }
         started.value = true
     }
 

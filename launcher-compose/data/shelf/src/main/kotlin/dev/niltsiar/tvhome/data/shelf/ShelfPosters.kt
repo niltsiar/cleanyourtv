@@ -42,8 +42,8 @@ internal const val POSTER_MAX_PIXELS: Long = 1920L * 1080L
  * Decodes the posters of shelf items for Home's cards, on [io] and one at a time, and keeps them in an LRU of
  * [POSTER_CACHE_BYTES]. A `content://` or `android.resource://` poster is read as it is; Home has no network, so an `https`
  * or `http` one is read through the poster helper app as [WebPosters] allows, else not at all. A poster that cannot be read
- * or decoded is not tried again until the next [onStart], except one the helper has not fetched yet: [changes] rises when
- * it may have.
+ * or decoded is not tried again until the next [onStart], which raises [changes] so its card asks again; one the helper
+ * has not fetched yet is tried again once [changes] rises for it.
  */
 public class ShelfPosters(
     private val context: Context,
@@ -63,8 +63,9 @@ public class ShelfPosters(
     private val failed: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     /**
-     * Rises each time a poster the helper had not fetched may have arrived; a card without a picture then asks again. While
-     * collected, it watches the helper once Home has asked it for a poster, and stops watching when Home stops.
+     * Rises each time a poster the helper had not fetched may have arrived, and on an [onStart] after a poster failed; a card
+     * without a picture then asks again. While collected, it watches the helper once Home has asked it for a poster, and stops
+     * watching when Home stops.
      */
     public val changes: Flow<Int> = web.changes
 
@@ -97,8 +98,9 @@ public class ShelfPosters(
 
     /** Home came to the front: a poster that failed may be readable now, as after the app granted its URI again. */
     public fun onStart() {
+        val retry = failed.isNotEmpty()
         failed.clear()
-        web.onStart()
+        web.onStart(retry)
     }
 
     /** Home went to the back: it stops watching the helper. */

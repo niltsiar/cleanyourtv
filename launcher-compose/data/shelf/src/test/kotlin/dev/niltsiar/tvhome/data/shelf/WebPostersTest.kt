@@ -254,5 +254,32 @@ class WebPostersTestContent :
 
                 changes.last() shouldBe first + 1
             }
+
+            test("after a poster failed, home coming to the front raises the changes and the poster is read again") {
+                val granted = Uri.parse("content://app.posters/granted")
+                posters.onStart()
+                collectChanges()
+                shadowOf(app.contentResolver).registerInputStreamSupplier(granted) { throw SecurityException("not exported") }
+                poster(granted.toString()).shouldBeNull()
+                val first = changes.last()
+
+                shadowOf(app.contentResolver).registerInputStreamSupplier(granted) { ByteArrayInputStream(png()) }
+                posters.onStop()
+                posters.onStart()
+
+                changes.last() shouldBe first + 1
+                poster(granted.toString()).shouldNotBeNull()
+            }
+
+            test("with nothing failed and pictures from the web off, home coming to the front raises nothing") {
+                posters.onStart()
+                collectChanges()
+                val first = changes.toList()
+
+                posters.onStop()
+                posters.onStart()
+
+                changes shouldBe first
+            }
         }
     })
