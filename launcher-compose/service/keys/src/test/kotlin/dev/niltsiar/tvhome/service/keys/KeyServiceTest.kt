@@ -437,6 +437,16 @@ class KeyServiceTestContent :
                 started()?.component shouldBe home
             }
 
+            test("a window with the stock home class from another package does not open the launcher") {
+                stockLauncherIsHome("com.stock.launcher")
+                service.start(TvConfig(stockHomeRedirect = "com.stock.launcher"))
+
+                service.handleWindow(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED, "com.evil.app", "com.stock.launcher.HomeActivity")
+                started().shouldBeNull()
+                service.handleWindow(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED, "com.stock.launcher", "com.stock.launcher.HomeActivity")
+                started()?.component shouldBe home
+            }
+
             test("a short home press opens the launcher after the system saw it and a long one does not") {
                 stockLauncherIsHome("com.stock.launcher")
                 service.start(TvConfig(stockHomeRedirect = "com.stock.launcher"))

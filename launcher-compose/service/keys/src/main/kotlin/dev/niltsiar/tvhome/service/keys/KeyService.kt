@@ -380,8 +380,9 @@ public class KeyService : AccessibilityService() {
             openHome()
             return
         }
-        // stock_home_redirect: the firmware turned the stock launcher back on and its home screen came up.
-        if (cls != null && cls.toString() in stockHome) openHome()
+        // stock_home_redirect: the firmware turned the stock launcher back on and its home screen came up. Any app can send this
+        // event with any class name; Android sets only its package name to the sender's.
+        if (cls != null && pkg?.toString() == config.stockHomeRedirect && cls.toString() in stockHome) openHome()
     }
 
     /** Unbound by Android: no UP will reach the service to cancel a hold it saw go down. */
