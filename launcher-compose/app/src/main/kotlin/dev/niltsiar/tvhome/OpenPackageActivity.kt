@@ -14,7 +14,8 @@ import dev.niltsiar.tvhome.core.model.tvLaunchIntent
 class OpenPackageActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val packageName = intent.data?.getQueryParameter("id")
+        // An explicit intent skips the filter, and an opaque URI such as x:y throws on getQueryParameter.
+        val packageName = intent.data?.takeIf { it.isHierarchical }?.getQueryParameter("id")
         if (!packageName.isNullOrBlank()) {
             packageManager.tvLaunchIntent(packageName)?.let {
                 if (startActivitySafely(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))) (application as AppOpened).opened(it)

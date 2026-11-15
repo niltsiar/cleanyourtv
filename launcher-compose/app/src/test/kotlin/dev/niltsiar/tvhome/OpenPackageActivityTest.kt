@@ -107,6 +107,15 @@ class OpenPackageActivityTestContent :
                 opened.keys shouldBe setOf("com.netflix.ninja/.Main")
             }
 
+            test("an opaque uri finishes without a crash and opens nothing") {
+                install("com.netflix.ninja", Intent.CATEGORY_LEANBACK_LAUNCHER)
+
+                val activity = open("x:y")
+
+                shadowOf(app).nextStartedActivity.shouldBeNull()
+                activity.isFinishing.shouldBeTrue()
+            }
+
             test("a missing blank or unknown id starts nothing and finishes") {
                 listOf("market://launch", "market://launch?id=", "market://launch?id=com.not.installed").forEach { uri ->
                     val activity = open(uri)
