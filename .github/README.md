@@ -37,6 +37,12 @@ and every key TV Home adds.
 The remote's Home, Input, Settings and app keys go through one accessibility service, which the install script below
 turns on ([ADR 0001](/launcher-compose/docs/adr/0001-one-key-service.md)).
 
+The standby guard is for a TV whose power key cannot wake the set while the key service stays on with the screen off
+(seen on a TCL). It is off by default. No theme key or setting turns it on: only `GUARD=1 scripts/switch-home.sh new`
+does. While the guard is on, the key service leaves Android's accessibility list when the screen goes off and comes back
+when the screen comes on. So turning the key service off in the TV's settings does not stick: TV Home puts it back the
+next time it starts, such as after a reboot. `scripts/switch-home.sh old` turns the guard off.
+
 ### Launcher settings
 
 TV Home has a Launcher settings page on the TV. To open it, hold OK on the Settings button of the top bar and pick
