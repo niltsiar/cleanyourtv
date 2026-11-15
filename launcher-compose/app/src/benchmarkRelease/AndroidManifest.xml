@@ -3,8 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!-- The benchmark build is a second package next to the real launcher. Android can drop the preferred Home when a second
-         package answers Home, so this copy answers no Home or launcher intent, and offers no accessibility service, screensaver
-         or input switcher. MainActivity stays exported: the benchmark starts it by component name. -->
+         package answers Home, so this copy answers no Home, launcher or market://launch intent, and offers no accessibility
+         service, screensaver or input switcher. MainActivity stays exported: the benchmark starts it by component name. -->
     <application>
         <activity android:name="dev.niltsiar.tvhome.MainActivity">
             <intent-filter tools:node="removeAll" />
@@ -12,6 +12,10 @@
 
         <!-- MainActivity reads and writes this component's enabled state, so the component stays, with no filter. -->
         <activity android:name="dev.niltsiar.tvhome.InputsRequestActivity">
+            <intent-filter tools:node="removeAll" />
+        </activity>
+
+        <activity android:name="dev.niltsiar.tvhome.OpenPackageActivity">
             <intent-filter tools:node="removeAll" />
         </activity>
 
