@@ -21,6 +21,7 @@ import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.ShelfItem
+import dev.niltsiar.tvhome.core.model.ShelfPoster
 import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,7 +64,7 @@ internal fun sources(
     openedSince: Flow<Long?> = flowOf(null),
     timeMillis: () -> Long = System::currentTimeMillis,
     shelfItems: suspend (String) -> List<ShelfItem> = { emptyList() },
-    shelfPoster: suspend (String, Int, Int) -> ImageBitmap? = { _, _, _ -> null },
+    shelfPoster: suspend (String, Int, Int) -> ShelfPoster? = { _, _, _ -> null },
 ) = HomeSources(
     apps,
     clock,

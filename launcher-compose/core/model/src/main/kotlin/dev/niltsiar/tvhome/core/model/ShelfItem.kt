@@ -1,6 +1,8 @@
 package dev.niltsiar.tvhome.core.model
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 
 /** Which row of the TV provider a [ShelfItem] comes from: Watch Next by its type, or a preview channel. */
 public enum class ShelfKind {
@@ -39,6 +41,16 @@ public data class ShelfItem(
     val posterUri: String? = null,
     val intentUri: String? = null,
     val lastEngagementMs: Long? = null,
+)
+
+/**
+ * A shelf item's [picture] as a card draws it. [fill] is unspecified for a picture close enough to the card's shape to cover
+ * it, cropped. Otherwise the picture shows whole, centred, and [fill], the average colour of its edge pixels, fills the rest.
+ */
+@Immutable
+public data class ShelfPoster(
+    val picture: ImageBitmap,
+    val fill: Color = Color.Unspecified,
 )
 
 /** A preview channel of a [ShelfPublisher] and how many programs it holds. */

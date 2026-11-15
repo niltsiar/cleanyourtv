@@ -7,9 +7,11 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
 import android.util.LruCache
-import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.model.ShelfPoster
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -21,6 +23,7 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 private const val TAG = "TvHome.Shelf"
@@ -32,9 +35,9 @@ private const val TAG = "TvHome.Shelf"
 internal const val POSTER_CACHE_BYTES: Int = 12 * 1024 * 1024
 
 /**
- * The most pixels a poster decodes into before its last scale: a 1080p frame, 8 MB at 4 bytes each. A 16:9 or 2:3 poster for a
- * 1080p card stays under it, and so does a 16:9 one for a card of twice that size; a poster of an extreme aspect, which only
- * the short side would shrink, goes over it and shows as a text card.
+ * The most pixels a poster decodes into before its last scale: a 1080p frame, 8 MB at 4 bytes each. A poster for a 1080p card
+ * stays under it, and so does a 16:9 one for a card of twice that size; a poster near the card's shape for a card that big
+ * can go over it and shows as a text card.
  */
 internal const val POSTER_MAX_PIXELS: Long = 1920L * 1080L
 
@@ -54,11 +57,11 @@ public class ShelfPosters(
 
     private val decoding = Mutex()
     private val cache =
-        object : LruCache<String, Bitmap>(POSTER_CACHE_BYTES) {
+        object : LruCache<String, ShelfPoster>(POSTER_CACHE_BYTES) {
             override fun sizeOf(
                 key: String,
-                value: Bitmap,
-            ): Int = value.allocationByteCount
+                value: ShelfPoster,
+            ): Int = value.picture.asAndroidBitmap().allocationByteCount
         }
     private val failed: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
@@ -70,30 +73,29 @@ public class ShelfPosters(
     public val changes: Flow<Int> = web.changes
 
     /**
-     * The poster at [uri], scaled while it decodes to the least size that covers [width] x [height] pixels. Null for a URI of
-     * another scheme, a web one the helper does not serve now, one that cannot be opened or decoded, or one over
-     * [POSTER_MAX_PIXELS].
+     * The poster at [uri] for a card of [width] x [height] pixels, scaled while it decodes as [posterOptions] says; a poster
+     * the card [drawsWhole] comes with its [posterFill]. Null for a URI of another scheme, a web one the helper does not serve
+     * now, one that cannot be opened or decoded, or one over [POSTER_MAX_PIXELS].
      */
     public suspend fun poster(
         uri: String,
         width: Int,
         height: Int,
-    ): ImageBitmap? {
+    ): ShelfPoster? {
         val parsed = Uri.parse(uri)
         val local = parsed.scheme == ContentResolver.SCHEME_CONTENT || parsed.scheme == ContentResolver.SCHEME_ANDROID_RESOURCE
         if (!local && !web.serves(parsed.scheme)) return null
         if (width <= 0 || height <= 0) return null
         val key = "$uri@${width}x$height"
-        cache.get(key)?.let { return it.asImageBitmap() }
+        cache.get(key)?.let { return it }
         if (key in failed) return null
-        return decoding
-            .withLock {
-                cache.get(key) ?: when {
-                    key in failed -> null
-                    local -> load(key, parsed, width, height, helper = false)
-                    else -> load(key, web.request(uri, parsed.scheme == "http", width, height), width, height, helper = true)
-                }
-            }?.asImageBitmap()
+        return decoding.withLock {
+            cache.get(key) ?: when {
+                key in failed -> null
+                local -> load(key, parsed, width, height, helper = false)
+                else -> load(key, web.request(uri, parsed.scheme == "http", width, height), width, height, helper = true)
+            }
+        }
     }
 
     /** Home came to the front: a poster that failed may be readable now, as after the app granted its URI again. */
@@ -120,8 +122,8 @@ public class ShelfPosters(
         width: Int,
         height: Int,
         helper: Boolean,
-    ): Bitmap? {
-        val bitmap =
+    ): ShelfPoster? {
+        val poster =
             try {
                 withContext(io) { decode(uri, width, height) }
             } catch (e: FileNotFoundException) {
@@ -129,8 +131,8 @@ public class ShelfPosters(
                 Log.w(TAG, "cannot read poster $uri: $e")
                 null
             }
-        if (bitmap == null) failed += key else cache.put(key, bitmap)
-        return bitmap
+        if (poster == null) failed += key else cache.put(key, poster)
+        return poster
     }
 
     /** The app gave the URI, so any failure to read it counts as no poster; a missing file is left to [load]. */
@@ -138,7 +140,7 @@ public class ShelfPosters(
         uri: Uri,
         width: Int,
         height: Int,
-    ): Bitmap? =
+    ): ShelfPoster? =
         try {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
@@ -147,7 +149,10 @@ public class ShelfPosters(
                 Log.w(TAG, "poster $uri not decoded at ${bounds.outWidth} x ${bounds.outHeight}")
                 null
             } else {
-                context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
+                context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }?.let { bitmap ->
+                    val whole = drawsWhole(bounds.outWidth, bounds.outHeight, width, height)
+                    ShelfPoster(bitmap.asImageBitmap(), if (whole) posterFill(bitmap) else Color.Unspecified)
+                }
             }
         } catch (e: FileNotFoundException) {
             throw e
@@ -161,9 +166,26 @@ public class ShelfPosters(
 }
 
 /**
- * Options that decode a [sourceWidth] x [sourceHeight] picture at the least size that covers [width] x [height]: the largest
- * power-of-two sample that keeps it at least that big, then a density scale for the rest. A smaller picture keeps its size.
- * Null for a picture with no size, or one whose sampled size is over [POSTER_MAX_PIXELS].
+ * Whether a card of [width] x [height] draws a [sourceWidth] x [sourceHeight] poster whole rather than cropped to cover it:
+ * when the poster's aspect ratio differs from the card's by more than a factor of 1.2, which for a 16:9 card is a ratio under
+ * about 1.48 or over about 2.13.
+ */
+internal fun drawsWhole(
+    sourceWidth: Int,
+    sourceHeight: Int,
+    width: Int,
+    height: Int,
+): Boolean {
+    val poster = sourceWidth.toLong() * height
+    val card = sourceHeight.toLong() * width
+    return max(poster, card) * 5 > min(poster, card) * 6
+}
+
+/**
+ * Options that decode a [sourceWidth] x [sourceHeight] picture at the least size that covers [width] x [height], or for one
+ * the card [drawsWhole], the greatest size that fits in it: the largest power-of-two sample that keeps it at least that big,
+ * then a density scale for the rest. A smaller picture keeps its size. Null for a picture with no size, or one whose sampled
+ * size is over [POSTER_MAX_PIXELS].
  */
 internal fun posterOptions(
     sourceWidth: Int,
@@ -172,11 +194,14 @@ internal fun posterOptions(
     height: Int,
 ): BitmapFactory.Options? {
     if (sourceWidth <= 0 || sourceHeight <= 0) return null
-    val cover = max(width.toFloat() / sourceWidth, height.toFloat() / sourceHeight)
+    val widthScale = width.toFloat() / sourceWidth
+    val heightScale = height.toFloat() / sourceHeight
+    val scale =
+        if (drawsWhole(sourceWidth, sourceHeight, width, height)) min(widthScale, heightScale) else max(widthScale, heightScale)
     val options = BitmapFactory.Options()
-    if (cover >= 1f) return options.takeIf { sourceWidth.toLong() * sourceHeight <= POSTER_MAX_PIXELS }
-    val targetWidth = (sourceWidth * cover).roundToInt()
-    val targetHeight = (sourceHeight * cover).roundToInt()
+    if (scale >= 1f) return options.takeIf { sourceWidth.toLong() * sourceHeight <= POSTER_MAX_PIXELS }
+    val targetWidth = (sourceWidth * scale).roundToInt()
+    val targetHeight = (sourceHeight * scale).roundToInt()
     var sample = 1
     while (sourceWidth / (sample * 2) >= targetWidth && sourceHeight / (sample * 2) >= targetHeight) sample *= 2
     // A decoder may round a sampled side up.
@@ -190,4 +215,37 @@ internal fun posterOptions(
         options.inTargetDensity = targetWidth
     }
     return options
+}
+
+/**
+ * The colour round a poster drawn whole: the average of the pixels on the outer edge of [bitmap], weighted by their alpha so a
+ * transparent edge pixel adds no colour, at their average alpha.
+ */
+internal fun posterFill(bitmap: Bitmap): Color {
+    val width = bitmap.width
+    val height = bitmap.height
+    val rows = if (height > 1) intArrayOf(0, height - 1) else intArrayOf(0)
+    val columns = if (width > 1) intArrayOf(0, width - 1) else intArrayOf(0)
+    val inner = max(0, height - 2)
+    val pixels = IntArray(rows.size * width + columns.size * inner)
+    rows.forEachIndexed { i, y -> bitmap.getPixels(pixels, i * width, width, 0, y, width, 1) }
+    columns.forEachIndexed { i, x -> bitmap.getPixels(pixels, rows.size * width + i * inner, 1, x, 1, 1, inner) }
+    var alpha = 0L
+    var red = 0L
+    var green = 0L
+    var blue = 0L
+    for (pixel in pixels) {
+        val a = (pixel ushr 24).toLong()
+        alpha += a
+        red += a * ((pixel shr 16) and 0xFF)
+        green += a * ((pixel shr 8) and 0xFF)
+        blue += a * (pixel and 0xFF)
+    }
+    if (alpha == 0L) return Color.Transparent
+    return Color(
+        red = (red / alpha).toInt(),
+        green = (green / alpha).toInt(),
+        blue = (blue / alpha).toInt(),
+        alpha = (alpha / pixels.size).toInt(),
+    )
 }

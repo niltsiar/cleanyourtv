@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,6 +45,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -63,6 +65,7 @@ import dev.niltsiar.tvhome.core.designsystem.pressDip
 import dev.niltsiar.tvhome.core.designsystem.ringBlendsWith
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.ShelfItem
+import dev.niltsiar.tvhome.core.model.ShelfPoster
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -135,8 +138,9 @@ internal class ShelfCardsState {
  * stop at the ends; Down and Back return to the dock tile, and the row scrolls back to its first card, at once without motion;
  * Up leaves for the top bar, as from the dock ([upToOffer]).
  * OK opens a card's item through [onOpen]; with [HomeLayout.pressFeedback] the card dips unless an app is launching.
- * A card shows its poster, or, for none that decodes, the app's [AppEntry.image] dimmed under the item's title; while the cards
- * are [visible], a card without a picture asks [poster] again each time [posterChanges] rises.
+ * A card shows its poster, cropped to cover it, or whole and centred on the poster's [ShelfPoster.fill] when that is
+ * specified; for none that decodes, it shows the app's [AppEntry.image] dimmed under the item's title. While the cards are
+ * [visible], a card without a picture asks [poster] again each time [posterChanges] rises.
  */
 @Composable
 internal fun AppShelfCards(
@@ -148,7 +152,7 @@ internal fun AppShelfCards(
     ring: (AppEntry) -> Color,
     shelfBottom: Dp,
     groupShift: () -> Float,
-    poster: suspend (String, Int, Int) -> ImageBitmap?,
+    poster: suspend (String, Int, Int) -> ShelfPoster?,
     posterChanges: Flow<Int>,
     layout: HomeLayout,
     input: HomeInput,
@@ -247,7 +251,7 @@ private fun ShelfCard(
     ring: Color,
     accent: Color,
     band: ShelfBand,
-    poster: suspend (String, Int, Int) -> ImageBitmap?,
+    poster: suspend (String, Int, Int) -> ShelfPoster?,
     posterGeneration: IntState,
     pressFeedback: Boolean,
     launching: State<Boolean>,
@@ -257,7 +261,7 @@ private fun ShelfCard(
     val density = LocalDensity.current
     val width = with(density) { band.cardWidth.roundToPx() }
     val height = with(density) { band.cardHeight.roundToPx() }
-    val picture by produceState<ImageBitmap?>(null, item.posterUri, width, height, posterGeneration) {
+    val picture by produceState<ShelfPoster?>(null, item.posterUri, width, height, posterGeneration) {
         val uri = item.posterUri
         var asked = posterGeneration.intValue
         value = uri?.let { poster(it, width, height) }
@@ -292,7 +296,13 @@ private fun ShelfCard(
         Box(Modifier.fillMaxSize().drawBehind { drawRect(surface) }, contentAlignment = Alignment.BottomStart) {
             val shown = picture
             if (shown != null) {
-                Image(shown, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                val fill = shown.fill
+                Image(
+                    shown.picture,
+                    contentDescription = null,
+                    contentScale = if (fill.isSpecified) ContentScale.Fit else ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().background(fill),
+                )
             } else {
                 if (art != null) {
                     Image(

@@ -12,6 +12,7 @@ import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.OpenedAt
 import dev.niltsiar.tvhome.core.model.ShelfItem
+import dev.niltsiar.tvhome.core.model.ShelfPoster
 import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -224,8 +225,8 @@ public class HomeSources(
     public val timeMillis: () -> Long = System::currentTimeMillis,
     /** The items of a package's app shelf (app_shelf). Runs off the main thread. */
     public val shelfItems: suspend (String) -> List<ShelfItem> = { emptyList() },
-    /** A shelf item's poster at a URI, decoded to cover a card of the given width and height in pixels; null when it has none. */
-    public val shelfPoster: suspend (String, Int, Int) -> ImageBitmap? = { _, _, _ -> null },
+    /** A shelf item's poster at a URI, decoded for a card of the given width and height in pixels; null when it has none. */
+    public val shelfPoster: suspend (String, Int, Int) -> ShelfPoster? = { _, _, _ -> null },
     /** Rises each time posters that gave none may have arrived; collected only while the shelf's cards show. */
     public val shelfPosterChanges: Flow<Int> = emptyFlow(),
 )

@@ -2,7 +2,10 @@ package dev.niltsiar.tvhome.data.shelf
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.net.Uri
+import androidx.compose.ui.graphics.Color
 import de.infix.testBalloon.framework.core.TestConfig
 import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
@@ -38,29 +41,34 @@ val PosterOptionsTest by testSuite {
         posterOptions(1001, 563, 480, 270).shouldNotBeNull().scale() shouldBe Triple(2, 500, 480)
     }
 
-    test("a 2 by 3 poster for a 480 x 270 card covers it at 480 x 720, under the cap") {
-        posterOptions(1000, 1500, 480, 270).shouldNotBeNull().scale() shouldBe Triple(2, 500, 480)
+    test("a poster within a factor of 1.2 of the card's aspect ratio is cropped, and one past it on either side is drawn whole") {
+        drawsWhole(576, 270, 480, 270) shouldBe false
+        drawsWhole(577, 270, 480, 270) shouldBe true
+        drawsWhole(400, 270, 480, 270) shouldBe false
+        drawsWhole(399, 270, 480, 270) shouldBe true
+    }
+
+    test("a 2 by 3 poster for a 480 x 270 card is drawn whole, so it decodes at the 180 x 270 that fits in the card") {
+        posterOptions(1000, 1500, 480, 270).shouldNotBeNull().scale() shouldBe Triple(4, 250, 180)
     }
 
     test("a 16:9 poster for a 960 x 540 card samples to 1919 x 1079, under the cap") {
         posterOptions(3838, 2158, 960, 540).shouldNotBeNull().scale() shouldBe Triple(2, 1919, 960)
     }
 
-    test("a poster no bigger than the card keeps its size, even at 1:100 and 1:10000") {
+    test("a poster that fits in the card keeps its size") {
         posterOptions(320, 180, 480, 270).shouldNotBeNull().scale() shouldBe Triple(1, 0, 0)
-        posterOptions(2700, 27, 480, 270).shouldNotBeNull().scale() shouldBe Triple(1, 0, 0)
-        posterOptions(10_000, 1, 480, 270).shouldNotBeNull().scale() shouldBe Triple(1, 0, 0)
+        posterOptions(200, 200, 480, 270).shouldNotBeNull().scale() shouldBe Triple(1, 0, 0)
     }
 
-    test("a 1:100 poster that only its short side would shrink is over the cap and not decoded") {
-        posterOptions(27_000, 270, 480, 270).shouldBeNull()
-        posterOptions(54_000, 540, 480, 270).shouldBeNull()
-        posterOptions(270, 27_000, 480, 270).shouldBeNull()
+    test("a 1:100 or 1:10000 poster is drawn whole, so its long side brings it under the cap") {
+        posterOptions(27_000, 270, 480, 270).shouldNotBeNull().scale() shouldBe Triple(32, 843, 480)
+        posterOptions(270, 27_000, 480, 270).shouldNotBeNull().scale() shouldBe Triple(64, 4, 3)
+        posterOptions(2_700_000, 270, 480, 270).shouldNotBeNull().scale() shouldBe Triple(4096, 659, 480)
     }
 
-    test("a 1:10000 poster is over the cap and not decoded") {
-        posterOptions(2_700_000, 270, 480, 270).shouldBeNull()
-        posterOptions(5_400_000, 540, 480, 270).shouldBeNull()
+    test("a poster near the card's shape that would decode over the cap is not decoded") {
+        posterOptions(2300, 1079, 960, 540).shouldBeNull()
     }
 
     test("a picture with no size is not decoded") {
@@ -87,12 +95,21 @@ class ShelfPostersTestContent :
                     }
                 }
 
+                /** A PNG of [middle] with a [border] a tenth of its short side wide; both transparent by default. */
                 fun png(
                     width: Int,
                     height: Int,
+                    border: Int = 0,
+                    middle: Int = 0,
                 ): ByteArray {
+                    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                    val inset = minOf(width, height) / 10f
+                    Canvas(bitmap).apply {
+                        drawColor(border)
+                        drawRect(inset, inset, width - inset, height - inset, Paint().apply { color = middle })
+                    }
                     val out = ByteArrayOutputStream()
-                    Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).compress(Bitmap.CompressFormat.PNG, 100, out)
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                     return out.toByteArray()
                 }
 
@@ -108,15 +125,32 @@ class ShelfPostersTestContent :
 
                 val poster = poster("content://app.posters/1").shouldNotBeNull()
 
-                (poster.width to poster.height) shouldBe (480 to 270)
+                (poster.picture.width to poster.picture.height) shouldBe (480 to 270)
             }
 
-            test("a 4 by 3 poster decodes at the least size that covers the card, 480 x 360") {
-                serve("content://app.posters/2", png(1600, 1200))
+            test("a 3 by 2 poster, near the card's shape, decodes at the least size that covers the card, 480 x 320, with no fill") {
+                serve("content://app.posters/2", png(1500, 1000))
 
                 val poster = poster("content://app.posters/2").shouldNotBeNull()
 
-                (poster.width to poster.height) shouldBe (480 to 360)
+                (poster.picture.width to poster.picture.height) shouldBe (480 to 320)
+                poster.fill shouldBe Color.Unspecified
+            }
+
+            test("a square poster decodes at the size that fits in the card, 270 x 270") {
+                serve("content://app.posters/square", png(1080, 1080))
+
+                val poster = poster("content://app.posters/square").shouldNotBeNull()
+
+                (poster.picture.width to poster.picture.height) shouldBe (270 to 270)
+            }
+
+            test("a poster drawn whole with a flat coloured border fills round it with that colour") {
+                serve("content://app.posters/cover", png(1080, 1080, border = 0xFF1E88E5.toInt(), middle = 0xFFE53935.toInt()))
+
+                val poster = poster("content://app.posters/cover").shouldNotBeNull()
+
+                poster.fill shouldBe Color(0xFF1E88E5)
             }
 
             test("a poster smaller than the card keeps its size") {
@@ -124,7 +158,7 @@ class ShelfPostersTestContent :
 
                 val poster = poster("content://app.posters/3").shouldNotBeNull()
 
-                (poster.width to poster.height) shouldBe (320 to 180)
+                (poster.picture.width to poster.picture.height) shouldBe (320 to 180)
             }
 
             test("an https poster is never opened") {
@@ -156,9 +190,9 @@ class ShelfPostersTestContent :
             }
 
             test("a poster over the pixel cap gives none, and only its size is read") {
-                serve("content://app.posters/wide", png(14_500, 145))
+                serve("content://app.posters/wide", png(2300, 1079))
 
-                poster("content://app.posters/wide").shouldBeNull()
+                poster("content://app.posters/wide", 960, 540).shouldBeNull()
 
                 opened.getValue("content://app.posters/wide") shouldBe 1
             }

@@ -41,6 +41,7 @@ import dev.niltsiar.tvhome.core.model.InputArrival
 import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.core.model.ShelfKind
+import dev.niltsiar.tvhome.core.model.ShelfPoster
 import io.kotest.assertions.withClue
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.comparables.shouldBeLessThan
@@ -364,6 +365,22 @@ class AppShelfUiTestContent :
                 textOf("shelf:card-title", unmerged = true) shouldBe "Andor"
             }
 
+            test("a square poster shows whole on its card, between bars of its fill") {
+                val square = ImageBitmap(9, 9).also { Canvas(it).drawRect(Rect(0f, 0f, 9f, 9f), Paint().apply { color = Color.Red }) }
+                posters["content://pkg.1/poster/severance"] = ShelfPoster(square, fill = Color.Blue)
+                showHome()
+                hold()
+
+                val image = compose.onRoot().captureToImage().toPixelMap()
+                val bounds = compose.onNodeWithTag("shelf:card:0").getBoundsInRoot()
+                val row = ((bounds.top.value + bounds.bottom.value) / 2f * DENSITY).roundToInt()
+                val middle = image[((bounds.left.value + bounds.right.value) / 2f * DENSITY).roundToInt(), row]
+                // The card is 16:9, so a square poster leaves a bar of 7/32 of its width on each side.
+                val bar = image[((bounds.left.value + (bounds.right.value - bounds.left.value) / 10f) * DENSITY).roundToInt(), row]
+                withClue("middle $middle") { (middle.red - middle.blue) shouldBeIn 0.8f..1f }
+                withClue("bar $bar") { (bar.blue - bar.red) shouldBeIn 0.8f..1f }
+            }
+
             test("after a poster change a card without a picture asks for its poster again and a card with one does not") {
                 showHome()
                 hold()
@@ -421,9 +438,14 @@ private class AppShelfUiTestFixture : JUnit4RulesContext() {
     lateinit var viewModel: MoleculeHomeViewModel
 
     val red =
-        ImageBitmap(16, 9).also { image ->
-            Canvas(image).drawRect(Rect(0f, 0f, 16f, 9f), Paint().apply { color = Color.Red })
-        }
+        ShelfPoster(
+            ImageBitmap(16, 9).also { image ->
+                Canvas(image).drawRect(Rect(0f, 0f, 16f, 9f), Paint().apply { color = Color.Red })
+            },
+        )
+
+    /** Posters by URI in place of [red]. */
+    val posters = mutableMapOf<String, ShelfPoster>()
 
     val apps = (1..18).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") }
 
@@ -457,7 +479,7 @@ private class AppShelfUiTestFixture : JUnit4RulesContext() {
                 },
                 shelfPoster = { uri, _, _ ->
                     posterAsks += uri
-                    if (uri.startsWith("content://")) red else null
+                    posters[uri] ?: if (uri.startsWith("content://")) red else null
                 },
             )
         compose.setContent {

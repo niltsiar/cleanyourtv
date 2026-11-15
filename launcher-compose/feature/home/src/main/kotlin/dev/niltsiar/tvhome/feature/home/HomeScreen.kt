@@ -160,6 +160,7 @@ import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.OpenedAt
 import dev.niltsiar.tvhome.core.model.ShelfItem
+import dev.niltsiar.tvhome.core.model.ShelfPoster
 import dev.niltsiar.tvhome.core.model.Wallpaper
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.coroutineScope
@@ -437,7 +438,7 @@ public fun HomeScreen(
     onOpenLibrary: () -> Unit = {},
     inputsRequests: () -> Int = { 0 },
     onOpenShelfItem: (String, ShelfItem) -> Unit = { _, _ -> },
-    shelfPoster: suspend (String, Int, Int) -> ImageBitmap? = { _, _, _ -> null },
+    shelfPoster: suspend (String, Int, Int) -> ShelfPoster? = { _, _, _ -> null },
     shelfPosterChanges: Flow<Int> = emptyFlow(),
     onShelfRoom: (Boolean) -> Unit = {},
     overlays: @Composable () -> Unit = {},
