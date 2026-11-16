@@ -112,6 +112,8 @@ its full rules and limits.
 ## Screenshots
 
 These come from a Sony Bravia, with the launcher's English text.
+The App highlights cards come from a small test app that publishes the repository's own scene pictures, so no
+household's viewing shows.
 
 | Home | App library |
 |---|---|
@@ -120,6 +122,10 @@ These come from a Sony Bravia, with the launcher's English text.
 | Tile menu | Launcher settings |
 |---|---|
 | ![A tile's menu open over the dock, with Replace with another app, Move, Remove from Home and App info](screenshots/tile-menu.jpg) | ![The Launcher settings page, with options in groups under headings](screenshots/settings.jpg) |
+
+| App highlights | A square picture |
+|---|---|
+| ![Home with the Scenes app first in the dock and its cards above the dock, the first card focused and its line reading Aurora · 24 min left](screenshots/highlights.jpg) | ![The same row scrolled to Lighthouse, a square picture drawn whole on bars of its own edge colour](screenshots/highlights-square.jpg) |
 
 ## Build and install TV Home
 
