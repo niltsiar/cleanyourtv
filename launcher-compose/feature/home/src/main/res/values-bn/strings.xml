@@ -27,6 +27,7 @@
   <string name="move_dock_end">ডকের শেষে</string>
   <string name="move_grid_start">গ্রিডের শুরুতে</string>
   <string name="move_grid_end">গ্রিডের শেষে</string>
+  <string name="tile_add_to_home">হোমে যোগ করুন</string>
   <string name="tile_remove_from_home">হোম থেকে সরান</string>
   <string name="library_save_failed">শর্টকাটটি সেভ করা যায়নি</string>
   <string name="dock_edit">ডকের অ্যাপ বেছে নিন</string>

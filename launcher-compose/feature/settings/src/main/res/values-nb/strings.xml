@@ -33,6 +33,7 @@
   <string name="settings_press_feedback">Svar på trykk</string>
   <string name="settings_habit_hint">Vanetips</string>
   <string name="settings_input_arrival">Varsel om ny inngang</string>
+  <string name="settings_input_tiles">Inngangsfliser</string>
   <string name="settings_follow_theme">Følg temaet (tilbakestill lokale valg)</string>
   <string name="settings_tv_settings">TV-innstillinger</string>
   <string name="home_settings">Velg standard startskjerm</string>

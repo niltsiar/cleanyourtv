@@ -28,6 +28,7 @@
   <string name="move_dock_end">Кінець доку</string>
   <string name="move_grid_start">Початок сітки</string>
   <string name="move_grid_end">Кінець сітки</string>
+  <string name="tile_add_to_home">Додати на головний екран</string>
   <string name="tile_remove_from_home">Прибрати з головного екрана</string>
   <string name="library_save_failed">Не вдалося зберегти ярлик</string>
   <string name="dock_edit">Вибрати застосунки дока</string>

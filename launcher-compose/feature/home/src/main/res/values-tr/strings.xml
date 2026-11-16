@@ -27,6 +27,7 @@
   <string name="move_dock_end">Dock sonu</string>
   <string name="move_grid_start">Izgara başı</string>
   <string name="move_grid_end">Izgara sonu</string>
+  <string name="tile_add_to_home">Ana ekrana ekle</string>
   <string name="tile_remove_from_home">Ana ekrandan kaldır</string>
   <string name="library_save_failed">Kısayol kaydedilemedi</string>
   <string name="dock_edit">Dock uygulamalarını seç</string>

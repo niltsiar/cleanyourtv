@@ -33,6 +33,7 @@
   <string name="settings_press_feedback">Bosishga javob</string>
   <string name="settings_habit_hint">Odat maslahati</string>
   <string name="settings_input_arrival">Yangi manba haqida xabar</string>
+  <string name="settings_input_tiles">Manba plitkalari</string>
   <string name="settings_follow_theme">Mavzuga qaytish (TVdagi tanlovlarni bekor qilish)</string>
   <string name="settings_tv_settings">TV tizim sozlamalari</string>
   <string name="home_settings">Asosiy bosh ekranni tanlash</string>

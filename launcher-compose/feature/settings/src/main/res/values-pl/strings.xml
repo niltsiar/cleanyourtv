@@ -33,6 +33,7 @@
   <string name="settings_press_feedback">Reakcja na naciśnięcie</string>
   <string name="settings_habit_hint">Podpowiedź z nawyku</string>
   <string name="settings_input_arrival">Powiadomienie o nowym wejściu</string>
+  <string name="settings_input_tiles">Kafelki wejść</string>
   <string name="settings_follow_theme">Użyj motywu (zresetuj wybór)</string>
   <string name="settings_tv_settings">Ustawienia systemowe TV</string>
   <string name="home_settings">Domyślny ekran główny</string>

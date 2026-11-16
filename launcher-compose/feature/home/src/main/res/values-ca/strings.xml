@@ -27,6 +27,7 @@
   <string name="move_dock_end">Final del dock</string>
   <string name="move_grid_start">Inici de la graella</string>
   <string name="move_grid_end">Final de la graella</string>
+  <string name="tile_add_to_home">Afegeix a l’inici</string>
   <string name="tile_remove_from_home">Elimina de l’inici</string>
   <string name="library_save_failed">No s’ha pogut desar la drecera</string>
   <string name="dock_edit">Tria les apps del dock</string>

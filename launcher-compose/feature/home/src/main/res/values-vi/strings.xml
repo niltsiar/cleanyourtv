@@ -28,6 +28,7 @@
   <string name="move_dock_end">Cuối dock</string>
   <string name="move_grid_start">Đầu lưới</string>
   <string name="move_grid_end">Cuối lưới</string>
+  <string name="tile_add_to_home">Thêm vào màn hình chính</string>
   <string name="tile_remove_from_home">Bỏ khỏi màn hình chính</string>
   <string name="library_save_failed">Không lưu được lối tắt</string>
   <string name="dock_edit">Chọn ứng dụng trên dock</string>

@@ -33,6 +33,7 @@
   <string name="settings_press_feedback">تأكيد الضغط</string>
   <string name="settings_habit_hint">تلميح العادة</string>
   <string name="settings_input_arrival">تنبيه بمدخل جديد</string>
+  <string name="settings_input_tiles">مربعات المداخل</string>
   <string name="settings_follow_theme">اتّباع السمة (إعادة ضبط الخيارات)</string>
   <string name="settings_tv_settings">إعدادات نظام التلفاز</string>
   <string name="home_settings">الشاشة الرئيسية الافتراضية</string>

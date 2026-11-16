@@ -33,6 +33,7 @@
   <string name="settings_press_feedback">Odezva na stisk</string>
   <string name="settings_habit_hint">Nápověda podle zvyku</string>
   <string name="settings_input_arrival">Upozornění na nový vstup</string>
+  <string name="settings_input_tiles">Dlaždice vstupů</string>
   <string name="settings_follow_theme">Podle motivu (zrušit volby na TV)</string>
   <string name="settings_tv_settings">Systémová nastavení TV</string>
   <string name="home_settings">Výchozí domovská obrazovka</string>

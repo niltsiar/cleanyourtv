@@ -28,6 +28,7 @@
   <string name="move_dock_end">Конец дока</string>
   <string name="move_grid_start">Начало сетки</string>
   <string name="move_grid_end">Конец сетки</string>
+  <string name="tile_add_to_home">Добавить на главный экран</string>
   <string name="tile_remove_from_home">Убрать с главного экрана</string>
   <string name="library_save_failed">Не удалось сохранить ярлык</string>
   <string name="dock_edit">Выбрать приложения дока</string>

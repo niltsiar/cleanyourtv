@@ -28,6 +28,7 @@
   <string name="move_dock_end">Einde van dock</string>
   <string name="move_grid_start">Begin van raster</string>
   <string name="move_grid_end">Einde van raster</string>
+  <string name="tile_add_to_home">Toevoegen aan Home</string>
   <string name="tile_remove_from_home">Verwijderen van Home</string>
   <string name="library_save_failed">Kon de snelkoppeling niet opslaan</string>
   <string name="dock_edit">Dock-apps kiezen</string>

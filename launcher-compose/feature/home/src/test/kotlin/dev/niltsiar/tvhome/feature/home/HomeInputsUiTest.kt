@@ -26,6 +26,8 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.designsystem.HOLD_OK_MS
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.InputConnection
 import dev.niltsiar.tvhome.core.model.InputIcon
@@ -149,6 +151,55 @@ class HomeInputsUiTestContent :
                 compose.onNodeWithTag("menu").assertDoesNotExist()
                 effects shouldBe (listOf<HomeEffect>(HomeEffect.OpenInput(InputTarget.TvInput("tv/.Cec/HDMI2"))))
                 compose.onNodeWithContentDescription("Inputs").assertIsFocused()
+            }
+
+            test("the UP of a held OK on an input row does not switch input") {
+                showHome(config = InputTilesOn)
+                openList()
+
+                holdAndReleaseOk()
+
+                effects shouldBe emptyList()
+                compose.onNodeWithTag("menu:AddToHome").assertIsFocused()
+                compose.onNodeWithText("Add to Home").assertExists()
+            }
+
+            test("a short OK on an input row switches input at once with input_tiles on") {
+                showHome(config = InputTilesOn)
+                openList()
+
+                press(Key.DirectionCenter)
+
+                effects shouldBe (listOf<HomeEffect>(HomeEffect.OpenInput(InputTarget.TvInput("tv/.Hdmi/HW1"))))
+                compose.onNodeWithTag("menu:AddToHome").assertDoesNotExist()
+            }
+
+            test("Back from the pin menu returns focus to the row it was opened on") {
+                showHome(config = InputTilesOn)
+                openList()
+                press(Key.DirectionDown)
+                holdAndReleaseOk()
+                compose.onNodeWithTag("menu:AddToHome").assertIsFocused()
+
+                back()
+
+                compose.onNodeWithTag("menu:AddToHome").assertDoesNotExist()
+                compose.onNodeWithTag("input:1").assertIsFocused()
+                effects shouldBe emptyList()
+            }
+
+            test("the Live TV and source panel rows open no pin menu") {
+                showHome(InputsMenu(available = true, rows = listOf(InputRow.Panel, InputRow.LiveTv)), InputTilesOn)
+                openList()
+
+                holdAndReleaseOk()
+                compose.onNodeWithTag("menu:AddToHome").assertDoesNotExist()
+                openList()
+                press(Key.DirectionDown)
+                holdAndReleaseOk()
+
+                compose.onNodeWithTag("menu:AddToHome").assertDoesNotExist()
+                effects shouldBe listOf(HomeEffect.OpenInput(InputTarget.SourcePanel), HomeEffect.OpenInput(InputTarget.LiveTv))
             }
 
             test("more inputs shows the folded rows and moves focus to the first of them") {
@@ -284,9 +335,15 @@ private class HomeInputsUiTestFixture : JUnit4RulesContext() {
 
     var inputsRequests by mutableIntStateOf(0)
 
-    fun showHome(inputs: InputsMenu = FourPorts) = showHome(flowOf(inputs))
+    fun showHome(
+        inputs: InputsMenu = FourPorts,
+        config: TvConfig = SixColumns,
+    ) = showHome(flowOf(inputs), config)
 
-    fun showHome(inputs: Flow<InputsMenu>) {
+    fun showHome(
+        inputs: Flow<InputsMenu>,
+        config: TvConfig = SixColumns,
+    ) {
         val sources = sources(inputs = inputs)
         // A TV has no touch screen; the native graphics mode starts in touch mode, where nothing takes key focus.
         compose.runOnUiThread {
@@ -295,14 +352,14 @@ private class HomeInputsUiTestFixture : JUnit4RulesContext() {
         }
         compose.setContent {
             TvTheme {
-                val viewModel = rememberHomeViewModel(sources, SixColumns, effects)
+                val viewModel = rememberHomeViewModel(sources, config, effects)
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(
                     state = { state.value },
-                    layout = SixColumns.homeLayout(),
+                    layout = config.homeLayout(),
                     onFocus = viewModel::onFocus,
                     onClick = {},
-                    topBar = SixColumns.topBarLayout(),
+                    topBar = config.topBarLayout(),
                     actions = viewModel.actions,
                     inputsRequests = { inputsRequests },
                 )
@@ -314,6 +371,15 @@ private class HomeInputsUiTestFixture : JUnit4RulesContext() {
 
     fun press(key: Key) {
         compose.onRoot().performKeyInput { pressKey(key) }
+        compose.waitForIdle()
+    }
+
+    /** Holds OK past the long-press time, then lets it go. */
+    fun holdAndReleaseOk() {
+        compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
+        compose.mainClock.advanceTimeBy(HOLD_OK_MS + 50)
+        compose.waitForIdle()
+        compose.onRoot().performKeyInput { keyUp(Key.DirectionCenter) }
         compose.waitForIdle()
     }
 

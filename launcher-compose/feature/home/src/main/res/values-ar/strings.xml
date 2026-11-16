@@ -27,6 +27,7 @@
   <string name="move_dock_end">نهاية الشريط</string>
   <string name="move_grid_start">بداية الشبكة</string>
   <string name="move_grid_end">نهاية الشبكة</string>
+  <string name="tile_add_to_home">إضافة إلى الرئيسية</string>
   <string name="tile_remove_from_home">إزالة من الرئيسية</string>
   <string name="library_save_failed">تعذر حفظ الاختصار</string>
   <string name="dock_edit">اختيار تطبيقات شريط التطبيقات</string>

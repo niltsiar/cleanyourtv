@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,7 +55,9 @@ import dev.niltsiar.tvhome.core.designsystem.GlassDropdown
 import dev.niltsiar.tvhome.core.designsystem.MenuDivider
 import dev.niltsiar.tvhome.core.designsystem.MenuDividerHeight
 import dev.niltsiar.tvhome.core.designsystem.MenuRowSpacing
+import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.designsystem.holdOk
 import dev.niltsiar.tvhome.core.designsystem.menuRowShape
 import dev.niltsiar.tvhome.core.model.InputConnection
 import dev.niltsiar.tvhome.core.model.InputIcon
@@ -94,6 +97,8 @@ private const val HALO_GROWTH = 1.8f
  * by a pulse unless [animated] is off. "More inputs" shows the rows [rows] folds. The Live TV row comes last.
  * Focus opens on the first connected port, as the TV does not say which input is active, else on the first row.
  * Rows are tagged `input:<n>` by position, the list `menu`.
+ * With a [hold], a held OK or MENU on an HDMI or AV row calls [onHold] with the row and its bounds in the root. While
+ * [pinMenuOpen] the list lets focus go to that menu, and once it goes false with the list still open, focus returns to the row.
  */
 @Composable
 internal fun InputsMenu(
@@ -103,8 +108,21 @@ internal fun InputsMenu(
     animated: Boolean,
     onPick: (InputTarget) -> Unit,
     modifier: Modifier = Modifier,
+    hold: OkHold? = null,
+    onHold: (InputRow.Port, Rect) -> Unit = { _, _ -> },
+    pinMenuOpen: () -> Boolean = { false },
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val heldRow = remember { FocusRequester() }
+    var held by remember { mutableStateOf<InputTarget?>(null) }
+    LaunchedEffect(Unit) {
+        snapshotFlow(pinMenuOpen).collect { open ->
+            if (open || held == null) return@collect
+            // The menu keeps focus until it has left the screen.
+            withFrameNanos { }
+            runCatching { heldRow.requestFocus() }
+        }
+    }
     val shown by remember { derivedStateOf { rows().visible(expanded) } }
     val first = remember { FocusRequester() }
     val afterMore = remember { FocusRequester() }
@@ -138,6 +156,7 @@ internal fun InputsMenu(
         edgeMargin = ScreenMargin,
         bottomLimit = bottomLimit,
         childHeights = childHeights,
+        keepsFocus = { !pinMenuOpen() },
     ) {
         shown.forEachIndexed { index, row ->
             val focus =
@@ -148,7 +167,19 @@ internal fun InputsMenu(
                 }
             when (row) {
                 is InputRow.Port -> {
-                    InputItem(row.icon.drawable(), row.label, row.connection, pulse, "input:$index", { onPick(row.target) }, focus)
+                    val rowFocus =
+                        if (hold != null && row.target is InputTarget.TvInput) {
+                            val opens = { bounds: Rect ->
+                                held = row.target
+                                onHold(row, bounds)
+                            }
+                            focus
+                                .then(if (row.target == held) Modifier.focusRequester(heldRow) else Modifier)
+                                .holdOk(hold, onHold = opens, onMenuKey = opens)
+                        } else {
+                            focus
+                        }
+                    InputItem(row.icon.drawable(), row.label, row.connection, pulse, "input:$index", { onPick(row.target) }, rowFocus)
                 }
 
                 InputRow.Panel -> {

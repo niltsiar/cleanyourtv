@@ -28,6 +28,7 @@
   <string name="move_dock_end">독 끝</string>
   <string name="move_grid_start">그리드 처음</string>
   <string name="move_grid_end">그리드 끝</string>
+  <string name="tile_add_to_home">홈에 추가</string>
   <string name="tile_remove_from_home">홈에서 삭제</string>
   <string name="library_save_failed">바로가기를 저장할 수 없음</string>
   <string name="dock_edit">독 앱 선택</string>

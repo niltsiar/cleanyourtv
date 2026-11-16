@@ -29,6 +29,7 @@
   <string name="move_dock_end">Slutet av favoritraden</string>
   <string name="move_grid_start">Början av rutnätet</string>
   <string name="move_grid_end">Slutet av rutnätet</string>
+  <string name="tile_add_to_home">Lägg till på startskärmen</string>
   <string name="tile_remove_from_home">Ta bort från startskärmen</string>
   <string name="library_save_failed">Kunde inte spara genvägen</string>
   <string name="dock_edit">Välj appar i favoritraden</string>

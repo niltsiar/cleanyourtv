@@ -1,7 +1,9 @@
 package dev.niltsiar.tvhome.feature.home
 
 import androidx.compose.runtime.Immutable
+import dev.niltsiar.tvhome.core.model.InputRow
 import dev.niltsiar.tvhome.core.model.InputTarget
+import dev.niltsiar.tvhome.core.model.InputTile
 
 /** One row of the tile menu or the Settings menu. */
 public enum class MenuRow {
@@ -14,6 +16,7 @@ public enum class MenuRow {
     GridStart,
     GridEnd,
     RemoveFromHome,
+    AddToHome,
     AppInfo,
     LauncherSettings,
     NativeSettings,
@@ -35,6 +38,19 @@ public data class HomeMenu(
     val focus: MenuRow? = null,
 )
 
+/**
+ * The menu a held OK or MENU on an Inputs row opens: Add to Home, which pins [tile] under the row's [label], or Remove from
+ * Home while the pin of id [pinned] stands for the row, as its tile shows.
+ */
+@Immutable
+public data class InputPinMenu(
+    val tile: InputTile,
+    val label: String,
+    val pinned: String?,
+) {
+    val rows: List<MenuRow> get() = listOf(if (pinned == null) MenuRow.AddToHome else MenuRow.RemoveFromHome)
+}
+
 /** The places "Move to" offers, in the order it lists them. */
 internal val MovePlaces: List<MenuRow> = listOf(MenuRow.DockStart, MenuRow.DockEnd, MenuRow.GridStart, MenuRow.GridEnd)
 
@@ -49,6 +65,9 @@ public class HomeMenuActions(
     /** OK on the Inputs button. */
     public val onInputsPress: () -> Unit = {},
     public val onInputPick: (InputTarget) -> Unit = {},
+    /** A held OK or MENU on a row of the Inputs list. */
+    public val onInputMenu: (InputRow.Port) -> Unit = {},
+    public val onInputMenuPick: (MenuRow) -> Unit = {},
     public val onMenuPick: (MenuRow) -> Unit = {},
     /** Back, while a menu or a mode is open. */
     public val onBack: () -> Unit = {},

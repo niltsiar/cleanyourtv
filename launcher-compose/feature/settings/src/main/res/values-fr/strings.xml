@@ -33,6 +33,7 @@
   <string name="settings_press_feedback">Retour à l\'appui</string>
   <string name="settings_habit_hint">Indice d\'habitude</string>
   <string name="settings_input_arrival">Alerte nouvelle source</string>
+  <string name="settings_input_tiles">Tuiles des sources</string>
   <string name="settings_follow_theme">Suivre le thème (réinitialiser les choix)</string>
   <string name="settings_tv_settings">Paramètres du téléviseur</string>
   <string name="home_settings">Accueil par défaut</string>

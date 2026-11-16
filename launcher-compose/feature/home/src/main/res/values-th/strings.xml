@@ -25,6 +25,7 @@
   <string name="move_dock_end">ท้ายแถบแอป</string>
   <string name="move_grid_start">ต้นตาราง</string>
   <string name="move_grid_end">ท้ายตาราง</string>
+  <string name="tile_add_to_home">เพิ่มในหน้าหลัก</string>
   <string name="tile_remove_from_home">นำออกจากหน้าหลัก</string>
   <string name="library_save_failed">บันทึกทางลัดไม่สำเร็จ</string>
   <string name="dock_edit">เลือกแอปบนแถบแอป</string>

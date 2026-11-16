@@ -33,6 +33,7 @@
   <string name="settings_press_feedback">Painalluksen palaute</string>
   <string name="settings_habit_hint">Tapavihje</string>
   <string name="settings_input_arrival">Ilmoitus uudesta lähteestä</string>
+  <string name="settings_input_tiles">Lähderuudut</string>
   <string name="settings_follow_theme">Noudata teemaa (nollaa televisiossa tehdyt valinnat)</string>
   <string name="settings_tv_settings">Television järjestelmäasetukset</string>
   <string name="home_settings">Valitse oletuskotinäkymä</string>

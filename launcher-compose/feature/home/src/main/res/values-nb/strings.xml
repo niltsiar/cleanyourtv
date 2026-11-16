@@ -28,6 +28,7 @@
   <string name="move_dock_end">Slutten av favorittraden</string>
   <string name="move_grid_start">Starten av rutenettet</string>
   <string name="move_grid_end">Slutten av rutenettet</string>
+  <string name="tile_add_to_home">Legg til på startskjermen</string>
   <string name="tile_remove_from_home">Fjern fra startskjermen</string>
   <string name="library_save_failed">Kunne ikke lagre snarveien</string>
   <string name="dock_edit">Velg apper i favorittraden</string>

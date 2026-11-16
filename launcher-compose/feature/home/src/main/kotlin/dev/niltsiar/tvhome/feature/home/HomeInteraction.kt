@@ -12,6 +12,7 @@ import dev.niltsiar.tvhome.core.model.AppList
 import dev.niltsiar.tvhome.core.model.InputArrival
 import dev.niltsiar.tvhome.core.model.InputRow
 import dev.niltsiar.tvhome.core.model.InputTarget
+import dev.niltsiar.tvhome.core.model.InputTile
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NowPlayingItem
 import dev.niltsiar.tvhome.core.model.ShelfItem
@@ -96,6 +97,10 @@ internal class HomeInteraction(
     var inputsOpen by mutableStateOf(false)
         private set
     private var inputsAsked = false
+
+    /** The Add to Home or Remove from Home menu over the open list, null while none is. */
+    var inputMenu by mutableStateOf<InputPinMenu?>(null)
+        private set
 
     /** What each input tile of [list] shows now, from what the TV lists. Unlike a new [list], a new value ends no session. */
     val inputTiles: Map<String, InputTileLive> by derivedStateOf { inputTilesLive(list.apps, inputs?.rows.orEmpty()) }
@@ -294,6 +299,14 @@ internal class HomeInteraction(
                 pickInput(event.target)
             }
 
+            is HomeEvent.InputMenu -> {
+                openInputMenu(event.row)
+            }
+
+            is HomeEvent.InputMenuPick -> {
+                pickInputMenu(event.row)
+            }
+
             is HomeEvent.MenuPick -> {
                 pick(event.row)
             }
@@ -451,6 +464,7 @@ internal class HomeInteraction(
 
     private suspend fun closeAll() {
         menu = null
+        inputMenu = null
         inputsOpen = false
         inputsAsked = false
         end()
@@ -509,6 +523,29 @@ internal class HomeInteraction(
         if (!inputsOpen) return
         inputsOpen = false
         effect(HomeEffect.OpenInput(target))
+        focus(INPUTS_FOCUS)
+    }
+
+    /**
+     * A held OK or MENU on an HDMI or AV [row] of the open list, with input_tiles and the Inputs pill on: Add to Home, or
+     * Remove from Home when a pin stands for the row, as [resolvePin] matches a tile to its row.
+     */
+    private fun openInputMenu(row: InputRow.Port) {
+        val target = row.target
+        if (!inputsOpen || inputMenu != null || !layout.inputPins || target !is InputTarget.TvInput) return
+        val rows = inputs?.rows.orEmpty()
+        val pinned = list.apps.firstNotNullOfOrNull { app -> app.input?.takeIf { resolvePin(it, rows) == row } }
+        inputMenu = InputPinMenu(InputTile(target.id, row.port, row.icon), row.label, pinned?.id)
+    }
+
+    /** Pins or unpins the row the menu is for, closes the menu and the list, and returns focus to the Inputs button. */
+    private suspend fun pickInputMenu(pick: MenuRow) {
+        val open = inputMenu?.takeIf { pick in it.rows } ?: return
+        inputMenu = null
+        inputsOpen = false
+        val pinned = open.pinned
+        val saved = if (pinned != null) sources.unpinInput(pinned) else sources.pinInput(open.tile, open.label)
+        if (!saved) effect(HomeEffect.LibrarySaveFailed)
         focus(INPUTS_FOCUS)
     }
 
@@ -593,6 +630,10 @@ internal class HomeInteraction(
                 focus(key)
             }
 
+            MenuRow.AddToHome -> {
+                focus(key)
+            }
+
             MenuRow.AppInfo -> {
                 shown.all.firstOrNull { it.key == key }?.let { effect(HomeEffect.OpenAppInfo(it.packageName)) }
                 focus(key)
@@ -628,6 +669,10 @@ internal class HomeInteraction(
         val current = session
         val edit = current?.dockEdit
         when {
+            inputMenu != null -> {
+                inputMenu = null
+            }
+
             inputsOpen -> {
                 inputsOpen = false
                 focus(INPUTS_FOCUS)

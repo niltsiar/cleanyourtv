@@ -40,6 +40,9 @@ internal val Evening: LocalDateTime = LocalDateTime.of(2026, 11, 3, 20, 15)
 
 internal val SixColumns = TvConfig(columns = 6)
 
+/** Six columns with input_tiles on: a held OK on an Inputs row can pin it. */
+internal val InputTilesOn = SixColumns.copy(inputTiles = true)
+
 internal fun homeApps(
     apps: List<AppEntry> = NineApps,
     docked: Int = 0,
@@ -69,6 +72,7 @@ internal fun sources(
     shelfPoster: suspend (String, Int, Int) -> ShelfPoster? = { _, _, _ -> null },
     nowPlaying: (String) -> Flow<NowPlayingItem?> = { flowOf(null) },
     unpinInput: suspend (String) -> Boolean = { true },
+    pinInput: suspend (InputTile, String) -> Boolean = { _, _ -> true },
 ) = HomeSources(
     apps,
     clock,
@@ -92,6 +96,7 @@ internal fun sources(
     shelfPoster = shelfPoster,
     nowPlaying = nowPlaying,
     unpinInput = unpinInput,
+    pinInput = pinInput,
 )
 
 internal fun port(

@@ -7,7 +7,9 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
 import dev.niltsiar.tvhome.core.model.InputArrival
+import dev.niltsiar.tvhome.core.model.InputRow
 import dev.niltsiar.tvhome.core.model.InputTarget
+import dev.niltsiar.tvhome.core.model.InputTile
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.NowPlayingItem
@@ -41,6 +43,7 @@ import java.util.Locale
  * [appShelf] is the app shelf of the focused dock tile (app_shelf), null while it has none or has not held focus long enough.
  * [inputTiles] is what each input tile shows now, by key, apart from the app list so a change ends no session; [focusedInput] is
  * the focused tile's when it is an input tile, whose line then says its state and never when Home last opened it.
+ * [inputMenu] is the small menu a held OK on an Inputs row opened over the list (input_tiles), null while none is.
  * [config] is the config this state was made with. The layouts are read from it, so they always match the split of [dock] and
  * [grid].
  */
@@ -75,6 +78,7 @@ public data class HomeUiState(
     val appShelf: AppShelf? = null,
     val inputTiles: Map<String, InputTileLive> = emptyMap(),
     val focusedInput: InputTileLive? = null,
+    val inputMenu: InputPinMenu? = null,
     val config: TvConfig = TvConfig(),
 )
 
@@ -246,6 +250,8 @@ public class HomeSources(
     public val nowPlaying: (String) -> Flow<NowPlayingItem?> = { flowOf(null) },
     /** Unpins the input of this id from Home. False when it was not written. */
     public val unpinInput: suspend (String) -> Boolean = { false },
+    /** Pins an input to Home under the name its row reads, at the end of the grid. False when it was not written. */
+    public val pinInput: suspend (InputTile, String) -> Boolean = { _, _ -> false },
 )
 
 internal sealed interface HomeEvent {
@@ -290,6 +296,16 @@ internal sealed interface HomeEvent {
 
     data class PickInput(
         val target: InputTarget,
+    ) : HomeEvent
+
+    /** A held OK or the MENU key on this row of the Inputs list. */
+    data class InputMenu(
+        val row: InputRow.Port,
+    ) : HomeEvent
+
+    /** A pick in the menu [InputMenu] opened. */
+    data class InputMenuPick(
+        val row: MenuRow,
     ) : HomeEvent
 
     data class MenuPick(
@@ -397,6 +413,7 @@ internal fun homeUiState(
     opening: Opening? = null,
     appShelf: AppShelf? = null,
     inputTiles: Map<String, InputTileLive> = emptyMap(),
+    inputMenu: InputPinMenu? = null,
     config: TvConfig = TvConfig(),
 ): HomeUiState {
     val focused = apps.all.firstOrNull { it.key == focusedKey } ?: apps.all.firstOrNull()
@@ -438,6 +455,7 @@ internal fun homeUiState(
         appShelf = appShelf,
         inputTiles = inputTiles,
         focusedInput = focusedInput,
+        inputMenu = inputMenu,
         config = config,
     )
 }

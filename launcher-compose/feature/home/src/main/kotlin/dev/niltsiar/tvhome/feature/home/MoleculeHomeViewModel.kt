@@ -104,6 +104,8 @@ public class MoleculeHomeViewModel(
             onInputs = { events.trySend(HomeEvent.OpenInputs) },
             onInputsPress = { events.trySend(HomeEvent.PressInputs) },
             onInputPick = { events.trySend(HomeEvent.PickInput(it)) },
+            onInputMenu = { events.trySend(HomeEvent.InputMenu(it)) },
+            onInputMenuPick = { events.trySend(HomeEvent.InputMenuPick(it)) },
             onMenuPick = { events.trySend(HomeEvent.MenuPick(it)) },
             onBack = { events.trySend(HomeEvent.Back) },
             onToggleReorder = { events.trySend(HomeEvent.ToggleReorder) },

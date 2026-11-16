@@ -36,6 +36,7 @@ public enum class SettingsRowId {
     PressFeedback,
     HabitHint,
     InputArrival,
+    InputTiles,
 }
 
 /** What an option says: a number or a string of the module. */

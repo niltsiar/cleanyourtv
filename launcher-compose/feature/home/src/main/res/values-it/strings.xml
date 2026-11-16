@@ -29,6 +29,7 @@
   <string name="move_dock_end">Fine del dock</string>
   <string name="move_grid_start">Inizio della griglia</string>
   <string name="move_grid_end">Fine della griglia</string>
+  <string name="tile_add_to_home">Aggiungi a Home</string>
   <string name="tile_remove_from_home">Rimuovi da Home</string>
   <string name="library_save_failed">Impossibile salvare il collegamento</string>
   <string name="dock_edit">Scegli le app del dock</string>

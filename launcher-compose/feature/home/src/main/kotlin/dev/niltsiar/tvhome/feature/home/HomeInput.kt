@@ -63,6 +63,9 @@ internal class HomeInput(
         anchor.value = bounds.translate(0f, -groupShift())
     }
 
+    /** Where the Inputs row that opened the Add to Home menu is, in the root's coordinates. The menu sits beside it. */
+    val inputRowBounds = mutableStateOf(Rect.Zero)
+
     /** Where the Inputs button is, in the root's coordinates; zero until it is laid out. The Inputs list hangs from it. */
     val inputsBounds = mutableStateOf(Rect.Zero)
 

@@ -28,6 +28,7 @@
   <string name="move_dock_end">Telakan loppuun</string>
   <string name="move_grid_start">Ruudukon alkuun</string>
   <string name="move_grid_end">Ruudukon loppuun</string>
+  <string name="tile_add_to_home">Lisää kotinäkymään</string>
   <string name="tile_remove_from_home">Poista kotinäkymästä</string>
   <string name="library_save_failed">Pikakuvaketta ei voitu tallentaa</string>
   <string name="dock_edit">Valitse telakan sovellukset</string>

@@ -101,6 +101,7 @@ class SettingsPresenterTestContent :
                         RowSpec(SettingsRowId.PressFeedback, onOff) { it.pressFeedback },
                         RowSpec(SettingsRowId.HabitHint, onOff) { it.habitHint },
                         RowSpec(SettingsRowId.InputArrival, onOff) { it.inputArrival },
+                        RowSpec(SettingsRowId.InputTiles, onOff) { it.inputTiles },
                     )
 
                 fun SettingsHarness.openWallpaperPicker(): WallpaperPicker {
@@ -179,8 +180,20 @@ class SettingsPresenterTestContent :
                             SettingsRowId.PressFeedback,
                             SettingsRowId.HabitHint,
                             SettingsRowId.InputArrival,
+                            SettingsRowId.InputTiles,
                         ),
                     )
+            }
+
+            test("the Input tiles row stores input_tiles") {
+                val settings = settings()
+                settings.row(SettingsRowId.InputTiles).selected shouldBe onOff.indexOf(false)
+
+                settings.pick(SettingsRowId.InputTiles, onOff.indexOf(true))
+                settings.awaitState { it.row(SettingsRowId.InputTiles).selected == onOff.indexOf(true) }
+
+                settings.config.inputTiles shouldBe true
+                settings.state.followsTheme.shouldBeFalse()
             }
 
             test("a row selects the option the theme holds and shows none for a value it does not offer") {
@@ -610,4 +623,4 @@ private const val LAST_OPTIONS =
     "app_library": false,
     "library_least_used": false, "unused_fade_days": 90, "home_idle_clock_minutes": 60, "back_opens_clock": false,
     "clock_wallpaper": false, "reduced_motion": false, "focus_overshoot": false, "press_feedback": false, "habit_hint": false,
-    "input_arrival": false}"""
+    "input_arrival": false, "input_tiles": false}"""

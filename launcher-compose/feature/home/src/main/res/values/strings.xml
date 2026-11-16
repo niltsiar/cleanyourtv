@@ -29,6 +29,7 @@
   <string name="move_dock_end">End of dock</string>
   <string name="move_grid_start">Start of grid</string>
   <string name="move_grid_end">End of grid</string>
+  <string name="tile_add_to_home">Add to Home</string>
   <string name="tile_remove_from_home">Remove from Home</string>
   <string name="library_save_failed">Could not save the shortcut</string>
   <string name="dock_edit">Choose dock apps</string>

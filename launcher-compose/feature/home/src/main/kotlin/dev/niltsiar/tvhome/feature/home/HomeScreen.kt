@@ -476,6 +476,7 @@ public fun HomeScreen(
         }
     val menu by remember { derivedStateOf { currentState.value().menu } }
     val inputsOpen by remember { derivedStateOf { currentState.value().inputsOpen } }
+    val inputMenu by remember { derivedStateOf { currentState.value().inputMenu } }
     val menuDockTile by remember {
         derivedStateOf {
             currentState.value().let { shown ->
@@ -739,7 +740,16 @@ public fun HomeScreen(
                     bottomLimit = windowHeight * dim.band.top - InputsTrayClearance,
                     animated = topBar.animated,
                     onPick = input.actions.onInputPick,
+                    hold = if (layout.inputPins) input.hold else null,
+                    onHold = { row, bounds ->
+                        input.inputRowBounds.value = bounds
+                        input.actions.onInputMenu(row)
+                    },
+                    pinMenuOpen = { currentState.value().inputMenu != null },
                 )
+            }
+            inputMenu?.let { open ->
+                key(open) { InputPinOverlay(open, input.inputRowBounds, onPick = input.actions.onInputMenuPick) }
             }
             overlays()
         }

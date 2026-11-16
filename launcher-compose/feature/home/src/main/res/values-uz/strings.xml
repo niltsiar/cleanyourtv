@@ -28,6 +28,7 @@
   <string name="move_dock_end">Dock oxiri</string>
   <string name="move_grid_start">Toʻr boshi</string>
   <string name="move_grid_end">Toʻr oxiri</string>
+  <string name="tile_add_to_home">Bosh ekranga qoʻshish</string>
   <string name="tile_remove_from_home">Bosh ekrandan olib tashlash</string>
   <string name="library_save_failed">Yorliq saqlanmadi</string>
   <string name="dock_edit">Dock ilovalarini tanlash</string>

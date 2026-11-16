@@ -29,6 +29,7 @@
   <string name="move_dock_end">Slut af dock</string>
   <string name="move_grid_start">Start af gitter</string>
   <string name="move_grid_end">Slut af gitter</string>
+  <string name="tile_add_to_home">Føj til startskærm</string>
   <string name="tile_remove_from_home">Fjern fra startskærm</string>
   <string name="dock_edit">Vælg apps i dock</string>
   <string name="reorder">Flyt apps</string>

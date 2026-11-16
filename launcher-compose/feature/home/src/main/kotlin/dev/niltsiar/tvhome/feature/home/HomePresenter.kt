@@ -182,6 +182,7 @@ internal fun homePresenter(
         opening = remember(launch) { launch?.let { Opening(it.label, it.says) } },
         appShelf = interaction.appShelf,
         inputTiles = inputTiles,
+        inputMenu = interaction.inputMenu,
         config = current,
     )
 }

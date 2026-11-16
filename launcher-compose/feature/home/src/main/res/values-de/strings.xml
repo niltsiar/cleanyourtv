@@ -25,6 +25,7 @@
   <string name="move_dock_end">Ende des Docks</string>
   <string name="move_grid_start">Anfang des Rasters</string>
   <string name="move_grid_end">Ende des Rasters</string>
+  <string name="tile_add_to_home">Zum Startbildschirm</string>
   <string name="tile_remove_from_home">Vom Startbildschirm entfernen</string>
   <string name="library_save_failed">Verknüpfung konnte nicht gespeichert werden</string>
   <string name="dock_edit">Dock-Apps wählen</string>

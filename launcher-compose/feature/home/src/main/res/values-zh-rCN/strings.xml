@@ -28,6 +28,7 @@
   <string name="move_dock_end">程序坞末尾</string>
   <string name="move_grid_start">网格开头</string>
   <string name="move_grid_end">网格末尾</string>
+  <string name="tile_add_to_home">添加到主屏幕</string>
   <string name="tile_remove_from_home">从主屏幕隐藏</string>
   <string name="library_save_failed">无法保存快捷方式</string>
   <string name="dock_edit">选择程序坤应用</string>

@@ -99,6 +99,10 @@ Motion and hints:
   private log of the apps it opens. With the option off, Home logs nothing.
 - **Input arrival.** When you switch on a device on an HDMI port while Home shows, the Inputs button names the device and
   its port. OK on the button switches to that input. Home never switches input by itself.
+- **Input tiles.** Hold OK on an HDMI or AV row of the Inputs list and pick Add to Home: the input gets a tile at the end of
+  the grid, which you can move into the dock like an app. The tile shows the device's name and a dot when the TV tells
+  whether a device is connected, and OK on it switches to that input. Hold OK on the row again, or use the tile's menu, to
+  remove it.
 
 The System group at the end resets the page's choices to the theme's, opens the TV's home picker and opens the TV's own
 settings.

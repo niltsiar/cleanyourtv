@@ -22,6 +22,7 @@ private fun MenuRow.label(): Int =
         MenuRow.GridStart -> R.string.move_grid_start
         MenuRow.GridEnd -> R.string.move_grid_end
         MenuRow.RemoveFromHome -> R.string.tile_remove_from_home
+        MenuRow.AddToHome -> R.string.tile_add_to_home
         MenuRow.AppInfo -> R.string.app_info
         MenuRow.LauncherSettings -> R.string.launcher_settings
         MenuRow.NativeSettings -> R.string.native_settings
@@ -106,4 +107,29 @@ internal fun MenuOverlay(
             focusRow = focusRow,
         )
     }
+}
+
+/**
+ * The Add to Home or Remove from Home menu of an Inputs row at [anchor]: one row beside it, tagged `menu:<row name>`, on
+ * the side of the row that has room, which is the left for a list that ends at the top bar's right edge.
+ */
+@Composable
+internal fun InputPinOverlay(
+    menu: InputPinMenu,
+    anchor: State<Rect>,
+    onPick: (MenuRow) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    GlassMenu(
+        menu.rows,
+        anchor,
+        alignEnd = true,
+        label = MenuRow::label,
+        rowTag = { "menu:${it.name}" },
+        onPick = onPick,
+        modifier = modifier,
+        topLimit = MenuTopLimit,
+        beside = BesideAnchor(top = MenuTopLimit, fallbackTop = MenuTopLimit, gap = MenuClearance, bottomMargin = TileMenuBottom),
+        rowHeight = SettingsRowHeight,
+    )
 }

@@ -28,6 +28,7 @@
   <string name="move_dock_end">Akhir dock</string>
   <string name="move_grid_start">Awal kisi</string>
   <string name="move_grid_end">Akhir kisi</string>
+  <string name="tile_add_to_home">Tambah ke Beranda</string>
   <string name="tile_remove_from_home">Hapus dari Beranda</string>
   <string name="library_save_failed">Tidak dapat menyimpan pintasan</string>
   <string name="dock_edit">Pilih aplikasi Dock</string>

@@ -33,6 +33,7 @@
   <string name="settings_press_feedback">Resposta ao premir</string>
   <string name="settings_habit_hint">Sugestão de hábito</string>
   <string name="settings_input_arrival">Aviso de nova entrada</string>
+  <string name="settings_input_tiles">Entradas no Início</string>
   <string name="settings_follow_theme">Seguir o tema (repõe as escolhas feitas na TV)</string>
   <string name="settings_tv_settings">Definições do sistema da TV</string>
   <string name="home_settings">Escolher o ecrã inicial predefinido</string>

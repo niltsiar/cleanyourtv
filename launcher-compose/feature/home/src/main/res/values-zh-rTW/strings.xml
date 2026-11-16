@@ -28,6 +28,7 @@
   <string name="move_dock_end">Dock 結尾</string>
   <string name="move_grid_start">格狀排列開頭</string>
   <string name="move_grid_end">格狀排列結尾</string>
+  <string name="tile_add_to_home">新增至主畫面</string>
   <string name="tile_remove_from_home">從主畫面移除</string>
   <string name="library_save_failed">無法儲存捷徑</string>
   <string name="dock_edit">選擇 Dock 應用程式</string>

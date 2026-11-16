@@ -27,6 +27,7 @@
   <string name="move_dock_end">Koniec docku</string>
   <string name="move_grid_start">Początek siatki</string>
   <string name="move_grid_end">Koniec siatki</string>
+  <string name="tile_add_to_home">Dodaj do ekranu głównego</string>
   <string name="tile_remove_from_home">Usuń z ekranu głównego</string>
   <string name="library_save_failed">Nie udało się zapisać skrótu</string>
   <string name="dock_edit">Wybierz aplikacje w docku</string>

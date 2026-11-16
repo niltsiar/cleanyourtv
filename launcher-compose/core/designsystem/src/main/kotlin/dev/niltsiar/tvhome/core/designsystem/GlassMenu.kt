@@ -150,7 +150,7 @@ public fun <T> GlassMenu(
  * does. The panel is as wide as its widest row, from [minWidth] to [maxWidth], and stays [edgeMargin] inside the sides of
  * the screen and never above [topLimit] (a top bar to keep clear), or goes [beside] the anchor. [padding] is the space
  * inside the panel's edge. It rises and fades in with a spring, then focus goes to [firstFocus], which the caller puts on
- * one of the rows; focus cannot leave the panel. With [above] the panel sits 10 dp above the anchor when it fits
+ * one of the rows; focus cannot leave the panel while [keepsFocus] says so. With [above] the panel sits 10 dp above the anchor when it fits
  * there, before it tries below; [anchorGap] is that distance, 10 dp by default. With [bottomLimit] (in the root's
  * coordinates) a panel that hangs below the anchor ends at or above it, and scrolls when its content is taller: it
  * fades its content over [EdgeFade] at an edge with more content past it, and a focused child scrolls clear of that fade.
@@ -179,6 +179,7 @@ public fun GlassDropdown(
     bottomLimit: Dp = Dp.Unspecified,
     columnGap: Dp? = null,
     childHeights: List<Dp>? = null,
+    keepsFocus: () -> Boolean = { true },
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val motion = TvTheme.motion
@@ -212,7 +213,7 @@ public fun GlassDropdown(
                                 .width(IntrinsicSize.Max)
                                 .then(if (bottomLimit.isSpecified) Modifier.fadeScrolledEdges(scroll).verticalScroll(scroll) else Modifier)
                                 .padding(padding)
-                                .focusProperties { exit = { FocusRequester.Cancel } }
+                                .focusProperties { exit = { if (keepsFocus()) FocusRequester.Cancel else FocusRequester.Default } }
                                 .focusGroup(),
                         verticalArrangement = Arrangement.spacedBy(MenuRowSpacing),
                         content = content,

@@ -26,6 +26,7 @@
   <string name="move_dock_end">Fin del dock</string>
   <string name="move_grid_start">Principiu de la cuadrícula</string>
   <string name="move_grid_end">Fin de la cuadrícula</string>
+  <string name="tile_add_to_home">Amestar a Aniciu</string>
   <string name="tile_remove_from_home">Quitar d\'Aniciu</string>
   <string name="library_save_failed">Nun se pudo guardar l\'accesu direutu</string>
   <string name="dock_edit">Escoyer les aplicaciones del dock</string>

@@ -208,8 +208,8 @@ class SettingsEdgesUiTestContent :
             test("after scrolling down the top edge fades and shows nothing in its first 12 dp") {
                 show { 190.dp }
                 repeat(30) { press(Key.DirectionDown) }
-                val selected = settingsSections(TvConfig()).flatMap { it.rows }.first { it.id == SettingsRowId.InputArrival }.selected
-                val chipTag = "option:InputArrival:$selected"
+                val selected = settingsSections(TvConfig()).flatMap { it.rows }.first { it.id == SettingsRowId.InputTiles }.selected
+                val chipTag = "option:InputTiles:$selected"
                 // The list grows at its end, so its top rises to 2 dp under the top of the last row's selected chip.
                 viewport.value += list().top - compose.onNodeWithTag(chipTag).getUnclippedBoundsInRoot().top - 2.dp
                 settle()
@@ -238,12 +238,12 @@ class SettingsEdgesUiTestContent :
 
             test("the focused row stays out of the fade from the first row to the last and back") {
                 show()
-                assertFocusClearOfTheFade(entries = 23)
+                assertFocusClearOfTheFade(entries = 24)
             }
 
             test("the focused row stays out of the fade with the reorder row and a short list") {
                 show(reorder = true) { 190.dp }
-                assertFocusClearOfTheFade(entries = 24)
+                assertFocusClearOfTheFade(entries = 25)
             }
 
             test("a button row is one option row pitch from the rows around it and its pill keeps a margin") {
@@ -278,7 +278,7 @@ class SettingsEdgesUiTestContent :
                     "General between Reorder and Columns",
                 ) { general.bottom shouldBeLessThanOrEqualTo unclipped("setting:Columns").top }
                 withClue("System between the last option and Follow theme") {
-                    unclipped("setting:InputArrival").bottom shouldBeLessThanOrEqualTo
+                    unclipped("setting:InputTiles").bottom shouldBeLessThanOrEqualTo
                         system.top
                 }
                 withClue("System between the last option and Follow theme") {

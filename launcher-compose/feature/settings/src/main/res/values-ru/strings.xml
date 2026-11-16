@@ -33,6 +33,7 @@
   <string name="settings_press_feedback">Отклик на нажатие</string>
   <string name="settings_habit_hint">Подсказка по привычке</string>
   <string name="settings_input_arrival">Уведомление о новом источнике</string>
+  <string name="settings_input_tiles">Плитки источников</string>
   <string name="settings_follow_theme">Следовать теме (сбросить выбор)</string>
   <string name="settings_tv_settings">Системные настройки ТВ</string>
   <string name="home_settings">Главный экран по умолчанию</string>

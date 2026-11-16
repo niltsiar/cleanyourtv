@@ -2,6 +2,7 @@ package dev.niltsiar.tvhome.feature.home
 
 import androidx.compose.ui.unit.dp
 import de.infix.testBalloon.framework.core.testSuite
+import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
 import io.kotest.assertions.withClue
 import io.kotest.matchers.booleans.shouldBeTrue
@@ -34,6 +35,13 @@ val HomeLayoutTest by testSuite {
             fun tiles(n: Int) = (1..n).map { AppEntry(key = "t$it", packageName = "t$it", label = "T$it") }
         }
     } asContextForEach {
+        test("an Inputs row can pin only with input_tiles and the Inputs pill both on") {
+            val on = TvConfig(inputTiles = true)
+            on.homeLayout().inputPins shouldBe true
+            on.copy(showInputsPill = false).homeLayout().inputPins shouldBe false
+            TvConfig().homeLayout().inputPins shouldBe false
+        }
+
         test("no rows below the dock keep the full width") {
             tileWidthShare(gridWidth, height, columns = 6, rowsBelowDock = 0, gap = gap) shouldBe (1f plusOrMinus 0f)
         }

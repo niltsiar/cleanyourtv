@@ -33,6 +33,7 @@
   <string name="settings_press_feedback">Phản hồi khi nhấn</string>
   <string name="settings_habit_hint">Gợi ý theo thói quen</string>
   <string name="settings_input_arrival">Báo nguồn vào mới</string>
+  <string name="settings_input_tiles">Ô nguồn vào</string>
   <string name="settings_follow_theme">Theo theme (xóa lựa chọn trên TV)</string>
   <string name="settings_tv_settings">Cài đặt hệ thống TV</string>
   <string name="home_settings">Chọn màn hình chính mặc định</string>

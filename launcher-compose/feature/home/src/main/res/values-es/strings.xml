@@ -28,6 +28,7 @@
   <string name="move_dock_end">Final del dock</string>
   <string name="move_grid_start">Inicio de la cuadrícula</string>
   <string name="move_grid_end">Final de la cuadrícula</string>
+  <string name="tile_add_to_home">Añadir a Inicio</string>
   <string name="tile_remove_from_home">Quitar de Inicio</string>
   <string name="library_save_failed">No se pudo guardar el acceso directo</string>
   <string name="dock_edit">Elegir apps del dock</string>

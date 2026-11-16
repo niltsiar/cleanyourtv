@@ -27,6 +27,7 @@
   <string name="move_dock_end">Kraj doka</string>
   <string name="move_grid_start">Početak mreže</string>
   <string name="move_grid_end">Kraj mreže</string>
+  <string name="tile_add_to_home">Dodaj na početni ekran</string>
   <string name="tile_remove_from_home">Ukloni sa početnog ekrana</string>
   <string name="library_save_failed">Prečica nije sačuvana</string>
   <string name="dock_edit">Izaberi aplikacije za dok</string>

@@ -16,7 +16,8 @@ import dev.niltsiar.tvhome.core.model.showLibraryPill
  * grid tiles of apps not opened for a while are drawn faded (unused_fade_days), and [dockTitle] whether the band above the dock
  * names the focused tile (dock_title); its reorder, dock-edit, library and top-bar lines show either way. [scrollCue] is whether
  * a down cue under the grid marks rows of apps below the screen (grid_scroll_cue). [pressFeedback] is whether OK on an app tile
- * dips it and brightens its ring (press_feedback).
+ * dips it and brightens its ring (press_feedback). [inputPins] is whether a held OK or MENU on an Inputs row opens its Add to Home
+ * menu (input_tiles, with the Inputs pill).
  */
 @Immutable
 public data class HomeLayout(
@@ -33,6 +34,7 @@ public data class HomeLayout(
     val dockTitle: Boolean = true,
     val scrollCue: Boolean = true,
     val pressFeedback: Boolean = false,
+    val inputPins: Boolean = false,
 )
 
 public fun TvConfig.homeLayout(): HomeLayout =
@@ -50,6 +52,7 @@ public fun TvConfig.homeLayout(): HomeLayout =
         dockTitle = dockTitle,
         scrollCue = gridScrollCue,
         pressFeedback = pressFeedback,
+        inputPins = inputTiles && showInputsPill,
     )
 
 private const val MIN_TILE_SHARE = 0.85f
