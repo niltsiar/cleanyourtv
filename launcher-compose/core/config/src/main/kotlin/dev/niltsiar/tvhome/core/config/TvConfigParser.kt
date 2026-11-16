@@ -158,6 +158,7 @@ public fun parseTvConfig(json: String): ParsedConfig {
             inputsConnectedOnly = o.bool("inputs_connected_only", d.inputsConnectedOnly),
             inputsCecStateOnly = o.bool("inputs_cec_state_only", d.inputsCecStateOnly),
             inputArrival = o.bool("input_arrival", d.inputArrival),
+            inputTiles = o.bool("input_tiles", d.inputTiles),
             habitHint = o.bool("habit_hint", d.habitHint),
             appShelf = o.bool("app_shelf", d.appShelf),
             appShelfSources = o.stringList("app_shelf_sources", d.appShelfSources).distinct(),

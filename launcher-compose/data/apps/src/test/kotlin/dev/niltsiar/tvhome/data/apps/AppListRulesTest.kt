@@ -2,6 +2,8 @@ package dev.niltsiar.tvhome.data.apps
 
 import de.infix.testBalloon.framework.core.testSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.model.InputIcon
+import dev.niltsiar.tvhome.core.model.InputTile
 import io.kotest.matchers.shouldBe
 
 val AppListRulesTest by testSuite {
@@ -16,6 +18,11 @@ val AppListRulesTest by testSuite {
                 exported: Boolean = true,
             ) = Candidate("$pkg/$activity", pkg, label, exported)
 
+            fun pin(
+                port: Int,
+                label: String = "HDMI $port",
+            ) = InputPin(InputTile("tv/.Hdmi/HW$port", "tv/.Hdmi/HW$port", InputIcon.Hdmi), label)
+
             fun arrange(
                 vararg candidates: Candidate,
                 config: TvConfig = this.config,
@@ -23,9 +30,12 @@ val AppListRulesTest by testSuite {
                 tv: Set<String> = candidates.map { it.packageName }.toSet(),
                 choices: LibraryChoices = LibraryChoices(added = config.libraryApps.toSet()),
                 ownPackage: String = "own",
-            ) = arrange(candidates.toList(), tv, config, order, ownPackage = ownPackage, choices = choices)
+                pins: List<InputPin> = emptyList(),
+            ) = arrange(candidates.toList(), tv, config, order, ownPackage = ownPackage, choices = choices, pins = pins)
 
             fun Arrangement.keys() = tiles.map { it.candidate.packageName }
+
+            fun Arrangement.tileKeys() = tiles.map { it.candidate.key }
         }
     } asContextForEach {
         test("no build of this launcher gets a tile whichever one is running") {
@@ -64,6 +74,49 @@ val AppListRulesTest by testSuite {
             val result = arrange(candidate("a"), candidate("b"), candidate("z"), order = order)
 
             result.keys() shouldBe listOf("z", "b", "a")
+            result.docked shouldBe 1
+        }
+
+        test("an unranked input tile goes after every app") {
+            val order = Order(Order.dockKey(config.dockApps), listOf("z/.Main"))
+
+            val result =
+                arrange(
+                    candidate("c", "YouTube"),
+                    candidate("b"),
+                    candidate("z"),
+                    config = config.copy(inputTiles = true),
+                    order = order,
+                    pins = listOf(pin(2), pin(1)),
+                )
+
+            result.tileKeys() shouldBe listOf("z/.Main", "b/.Main", "c/.Main", "input:tv/.Hdmi/HW2", "input:tv/.Hdmi/HW1")
+            result.tiles.last().let { it.label to it.input } shouldBe ("HDMI 1" to pin(1).tile)
+        }
+
+        test("a ranked input tile keeps its saved place in the dock") {
+            val order = Order(Order.dockKey(config.dockApps), listOf("b/.Main", "input:tv/.Hdmi/HW2", "a/.Main"), docked = 2)
+
+            val result =
+                arrange(
+                    candidate("a"),
+                    candidate("b"),
+                    candidate("z"),
+                    config = config.copy(inputTiles = true),
+                    order = order,
+                    pins = listOf(pin(2)),
+                )
+
+            result.tileKeys() shouldBe listOf("b/.Main", "input:tv/.Hdmi/HW2", "a/.Main", "z/.Main")
+            result.docked shouldBe 2
+        }
+
+        test("input tiles are left out while input_tiles is off") {
+            val order = Order(Order.dockKey(config.dockApps), listOf("b/.Main", "input:tv/.Hdmi/HW2", "a/.Main"), docked = 2)
+
+            val result = arrange(candidate("a"), candidate("b"), order = order, pins = listOf(pin(2)))
+
+            result.tileKeys() shouldBe listOf("b/.Main", "a/.Main")
             result.docked shouldBe 1
         }
 

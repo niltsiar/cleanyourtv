@@ -54,8 +54,9 @@ internal fun inputFolds(
 private fun PortState.connection(): InputConnection =
     when (this) {
         PortState.Connected -> InputConnection.Connected
+        PortState.Standby -> InputConnection.Standby
         PortState.Disconnected -> InputConnection.Disconnected
-        else -> InputConnection.Unknown
+        PortState.None -> InputConnection.Unknown
     }
 
 /**
@@ -121,6 +122,7 @@ internal fun portEntries(
                         connection = state.connection(),
                         target = InputTarget.TvInput(device.id),
                         folded = settings.connectedOnly && inputFolds(hdmi = true, state),
+                        port = input.id,
                     )
             }
             continue
@@ -128,14 +130,16 @@ internal fun portEntries(
         if (named) label = "$custom · $label"
         // Analog AV jacks have no hotplug detection, and some TVs report them as always connected.
         val state = if (!hdmi || stateBogus) PortState.None else input.state
+        val port = if (hdmi) input.id else null
         rows +=
-            (if (hdmi) input.id else null) to
+            port to
             InputRow.Port(
                 label = label,
                 icon = if (hdmi) InputIcon.Hdmi else InputIcon.Av,
                 connection = state.connection(),
                 target = InputTarget.TvInput(input.id),
                 folded = settings.connectedOnly && inputFolds(hdmi, state),
+                port = port,
             )
     }
     return rows

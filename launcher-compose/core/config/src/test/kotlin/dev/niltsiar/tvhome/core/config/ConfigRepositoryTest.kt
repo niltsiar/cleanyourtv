@@ -197,7 +197,8 @@ class ConfigRepositoryTestContent :
                 repo.choose(Choices.AppShelfCards, 20)
                 repo.choose(Choices.NowPlaying, true)
                 repo.choose(Choices.InputArrival, true)
-                awaitConfig(repo) { it.inputArrival }
+                repo.choose(Choices.InputTiles, true)
+                awaitConfig(repo) { it.inputArrival && it.inputTiles }
 
                 repo.config.value shouldBe
                     theme.copy(
@@ -216,6 +217,7 @@ class ConfigRepositoryTestContent :
                         pressFeedback = true,
                         habitHint = true,
                         inputArrival = true,
+                        inputTiles = true,
                         appShelf = true,
                         appShelfSources = listOf("com.a", "com.b/7"),
                         appShelfWebPosters = true,
@@ -359,6 +361,20 @@ class ConfigRepositoryTestContent :
                 repo.config.value shouldBe theme
                 repo.openOnStartApp.value shouldBe "com.netflix.ninja"
                 repo.wallpaperChoice.value.shouldBeNull()
+            }
+
+            test("a theme push clears a stored input_tiles") {
+                pushTheme("""{"columns": 5}""")
+                chooseAndStop {
+                    it.choose(Choices.InputTiles, true)
+                    awaitConfig(it) { c -> c.inputTiles }
+                }
+
+                pushTheme("""{"columns": 6}""")
+
+                repository()
+                    .config.value.inputTiles
+                    .shouldBeFalse()
             }
 
             test("a new revision of the same theme clears the choices") {

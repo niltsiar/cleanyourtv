@@ -189,6 +189,8 @@ public data class TvConfig(
     val inputsCecStateOnly: Boolean = false,
     /** A device switched on while Home shows (an HDMI port goes to connected) is offered on the Inputs button. */
     val inputArrival: Boolean = false,
+    /** The inputs pinned to Home show as tiles at the grid's end, in the place a Move gives them. */
+    val inputTiles: Boolean = false,
     /** A quiet mark on the app the household usually opens at this time of day; Home keeps a log of its launches for it. */
     val habitHint: Boolean = false,
     /** With focus on a dock app, Home shows that app's own items from the TV provider; needs READ_TV_LISTINGS. */

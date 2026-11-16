@@ -270,7 +270,7 @@ private fun InputItem(
                     )
                 }
 
-                InputConnection.Unknown -> {
+                InputConnection.Unknown, InputConnection.Standby -> {
                     Unit
                 }
             }

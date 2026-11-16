@@ -1,6 +1,8 @@
 package dev.niltsiar.tvhome.data.apps
 
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.model.INPUT_PREFIX
+import dev.niltsiar.tvhome.core.model.InputTile
 
 private const val MAX_LABEL_LENGTH = 40
 
@@ -12,10 +14,11 @@ internal data class Candidate(
     val exported: Boolean,
 )
 
-/** A [candidate] that Home shows, under the name its tile carries. */
+/** A [candidate] that Home shows, under the name its tile carries. A pinned input's tile has its [input] and no package. */
 internal data class Tile(
     val candidate: Candidate,
     val label: String,
+    val input: InputTile? = null,
 )
 
 /** The tiles in Home's order and how many leading ones are dock apps. */
@@ -29,8 +32,9 @@ internal data class Arrangement(
  * A tile needs an exported activity in a package that is not this launcher ([isThisLauncher]), and is shown by
  * [LibraryChoices.showsOnHome]: a TV app that the theme does not hide, or a package added in the library or through
  * library_apps, unless the owner removed it.
- * Two tiles with one package and one name are one tile.
- * Order: the saved order, then dock_apps, then name.
+ * Two tiles with one package and one name are one tile. With input_tiles, each of [pins] adds a tile keyed `input:<id>`.
+ * Order: the saved order, then dock_apps, then name; the pinned inputs the saved order does not rank come last, in
+ * the order they were pinned.
  */
 internal fun arrange(
     candidates: List<Candidate>,
@@ -39,10 +43,11 @@ internal fun arrange(
     order: Order?,
     ownPackage: String,
     choices: LibraryChoices = LibraryChoices(added = config.libraryApps.toSet()),
+    pins: List<InputPin> = emptyList(),
 ): Arrangement {
     val hidden = config.hiddenApps.toSet()
     val seen = HashSet<String>()
-    val tiles =
+    val apps =
         candidates.mapNotNull { candidate ->
             val pkg = candidate.packageName
             val shown = choices.showsOnHome(pkg, tvApp = pkg in tvPackages, hidden = pkg in hidden)
@@ -50,6 +55,13 @@ internal fun arrange(
             val label = cleanLabel(config.appLabels[pkg] ?: candidate.label, pkg)
             if (seen.add("$pkg\n$label")) Tile(candidate, label) else null
         }
+    val inputs =
+        if (config.inputTiles) {
+            pins.map { pin -> Tile(Candidate(INPUT_PREFIX + pin.tile.id, "", pin.label, exported = true), pin.label, pin.tile) }
+        } else {
+            emptyList()
+        }
+    val tiles = apps + inputs
 
     val ranks = order?.ranks(config.dockApps).orEmpty()
     val sorted =
@@ -62,6 +74,7 @@ internal fun arrange(
                 rankA != null && rankB != null -> rankA.compareTo(rankB)
                 rankA != null -> -1
                 rankB != null -> 1
+                a.input != null || b.input != null -> (a.input != null).compareTo(b.input != null)
                 dockA >= 0 && dockB >= 0 -> dockA.compareTo(dockB)
                 dockA >= 0 -> -1
                 dockB >= 0 -> 1

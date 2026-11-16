@@ -111,12 +111,14 @@ public class AppLauncher(
  * running app resumes). A launch_actions value replaces it when it resolves: `view:<uri>` sends ACTION_VIEW on the
  * uri, any other value is an intent action, both limited to the app's package and in a new task without
  * RESET_TASK_IF_NEEDED, which would only bring a running task of the app forward. `input:` values belong to [inputIdOf].
+ * A pinned input's tile names no activity, so it makes no intent.
  */
 internal fun launchIntent(
     app: AppEntry,
     action: String?,
     resolves: (Intent) -> Boolean,
 ): Intent? {
+    if (app.input != null) return null
     val component = ComponentName.unflattenFromString(app.key) ?: return null
     val tile =
         Intent(Intent.ACTION_MAIN)

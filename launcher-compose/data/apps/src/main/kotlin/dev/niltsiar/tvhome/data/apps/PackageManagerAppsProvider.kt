@@ -14,6 +14,7 @@ import androidx.core.content.ContextCompat
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
+import dev.niltsiar.tvhome.core.model.InputTile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,10 +35,12 @@ private const val TOP_BAR_ICON_DP = 22
 
 /**
  * The tiles Home shows, read the way the reference launcher reads them: the TV launcher activities, plus phone
- * launcher activities of packages added in the library or through library_apps, ordered by [arrange].
+ * launcher activities of packages added in the library or through library_apps, and with input_tiles the pinned inputs,
+ * ordered by [arrange].
  *
  * [apps] emits the labels first, then the same list with banners or icons decoded to a tile 16:9 at the width
- * [tileWidthPx] gives for the columns, and again, images included, each time the installed apps or the columns change.
+ * [tileWidthPx] gives for the columns, and again, images included, each time the installed apps, the pins, the columns
+ * or input_tiles change.
  * The apps change comes from package broadcasts while
  * Home is started ([onStart], [onStop]), and from PackageManager's changed-packages log when Home starts again,
  * which catches what happened while it was stopped.
@@ -51,11 +54,19 @@ public class PackageManagerAppsProvider(
         val images: TileImages,
     )
 
+    private data class AppVersion(
+        val refresh: Int,
+        val trim: Int,
+        val columns: Int,
+        val inputTiles: Boolean,
+    )
+
     @Volatile
     private var sized: SizedImages? = null
     private val columns = config.map { it.columns }.distinctUntilChanged()
     private val orderFile = File(context.filesDir, ORDER_FILE_NAME)
     internal val library = LibraryStore(context.filesDir)
+    private val inputPins = InputPinStore(context.filesDir)
     private val refreshes = MutableStateFlow(0)
 
     /** Counts the [trimImages] calls. */
@@ -65,7 +76,7 @@ public class PackageManagerAppsProvider(
     @Volatile
     private var imagesDropped = false
     private val versions = refreshes.combine(trims, ::Pair)
-    private val appVersions = combine(refreshes, trims, columns, ::Triple)
+    private val appVersions = combine(refreshes, trims, columns, config.map { it.inputTiles }.distinctUntilChanged(), ::AppVersion)
     private val packageFilter =
         IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
@@ -100,16 +111,18 @@ public class PackageManagerAppsProvider(
             var seen = refreshes.value
             var trimmed = trims.value
             var seenColumns = config.value.columns
+            var seenInputTiles = config.value.inputTiles
             var loaded = load()
             emit(loaded.toAppList(withImages = false))
             emit(loaded.toAppList(withImages = true))
             imagesDropped = false
             // A refresh shows no bare labels first: that would blank every banner for a frame.
-            appVersions.collect { (version, trim, tileColumns) ->
-                if (version != seen) {
+            appVersions.collect { (version, trim, tileColumns, inputTiles) ->
+                if (version != seen || inputTiles != seenInputTiles) {
                     seen = version
                     trimmed = trim
                     seenColumns = tileColumns
+                    seenInputTiles = inputTiles
                     loaded = load()
                     emit(loaded.toAppList(withImages = true))
                     imagesDropped = false
@@ -197,6 +210,16 @@ public class PackageManagerAppsProvider(
             writeOrder(orderFile, Order(Order.dockKey(config.value.dockApps), keys, docked)).also { if (it) requestRefresh() }
         }
 
+    /** Pins [tile] to Home under [label] and loads the tiles again. False, with a log line, when the pin was not saved. */
+    public suspend fun pinInput(
+        tile: InputTile,
+        label: String,
+    ): Boolean = withContext(Dispatchers.IO) { inputPins.pin(tile, label).also { if (it) requestRefresh() } }
+
+    /** Unpins the input [id] and loads the tiles again. False, with a log line, when the change was not saved. */
+    public suspend fun unpinInput(id: String): Boolean =
+        withContext(Dispatchers.IO) { inputPins.unpin(id).also { if (it) requestRefresh() } }
+
     /** Counts the loads asked for: package changes and [libraryChanged]. A collector starts at the current count. */
     internal val changes: Flow<Int> get() = refreshes
 
@@ -281,7 +304,9 @@ public class PackageManagerAppsProvider(
                 infos[key] = info
                 Candidate(key, activity.packageName, info.loadLabel(pm).toString(), activity.exported)
             }
-        val arrangement = arrange(candidates, tvPackages, config.value, readOrder(orderFile), context.packageName, choices)
+        val now = config.value
+        val pins = if (now.inputTiles) inputPins.load() else emptyList()
+        val arrangement = arrange(candidates, tvPackages, now, readOrder(orderFile), context.packageName, choices, pins)
         this.infos = infos
         heroArts.clear()
         return Loaded(arrangement, infos, tvPackages, homePackages)
@@ -291,6 +316,7 @@ public class PackageManagerAppsProvider(
         val pm = context.packageManager
         val apps =
             arrangement.tiles.map { tile ->
+                tile.input?.let { return@map AppEntry(key = tile.candidate.key, packageName = "", label = tile.label, input = it) }
                 val info = infos.getValue(tile.candidate.key)
                 val art = if (withImages) tileArt(info, pm) else null
                 AppEntry(

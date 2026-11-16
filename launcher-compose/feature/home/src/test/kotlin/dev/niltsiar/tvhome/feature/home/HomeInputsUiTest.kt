@@ -129,6 +129,16 @@ class HomeInputsUiTestContent :
                 compose.onNodeWithTag("input:5").assertIsFocused()
             }
 
+            test("a port in standby shows neither connected nor no device") {
+                showHome(InputsMenu(available = true, rows = listOf(port(1, InputConnection.Standby), InputRow.LiveTv)))
+
+                openList()
+
+                compose.onNodeWithText("HDMI 1").assertExists()
+                compose.onAllNodesWithText("Connected").fetchSemanticsNodes().size shouldBe 0
+                compose.onAllNodesWithText("No device").fetchSemanticsNodes().size shouldBe 0
+            }
+
             test("ok on a row closes the list hands the input to the host and focus returns to the button") {
                 showHome()
                 openList()

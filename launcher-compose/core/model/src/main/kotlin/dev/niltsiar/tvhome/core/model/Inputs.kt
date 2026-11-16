@@ -28,14 +28,21 @@ public enum class InputIcon {
     LiveTv,
 }
 
-/** What the TV says about a port. The dot shows for [Connected] only; [Unknown] covers standby and "no state worth showing". */
+/**
+ * What the TV says about a port. The Inputs menu marks [Connected] and [Disconnected] only. [Standby] is a device asleep or
+ * a port that reports standby; [Unknown] is no state worth showing.
+ */
 public enum class InputConnection {
     Unknown,
     Connected,
+    Standby,
     Disconnected,
 }
 
-/** One row of the Inputs menu, or a line between groups. A [folded] row waits behind "More inputs". */
+/**
+ * One row of the Inputs menu, or a line between groups. A [folded] row waits behind "More inputs". [Port.port] is the id
+ * of the HDMI port the row stands for: the port itself, or the port its CEC device sits on; null for any other row.
+ */
 @Immutable
 public sealed interface InputRow {
     public data class Port(
@@ -44,6 +51,7 @@ public sealed interface InputRow {
         val connection: InputConnection,
         val target: InputTarget,
         val folded: Boolean = false,
+        val port: String? = null,
     ) : InputRow
 
     /** One "Inputs" row that opens the TV's source panel, where nothing could be listed. */
@@ -94,3 +102,14 @@ public fun List<InputRow>.visible(expanded: Boolean): List<InputRow> =
             else -> true
         }
     }
+
+/**
+ * A TV input pinned to Home as a tile: [id] is the TvInputManager id its Inputs row opened when it was pinned (a CEC
+ * device or a port), [port] the HDMI port that row stood for, null when it stood for none, and [icon] its row's icon.
+ */
+@Immutable
+public data class InputTile(
+    val id: String,
+    val port: String?,
+    val icon: InputIcon,
+)

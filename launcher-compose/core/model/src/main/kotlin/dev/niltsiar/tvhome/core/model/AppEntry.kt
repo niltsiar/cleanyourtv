@@ -13,6 +13,8 @@ import androidx.compose.ui.graphics.ImageBitmap
  * rather than a banner. [edge] is the colour the banner shows at the tile's edge, which the focus ring sits against;
  * unspecified for an icon, whose tile is the theme's. [lightArt] is true when the banner is light enough to need an edge on a light surface.
  * [homeLauncher] is true when the app is a Home launcher other than this one, whose banner may not say what it is.
+ * [input] is set for a tile that stands for a TV input rather than an app: its [key] is `input:<id>`, it has no package
+ * and no image, and its [label] is the name its Inputs row read when it was last known.
  */
 @Immutable
 public data class AppEntry(
@@ -26,6 +28,7 @@ public data class AppEntry(
     val iconArt: Boolean = false,
     val lightArt: Boolean = false,
     val homeLauncher: Boolean = false,
+    val input: InputTile? = null,
 )
 
 /** The tiles in Home's order, and how many of the leading ones are dock apps (the rest follow in the grid). */

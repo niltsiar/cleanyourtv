@@ -8,7 +8,9 @@ import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
+import dev.niltsiar.tvhome.core.model.InputIcon
 import dev.niltsiar.tvhome.core.model.InputTarget
+import dev.niltsiar.tvhome.core.model.InputTile
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.maps.shouldBeEmpty
@@ -100,6 +102,18 @@ class AppLauncherTestContent :
 
             test("a key that is not a component makes no intent") {
                 launchIntent(tile.copy(key = "not a component"), null) { true }.shouldBeNull()
+            }
+
+            test("a pinned input's tile starts nothing and is not noted") {
+                val input = InputTile("com.tv/.Hdmi/HW2", "com.tv/.Hdmi/HW2", InputIcon.Hdmi)
+                val pinned = AppEntry(key = "input:${input.id}", packageName = "", label = "HDMI 2", input = input)
+
+                launcher().open(pinned) shouldBe LaunchResult.CantOpen
+                launcher().openFromLibrary(pinned).shouldBeFalse()
+
+                shadowOf(context).nextStartedActivity.shouldBeNull()
+                lastOpened.times.value.shouldBeEmpty()
+                logFile.exists().shouldBeFalse()
             }
 
             test("a tile with an input action reports its input") {

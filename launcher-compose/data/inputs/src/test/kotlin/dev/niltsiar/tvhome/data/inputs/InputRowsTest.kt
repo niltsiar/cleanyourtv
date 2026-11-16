@@ -101,6 +101,14 @@ val InputRowsTest by testSuite {
         (out[0] as InputRow.Port).target shouldBe InputTarget.TvInput("tv/.Cec/HDMI1")
     }
 
+    test("a cec device row carries its port id, a bare port its own and an av jack none") {
+        val port = hdmi(1)
+        val device = hdmi(1, id = "tv/.Cec/HDMI1", label = "Apple TV", parent = port.id)
+
+        rows(port, device, hdmi(2), av()).map { (it as? InputRow.Port)?.port } shouldBe
+            listOf("tv/.Hdmi/HW1", "tv/.Hdmi/HW2", null, null)
+    }
+
     test("a name given in settings goes before the port and philips types become emoji") {
         val out = rows(hdmi(1, custom = "MacBook Pro"), hdmi(2, custom = "Xbox&GAME_CONSOLE"), hdmi(3, custom = "null"))
 
@@ -114,11 +122,11 @@ val InputRowsTest by testSuite {
         rows(port, device).single().label() shouldBe "Living room box · HDMI 1"
     }
 
-    test("only connected and disconnected ports show a state") {
+    test("a port in standby reads Standby and an av jack has no state") {
         val out = rows(hdmi(1, PortState.Connected), hdmi(2, PortState.Disconnected), hdmi(3, PortState.Standby), av())
 
         listOf(out[0], out[1], out[2], out[4]).map { it.connection() } shouldBe
-            listOf(InputConnection.Connected, InputConnection.Disconnected, InputConnection.Unknown, InputConnection.Unknown)
+            listOf(InputConnection.Connected, InputConnection.Disconnected, InputConnection.Standby, InputConnection.Unknown)
     }
 
     test("a tv that reports every port connected shows no hdmi state") {

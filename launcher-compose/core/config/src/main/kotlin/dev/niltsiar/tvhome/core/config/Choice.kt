@@ -102,6 +102,7 @@ public object Choices {
     public val PressFeedback: Choice<Boolean> = boolChoice("press_feedback") { copy(pressFeedback = it) }
     public val HabitHint: Choice<Boolean> = boolChoice("habit_hint") { copy(habitHint = it) }
     public val InputArrival: Choice<Boolean> = boolChoice("input_arrival") { copy(inputArrival = it) }
+    public val InputTiles: Choice<Boolean> = boolChoice("input_tiles") { copy(inputTiles = it) }
     public val AppShelf: Choice<Boolean> = boolChoice("app_shelf") { copy(appShelf = it) }
 
     /** The ticked shelf sources; a stored empty set ticks none, whatever the theme lists. [ConfigRepository.toggleShelfSource] changes it. */
@@ -146,6 +147,7 @@ public object Choices {
             PressFeedback,
             HabitHint,
             InputArrival,
+            InputTiles,
             AppShelf,
             AppShelfSources,
             AppShelfWebPosters,

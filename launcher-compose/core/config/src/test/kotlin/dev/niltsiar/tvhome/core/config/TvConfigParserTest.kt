@@ -234,6 +234,15 @@ val TvConfigParserTest by testSuite {
         wrong.rejectedKeys shouldBe listOf("now_playing")
     }
 
+    test("input_tiles defaults to false, a theme turns it on, and a wrong type keeps it off") {
+        parseTvConfig("{}").config.inputTiles.shouldBeFalse()
+        parseTvConfig("""{"input_tiles": true}""").config.inputTiles.shouldBeTrue()
+
+        val wrong = parseTvConfig("""{"input_tiles": "yes"}""")
+        wrong.config.inputTiles.shouldBeFalse()
+        wrong.rejectedKeys shouldBe listOf("input_tiles")
+    }
+
     test("app shelf cards is 10 unless the theme sets 5, 10 or 20") {
         parseTvConfig("{}").config.appShelfCards shouldBe 10
         listOf(5, 10, 20).forEach { parseTvConfig("""{"app_shelf_cards": $it}""").config.appShelfCards shouldBe it }
@@ -671,6 +680,7 @@ val TvConfigParserTest by testSuite {
             "inputs_connected_only" to ("true" to defaults.copy(inputsConnectedOnly = true)),
             "inputs_cec_state_only" to ("true" to defaults.copy(inputsCecStateOnly = true)),
             "input_arrival" to ("true" to defaults.copy(inputArrival = true)),
+            "input_tiles" to ("true" to defaults.copy(inputTiles = true)),
             "habit_hint" to ("true" to defaults.copy(habitHint = true)),
             "app_shelf" to ("true" to defaults.copy(appShelf = true)),
             "app_shelf_sources" to ("""["com.a", "com.b/7", "com.a"]""" to defaults.copy(appShelfSources = listOf("com.a", "com.b/7"))),
