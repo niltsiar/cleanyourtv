@@ -14,8 +14,15 @@ import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.ShelfPoster
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -25,6 +32,8 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 private const val TAG = "TvHome.Shelf"
 
@@ -42,11 +51,18 @@ internal const val POSTER_CACHE_BYTES: Int = 12 * 1024 * 1024
 internal const val POSTER_MAX_PIXELS: Long = 1920L * 1080L
 
 /**
+ * When Home tries again a poster its app refused to let it read, counted from the first refusal while Home is started: an app
+ * grants its URIs again on BOOT_COMPLETED, tens of seconds after Home has read them.
+ */
+internal val POSTER_GRANT_RETRIES: List<Duration> = listOf(10.seconds, 20.seconds, 40.seconds, 80.seconds, 160.seconds, 320.seconds)
+
+/**
  * Decodes the posters of shelf items for Home's cards, on [io] and one at a time, and keeps them in an LRU of
  * [POSTER_CACHE_BYTES]. A `content://` or `android.resource://` poster is read as it is; Home has no network, so an `https`
  * or `http` one is read through the poster helper app as [WebPosters] allows, else not at all. A poster that cannot be read
  * or decoded is not tried again until the next [onStart], which raises [changes] so its card asks again; one the helper
- * has not fetched yet is tried again once [changes] rises for it.
+ * has not fetched yet is tried again once [changes] rises for it; one the app refused is also tried again at each step of
+ * [POSTER_GRANT_RETRIES] while Home stays started.
  */
 public class ShelfPosters(
     private val context: Context,
@@ -65,12 +81,23 @@ public class ShelfPosters(
         }
     private val failed: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
+    /** The failed posters whose last read the app refused for permission. */
+    private val refused = MutableStateFlow(emptySet<String>())
+    private val started = MutableStateFlow(false)
+
+    /** The steps of [POSTER_GRANT_RETRIES] taken since the last [onStart]. */
+    @Volatile private var retries = 0
+
     /**
-     * Rises each time a poster the helper had not fetched may have arrived, and on an [onStart] after a poster failed; a card
-     * without a picture then asks again. While collected, it watches the helper once Home has asked it for a poster, and stops
-     * watching when Home stops.
+     * Rises each time a poster the helper had not fetched may have arrived, on an [onStart] after a poster failed, and at each
+     * step of [POSTER_GRANT_RETRIES] while a poster is refused; a card without a picture then asks again. While collected, it
+     * watches the helper once Home has asked it for a poster, and stops watching when Home stops.
      */
-    public val changes: Flow<Int> = web.changes
+    public val changes: Flow<Int> =
+        channelFlow {
+            launch { combine(started, refused) { on, keys -> on && keys.isNotEmpty() }.collectLatest { if (it) retryRefused() } }
+            web.changes.collect { send(it) }
+        }
 
     /**
      * The poster at [uri] for a card of [width] x [height] pixels, scaled while it decodes as [posterOptions] says; a poster
@@ -107,11 +134,15 @@ public class ShelfPosters(
     public fun onStart() {
         val retry = failed.isNotEmpty()
         failed.clear()
+        refused.value = emptySet()
+        retries = 0
         web.onStart(retry)
+        started.value = true
     }
 
-    /** Home went to the back: it stops watching the helper. */
+    /** Home went to the back: it stops watching the helper and trying refused posters again. */
     public fun onStop() {
+        started.value = false
         web.onStop()
     }
 
@@ -135,12 +166,32 @@ public class ShelfPosters(
                 if (helper) return null
                 Log.w(TAG, "cannot read poster $uri: $e")
                 null
+            } catch (e: SecurityException) {
+                Log.w(TAG, "cannot read poster $uri: $e")
+                failed += key
+                refused.update { it + key }
+                return null
             }
+        refused.update { it - key }
         if (poster == null) failed += key else cache.put(key, poster)
         return poster
     }
 
-    /** The app gave the URI, so any failure to read it counts as no poster; a missing file is left to [load]. */
+    /** Lets the refused posters be read again at each step of [POSTER_GRANT_RETRIES] left, raising [changes] for their cards. */
+    private suspend fun retryRefused() {
+        while (retries < POSTER_GRANT_RETRIES.size) {
+            val previous = if (retries == 0) Duration.ZERO else POSTER_GRANT_RETRIES[retries - 1]
+            delay(POSTER_GRANT_RETRIES[retries] - previous)
+            retries++
+            failed -= refused.value
+            web.raise()
+        }
+    }
+
+    /**
+     * The app gave the URI, so any failure to read it counts as no poster; a missing file and a refusal for permission are
+     * left to [load].
+     */
     private fun decode(
         uri: Uri,
         width: Int,
@@ -160,6 +211,8 @@ public class ShelfPosters(
                 }
             }
         } catch (e: FileNotFoundException) {
+            throw e
+        } catch (e: SecurityException) {
             throw e
         } catch (e: IOException) {
             Log.w(TAG, "cannot read poster $uri: $e")

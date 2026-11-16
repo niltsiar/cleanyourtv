@@ -18,11 +18,21 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.currentTime
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.seconds
 
 /** The posters of Home's shelf cards: which URIs are read, the size they decode at, and the cache. */
 val ShelfPostersTest by testSuite {
@@ -114,11 +124,40 @@ class ShelfPostersTestContent :
                     return out.toByteArray()
                 }
 
+                /** The app at [uri] does not let Home read it, as before it grants the URI again after a restart. */
+                fun refuse(uri: String) {
+                    shadowOf(app.contentResolver).registerInputStreamSupplier(Uri.parse(uri)) {
+                        opened.merge(uri, 1, Int::plus)
+                        throw SecurityException("Permission Denial: opening provider not exported")
+                    }
+                }
+
                 fun poster(
                     uri: String,
                     width: Int = 480,
                     height: Int = 270,
                 ) = runBlocking { posters.poster(uri, width, height) }
+
+                /**
+                 * Collects [ShelfPosters.changes] as the card does, asking for [uri] again at each rise, and gives the virtual
+                 * times of the rises after the first value.
+                 */
+                fun TestScope.cardAsking(uri: String): List<Long> {
+                    val raised = ArrayList<Long>()
+                    backgroundScope.launch {
+                        posters.changes.drop(1).collect {
+                            raised += currentTime
+                            posters.poster(uri, 480, 270)
+                        }
+                    }
+                    runCurrent()
+                    return raised
+                }
+
+                fun TestScope.wait(time: Duration) {
+                    advanceTimeBy(time)
+                    runCurrent()
+                }
             }
         } asContextForEach {
             test("a 1920 x 1080 content poster decodes at the card's 480 x 270 pixels") {
@@ -220,6 +259,72 @@ class ShelfPostersTestContent :
                 posters.onStart()
                 poster("content://app.posters/broken").shouldBeNull()
                 opened.getValue("content://app.posters/broken") shouldBe reads * 2
+            }
+
+            test("a poster refused for permission shows once the app grants it, while home stays started") {
+                runTest {
+                    val uri = "content://app.posters/granted-late"
+                    refuse(uri)
+                    posters.onStart()
+                    val raised = cardAsking(uri)
+                    posters.poster(uri, 480, 270).shouldBeNull()
+
+                    wait(10.seconds)
+                    raised.size shouldBe 1
+                    serve(uri, png(480, 270))
+                    wait(10.seconds)
+
+                    raised.size shouldBe 2
+                    posters.poster(uri, 480, 270).shouldNotBeNull()
+                }
+            }
+
+            test("the retries of a refused poster stop after the last step of the backoff, ten minutes after the refusal") {
+                runTest {
+                    val uri = "content://app.posters/never-granted"
+                    refuse(uri)
+                    posters.onStart()
+                    val raised = cardAsking(uri)
+                    posters.poster(uri, 480, 270).shouldBeNull()
+
+                    wait(1.hours)
+
+                    raised shouldBe listOf(10L, 20L, 40L, 80L, 160L, 320L).map { it * 1000 }
+                    opened.getValue(uri) shouldBe 7
+                }
+            }
+
+            test("a stopped home makes no retries of a refused poster") {
+                runTest {
+                    val uri = "content://app.posters/refused-while-stopped"
+                    refuse(uri)
+                    posters.onStart()
+                    val raised = cardAsking(uri)
+                    posters.poster(uri, 480, 270).shouldBeNull()
+
+                    posters.onStop()
+                    wait(1.hours)
+
+                    raised shouldBe emptyList()
+                    opened.getValue(uri) shouldBe 1
+                }
+            }
+
+            test("a poster that does not decode is not retried while home stays started") {
+                runTest {
+                    val uri = "content://app.posters/garbled"
+                    serve(uri, "not a picture".toByteArray())
+                    posters.onStart()
+                    val raised = cardAsking(uri)
+                    posters.poster(uri, 480, 270).shouldBeNull()
+                    val reads = opened.getValue(uri)
+
+                    wait(1.hours)
+                    posters.poster(uri, 480, 270).shouldBeNull()
+
+                    raised shouldBe emptyList()
+                    opened.getValue(uri) shouldBe reads
+                }
             }
 
             test("trim drops the decoded posters, which the next ask reads again") {

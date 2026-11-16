@@ -131,6 +131,11 @@ internal class WebPosters(
         started.value = true
     }
 
+    /** Raises [changes], for a poster that failed and may be readable now. */
+    fun raise() {
+        generation.update { it + 1 }
+    }
+
     fun onStop() {
         started.value = false
     }
