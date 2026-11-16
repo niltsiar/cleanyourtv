@@ -60,6 +60,7 @@ dependencies {
     implementation(project(":feature:library"))
     implementation(project(":feature:settings"))
     implementation(project(":service:keys"))
+    implementation(project(":service:media"))
     implementation(project(":data:apps"))
     implementation(project(":data:inputs"))
     implementation(project(":data:shelf"))

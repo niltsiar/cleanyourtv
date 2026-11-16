@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Its notification access is what lets Home read media sessions. Disabled here until NowPlayingAccess.setEnabled
+             switches it on. The empty filter delivers no notification from API 31.
+             cmd notification allow_listener dev.niltsiar.tvhome/.service.media.NowPlayingListener -->
+        <service
+            android:name=".NowPlayingListener"
+            android:enabled="false"
+            android:exported="true"
+            android:label="@string/now_playing_listener_name"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.notification.default_filter_types"
+                android:value="" />
+        </service>
+    </application>
+</manifest>

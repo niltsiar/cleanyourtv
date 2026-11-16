@@ -28,6 +28,9 @@
 #                    opt-in broadcast, whose reply it prints. The key service then leaves the accessibility list at screen-off
 #                    and returns at screen-on. With `old` it sends the opt-out and disallows the listener. Without GUARD=1
 #                    `new` leaves an earlier opt-in as it is.
+#          NOW_PLAYING=1   with `new`: allow the notification listener NowPlayingListener, whose access lets Home read
+#                    what a music app plays (it reads no notification). `old` disallows it. Without NOW_PLAYING=1 `new`
+#                    leaves it as it is.
 #
 # Stages: `KEYS=keep SCREENSAVER=keep scripts/switch-home.sh new` changes only Home. Run it again without the two
 # variables to move the key service and the screensaver after Home has been seen working.
@@ -317,6 +320,25 @@ switch_guard() {
   fi
 }
 
+switch_now_playing() {
+  local listener
+  listener="$(component service.media.NowPlayingListener)"
+  echo "== Now playing listener"
+  if [ "$1" = new ]; then
+    if [ "${NOW_PLAYING:-0}" != 1 ]; then
+      echo "not requested (NOW_PLAYING=1 allows it)"
+      return 0
+    fi
+    adb_tv shell cmd notification allow_listener "$listener" > /dev/null 2>&1 \
+      && echo "notification listener allowed: $listener" \
+      || echo "not allowed: $listener; Home cannot read what a music app plays"
+  else
+    adb_tv shell cmd notification disallow_listener "$listener" > /dev/null 2>&1 \
+      && echo "notification listener disallowed: $listener" \
+      || echo "could not disallow $listener"
+  fi
+}
+
 # restore_setting NAME RAW: put a setting back to RAW as read_raw gave it; "null" means unset.
 restore_setting() {
   local now
@@ -529,6 +551,8 @@ elif [ "$USE_STATE" = 1 ]; then
 else
   switch_screensaver "$1"
 fi
+
+switch_now_playing "$1"
 
 if [ "$USE_STATE" = 1 ] && [ "$KEYS" != keep ] && [ "$SCREENSAVER" != keep ]; then rm -f "$STATE_FILE"; fi
 echo "OK: $PACKAGE is Home and in front"

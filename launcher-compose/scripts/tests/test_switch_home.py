@@ -30,6 +30,7 @@ SECURE_SETTINGS = "android.permission.WRITE_SECURE_SETTINGS"
 TV_LISTINGS = "android.permission.READ_TV_LISTINGS"
 GUARD_CONFIG = f"{NEW}/.service.keys.GuardConfig"
 GUARD_LISTENER = f"{NEW}/.service.keys.GuardRevival"
+NOW_PLAYING_LISTENER = f"{NEW}/.service.media.NowPlayingListener"
 ALT = "com.example.home"
 
 FAKE_ADB = r'''#!/usr/bin/env python3
@@ -416,10 +417,10 @@ class SwitchHomeTest(unittest.TestCase):
         self.assertEqual(self.secure_settings_calls("grant") + self.secure_settings_calls("revoke"), [])
 
     def guard_calls(self):
-        """The listener and opt-in calls, in order, as 'allow', 'disallow' or 'opt true|false'."""
+        """The standby guard's listener and opt-in calls, in order, as 'allow', 'disallow' or 'opt true|false'."""
         found = []
         for call in self.calls():
-            if call[1:3] == ["cmd", "notification"]:
+            if call[1:3] == ["cmd", "notification"] and not call[4].endswith(".service.media.NowPlayingListener"):
                 found.append(f"{call[3].split('_')[0]} {call[4]}")
             elif call[1:3] == ["am", "broadcast"]:
                 found.append(f"opt {call[-1]} {call[call.index('-a') + 1]} {call[call.index('-n') + 1]}")
@@ -479,6 +480,19 @@ class SwitchHomeTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("not allowed", result.stdout)
         self.assertEqual(self.read_tv()["home"], f"{NEW}/.MainActivity")
+
+    def test_now_playing_allows_its_listener_with_new_and_old_disallows_it(self):
+        def listener_calls():
+            return [call[3] for call in self.calls() if call[1:3] == ["cmd", "notification"] and call[4] == NOW_PLAYING_LISTENER]
+
+        self.assertEqual(self.run_script("new").returncode, 0)
+        self.assertEqual(listener_calls(), [])
+        result = self.run_script("new", NOW_PLAYING="1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(listener_calls(), ["allow_listener"])
+        self.assertIn(f"notification listener allowed: {NOW_PLAYING_LISTENER}", result.stdout)
+        self.assertEqual(self.run_script("old").returncode, 0)
+        self.assertEqual(listener_calls(), ["allow_listener", "disallow_listener"])
 
     def test_keys_keep_grants_no_app_ops(self):
         self.assertEqual(self.run_script("new", KEYS="keep").returncode, 0)
