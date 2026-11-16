@@ -50,6 +50,7 @@
   <string name="settings_shelf_sources">Ứng dụng và kênh</string>
   <string name="settings_shelf_cards">Số thẻ mỗi ứng dụng</string>
   <string name="settings_shelf_no_access">Không có quyền</string>
+  <string name="settings_shelf_no_room">Bố cục này không có chỗ cho thẻ</string>
   <string name="settings_shelf_none">Không có</string>
   <string name="settings_shelf_watch_next">Tiếp tục xem · %1$d</string>
   <string name="settings_shelf_nothing">Không ứng dụng nào chia sẻ mục</string>

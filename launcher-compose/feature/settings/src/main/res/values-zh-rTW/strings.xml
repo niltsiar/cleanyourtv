@@ -50,6 +50,7 @@
   <string name="settings_shelf_sources">應用程式和頻道</string>
   <string name="settings_shelf_cards">每個應用程式的卡片數</string>
   <string name="settings_shelf_no_access">無權限</string>
+  <string name="settings_shelf_no_room">此版面沒有放置卡片的空間</string>
   <string name="settings_shelf_none">無</string>
   <string name="settings_shelf_watch_next">繼續觀看 · %1$d</string>
   <string name="settings_shelf_nothing">沒有應用程式分享內容</string>

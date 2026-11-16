@@ -4,10 +4,13 @@ import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
 import dev.niltsiar.tvhome.core.model.PosterHelper
 import dev.niltsiar.tvhome.core.model.ShelfPublisher
 import dev.niltsiar.tvhome.core.model.WallpaperPicture
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 /** One row of Launcher settings that offers a set of options. */
 public enum class SettingsRowId {
@@ -113,9 +116,10 @@ public data class ShelfPicker(
  * open_on_start_choice, and [picker] is set while its picker is open. [wallpaper] is the value of the Wallpaper row, which
  * follows the Clock row (the picked picture's name, None, or Theme default); it is there when the theme has a picture, and
  * [wallpaperPicker] is set while its picker is open. [shelfSources] is the value of the Apps and channels row, which follows
- * the App highlights row while app_shelf is on (No access without READ_TV_LISTINGS, None, how many of the ticked sources its
- * picker lists, or empty while they load), and [shelfPicker] is set while its picker is open. [backdrop] is what Home draws
- * where it has no picture: the theme's background_color.
+ * the App highlights row while app_shelf is on (No access without READ_TV_LISTINGS, that the layout has no room for cards
+ * when Home would show none, None, how many of the ticked sources its picker lists, or empty while they load), and
+ * [shelfPicker] is set while its picker is open. [backdrop] is what Home draws where it has no picture: the theme's
+ * background_color.
  */
 @Immutable
 public data class SettingsUiState(
@@ -153,6 +157,8 @@ public class SettingsSources(
     public val nowPlayingAvailable: () -> Boolean = { false },
     /** True when the Now playing listener has notification access. */
     public val nowPlayingAccess: () -> Boolean = { false },
+    /** Whether Home has room for the shelf cards with a config, in its window with its tiles; null until Home has shown them. */
+    public val shelfRoom: Flow<((TvConfig) -> Boolean)?> = flowOf(null),
 )
 
 /** The art beside the pickers' entries, loaded off the main thread at a width and height in pixels; null when there is none. */

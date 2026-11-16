@@ -21,8 +21,8 @@ import java.io.IOException
  * The settings screen's state logic: the rows are the repository's config read through [settingsGroups], nothing is
  * kept apart from it, and a pick or Follow theme goes to the repository, which answers through the same flow.
  * Only the open pickers, the theme's pictures, the picked app's label, whether Home holds READ_TV_LISTINGS, the sources
- * the Apps and channels picker lists, the poster helper's status and whether the TV gives notification access, read once,
- * and whether the Now playing listener has it are kept here. [onEffect] gets
+ * the Apps and channels picker lists, Home's room rule for the shelf cards, the poster helper's status and whether the TV
+ * gives notification access, read once, and whether the Now playing listener has it are kept here. [onEffect] gets
  * [SettingsEffect.SaveFailed] when the store refuses a write, [SettingsEffect.WallpaperApplied] after a picture or None was
  * stored as the wallpaper, [SettingsEffect.AskShelfAccess] when App highlights is turned on or the Apps and channels picker
  * opened without that permission, [SettingsEffect.NoShelfSources] when that picker would list nothing, and
@@ -157,7 +157,9 @@ internal fun settingsPresenter(
         shelfListed = null
         if (config.appShelf && shelfAccess) shelfListed = shelfEntries(sources.shelfPublishers()).mapTo(HashSet()) { it.source }
     }
-    val shelfRow = remember(config, shelfAccess, shelfListed) { shelfSourcesLabel(config, shelfAccess, shelfListed) }
+    val shelfRoom by sources.shelfRoom.collectAsState(null)
+    val room = remember(config, shelfRoom) { shelfRoom?.invoke(config) != false }
+    val shelfRow = remember(config, shelfAccess, shelfListed, room) { shelfSourcesLabel(config, shelfAccess, shelfListed, room) }
     LaunchedEffect(config.appShelf) { if (!config.appShelf) shelfEntries = null }
     val ticked = config.appShelfSources
     val shelfPicker = remember(shelfEntries, ticked) { shelfEntries?.let { ShelfPicker(it, ticked.toSet()) } }

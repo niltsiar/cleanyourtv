@@ -243,18 +243,21 @@ internal fun turnsShelfOn(
 ): Boolean = row == SettingsRowId.AppShelf && rowOf(row).valueAt(option) == true
 
 /**
- * The value of the Apps and channels row: how many ticked sources the picker [listed], None for none, and empty while the
- * listing loads. Null while app_shelf is off, when the row is not there.
+ * The value of the Apps and channels row: No access without READ_TV_LISTINGS, the no-room line when Home has no [room] for
+ * the cards in this layout, how many ticked sources the picker [listed], None for none, and empty while the listing loads.
+ * Null while app_shelf is off, when the row is not there.
  */
 internal fun shelfSourcesLabel(
     config: TvConfig,
     access: Boolean,
     listed: Set<String>?,
+    room: Boolean,
 ): OptionLabel? {
     val shown = listed?.let { config.appShelfSources.count(it::contains) }
     return when {
         !config.appShelf -> null
         !access -> res(R.string.settings_shelf_no_access)
+        !room -> res(R.string.settings_shelf_no_room)
         config.appShelfSources.isEmpty() || shown == 0 -> res(R.string.settings_shelf_none)
         shown == null -> OptionLabel.Text("")
         else -> text(shown)

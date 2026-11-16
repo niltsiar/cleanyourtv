@@ -50,6 +50,7 @@
   <string name="settings_shelf_sources">앱 및 채널</string>
   <string name="settings_shelf_cards">앱당 카드 수</string>
   <string name="settings_shelf_no_access">권한 없음</string>
+  <string name="settings_shelf_no_room">이 구성에는 카드 공간이 없습니다</string>
   <string name="settings_shelf_none">없음</string>
   <string name="settings_shelf_watch_next">이어서 시청하기 · %1$d</string>
   <string name="settings_shelf_nothing">항목을 공유하는 앱이 없습니다</string>

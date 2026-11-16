@@ -7,7 +7,11 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntSize
 import de.infix.testBalloon.framework.core.JUnit4RulesContext
 import de.infix.testBalloon.framework.core.TestConfig
 import de.infix.testBalloon.framework.core.testSuite
@@ -82,10 +86,37 @@ class ShelfRoomUiTestContent :
             test("with no grid rows to show, rows_below_dock 3 shrinks the tiles and leaves room from columns 3") {
                 roomyColumns(Shelf.copy(rowsBelowDock = 3), apps = 3) shouldBe (3..8).toList()
             }
+
+            test("shelfHasRoom, which Settings reads, agrees with Home's measurement in every layout above") {
+                for ((index, measured) in Measured.withIndex()) {
+                    val (layout, apps) = measured
+                    withClue("layout $index") { ruledColumns(layout, apps) shouldBe roomyColumns(layout, apps) }
+                }
+            }
         }
     })
 
 private val Shelf = TvConfig(appShelf = true)
+
+/** Every layout the tests above measure, with its app count. */
+private val Measured: List<Pair<TvConfig, Int>> =
+    listOf(
+        Shelf,
+        Shelf.copy(cinematicHome = true),
+        Shelf.copy(alwaysShowNames = true),
+        Shelf.copy(alwaysShowNames = true, cinematicHome = true),
+        Shelf.copy(alwaysShowNames = true, cinematicHome = true, animations = false),
+        Shelf.copy(dockEvenPadding = true, focusOvershoot = true),
+        Shelf.copy(dockEvenPadding = true, focusOvershoot = true, alwaysShowNames = true),
+        Shelf.copy(dockEvenPadding = true, focusOvershoot = true, alwaysShowNames = true, cinematicHome = true),
+        Shelf.copy(rowsBelowDock = 1),
+        Shelf.copy(rowsBelowDock = 1, cinematicHome = true),
+        Shelf.copy(rowsBelowDock = 1, alwaysShowNames = true),
+        Shelf.copy(rowsBelowDock = 1, cinematicHome = true, dockEvenPadding = true),
+        Shelf.copy(rowsBelowDock = 2),
+        Shelf.copy(rowsBelowDock = 3),
+        Shelf.copy(singleRow = true),
+    ).map { it to 18 } + (Shelf.copy(rowsBelowDock = 3) to 3)
 
 private class ShelfRoomUiTestFixture : JUnit4RulesContext() {
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
@@ -94,6 +125,8 @@ private class ShelfRoomUiTestFixture : JUnit4RulesContext() {
     private var appCount by mutableIntStateOf(0)
     private var room: Boolean? = null
     private var shown = false
+    private var window = IntSize.Zero
+    private var density = Density(1f)
 
     /** The columns, of 1 to 8, at which Home with [layout] and [apps] apps reports room for the cards. */
     fun roomyColumns(
@@ -111,10 +144,22 @@ private class ShelfRoomUiTestFixture : JUnit4RulesContext() {
         }
     }
 
+    /** The columns, of 1 to 8, at which [shelfHasRoom] gives room in the window Home is shown in. */
+    fun ruledColumns(
+        layout: TvConfig,
+        apps: Int,
+    ): List<Int> {
+        show()
+        compose.waitForIdle()
+        return (1..8).filter { shelfHasRoom(layout.copy(columns = it), apps, docked = 0, window, density) }
+    }
+
     private fun show() {
         if (shown) return
         shown = true
         compose.setContent {
+            window = LocalWindowInfo.current.containerSize
+            density = LocalDensity.current
             val current = config ?: return@setContent
             key(current, appCount) {
                 val entries = (1..appCount).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") }

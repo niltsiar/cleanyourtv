@@ -50,6 +50,7 @@
   <string name="settings_shelf_sources">Aplicacions i canals</string>
   <string name="settings_shelf_cards">Targetes per app</string>
   <string name="settings_shelf_no_access">Sense accés</string>
+  <string name="settings_shelf_no_room">No hi caben targetes</string>
   <string name="settings_shelf_none">Cap</string>
   <string name="settings_shelf_watch_next">Continua mirant · %1$d</string>
   <string name="settings_shelf_nothing">Cap app no comparteix elements</string>

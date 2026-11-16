@@ -50,6 +50,7 @@
   <string name="settings_shelf_sources">Applis et chaînes</string>
   <string name="settings_shelf_cards">Cartes par appli</string>
   <string name="settings_shelf_no_access">Pas d\'accès</string>
+  <string name="settings_shelf_no_room">Pas de place pour les cartes</string>
   <string name="settings_shelf_none">Aucune</string>
   <string name="settings_shelf_watch_next">Continuer à regarder · %1$d</string>
   <string name="settings_shelf_nothing">Aucune appli ne partage de contenu</string>

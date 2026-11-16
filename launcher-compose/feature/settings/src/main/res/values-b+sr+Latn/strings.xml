@@ -50,6 +50,7 @@
   <string name="settings_shelf_sources">Aplikacije i kanali</string>
   <string name="settings_shelf_cards">Kartice po aplikaciji</string>
   <string name="settings_shelf_no_access">Nema pristupa</string>
+  <string name="settings_shelf_no_room">Raspored nema mesta za kartice</string>
   <string name="settings_shelf_none">Nijedan</string>
   <string name="settings_shelf_watch_next">Nastavite da gledate · %1$d</string>
   <string name="settings_shelf_nothing">Nijedna aplikacija ne deli stavke</string>

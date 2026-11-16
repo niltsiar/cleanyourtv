@@ -17,7 +17,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -42,7 +44,7 @@ import kotlin.coroutines.EmptyCoroutineContext
  * [awaitSaveFailed] for a write the store refused. The pickers show [art], and Home shows [themeDefault] for the theme default.
  * The Apps and channels picker lists [shelfPublishers], each listing counted in [shelfListings], and [shelfAccess] says whether
  * Home holds READ_TV_LISTINGS; [awaitAskedShelfAccess] and [awaitNoShelfSources] wait for the effects that report them.
- * [posterHelper] is the poster helper's status.
+ * [posterHelper] is the poster helper's status, and [shelfRoom] Home's room rule for the shelf cards.
  */
 internal class SettingsHarness(
     private val app: Application,
@@ -58,6 +60,7 @@ internal class SettingsHarness(
     posterHelper: () -> PosterHelper = { PosterHelper.Missing },
     nowPlayingAvailable: () -> Boolean = { true },
     nowPlayingAccess: () -> Boolean = { false },
+    shelfRoom: Flow<((TvConfig) -> Boolean)?> = flowOf(null),
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val presenterScope = if (uiThread) CoroutineScope(SupervisorJob() + Dispatchers.Main) else scope
@@ -93,6 +96,7 @@ internal class SettingsHarness(
                 posterHelper,
                 nowPlayingAvailable,
                 nowPlayingAccess,
+                shelfRoom,
             )
         viewModel = MoleculeSettingsViewModel(repository, sources, presenterScope, RecompositionMode.Immediate, EmptyCoroutineContext)
         scope.launch {

@@ -50,6 +50,7 @@
   <string name="settings_shelf_sources">Aplicaciones y canales</string>
   <string name="settings_shelf_cards">Tarxetes per aplicación</string>
   <string name="settings_shelf_no_access">Ensin accesu</string>
+  <string name="settings_shelf_no_room">Nun hai sitiu pa tarxetes</string>
   <string name="settings_shelf_none">Nengunu</string>
   <string name="settings_shelf_watch_next">Siguir viendo · %1$d</string>
   <string name="settings_shelf_nothing">Nenguna aplicación comparte elementos</string>

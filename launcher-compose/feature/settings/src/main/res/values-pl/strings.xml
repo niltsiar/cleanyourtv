@@ -50,6 +50,7 @@
   <string name="settings_shelf_sources">Aplikacje i kanały</string>
   <string name="settings_shelf_cards">Karty na aplikację</string>
   <string name="settings_shelf_no_access">Brak dostępu</string>
+  <string name="settings_shelf_no_room">Ten układ nie ma miejsca na karty</string>
   <string name="settings_shelf_none">Brak</string>
   <string name="settings_shelf_watch_next">Oglądaj dalej · %1$d</string>
   <string name="settings_shelf_nothing">Żadna aplikacja nie udostępnia elementów</string>

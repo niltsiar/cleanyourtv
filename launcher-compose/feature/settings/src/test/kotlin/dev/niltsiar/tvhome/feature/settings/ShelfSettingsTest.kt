@@ -6,6 +6,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.PosterHelper
 import dev.niltsiar.tvhome.core.model.PublishedChannel
 import dev.niltsiar.tvhome.core.model.ShelfChannel
@@ -14,11 +15,15 @@ import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.flow.flowOf
 import org.robolectric.RuntimeEnvironment
 import java.util.concurrent.atomic.AtomicBoolean
 
 private const val SHELF_ON = """{"app_shelf": true}"""
 private const val SMARTTUBE = "org.smarttube.stable"
+
+/** A stand-in for Home's room rule: with always_show_names the cards need 5 columns. */
+private val NamesNeedFiveColumns: (TvConfig) -> Boolean = { !it.alwaysShowNames || it.columns >= 5 }
 
 /** The App highlights row, its Apps and channels row and picker, over the real repository. */
 val ShelfSettingsTest by testSuite {
@@ -54,6 +59,7 @@ class ShelfSettingsTestContent :
                     listed: List<ShelfPublisher> = publishers,
                     helper: PosterHelper = PosterHelper.Missing,
                     listenerAvailable: Boolean = true,
+                    room: ((TvConfig) -> Boolean)? = null,
                 ): SettingsHarness {
                     harness?.stop()
                     return SettingsHarness(
@@ -64,6 +70,7 @@ class ShelfSettingsTestContent :
                         posterHelper = { helper },
                         nowPlayingAvailable = { listenerAvailable },
                         nowPlayingAccess = { listenerGranted.get() },
+                        shelfRoom = flowOf(room),
                     ).also { harness = it }
                 }
 
@@ -93,6 +100,50 @@ class ShelfSettingsTestContent :
 
                 settings.awaitState { it.shelfSources == OptionLabel.Text("2") }
                 settings.config.appShelfSources shouldBe listOf("com.plezy", "com.gone", "$SMARTTUBE/history", "$SMARTTUBE/rebuilt")
+            }
+
+            test("the apps and channels row says the layout has no room for cards where home has none, and counts where it has") {
+                val noRoom =
+                    settings(
+                        """{"app_shelf": true, "always_show_names": true, "columns": 4, "app_shelf_sources": ["com.plezy"]}""",
+                        room = NamesNeedFiveColumns,
+                    )
+                noRoom.awaitState { it.shelfSources == OptionLabel.Res(R.string.settings_shelf_no_room) }
+
+                val roomy =
+                    settings(
+                        """{"app_shelf": true, "always_show_names": true, "columns": 5, "app_shelf_sources": ["com.plezy"]}""",
+                        room = NamesNeedFiveColumns,
+                    )
+                roomy.awaitState { it.shelfSources == OptionLabel.Text("1") }
+            }
+
+            test("the no room line follows the columns and names rows on the page") {
+                val settings =
+                    settings(
+                        """{"app_shelf": true, "always_show_names": true, "columns": 4, "app_shelf_sources": ["com.plezy"]}""",
+                        room = NamesNeedFiveColumns,
+                    )
+                settings.awaitState { it.shelfSources == OptionLabel.Res(R.string.settings_shelf_no_room) }
+
+                settings.pick(SettingsRowId.Columns, 1)
+                settings.awaitState { it.shelfSources == OptionLabel.Text("1") }
+
+                settings.pick(SettingsRowId.Columns, 0)
+                settings.awaitState { it.shelfSources == OptionLabel.Res(R.string.settings_shelf_no_room) }
+
+                settings.pick(SettingsRowId.AlwaysShowNames, 1)
+                settings.awaitState { it.shelfSources == OptionLabel.Text("1") }
+            }
+
+            test("turning app highlights off takes the no room line away with its row") {
+                val settings = settings("""{"app_shelf": true, "always_show_names": true, "columns": 4}""", room = NamesNeedFiveColumns)
+                settings.awaitState { it.shelfSources == OptionLabel.Res(R.string.settings_shelf_no_room) }
+
+                settings.pick(SettingsRowId.AppShelf, 1)
+
+                settings.awaitState { it.shelfSources == null }
+                settings.config.appShelf.shouldBeFalse()
             }
 
             test("with none of its ticked sources listed the apps and channels row says none") {

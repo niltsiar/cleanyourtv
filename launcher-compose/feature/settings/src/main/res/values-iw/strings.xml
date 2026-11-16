@@ -50,6 +50,7 @@
   <string name="settings_shelf_sources">אפליקציות וערוצים</string>
   <string name="settings_shelf_cards">כרטיסים לכל אפליקציה</string>
   <string name="settings_shelf_no_access">אין גישה</string>
+  <string name="settings_shelf_no_room">אין מקום לכרטיסים בפריסה הזו</string>
   <string name="settings_shelf_none">ללא</string>
   <string name="settings_shelf_watch_next">המשך צפייה · %1$d</string>
   <string name="settings_shelf_nothing">אף אפליקציה לא משתפת פריטים</string>

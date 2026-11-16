@@ -50,6 +50,7 @@
   <string name="settings_shelf_sources">Застосунки та канали</string>
   <string name="settings_shelf_cards">Карток на застосунок</string>
   <string name="settings_shelf_no_access">Немає доступу</string>
+  <string name="settings_shelf_no_room">Немає місця для карток</string>
   <string name="settings_shelf_none">Немає</string>
   <string name="settings_shelf_watch_next">Дивіться далі · %1$d</string>
   <string name="settings_shelf_nothing">Жоден застосунок не ділиться матеріалами</string>

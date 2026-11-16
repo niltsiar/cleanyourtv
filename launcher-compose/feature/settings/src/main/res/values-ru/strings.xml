@@ -50,6 +50,7 @@
   <string name="settings_shelf_sources">Приложения и каналы</string>
   <string name="settings_shelf_cards">Карточек на приложение</string>
   <string name="settings_shelf_no_access">Нет доступа</string>
+  <string name="settings_shelf_no_room">Нет места для карточек</string>
   <string name="settings_shelf_none">Нет</string>
   <string name="settings_shelf_watch_next">Продолжить просмотр · %1$d</string>
   <string name="settings_shelf_nothing">Ни одно приложение не делится материалами</string>

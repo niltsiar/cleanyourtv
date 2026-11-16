@@ -8,6 +8,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -92,6 +94,9 @@ internal fun HomeHost(
     LaunchedEffect(viewModel) {
         snapshotFlow(settingsClosing).filterNotNull().collect { viewModel.onSettingsClosed(it.reorder) }
     }
+    val window = LocalWindowInfo.current.containerSize
+    val density = LocalDensity.current
+    LaunchedEffect(window, density) { graph.homeShape.windowShown(window, density) }
     LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onStarted() }
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.onStopped() }
     val state = viewModel.uiState.collectAsStateWithLifecycle()

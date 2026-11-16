@@ -50,6 +50,7 @@
   <string name="settings_shelf_sources">Apps und Kanäle</string>
   <string name="settings_shelf_cards">Karten pro App</string>
   <string name="settings_shelf_no_access">Kein Zugriff</string>
+  <string name="settings_shelf_no_room">Layout ohne Platz für Karten</string>
   <string name="settings_shelf_none">Keine</string>
   <string name="settings_shelf_watch_next">Weiter ansehen · %1$d</string>
   <string name="settings_shelf_nothing">Keine App teilt Inhalte</string>

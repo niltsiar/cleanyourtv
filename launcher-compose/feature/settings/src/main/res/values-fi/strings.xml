@@ -50,6 +50,7 @@
   <string name="settings_shelf_sources">Sovellukset ja kanavat</string>
   <string name="settings_shelf_cards">Kortteja sovellusta kohden</string>
   <string name="settings_shelf_no_access">Ei käyttöoikeutta</string>
+  <string name="settings_shelf_no_room">Ulkoasussa ei ole tilaa korteille</string>
   <string name="settings_shelf_none">Ei mitään</string>
   <string name="settings_shelf_watch_next">Jatka katselua · %1$d</string>
   <string name="settings_shelf_nothing">Mikään sovellus ei jaa kohteita</string>

@@ -50,6 +50,7 @@
   <string name="settings_shelf_sources">Aplikace a kanály</string>
   <string name="settings_shelf_cards">Karty na aplikaci</string>
   <string name="settings_shelf_no_access">Bez přístupu</string>
+  <string name="settings_shelf_no_room">Rozvržení nemá místo pro karty</string>
   <string name="settings_shelf_none">Žádné</string>
   <string name="settings_shelf_watch_next">Pokračovat ve sledování · %1$d</string>
   <string name="settings_shelf_nothing">Žádná aplikace nesdílí položky</string>

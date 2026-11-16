@@ -50,6 +50,7 @@
   <string name="settings_shelf_sources">应用和频道</string>
   <string name="settings_shelf_cards">每个应用的卡片数</string>
   <string name="settings_shelf_no_access">无权限</string>
+  <string name="settings_shelf_no_room">此布局没有放置卡片的空间</string>
   <string name="settings_shelf_none">无</string>
   <string name="settings_shelf_watch_next">继续观看 · %1$d</string>
   <string name="settings_shelf_nothing">没有应用分享内容</string>

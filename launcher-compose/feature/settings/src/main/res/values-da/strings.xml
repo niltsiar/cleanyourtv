@@ -50,6 +50,7 @@
   <string name="settings_shelf_sources">Apps og kanaler</string>
   <string name="settings_shelf_cards">Kort pr. app</string>
   <string name="settings_shelf_no_access">Ingen adgang</string>
+  <string name="settings_shelf_no_room">Dette layout har ikke plads til kort</string>
   <string name="settings_shelf_none">Ingen</string>
   <string name="settings_shelf_watch_next">Se videre · %1$d</string>
   <string name="settings_shelf_nothing">Ingen app deler noget at vise</string>

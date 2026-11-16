@@ -50,6 +50,7 @@
   <string name="settings_shelf_sources">Aplikasi dan saluran</string>
   <string name="settings_shelf_cards">Kartu per aplikasi</string>
   <string name="settings_shelf_no_access">Tanpa akses</string>
+  <string name="settings_shelf_no_room">Tata letak tanpa ruang kartu</string>
   <string name="settings_shelf_none">Tidak ada</string>
   <string name="settings_shelf_watch_next">Teruskan menonton · %1$d</string>
   <string name="settings_shelf_nothing">Tidak ada aplikasi yang membagikan item</string>

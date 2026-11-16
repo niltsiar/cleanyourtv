@@ -357,16 +357,23 @@ internal class HomeApps(
     val grid: List<AppEntry>
 
     init {
-        val dockSize =
-            when {
-                layout.singleRow -> all.size
-                emptyDockSlots(list.docked, layout.columns, all.size, layout.fillDock) > 0 -> list.docked
-                else -> layout.columns
-            }
+        val dockSize = dockSize(layout, list.docked, all.size)
         dock = all.take(dockSize)
         grid = all.drop(dockSize)
     }
 }
+
+/** How many of [tiles] tiles, led by [docked] dock apps, [HomeApps] puts in the dock. */
+internal fun dockSize(
+    layout: HomeLayout,
+    docked: Int,
+    tiles: Int,
+): Int =
+    when {
+        layout.singleRow -> tiles
+        emptyDockSlots(docked, layout.columns, tiles, layout.fillDock) > 0 -> docked
+        else -> minOf(layout.columns, tiles)
+    }
 
 /**
  * Empty slots to leave after [docked] dock apps in a dock of [dockSize], when fill_dock is off. None when the dock is

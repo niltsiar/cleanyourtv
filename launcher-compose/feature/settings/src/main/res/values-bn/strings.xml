@@ -50,6 +50,7 @@
   <string name="settings_shelf_sources">অ্যাপ ও চ্যানেল</string>
   <string name="settings_shelf_cards">প্রতি অ্যাপে কার্ড</string>
   <string name="settings_shelf_no_access">অ্যাক্সেস নেই</string>
+  <string name="settings_shelf_no_room">এই লেআউটে কার্ডের জায়গা নেই</string>
   <string name="settings_shelf_none">কোনোটি নয়</string>
   <string name="settings_shelf_watch_next">দেখা চালিয়ে যান · %1$d</string>
   <string name="settings_shelf_nothing">কোনো অ্যাপ দেখানোর মতো কিছু শেয়ার করে না</string>

@@ -127,9 +127,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.DockEdgeLight
 import dev.niltsiar.tvhome.core.designsystem.DockSurface
 import dev.niltsiar.tvhome.core.designsystem.FocusRingReach
@@ -138,6 +140,7 @@ import dev.niltsiar.tvhome.core.designsystem.GlassIconButton
 import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.designsystem.KeyChip
 import dev.niltsiar.tvhome.core.designsystem.KeyChipHeight
+import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.ScrollsClearOfEdge
 import dev.niltsiar.tvhome.core.designsystem.Spotlight
@@ -507,10 +510,9 @@ public fun HomeScreen(
     val backdrop = rememberCinematicBackdrop(shelfLayout, shelf = { state().shelf }, heroArt = heroArt, reordering = reordering)
     val cards = remember { ShelfCardsState() }
     val density = LocalDensity.current
-    val titleLine = if (shelfLayout.cinematic) CinematicTitleLine else HeroTitleLine
     val lift = with(density) { dim.loweringPx.toDp() }
     val peak = TvTheme.motion.focusPeakScale(TILE_FOCUSED_SCALE)
-    val cardBand = remember(shelfHeight, titleLine, lift, peak) { shelfBand(shelfHeight - titleLine - MetaGap - MetaSlot, lift, peak) }
+    val cardBand = remember(shelfLayout.cinematic, lift, peak) { shelfBand(shelfCardRoom(shelfLayout.cinematic), lift, peak) }
     val currentLibraryOpen = rememberUpdatedState(libraryOpen)
     val shelfVisible =
         remember(cardBand) {
@@ -1167,7 +1169,23 @@ private fun rememberDockPadding(
     val gridEmpty by remember(state) { derivedStateOf { state.value().grid.isEmpty() } }
     val scale = TvTheme.motion.focusScale(TILE_FOCUSED_SCALE)
     val peak = TvTheme.motion.focusPeakScale(TILE_FOCUSED_SCALE)
-    val tileWidth = dockRowTileWidth(with(density) { windowWidth.toDp() } - ScreenMargin * 2, layout.columns)
+    return density.dockPaddingIn(with(density) { windowWidth.toDp() }, layout, look, scale, peak, shrunk, gridEmpty)
+}
+
+/**
+ * The dock panel's padding in a window [windowWidth] wide, for tiles that grow [scale] times and pop to [peak]: [shrunk] when
+ * the panel holds fewer tiles than the row, and [gridEmpty] with no tile in the grid.
+ */
+private fun Density.dockPaddingIn(
+    windowWidth: Dp,
+    layout: HomeLayout,
+    look: DockLook,
+    scale: Float,
+    peak: Float,
+    shrunk: Boolean,
+    gridEmpty: Boolean,
+): DockPadding {
+    val tileWidth = dockRowTileWidth(windowWidth - ScreenMargin * 2, layout.columns)
     val tileHeight = tileWidth.value / TILE_ASPECT
     val pivot = if (layout.showNames) namePivot(tileHeight, scale) else tileHeight / 2f
     val over = roomOver(pivot, scale, peak).dp
@@ -1175,7 +1193,7 @@ private fun rememberDockPadding(
     val under = if (layout.showNames) TileGap else roomOver(tileHeight - pivot, scale, peak).dp
     // A first-row tile is as wide as this one at most, and grows about the same point. The library pill does not pop.
     val rowGap = if (layout.singleRow || gridEmpty) TileGap else over
-    return dockPadding(density.dockRingSide(tileWidth, peak), shrunk, look.evenPadding, over, under, rowGap)
+    return dockPadding(dockRingSide(tileWidth, peak), shrunk, look.evenPadding, over, under, rowGap)
 }
 
 @Composable
@@ -1196,28 +1214,8 @@ private fun rememberFocusDim(
             val height = window.height.toDp()
             val gridWidth = width - ScreenMargin * 2
             val share = gridShare(layout, gridWidth, height, shelfBottom, dockPadding)
-            val tileWidth = (gridWidth * share - TileGap * (layout.columns - 1)) / layout.columns
-            val tileHeight = tileWidth / TILE_ASPECT
-            val gridRows = if (layout.singleRow) 0 else (gridCount + layout.columns - 1) / layout.columns
-            val lowered =
-                if (layout.singleRow) {
-                    0.dp
-                } else {
-                    dockLowering(
-                        windowHeight = height.value,
-                        shelfBottom = shelfBottom.value,
-                        tileHeight = tileHeight.value,
-                        gap = TileGap.value,
-                        dockTop = dockPadding.top.value,
-                        dockBottom = dockPadding.bottom.value,
-                        rowGap = dockPadding.rowGap.value,
-                        gridRows = gridRows,
-                        rowsBelowDock = layout.rowsBelowDock,
-                        bottomMargin = GridBottom.value,
-                        nameRoom = layout.nameRoom(tileHeight.value, scale, peak),
-                        dockNameRoom = layout.nameRoom(tileHeight.value, scale, peak, rowUnder = false),
-                    ).dp
-                }
+            val tileHeight = gridTileHeight(layout, gridWidth, share)
+            val lowered = groupLowering(layout, height, shelfBottom, tileHeight, dockPadding, scale, peak, gridCount)
             val start = gridStart(gridWidth, share)
             val edge = (start - TileGap) / width
             val end = (start + gridWidth * share + TileGap) / width
@@ -1277,6 +1275,82 @@ private fun gridStart(
     gridWidth: Dp,
     share: Float,
 ): Dp = ScreenMargin + gridWidth * ((1f - share) / 2f)
+
+/** The height of a grid tile when the tiles use [share] of the grid's [gridWidth]. */
+private fun gridTileHeight(
+    layout: HomeLayout,
+    gridWidth: Dp,
+    share: Float,
+): Dp = (gridWidth * share - TileGap * (layout.columns - 1)) / layout.columns / TILE_ASPECT
+
+/**
+ * How far the group goes down in dock focus ([dockLowering]) in a window [height] high, with [gridCount] grid tiles
+ * [tileHeight] high under a dock panel that starts at [shelfBottom]. None for single_row.
+ */
+private fun groupLowering(
+    layout: HomeLayout,
+    height: Dp,
+    shelfBottom: Dp,
+    tileHeight: Dp,
+    dockPadding: DockPadding,
+    scale: Float,
+    peak: Float,
+    gridCount: Int,
+): Dp {
+    if (layout.singleRow) return 0.dp
+    return dockLowering(
+        windowHeight = height.value,
+        shelfBottom = shelfBottom.value,
+        tileHeight = tileHeight.value,
+        gap = TileGap.value,
+        dockTop = dockPadding.top.value,
+        dockBottom = dockPadding.bottom.value,
+        rowGap = dockPadding.rowGap.value,
+        gridRows = (gridCount + layout.columns - 1) / layout.columns,
+        rowsBelowDock = layout.rowsBelowDock,
+        bottomMargin = GridBottom.value,
+        nameRoom = layout.nameRoom(tileHeight.value, scale, peak),
+        dockNameRoom = layout.nameRoom(tileHeight.value, scale, peak, rowUnder = false),
+    ).dp
+}
+
+/** How far over the dock panel in dock focus the meta line ends, before the title block rises: the room the shelf cards share. */
+private fun shelfCardRoom(cinematic: Boolean): Dp =
+    if (cinematic) {
+        CinematicShelfHeight - CinematicTitleLine - MetaGap - MetaSlot
+    } else {
+        ShelfHeight - HeroTitleLine - MetaGap - MetaSlot
+    }
+
+/**
+ * Whether Home with [config] has room for the app_shelf cards, as [HomeScreen] reports it through onShelfRoom: in a window
+ * [window] pixels large at [density], showing [tiles] tiles of which [docked] are dock apps (an [AppList]'s size and docked).
+ */
+public fun shelfHasRoom(
+    config: TvConfig,
+    tiles: Int,
+    docked: Int,
+    window: IntSize,
+    density: Density,
+): Boolean =
+    with(density) {
+        val layout = config.homeLayout()
+        val motion = Motion(config.animations, config.reducedMotion, config.focusOvershoot)
+        val scale = motion.focusScale(TILE_FOCUSED_SCALE)
+        val peak = motion.focusPeakScale(TILE_FOCUSED_SCALE)
+        val dockSize = dockSize(layout, docked, tiles)
+        val gridCount = tiles - dockSize
+        val width = window.width.toDp()
+        val height = window.height.toDp()
+        val look = config.dockLook()
+        val padding = dockPaddingIn(width, layout, look, scale, peak, look.shrinks(layout, dockSize), gridCount == 0)
+        val shelfBottom = ContentTop + if (config.cinematicHome) CinematicShelfHeight else ShelfHeight
+        val gridWidth = width - ScreenMargin * 2
+        val tileHeight = gridTileHeight(layout, gridWidth, gridShare(layout, gridWidth, height, shelfBottom, padding))
+        // Home keeps the lowering in pixels and reads it back in dp.
+        val lift = groupLowering(layout, height, shelfBottom, tileHeight, padding, scale, peak, gridCount).toPx().toDp()
+        shelfBand(shelfCardRoom(config.cinematicHome), lift, peak) != null
+    }
 
 /** The room the name of a tile [tileHeight] dp high takes under it, in dp, with a grid row under it if [rowUnder]; 0 with the names off. */
 private fun HomeLayout.nameRoom(

@@ -50,6 +50,7 @@
   <string name="settings_shelf_sources">Apper og kanaler</string>
   <string name="settings_shelf_cards">Kort per app</string>
   <string name="settings_shelf_no_access">Ingen tilgang</string>
+  <string name="settings_shelf_no_room">Oppsettet har ikke plass til kort</string>
   <string name="settings_shelf_none">Ingen</string>
   <string name="settings_shelf_watch_next">Fortsett å se · %1$d</string>
   <string name="settings_shelf_nothing">Ingen apper deler noe å vise</string>

@@ -40,6 +40,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import java.io.File
 import kotlin.math.roundToInt
 
@@ -61,6 +62,7 @@ interface AppGraph {
     val openOnStart: OpenOnStart
     val settingsSources: SettingsSources
     val shelfPosters: ShelfPosters
+    val homeShape: HomeShape
 
     @Provides
     @SingleIn(AppScope::class)
@@ -164,6 +166,7 @@ interface AppGraph {
         appsProvider: PackageManagerAppsProvider,
         wallpaperProvider: WallpaperProvider,
         shelfReader: ShelfReader,
+        homeShape: HomeShape,
     ): SettingsSources {
         val pictures = WallpaperPictures(ThemeDirectory(application))
         return SettingsSources(
@@ -177,8 +180,13 @@ interface AppGraph {
             { posterHelper(application) },
             { NowPlayingAccess.available(application) },
             { NowPlayingAccess.granted(application) },
+            homeShape.shelfRoom,
         )
     }
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideHomeShape(): HomeShape = HomeShape()
 
     @Provides
     @SingleIn(AppScope::class)
@@ -224,12 +232,13 @@ interface AppGraph {
         shelfReader: ShelfReader,
         shelfPosters: ShelfPosters,
         nowPlaying: NowPlaying,
+        homeShape: HomeShape,
     ): HomeSources {
         val density = application.resources.displayMetrics.density
         val artWidth = (ShelfCardMaxSize.width.value * density).roundToInt()
         val artHeight = (ShelfCardMaxSize.height.value * density).roundToInt()
         return HomeSources(
-            apps = appsProvider.apps,
+            apps = appsProvider.apps.onEach(homeShape::appsLoaded),
             clock = minuteClock.now,
             network = networkMonitor.state,
             topBarApps = appsProvider.topBarApps,

@@ -50,6 +50,7 @@
   <string name="settings_shelf_sources">Apps y canales</string>
   <string name="settings_shelf_cards">Tarjetas por app</string>
   <string name="settings_shelf_no_access">Sin acceso</string>
+  <string name="settings_shelf_no_room">Diseño sin espacio para tarjetas</string>
   <string name="settings_shelf_none">Ninguno</string>
   <string name="settings_shelf_watch_next">Seguir viendo · %1$d</string>
   <string name="settings_shelf_nothing">Ninguna app comparte elementos</string>

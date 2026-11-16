@@ -50,6 +50,7 @@
   <string name="settings_shelf_sources">Apps en kanalen</string>
   <string name="settings_shelf_cards">Kaarten per app</string>
   <string name="settings_shelf_no_access">Geen toegang</string>
+  <string name="settings_shelf_no_room">Geen ruimte voor kaarten</string>
   <string name="settings_shelf_none">Geen</string>
   <string name="settings_shelf_watch_next">Verder kijken · %1$d</string>
   <string name="settings_shelf_nothing">Geen app deelt items</string>

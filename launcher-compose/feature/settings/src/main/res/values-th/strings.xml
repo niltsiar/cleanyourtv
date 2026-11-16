@@ -50,6 +50,7 @@
   <string name="settings_shelf_sources">แอปและช่อง</string>
   <string name="settings_shelf_cards">การ์ดต่อแอป</string>
   <string name="settings_shelf_no_access">ไม่มีสิทธิ์เข้าถึง</string>
+  <string name="settings_shelf_no_room">เลย์เอาต์นี้ไม่มีที่สำหรับการ์ด</string>
   <string name="settings_shelf_none">ไม่มี</string>
   <string name="settings_shelf_watch_next">รับชมต่อ · %1$d</string>
   <string name="settings_shelf_nothing">ไม่มีแอปที่แชร์รายการ</string>
