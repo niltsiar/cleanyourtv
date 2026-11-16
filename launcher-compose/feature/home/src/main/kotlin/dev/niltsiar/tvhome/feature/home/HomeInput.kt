@@ -41,6 +41,8 @@ internal class HomeInput(
     val faded: State<Set<String>>? = null,
     /** Whether a tile press is opening its app (press_feedback), which takes no other press. Read it in click handlers only. */
     val launching: State<Boolean> = mutableStateOf(false),
+    /** What each input tile shows now, by key. Read it through [rememberInputTileLive] in a tile's face and draw lambdas only. */
+    val inputTiles: State<Map<String, InputTileLive>> = mutableStateOf(emptyMap()),
     val hold: OkHold = OkHold(),
 ) {
     /** The colour of the focus ring as it moves from tile to tile. */

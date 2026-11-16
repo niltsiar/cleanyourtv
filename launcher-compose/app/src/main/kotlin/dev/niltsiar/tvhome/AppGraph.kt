@@ -251,6 +251,7 @@ interface AppGraph {
             shelfPoster = shelfPosters::poster,
             shelfPosterChanges = shelfPosters.changes,
             nowPlaying = { nowPlaying.item(it, artWidth, artHeight) },
+            unpinInput = appsProvider::unpinInput,
         )
     }
 

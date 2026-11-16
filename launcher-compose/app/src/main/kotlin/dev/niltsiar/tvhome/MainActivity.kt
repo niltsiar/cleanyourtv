@@ -136,6 +136,7 @@ class MainActivity : ComponentActivity() {
                     onLibrarySaveFailed = ::librarySaveFailed,
                     onOpenInput = ::openInput,
                     onNoInputs = { toast(R.string.no_inputs) },
+                    onInputNotAvailable = { toast(R.string.not_available) },
                     glass = glass,
                     libraryOpen = { libraryOpen?.value?.open == true },
                     onOpenLibrary = { library.onOpen() },

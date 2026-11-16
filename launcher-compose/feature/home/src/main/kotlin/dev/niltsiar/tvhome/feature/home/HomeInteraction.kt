@@ -97,6 +97,9 @@ internal class HomeInteraction(
         private set
     private var inputsAsked = false
 
+    /** What each input tile of [list] shows now, from what the TV lists. Unlike a new [list], a new value ends no session. */
+    val inputTiles: Map<String, InputTileLive> by derivedStateOf { inputTilesLive(list.apps, inputs?.rows.orEmpty()) }
+
     private var heldToken by mutableIntStateOf(0)
     private var endedToken by mutableIntStateOf(0)
 
@@ -179,12 +182,14 @@ internal class HomeInteraction(
 
     /**
      * The dock tile [key] when app_shelf is on, the layout has room and the tile's app has app_shelf_sources ticked or
-     * now_playing is on, else null. A tile whose launch_actions switch to an input opens no app, so it has no shelf.
+     * now_playing is on, else null. A tile whose launch_actions switch to an input, or an input tile, opens no app, so it
+     * has no shelf.
      */
     fun shelfTile(key: String?): AppEntry? {
         val current = config.value
         if (!current.appShelf || !shelfRoom) return null
         val tile = shown.dock.firstOrNull { it.key == key } ?: return null
+        if (tile.input != null) return null
         if (inputIdOf(current.launchActions[tile.packageName]) != null) return null
         return tile.takeIf { current.nowPlaying || ticks(current, it.packageName) }
     }
@@ -365,10 +370,15 @@ internal class HomeInteraction(
         }
     }
 
-    /** A tile press opens its app as [startLaunch] says; a top-bar app opens as before. */
+    /**
+     * A tile press opens its app as [startLaunch] says; a top-bar app opens as before. An input tile switches to the input
+     * its row opens now, as the Inputs list does, and records no open; while the TV does not list it, it switches nothing.
+     */
     private fun click(key: String) {
         val tile = list.apps.firstOrNull { it.key == key }
-        if (tile != null) {
+        if (tile?.input != null) {
+            effect(inputTiles[key]?.target?.let(HomeEffect::OpenInput) ?: HomeEffect.InputNotAvailable)
+        } else if (tile != null) {
             startLaunch(tile, HomeEffect.LaunchApp(tile))
         } else {
             topBarApps.firstOrNull { it.key == key }?.let { effect(HomeEffect.LaunchApp(it)) }
@@ -506,21 +516,23 @@ internal class HomeInteraction(
         if (session != null || menu != null) return
         val apps = shown
         val app = apps.all.firstOrNull { it.key == event.key } ?: return
+        val input = app.input != null
         when {
             config.value.tileMenu -> {
                 val current = config.value
+                // An input tile has no App info, and Remove from Home unpins it, with or without the app library.
                 val rows =
                     tileMenuRows(
                         current.dockRow,
                         inDock(apps, app.key),
-                        sources.hasAppInfo(app.packageName),
-                        current.appLibrary,
+                        !input && sources.hasAppInfo(app.packageName),
+                        current.appLibrary || input,
                         moveTo = current.moveToMenu && movePlaces(app.key).isNotEmpty(),
                     )
                 menu = HomeMenu(app.key, rows)
             }
 
-            event.held -> {
+            event.held && !input -> {
                 effect(HomeEffect.OpenAppInfo(app.packageName))
             }
         }
@@ -570,7 +582,14 @@ internal class HomeInteraction(
 
             MenuRow.RemoveFromHome -> {
                 val app = shown.all.firstOrNull { it.key == key }
-                if (app != null && !sources.removeFromHome(app.packageName)) effect(HomeEffect.LibrarySaveFailed)
+                val pin = app?.input
+                val removed =
+                    when {
+                        app == null -> true
+                        pin != null -> sources.unpinInput(pin.id)
+                        else -> sources.removeFromHome(app.packageName)
+                    }
+                if (!removed) effect(HomeEffect.LibrarySaveFailed)
                 focus(key)
             }
 

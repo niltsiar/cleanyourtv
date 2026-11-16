@@ -55,6 +55,7 @@ internal fun HomeHost(
     onLibrarySaveFailed: () -> Unit,
     onOpenInput: (InputTarget) -> Unit,
     onNoInputs: () -> Unit,
+    onInputNotAvailable: () -> Unit,
     glass: GlassState,
     libraryOpen: () -> Boolean,
     onOpenLibrary: () -> Unit,
@@ -84,6 +85,7 @@ internal fun HomeHost(
                 HomeEffect.LibrarySaveFailed -> onLibrarySaveFailed()
                 is HomeEffect.OpenInput -> onOpenInput(effect.target)
                 HomeEffect.NoInputs -> onNoInputs()
+                HomeEffect.InputNotAvailable -> onInputNotAvailable()
             }
         }
     }

@@ -471,13 +471,16 @@ public fun HomeScreen(
                 habit = if (layout.habitMark) derivedStateOf { currentState.value().habit } else null,
                 faded = if (layout.unusedFade) derivedStateOf { currentState.value().faded } else null,
                 launching = derivedStateOf { currentState.value().opening != null },
+                inputTiles = derivedStateOf { currentState.value().inputTiles },
             ).also { it.anchor.value = menuAnchor }
         }
     val menu by remember { derivedStateOf { currentState.value().menu } }
     val inputsOpen by remember { derivedStateOf { currentState.value().inputsOpen } }
     val menuDockTile by remember {
         derivedStateOf {
-            currentState.value().let { shown -> shown.menu?.tileKey?.let { key -> shown.dock.firstOrNull { it.key == key }?.label } }
+            currentState.value().let { shown ->
+                shown.menu?.tileKey?.let { key -> shown.inputTiles[key]?.label ?: shown.dock.firstOrNull { it.key == key }?.label }
+            }
         }
     }
     val menuPlace =
@@ -1669,6 +1672,8 @@ private data class HeroLine(
     val chrome: Boolean = false,
     /** The app shelf card with focus, which the line describes in place of [opened]. */
     val card: ShelfItem? = null,
+    /** The state of the focused input tile, which the line says in place of [opened]. */
+    @StringRes val status: Int? = null,
 )
 
 /**
@@ -1717,6 +1722,7 @@ private fun HeroTitle(
                     never = home.focusedNeverOpened,
                     usual = home.focusedUsual,
                     opening = home.opening?.takeIf { it.says }?.label,
+                    status = home.focusedInput?.status(),
                 )
             }
         }
@@ -1759,7 +1765,7 @@ private fun HeroTitle(
             animated,
             rise,
             // A new time for the same tile, as the clock moves on, replaces the old one without a cross-fade.
-            key = { it.copy(opened = null, never = false, usual = false, opening = null, card = null) },
+            key = { it.copy(opened = null, never = false, usual = false, opening = null, card = null, status = null) },
             inMillis = { from, to -> if (from.quick || to.quick) LIBRARY_SWAP_MS else CINEMATIC_MS },
             extent = extent,
         ) { shown, live ->
@@ -1788,6 +1794,7 @@ private fun HeroTitle(
                                     !live -> AnnotatedString("")
                                     shown.opening != null -> AnnotatedString(stringResource(R.string.opening_app, shown.opening))
                                     shown.card != null -> AnnotatedString(shelfLine(shown.card))
+                                    shown.status != null -> AnnotatedString(stringResource(shown.status))
                                     opened != null || shown.usual || shown.never -> lastOpenedLine(opened, shown.usual, shown.never)
                                     else -> AnnotatedString(shown.meta)
                                 }
@@ -2228,7 +2235,7 @@ private fun AppTile(
         val pivot: (
             Float,
         ) -> Float = remember(density, scale) { { height -> with(density) { namePivot(height.toDp().value, scale).dp.toPx() } } }
-        NameUnder(app, scale, peak, rowUnder, marked) {
+        NameUnder(app, input, scale, peak, rowUnder, marked) {
             AppTile(
                 app,
                 accent,
@@ -2343,11 +2350,14 @@ private fun AppTile(
             contentAlignment = Alignment.Center,
         ) {
             val image = app.image
-            if (image != null) {
+            val pin = app.input
+            if (pin != null) {
+                InputTileFace(app, pin, input, showName = bannerName)
+            } else if (image != null) {
                 Image(bitmap = image, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 if (app.iconArt) IconTileLabel(app.label)
                 if (app.homeLauncher && bannerName && !app.iconArt) {
-                    NameChip(app, Modifier.align(Alignment.BottomStart).padding(NameOnBannerInset))
+                    NameChip(app.label, app.key, Modifier.align(Alignment.BottomStart).padding(NameOnBannerInset))
                 }
             } else {
                 TrimmedEllipsisText(app.label, TvTheme.typography.tileLabel, maxLines = 2)
@@ -2364,6 +2374,7 @@ private fun AppTile(
 @Composable
 private fun NameUnder(
     app: AppEntry,
+    input: HomeInput,
     scale: Float,
     peak: Float,
     rowUnder: Boolean,
@@ -2375,7 +2386,7 @@ private fun NameUnder(
     Layout(
         content = {
             tile()
-            NameChip(app, scrolling = scrolling)
+            if (app.input != null) InputNameChip(app, input, scrolling) else NameChip(app.label, app.key, scrolling = scrolling)
         },
         modifier = modifier.onFocusChanged { focused.value = it.hasFocus },
     ) { measurables, constraints ->
@@ -2393,18 +2404,30 @@ private fun NameUnder(
     }
 }
 
-/** [app]'s name in a pill of one line, [NameLine] high; a cut name scrolls while [scrolling] says so. */
+/** An input tile's [NameChip], with the name its row reads now; a change of name recomposes this chip only. */
+@Composable
+private fun InputNameChip(
+    app: AppEntry,
+    input: HomeInput,
+    scrolling: () -> Boolean,
+) {
+    val label by rememberInputTileLabel(input, app)
+    NameChip(label, app.key, scrolling = scrolling)
+}
+
+/** The tile [key]'s name [label] in a pill of one line, [NameLine] high; a cut name scrolls while [scrolling] says so. */
 @Composable
 private fun NameChip(
-    app: AppEntry,
+    label: String,
+    key: String,
     modifier: Modifier = Modifier,
     scrolling: (() -> Boolean)? = null,
 ) {
     val density = LocalDensity.current
-    val label = TvTheme.typography.tileLabel
+    val tileLabel = TvTheme.typography.tileLabel
     val style =
-        remember(density, label) {
-            label.copy(
+        remember(density, tileLabel) {
+            tileLabel.copy(
                 color = NameInk,
                 textAlign = TextAlign.Center,
                 lineHeight = with(density) { NameLine.toSp() },
@@ -2417,10 +2440,10 @@ private fun NameChip(
             .padding(horizontal = NamePillAcross, vertical = NamePillDown),
     ) {
         TrimmedEllipsisText(
-            app.label,
+            label,
             style,
             maxLines = 1,
-            modifier = Modifier.testTag("name:${app.key}").clearAndSetSemantics {},
+            modifier = Modifier.testTag("name:$key").clearAndSetSemantics {},
             scrolling = scrolling,
         )
     }

@@ -39,6 +39,8 @@ import java.util.Locale
  * [awaitingApps] is true until the first app list arrives: the dock is empty then, and focus waits for it.
  * [opening] is the app a press on its tile is opening while Home still shows (press_feedback), null otherwise.
  * [appShelf] is the app shelf of the focused dock tile (app_shelf), null while it has none or has not held focus long enough.
+ * [inputTiles] is what each input tile shows now, by key, apart from the app list so a change ends no session; [focusedInput] is
+ * the focused tile's when it is an input tile, whose line then says its state and never when Home last opened it.
  * [config] is the config this state was made with. The layouts are read from it, so they always match the split of [dock] and
  * [grid].
  */
@@ -71,6 +73,8 @@ public data class HomeUiState(
     val awaitingApps: Boolean = false,
     val opening: Opening? = null,
     val appShelf: AppShelf? = null,
+    val inputTiles: Map<String, InputTileLive> = emptyMap(),
+    val focusedInput: InputTileLive? = null,
     val config: TvConfig = TvConfig(),
 )
 
@@ -115,6 +119,7 @@ public const val LIBRARY_BUTTON_FOCUS: String = "library-button"
  * the [count] dock apps (one dot each), [lastOpened], when Home last opened it, null if it never did or the time is not
  * valid yet, [neverOpened] when Home has no record of opening it, and whether it is the [usual] app of this time of day.
  * [opening] is the name of the app a tile press is opening, which the line says in place of when Home last opened the app.
+ * [input] is set for an input tile, whose line says its state instead.
  */
 @Immutable
 public data class Shelf(
@@ -127,6 +132,7 @@ public data class Shelf(
     val neverOpened: Boolean = false,
     val usual: Boolean = false,
     val opening: String? = null,
+    val input: InputTileLive? = null,
 )
 
 /** One-shot results the host handles outside the UI state. */
@@ -171,6 +177,9 @@ public sealed interface HomeEffect {
 
     /** The Inputs button was pressed and the TV has nothing to list. */
     public data object NoInputs : HomeEffect
+
+    /** OK on an input tile whose input the TV does not list now. */
+    public data object InputNotAvailable : HomeEffect
 
     /** The new tile order could not be written. */
     public data object OrderNotSaved : HomeEffect
@@ -235,6 +244,8 @@ public class HomeSources(
      * [ShelfCardMaxSize]. Collected only while Home shows and that app's shelf is read.
      */
     public val nowPlaying: (String) -> Flow<NowPlayingItem?> = { flowOf(null) },
+    /** Unpins the input of this id from Home. False when it was not written. */
+    public val unpinInput: suspend (String) -> Boolean = { false },
 )
 
 internal sealed interface HomeEvent {
@@ -385,9 +396,11 @@ internal fun homeUiState(
     awaitingApps: Boolean = false,
     opening: Opening? = null,
     appShelf: AppShelf? = null,
+    inputTiles: Map<String, InputTileLive> = emptyMap(),
     config: TvConfig = TvConfig(),
 ): HomeUiState {
     val focused = apps.all.firstOrNull { it.key == focusedKey } ?: apps.all.firstOrNull()
+    val focusedInput = focused?.let { inputTiles[it.key] }
     return HomeUiState(
         clock = now?.let { clockText(it, header.hour24, locale) }.orEmpty(),
         amPm = now?.let { amPmText(it, header.hour24, locale) }.orEmpty(),
@@ -398,13 +411,13 @@ internal fun homeUiState(
         dock = apps.dock,
         grid = apps.grid,
         focusedKey = focusedKey,
-        focusedLabel = focused?.label.orEmpty(),
-        focusedOpened = focused?.let { openedAt(it.key, lastOpened, now, header.hour24, zone) },
-        focusedNeverOpened = focused != null && focused.key !in lastOpened,
+        focusedLabel = focusedInput?.label ?: focused?.label.orEmpty(),
+        focusedOpened = focused?.takeIf { focusedInput == null }?.let { openedAt(it.key, lastOpened, now, header.hour24, zone) },
+        focusedNeverOpened = focused != null && focusedInput == null && focused.key !in lastOpened,
         wallpaper = wallpaper,
         shelf =
             if (cinematic) {
-                shelfFor(apps, focusedKey, lastOpened, now, header.hour24, zone, habit)?.let { shelf ->
+                shelfFor(apps, focusedKey, lastOpened, now, header.hour24, zone, habit, inputTiles)?.let { shelf ->
                     opening?.takeIf { it.says }?.let { shelf.copy(opening = it.label) } ?: shelf
                 }
             } else {
@@ -423,6 +436,8 @@ internal fun homeUiState(
         awaitingApps = awaitingApps,
         opening = opening,
         appShelf = appShelf,
+        inputTiles = inputTiles,
+        focusedInput = focusedInput,
         config = config,
     )
 }
@@ -442,7 +457,7 @@ private fun openedAt(
 
 /**
  * The shelf for the focused app, resolved like the label: an unknown key gives the first app. Null when that app is
- * not in the dock. The "last opened" line waits for a valid time.
+ * not in the dock. The "last opened" line waits for a valid time. An input tile takes its name and state from [inputTiles].
  */
 internal fun shelfFor(
     apps: HomeApps,
@@ -452,10 +467,13 @@ internal fun shelfFor(
     hour24: Boolean,
     zone: ZoneId,
     habit: String? = null,
+    inputTiles: Map<String, InputTileLive> = emptyMap(),
 ): Shelf? {
     val app = apps.all.firstOrNull { it.key == focusedKey } ?: apps.all.firstOrNull() ?: return null
     val position = apps.dock.indexOfFirst { it.key == app.key }
     if (position < 0) return null
+    val input = inputTiles[app.key]
+    if (input != null) return Shelf(app.key, input.label, app.accent, position, apps.dock.size, lastOpened = null, input = input)
     return Shelf(
         key = app.key,
         label = app.label,

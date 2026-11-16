@@ -193,6 +193,7 @@ internal fun CinematicShelf(
                             !live -> AnnotatedString("")
                             app.opening != null -> AnnotatedString(stringResource(R.string.opening_app, app.opening))
                             item != null -> AnnotatedString(shelfLine(item))
+                            app.input != null -> AnnotatedString(app.input.status()?.let { stringResource(it) } ?: " ")
                             else -> lastOpenedLine(app.lastOpened, app.usual, app.neverOpened)
                         }
                     BasicText(

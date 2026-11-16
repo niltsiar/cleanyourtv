@@ -3,6 +3,9 @@ package dev.niltsiar.tvhome.feature.home
 import de.infix.testBalloon.framework.core.testSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
+import dev.niltsiar.tvhome.core.model.InputConnection
+import dev.niltsiar.tvhome.core.model.InputTarget
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import java.time.LocalDateTime
 import java.util.Locale
@@ -111,5 +114,29 @@ val HomeUiStateTest by testSuite {
     test("show greeting false and no time both leave no greeting") {
         state(header = HeaderStyle(showGreeting = false)).greeting shouldBe null
         state(now = null).greeting shouldBe null
+    }
+
+    test("a focused input tile's line says its state, not Never opened") {
+        val apps = homeApps(listOf(NineApps[0], PlayStationTile) + NineApps.drop(1))
+        val live = InputTileLive(InputTarget.TvInput(PlayStationId), "PlayStation 5", InputConnection.Connected)
+
+        val state =
+            homeUiState(
+                apps,
+                Evening,
+                PlayStationTile.key,
+                Locale.ENGLISH,
+                cinematic = true,
+                inputTiles =
+                    mapOf(PlayStationTile.key to live),
+            )
+
+        state.focusedLabel shouldBe "PlayStation 5"
+        state.focusedNeverOpened shouldBe false
+        state.focusedOpened shouldBe null
+        state.focusedInput?.status() shouldBe R.string.input_connected
+        val shelf = state.shelf.shouldNotBeNull()
+        (shelf.label to shelf.neverOpened) shouldBe ("PlayStation 5" to false)
+        shelf.input?.status() shouldBe R.string.input_connected
     }
 }

@@ -18,6 +18,7 @@ import dev.niltsiar.tvhome.core.model.InputConnection
 import dev.niltsiar.tvhome.core.model.InputIcon
 import dev.niltsiar.tvhome.core.model.InputRow
 import dev.niltsiar.tvhome.core.model.InputTarget
+import dev.niltsiar.tvhome.core.model.InputTile
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.NowPlayingItem
@@ -67,6 +68,7 @@ internal fun sources(
     shelfItems: suspend (String) -> List<ShelfItem> = { emptyList() },
     shelfPoster: suspend (String, Int, Int) -> ShelfPoster? = { _, _, _ -> null },
     nowPlaying: (String) -> Flow<NowPlayingItem?> = { flowOf(null) },
+    unpinInput: suspend (String) -> Boolean = { true },
 ) = HomeSources(
     apps,
     clock,
@@ -89,6 +91,7 @@ internal fun sources(
     shelfItems = shelfItems,
     shelfPoster = shelfPoster,
     nowPlaying = nowPlaying,
+    unpinInput = unpinInput,
 )
 
 internal fun port(
@@ -111,6 +114,38 @@ internal val FourPorts =
                 InputRow.LiveTv,
             ),
     )
+
+/** The input id a PlayStation on HDMI 2 was pinned under, and that port's id. */
+internal val PlayStationId: String = "tv/.Cec/HDMI2004"
+internal val Hdmi2Id: String = "tv/.Hdmi/HW2"
+
+/** A tile pinned from the PlayStation's Inputs row, under the name that row read then. */
+internal val PlayStationTile =
+    AppEntry(
+        key = "input:$PlayStationId",
+        packageName = "",
+        label = "PlayStation 5 \u00B7 HDMI 2",
+        input = InputTile(PlayStationId, Hdmi2Id, InputIcon.Hdmi),
+    )
+
+/**
+ * HDMI 1, then on HDMI 2 the PlayStation in [connection] as a CEC device named [label], or the bare port without [label];
+ * nothing on HDMI 2 unless [listed].
+ */
+internal fun playStationInputs(
+    connection: InputConnection = InputConnection.Connected,
+    label: String? = "PlayStation 5 \u00B7 HDMI 2",
+    listed: Boolean = true,
+): InputsMenu {
+    val hdmi2 =
+        if (label != null) {
+            InputRow.Port(label, InputIcon.Hdmi, connection, InputTarget.TvInput(PlayStationId), port = Hdmi2Id)
+        } else {
+            InputRow.Port("HDMI 2", InputIcon.Hdmi, connection, InputTarget.TvInput(Hdmi2Id), port = Hdmi2Id)
+        }
+    val hdmi1 = InputRow.Port("HDMI 1", InputIcon.Hdmi, InputConnection.Unknown, InputTarget.TvInput("tv/.Hdmi/HW1"), port = "tv/.Hdmi/HW1")
+    return InputsMenu(available = true, rows = listOfNotNull(hdmi1, hdmi2.takeIf { listed }, InputRow.Separator(), InputRow.LiveTv))
+}
 
 /** [homePresenter] over a config that never changes. */
 @Composable

@@ -144,6 +144,7 @@ class HomeHostConfigTestContent :
                                     onLibrarySaveFailed = {},
                                     onOpenInput = {},
                                     onNoInputs = {},
+                                    onInputNotAvailable = {},
                                     glass = rememberGlassState(),
                                     libraryOpen = { false },
                                     onOpenLibrary = {},

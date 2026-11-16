@@ -70,7 +70,7 @@ private const val ICON_ALPHA = 0.9f
 private const val NO_DEVICE_ALPHA = 0.65f
 private val CapsuleHeight = 24.dp
 private val DotSize = 6.dp
-private val Connected = Color(0xFF34C759)
+internal val ConnectedGreen: Color = Color(0xFF34C759)
 
 /** The "Connected" capsule of an idle row, on the dark surface and on the light one. */
 private val CapsuleFillOnDark = Color(0x2934C759)
@@ -214,7 +214,7 @@ private fun rowHeights(rows: List<InputRow>): List<Dp> {
 }
 
 @DrawableRes
-private fun InputIcon.drawable(): Int =
+internal fun InputIcon.drawable(): Int =
     when (this) {
         InputIcon.Hdmi -> R.drawable.ic_input_hdmi
         InputIcon.Av -> R.drawable.ic_input_av
@@ -328,8 +328,8 @@ private fun PulsingDot(pulse: State<Float>) {
         Modifier.size(DotSize).drawBehind {
             val radius = size.minDimension / 2f
             val p = pulse.value
-            drawCircle(Connected.copy(alpha = HALO_ALPHA * (1f - p)), radius = radius * (1f + HALO_GROWTH * p))
-            drawCircle(Connected, radius = radius)
+            drawCircle(ConnectedGreen.copy(alpha = HALO_ALPHA * (1f - p)), radius = radius * (1f + HALO_GROWTH * p))
+            drawCircle(ConnectedGreen, radius = radius)
         },
     )
 }

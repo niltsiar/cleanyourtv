@@ -145,9 +145,15 @@ internal fun homePresenter(
         }
     val session = interaction.session
     val shown = interaction.shown
+    val inputTiles = interaction.inputTiles
+    // An input tile is never opened as an app, so it never counts as unused.
     val faded =
         remember(shown, lastOpened, openedSince, today, current.unusedFadeDays) {
-            today?.let { OpenedRecord(lastOpened, openedSince).unusedKeys(shown.grid.map { it.key }, current.unusedFadeDays, it) }.orEmpty()
+            today
+                ?.let {
+                    val keys = shown.grid.mapNotNull { tile -> tile.key.takeIf { tile.input == null } }
+                    OpenedRecord(lastOpened, openedSince).unusedKeys(keys, current.unusedFadeDays, it)
+                }.orEmpty()
         }
     return homeUiState(
         shown,
@@ -161,7 +167,10 @@ internal fun homePresenter(
         cinematic = current.cinematicHome,
         lastOpened = launch?.openedBefore ?: lastOpened,
         menu = interaction.menu,
-        reorder = remember(session, shown) { session?.view { key -> shown.all.firstOrNull { it.key == key }?.label } },
+        reorder =
+            remember(session, shown, inputTiles) {
+                session?.view { key -> inputTiles[key]?.label ?: shown.all.firstOrNull { it.key == key }?.label }
+            },
         focusRequest = interaction.focusRequest,
         inputs = interaction.inputs ?: UnknownInputs,
         inputsOpen = interaction.inputsOpen,
@@ -172,6 +181,7 @@ internal fun homePresenter(
         awaitingApps = interaction.awaitingApps,
         opening = remember(launch) { launch?.let { Opening(it.label, it.says) } },
         appShelf = interaction.appShelf,
+        inputTiles = inputTiles,
         config = current,
     )
 }
