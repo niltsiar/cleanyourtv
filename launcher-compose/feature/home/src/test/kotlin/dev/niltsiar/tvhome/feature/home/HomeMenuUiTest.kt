@@ -460,6 +460,26 @@ class HomeMenuUiTestContent :
 
                 assertFocusInTheDock()
             }
+
+            for ((name, config) in listOf(
+                "grid" to SixColumns,
+                "cinematic" to SixColumns.copy(cinematicHome = true),
+            )) {
+                test("$name add to dock from the third grid row brings the dock back where it rests with a dock place focused") {
+                    showHome(config, apps = (1..22).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") })
+                    val rest = boundsOf("dock")
+                    repeat(3) { press(Key.DirectionDown) }
+                    compose.onNodeWithTag("tile:pkg.19").assertIsFocused()
+
+                    press(Key.Menu)
+                    compose.onNodeWithTag("menu:AddToDock").assertIsFocused()
+                    press(Key.DirectionCenter)
+
+                    compose.onNodeWithTag("reorder:hint").assertExists()
+                    assertFocusInTheDock()
+                    withClue("dock at rest $rest") { boundsOf("dock").top shouldBe (rest.top plusOrMinus 1f) }
+                }
+            }
         }
     })
 

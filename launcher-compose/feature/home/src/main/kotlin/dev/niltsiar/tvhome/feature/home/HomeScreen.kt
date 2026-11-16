@@ -1006,6 +1006,11 @@ private suspend fun focusOn(
             if (shown.none { it.key == LIBRARY_FOCUS }) gridState.scrollToItem(GRID_ITEMS_BEFORE + grid.size)
         }
 
+        // A dock scrolled partly off the top stays there when its tile takes focus from a request, not an arrow key.
+        inDock >= 0 -> {
+            if (gridState.firstVisibleItemIndex != 0 || gridState.firstVisibleItemScrollOffset != 0) gridState.scrollToItem(0)
+        }
+
         shown.none { it.key == "dock" } -> {
             gridState.scrollToItem(0)
         }
