@@ -64,6 +64,7 @@
   <string name="launcher_settings_summary">Raspored, sat i kretanje</string>
   <string name="shelf_season_episode">S%1$s E%2$s</string>
   <string name="shelf_episode">E%1$s</string>
+  <string name="shelf_paused">Pauzirano</string>
   <plurals name="shelf_minutes_left">
     <item quantity="one">Još %1$d min</item>
     <item quantity="few">Još %1$d min</item>

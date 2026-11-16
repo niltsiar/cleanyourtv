@@ -57,4 +57,8 @@
   <string name="settings_lan_posters">Obrázky z vaší sítě</string>
   <string name="settings_poster_helper_missing">Pomocník není nainstalován</string>
   <string name="settings_poster_helper_other_key">Pomocník podepsaný jiným klíčem</string>
+  <string name="settings_now_playing">Právě hraje</string>
+  <string name="settings_now_playing_needs_access">Vyžaduje přístup</string>
+  <string name="settings_now_playing_unavailable">Na této televizi není k dispozici</string>
+  <string name="settings_now_playing_adb">Povolte přes adb: %1$s</string>
 </resources>

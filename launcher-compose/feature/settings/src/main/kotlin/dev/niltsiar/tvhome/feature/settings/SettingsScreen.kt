@@ -222,10 +222,12 @@ public class PageNotice {
     internal var shown: Shown? by mutableStateOf(null)
         private set
 
+    /** Shows [text], formatted with [args] when it takes any. */
     public fun show(
         @StringRes text: Int,
+        vararg args: Any,
     ) {
-        shown = Shown(text)
+        shown = Shown(text, args.toList())
     }
 
     internal fun clear(of: Shown) {
@@ -235,6 +237,7 @@ public class PageNotice {
     /** One showing of a message: the same text shown again is a new one, with its own 2 s. */
     internal class Shown(
         @StringRes val text: Int,
+        val args: List<Any>,
     )
 }
 
@@ -546,7 +549,12 @@ private fun NoticePill(
             .testTag("settings:notice"),
         contentAlignment = Alignment.Center,
     ) {
-        BasicText(stringResource(shown.text), style = style, maxLines = 1, modifier = Modifier.padding(horizontal = ChipPadding))
+        BasicText(
+            stringResource(shown.text, *shown.args.toTypedArray()),
+            style = style,
+            maxLines = 1,
+            modifier = Modifier.padding(horizontal = ChipPadding),
+        )
     }
 }
 

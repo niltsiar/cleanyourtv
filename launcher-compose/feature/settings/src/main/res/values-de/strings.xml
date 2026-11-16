@@ -57,4 +57,8 @@
   <string name="settings_lan_posters">Bilder aus dem Heimnetz</string>
   <string name="settings_poster_helper_missing">Helfer nicht installiert</string>
   <string name="settings_poster_helper_other_key">Helfer mit anderem Schlüssel signiert</string>
+  <string name="settings_now_playing">Läuft gerade</string>
+  <string name="settings_now_playing_needs_access">Zugriff nötig</string>
+  <string name="settings_now_playing_unavailable">Auf diesem TV nicht verfügbar</string>
+  <string name="settings_now_playing_adb">Mit adb erlauben: %1$s</string>
 </resources>

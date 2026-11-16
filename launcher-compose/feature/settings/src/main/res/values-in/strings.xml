@@ -57,4 +57,8 @@
   <string name="settings_lan_posters">Gambar dari jaringan Anda</string>
   <string name="settings_poster_helper_missing">Aplikasi bantu tidak terpasang</string>
   <string name="settings_poster_helper_other_key">Aplikasi bantu ditandatangani kunci lain</string>
+  <string name="settings_now_playing">Sedang diputar</string>
+  <string name="settings_now_playing_needs_access">Perlu akses</string>
+  <string name="settings_now_playing_unavailable">Tidak tersedia di TV ini</string>
+  <string name="settings_now_playing_adb">Izinkan dengan adb: %1$s</string>
 </resources>

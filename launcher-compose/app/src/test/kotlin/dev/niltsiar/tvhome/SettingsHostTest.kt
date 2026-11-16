@@ -31,6 +31,7 @@ import dev.niltsiar.tvhome.core.config.ThemeDirectory
 import dev.niltsiar.tvhome.data.shelf.READ_TV_LISTINGS
 import dev.niltsiar.tvhome.feature.settings.MoleculeSettingsViewModel
 import dev.niltsiar.tvhome.feature.settings.OptionLabel
+import dev.niltsiar.tvhome.service.media.NowPlayingAccess
 import io.kotest.assertions.withClue
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
@@ -52,6 +53,7 @@ private const val PERMISSION_NAMES = "android.content.pm.extra.REQUEST_PERMISSIO
 private const val PERMISSION_RESULTS = "android.content.pm.extra.REQUEST_PERMISSIONS_RESULTS"
 private const val PERMISSIONS_WHO = "@android:requestPermissions:"
 private val PermissionController = ComponentName("org.robolectric.permissioncontroller", "org.robolectric.permissioncontroller.Grant")
+private val AccessList = ComponentName("com.android.tv.settings", "com.android.tv.settings.NotificationAccessActivity")
 
 /** [SettingsHost] over the real graph: what the page has to tell shows in the page itself, never as a system toast. */
 val SettingsHostTest by testSuite {
@@ -233,6 +235,39 @@ class SettingsHostTestContent :
                         started().map { it.action } shouldNotContain Settings.ACTION_APPLICATION_DETAILS_SETTINGS
                     }
                 }
+            }
+
+            test("ok on now playing without notification access opens the notification access list where the tv has one") {
+                shadowOf(compose.activity.packageManager).apply {
+                    addActivityIfNotPresent(AccessList)
+                    addIntentFilterForActivity(
+                        AccessList,
+                        IntentFilter(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).apply { addCategory(Intent.CATEGORY_DEFAULT) },
+                    )
+                }
+                shadowOf(compose.activity.application).checkActivities(true)
+                show(SHELF_ON)
+
+                compose.onNodeWithTag("option:NowPlaying:0").performSemanticsAction(SemanticsActions.OnClick)
+
+                val opened = mutableListOf<Intent>()
+                compose.waitUntil(30_000) {
+                    opened += started()
+                    opened.any { it.action == Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS }
+                }
+                exists("settings:notice").shouldBeFalse()
+            }
+
+            test("where the tv has no notification access list, ok on now playing gives the adb line in the page and opens nothing") {
+                shadowOf(compose.activity.application).checkActivities(true)
+                show(SHELF_ON)
+
+                compose.onNodeWithTag("option:NowPlaying:0").performSemanticsAction(SemanticsActions.OnClick)
+                compose.waitUntil(30_000) { exists("settings:notice") }
+
+                val listener = NowPlayingAccess.component(compose.activity).flattenToShortString()
+                noticeSays("Allow it with adb: cmd notification allow_listener $listener")
+                started().map { it.action } shouldNotContain Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS
             }
 
             test("coming back to the page reads read tv listings again") {

@@ -57,4 +57,8 @@
   <string name="settings_lan_posters">Slike iz vaše mreže</string>
   <string name="settings_poster_helper_missing">Pomoćnik nije instaliran</string>
   <string name="settings_poster_helper_other_key">Pomoćnik potpisan drugim ključem</string>
+  <string name="settings_now_playing">Sada se reprodukuje</string>
+  <string name="settings_now_playing_needs_access">Potreban pristup</string>
+  <string name="settings_now_playing_unavailable">Nije dostupno na ovom televizoru</string>
+  <string name="settings_now_playing_adb">Dozvolite preko adb-a: %1$s</string>
 </resources>

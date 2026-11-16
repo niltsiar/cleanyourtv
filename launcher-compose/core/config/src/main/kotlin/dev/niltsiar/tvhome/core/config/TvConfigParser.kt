@@ -164,6 +164,7 @@ public fun parseTvConfig(json: String): ParsedConfig {
             appShelfWebPosters = o.bool("app_shelf_web_posters", d.appShelfWebPosters),
             appShelfLanPosters = o.bool("app_shelf_lan_posters", d.appShelfLanPosters),
             appShelfCards = o.int("app_shelf_cards", d.appShelfCards, SHELF_CARD_COUNTS),
+            nowPlaying = o.bool("now_playing", d.nowPlaying),
             pressFeedback = o.bool("press_feedback", d.pressFeedback),
             unusedFadeDays = o.int("unused_fade_days", d.unusedFadeDays, 0..3650),
             handleViewInputs = o.bool("handle_view_inputs", d.handleViewInputs),

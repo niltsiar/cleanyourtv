@@ -225,6 +225,15 @@ val TvConfigParserTest by testSuite {
         wrong.rejectedKeys shouldBe listOf("app_shelf_web_posters", "app_shelf_lan_posters")
     }
 
+    test("now playing is off unless the theme turns it on, and a wrong type keeps it off") {
+        parseTvConfig("{}").config.nowPlaying.shouldBeFalse()
+        parseTvConfig("""{"now_playing": true}""").config.nowPlaying.shouldBeTrue()
+
+        val wrong = parseTvConfig("""{"now_playing": "yes"}""")
+        wrong.config.nowPlaying.shouldBeFalse()
+        wrong.rejectedKeys shouldBe listOf("now_playing")
+    }
+
     test("app shelf cards is 10 unless the theme sets 5, 10 or 20") {
         parseTvConfig("{}").config.appShelfCards shouldBe 10
         listOf(5, 10, 20).forEach { parseTvConfig("""{"app_shelf_cards": $it}""").config.appShelfCards shouldBe it }
@@ -668,6 +677,7 @@ val TvConfigParserTest by testSuite {
             "app_shelf_web_posters" to ("true" to defaults.copy(appShelfWebPosters = true)),
             "app_shelf_lan_posters" to ("true" to defaults.copy(appShelfLanPosters = true)),
             "app_shelf_cards" to ("20" to defaults.copy(appShelfCards = 20)),
+            "now_playing" to ("true" to defaults.copy(nowPlaying = true)),
             "press_feedback" to ("true" to defaults.copy(pressFeedback = true)),
             "unused_fade_days" to ("60" to defaults.copy(unusedFadeDays = 60)),
             "handle_view_inputs" to ("true" to defaults.copy(handleViewInputs = true)),

@@ -32,6 +32,8 @@ public class SettingsActions(
     public val onToggleShelfSource: (Int) -> Unit = {},
     /** Whether Home holds READ_TV_LISTINGS may have changed: the request for it was answered, or the page came back. */
     public val onShelfAccessAnswered: () -> Unit = {},
+    /** The Now playing listener's notification access may have changed: the page came back to the front. */
+    public val onNowPlayingAccessChanged: () -> Unit = {},
 )
 
 /** Hosts [settingsPresenter] with Molecule: an event Flow in, a StateFlow out. */
@@ -68,5 +70,6 @@ public class MoleculeSettingsViewModel(
             onOpenShelfPicker = { events.trySend(SettingsEvent.OpenShelfPicker) },
             onToggleShelfSource = { events.trySend(SettingsEvent.ToggleShelfSource(it)) },
             onShelfAccessAnswered = { events.trySend(SettingsEvent.ShelfAccessAnswered) },
+            onNowPlayingAccessChanged = { events.trySend(SettingsEvent.NowPlayingAccessChanged) },
         )
 }

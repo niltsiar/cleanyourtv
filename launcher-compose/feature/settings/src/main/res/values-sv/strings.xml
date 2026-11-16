@@ -57,4 +57,8 @@
   <string name="settings_lan_posters">Bilder från hemnätverket</string>
   <string name="settings_poster_helper_missing">Hjälpen är inte installerad</string>
   <string name="settings_poster_helper_other_key">Hjälpen är signerad med en annan nyckel</string>
+  <string name="settings_now_playing">Spelas nu</string>
+  <string name="settings_now_playing_needs_access">Behöver åtkomst</string>
+  <string name="settings_now_playing_unavailable">Inte tillgängligt på den här TV:n</string>
+  <string name="settings_now_playing_adb">Ge åtkomst med adb: %1$s</string>
 </resources>

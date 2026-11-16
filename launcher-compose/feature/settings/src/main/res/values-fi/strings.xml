@@ -57,4 +57,8 @@
   <string name="settings_lan_posters">Kuvat kotiverkosta</string>
   <string name="settings_poster_helper_missing">Apuri ei asennettu</string>
   <string name="settings_poster_helper_other_key">Apuri allekirjoitettu eri avaimella</string>
+  <string name="settings_now_playing">Nyt toistossa</string>
+  <string name="settings_now_playing_needs_access">Tarvitsee käyttöoikeuden</string>
+  <string name="settings_now_playing_unavailable">Ei käytettävissä tässä televisiossa</string>
+  <string name="settings_now_playing_adb">Salli adb:llä: %1$s</string>
 </resources>

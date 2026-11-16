@@ -57,4 +57,8 @@
   <string name="settings_lan_posters">صور من شبكتك</string>
   <string name="settings_poster_helper_missing">المساعد غير مثبّت</string>
   <string name="settings_poster_helper_other_key">المساعد موقّع بمفتاح آخر</string>
+  <string name="settings_now_playing">قيد التشغيل الآن</string>
+  <string name="settings_now_playing_needs_access">يحتاج إلى إذن</string>
+  <string name="settings_now_playing_unavailable">غير متاح على هذا التلفاز</string>
+  <string name="settings_now_playing_adb">اسمح به عبر adb: %1$s</string>
 </resources>

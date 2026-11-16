@@ -112,6 +112,7 @@ public object Choices {
 
     public val AppShelfWebPosters: Choice<Boolean> = boolChoice("app_shelf_web_posters") { copy(appShelfWebPosters = it) }
     public val AppShelfLanPosters: Choice<Boolean> = boolChoice("app_shelf_lan_posters") { copy(appShelfLanPosters = it) }
+    public val NowPlaying: Choice<Boolean> = boolChoice("now_playing") { copy(nowPlaying = it) }
 
     /** One of [SHELF_CARD_COUNTS]. */
     public val AppShelfCards: Choice<Int> =
@@ -150,6 +151,7 @@ public object Choices {
             AppShelfWebPosters,
             AppShelfLanPosters,
             AppShelfCards,
+            NowPlaying,
         )
 
     /** The choices a pushed theme resets: all but open on start. */

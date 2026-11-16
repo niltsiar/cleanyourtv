@@ -66,6 +66,7 @@
   <string name="launcher_settings_summary">פריסה, שעון ותנועה</string>
   <string name="shelf_season_episode">עונה %1$s פרק %2$s</string>
   <string name="shelf_episode">פרק %1$s</string>
+  <string name="shelf_paused">מושהה</string>
   <plurals name="shelf_minutes_left">
     <item quantity="one">נותרו %1$d דק׳</item>
     <item quantity="two">נותרו %1$d דק׳</item>

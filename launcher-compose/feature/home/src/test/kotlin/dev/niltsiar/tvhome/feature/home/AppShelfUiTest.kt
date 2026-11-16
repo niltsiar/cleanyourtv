@@ -39,9 +39,11 @@ import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
 import dev.niltsiar.tvhome.core.model.InputArrival
 import dev.niltsiar.tvhome.core.model.InputTarget
+import dev.niltsiar.tvhome.core.model.NowPlayingItem
 import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.core.model.ShelfKind
 import dev.niltsiar.tvhome.core.model.ShelfPoster
+import dev.niltsiar.tvhome.core.model.nowPlayingCard
 import io.kotest.assertions.withClue
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
@@ -258,6 +260,50 @@ class AppShelfUiTestContent :
                 compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
                 compose.onNodeWithTag("shelf:card:0").assertExists()
                 compose.onNodeWithTag("shelf:card:1").assertDoesNotExist()
+            }
+
+            test("the now playing card's line gives the title, the artist when there is one, and paused, and keeps focus across tracks") {
+                session.value = NowPlayingItem("pkg.1", "The Sound of Silence", "Disturbed", paused = false, art = null)
+                showHome(Cinematic.copy(nowPlaying = true))
+                hold()
+                press(Key.DirectionUp)
+                textOf("shelf:meta") shouldBe "The Sound of Silence · Disturbed"
+
+                session.value = NowPlayingItem("pkg.1", "Down with the Sickness", null, paused = true, art = null)
+                compose.waitForIdle()
+                compose.onNodeWithTag("shelf:card:0").assertIsFocused()
+                textOf("shelf:meta") shouldBe "Down with the Sickness · Paused"
+
+                session.value = NowPlayingItem("pkg.1", "Stricken", "Disturbed", paused = true, art = null)
+                compose.waitForIdle()
+                textOf("shelf:meta") shouldBe "Stricken · Disturbed · Paused"
+            }
+
+            test("the now playing card with focus hands focus to its dock tile when the session stops, and the items stay") {
+                session.value = NowPlayingItem("pkg.1", "The Sound of Silence", "Disturbed", paused = false, art = null)
+                showHome(Cinematic.copy(nowPlaying = true))
+                hold()
+                press(Key.DirectionUp)
+                compose.onNodeWithTag("shelf:card:0").assertIsFocused()
+
+                session.value = null
+                compose.waitForIdle()
+
+                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                compose.onNodeWithContentDescription("Severance").assertExists()
+                compose.onNodeWithTag("shelf:card:3").assertDoesNotExist()
+            }
+
+            test("ok on the now playing card opens it with the app of its dock tile") {
+                val playing = NowPlayingItem("pkg.1", "The Sound of Silence", "Disturbed", paused = false, art = null)
+                session.value = playing
+                showHome(Cinematic.copy(nowPlaying = true))
+                hold()
+                press(Key.DirectionUp)
+
+                press(Key.DirectionCenter)
+
+                effects shouldBe listOf(HomeEffect.OpenShelfItem(apps[0], nowPlayingCard(playing)))
             }
 
             test("with press_feedback ok on a card dips it to 96 percent of its focused size and back") {
@@ -493,6 +539,9 @@ private class AppShelfUiTestFixture : JUnit4RulesContext() {
             ShelfItem(packageName = "pkg.1", title = "Silo", kind = ShelfKind.Next, posterUri = "content://pkg.1/poster/silo"),
         )
 
+    /** What pkg.1 plays; the other apps play nothing. */
+    val session = MutableStateFlow<NowPlayingItem?>(null)
+
     /** Twenty items, each with its own poster. */
     fun twentyItems() {
         items.clear()
@@ -523,6 +572,7 @@ private class AppShelfUiTestFixture : JUnit4RulesContext() {
                     posterAsks += uri
                     posters[uri] ?: if (uri.startsWith("content://")) red else null
                 },
+                nowPlaying = { pkg -> if (pkg == "pkg.1") session else flowOf(null) },
             )
         compose.setContent {
             TvTheme(motion = motion) {

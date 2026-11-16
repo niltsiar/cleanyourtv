@@ -116,6 +116,11 @@ internal fun homePresenter(
     LaunchedEffect(interaction, shelfTile?.key, current.appShelfSources, interaction.shelfReads, showing) {
         if (showing) interaction.followShelf(shelfTile)
     }
+    val playingPackage = interaction.playingPackage
+    LaunchedEffect(interaction, playingPackage, showing) {
+        interaction.nowPlayingFound(null)
+        if (showing && playingPackage != null) sources.nowPlaying(playingPackage).collect(interaction::nowPlayingFound)
+    }
     var today by remember { mutableStateOf<LocalDate?>(null) }
     LaunchedEffect(interaction, showing, current.unusedFadeDays > 0) {
         if (current.unusedFadeDays > 0 && showing) {

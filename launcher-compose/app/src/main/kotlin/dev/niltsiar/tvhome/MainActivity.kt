@@ -34,6 +34,7 @@ import dev.niltsiar.tvhome.feature.library.MoleculeLibraryViewModel
 import dev.niltsiar.tvhome.service.keys.PowerMenu
 import dev.niltsiar.tvhome.service.keys.ServiceRepair
 import dev.niltsiar.tvhome.service.keys.VendorKeys
+import dev.niltsiar.tvhome.service.media.NowPlayingAccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -108,6 +109,9 @@ class MainActivity : ComponentActivity() {
         if (config.value.restoreKeyServices) ServiceRepair.restore(this)
         lifecycleScope.launch {
             config.map { it.appShelf }.distinctUntilChanged().collect { on -> if (!on) graph.shelfPosters.trim() }
+        }
+        lifecycleScope.launch(Dispatchers.IO) {
+            config.map { it.nowPlaying }.distinctUntilChanged().collect { on -> NowPlayingAccess.setEnabled(this@MainActivity, on) }
         }
         setContent {
             val current = config.collectAsStateWithLifecycle()

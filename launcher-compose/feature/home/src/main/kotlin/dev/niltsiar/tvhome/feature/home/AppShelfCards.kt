@@ -58,6 +58,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.designsystem.FocusRingReach
 import dev.niltsiar.tvhome.core.designsystem.FocusSurface
@@ -67,7 +68,9 @@ import dev.niltsiar.tvhome.core.designsystem.popsOver
 import dev.niltsiar.tvhome.core.designsystem.pressDip
 import dev.niltsiar.tvhome.core.designsystem.ringBlendsWith
 import dev.niltsiar.tvhome.core.model.AppEntry
+import dev.niltsiar.tvhome.core.model.NowPlayingArt
 import dev.niltsiar.tvhome.core.model.ShelfItem
+import dev.niltsiar.tvhome.core.model.ShelfKind
 import dev.niltsiar.tvhome.core.model.ShelfPoster
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
@@ -76,6 +79,9 @@ import kotlin.math.ceil
 
 /** The tallest a shelf card is, 16:9 at 240 x 135 dp. */
 internal val ShelfCardHeight = 135.dp
+
+/** The largest a shelf card is. */
+public val ShelfCardMaxSize: DpSize = DpSize(ShelfCardHeight * TILE_ASPECT, ShelfCardHeight)
 
 /** The least a shelf card shrinks to in a layout with less room; a layout without room for it shows no cards. */
 internal val ShelfCardMinHeight = 90.dp
@@ -87,6 +93,7 @@ private val TextCardInset = 12.dp
 private const val SHELF_FADE_MS = 200
 private const val TEXT_CARD_ART_ALPHA = 0.3f
 private const val MINUTE_MS = 60_000.0
+private const val SHELF_LINE_SEPARATOR = " · "
 
 /**
  * Where the shelf cards go in a layout: cards [cardHeight] high, [clear] of room over and under them for a focused card's ring,
@@ -259,11 +266,14 @@ private fun PinnedWhileShown() {
     }
 }
 
-/** A key per card that stays with its item when a new read moves it; items with the same key get their place among them. */
+/**
+ * A key per card that stays with its item when a new read moves it; items with the same key get their place among them. The
+ * now-playing card keeps one key while its track changes, so it keeps focus.
+ */
 private fun cardKeys(items: List<ShelfItem>): List<String> {
     val seen = HashMap<String, Int>()
     return items.map { item ->
-        val key = "${item.intentUri}|${item.posterUri}|${item.title}"
+        val key = if (item.kind == ShelfKind.NowPlaying) "now-playing" else "${item.intentUri}|${item.posterUri}|${item.title}"
         "${seen.merge(key, 1, Int::plus)}|$key"
     }
 }
@@ -285,7 +295,8 @@ private fun ShelfCard(
     val density = LocalDensity.current
     val width = with(density) { band.cardWidth.roundToPx() }
     val height = with(density) { band.cardHeight.roundToPx() }
-    val picture by produceState<ShelfPoster?>(null, item.posterUri, width, height, posterGeneration) {
+    val carried = (item.playing?.art as? NowPlayingArt.Picture)?.poster
+    val decoded by produceState<ShelfPoster?>(null, item.posterUri, width, height, posterGeneration) {
         val uri = item.posterUri
         var asked = posterGeneration.intValue
         value = uri?.let { poster(it, width, height) }
@@ -318,7 +329,7 @@ private fun ShelfCard(
     ) {
         val surface = TvTheme.colors.surface
         Box(Modifier.fillMaxSize().drawBehind { drawRect(surface) }, contentAlignment = Alignment.BottomStart) {
-            val shown = picture
+            val shown = carried ?: decoded
             if (shown != null) {
                 val fill = shown.fill
                 Image(
@@ -351,10 +362,15 @@ private fun ShelfCard(
 
 /**
  * What the line under the title says for a focused shelf card: the item's title, then its season and episode when the app
- * gives them, then the minutes left when it gives a position and a duration.
+ * gives them, then the minutes left when it gives a position and a duration. A now-playing card gives the title, the artist
+ * when the session names one, and Paused while it is paused.
  */
 @Composable
 internal fun shelfLine(item: ShelfItem): String {
+    item.playing?.let { playing ->
+        val paused = if (playing.paused) stringResource(R.string.shelf_paused) else null
+        return listOfNotNull(playing.title, playing.artist, paused).joinToString(SHELF_LINE_SEPARATOR)
+    }
     val season = item.seasonNumber
     val episode = item.episodeNumber
     val number =
@@ -364,7 +380,7 @@ internal fun shelfLine(item: ShelfItem): String {
             else -> null
         }
     val left = minutesLeft(item)?.let { pluralStringResource(R.plurals.shelf_minutes_left, it, it) }
-    return listOfNotNull(item.title, number, left).joinToString(" · ")
+    return listOfNotNull(item.title, number, left).joinToString(SHELF_LINE_SEPARATOR)
 }
 
 /** The whole minutes left of [item], rounded up; null without a position and a duration, or with none left. */

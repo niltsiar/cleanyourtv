@@ -69,6 +69,10 @@ Home layout:
   fetches. Without the helper, such a card shows text on the app's banner.
 - **Pictures from your network.** With Pictures from the web on, App highlights cards also show poster pictures from a
   media server on your home network.
+- **Now playing.** What a dock app plays, such as a Spotify track, is the first card of its App highlights, with the
+  title, the artist and Paused, and it changes with the track. OK opens the app. Home reads the app's media session,
+  which needs notification access for TV Home's Now playing entry. Home reads no notification. Where the TV has no
+  Notification access screen, the row gives the adb line that allows it.
 
 App library:
 

@@ -57,4 +57,8 @@
   <string name="settings_lan_posters">Ağınızdan görseller</string>
   <string name="settings_poster_helper_missing">Yardımcı yüklü değil</string>
   <string name="settings_poster_helper_other_key">Yardımcı başka bir anahtarla imzalanmış</string>
+  <string name="settings_now_playing">Şimdi çalıyor</string>
+  <string name="settings_now_playing_needs_access">Erişim gerekiyor</string>
+  <string name="settings_now_playing_unavailable">Bu TV’de kullanılamıyor</string>
+  <string name="settings_now_playing_adb">adb ile izin verin: %1$s</string>
 </resources>

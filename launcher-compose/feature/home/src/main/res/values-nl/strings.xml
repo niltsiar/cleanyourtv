@@ -63,6 +63,7 @@
   <string name="launcher_settings_summary">Indeling, klok en beweging</string>
   <string name="shelf_season_episode">S%1$s A%2$s</string>
   <string name="shelf_episode">A%1$s</string>
+  <string name="shelf_paused">Gepauzeerd</string>
   <plurals name="shelf_minutes_left">
     <item quantity="one">nog %1$d min</item>
     <item quantity="other">nog %1$d min</item>

@@ -62,6 +62,7 @@
   <string name="launcher_settings_summary">লেআউট, ঘড়ি ও গতি</string>
   <string name="shelf_season_episode">সিজন %1$s পর্ব %2$s</string>
   <string name="shelf_episode">পর্ব %1$s</string>
+  <string name="shelf_paused">বিরতি দেওয়া হয়েছে</string>
   <plurals name="shelf_minutes_left">
     <item quantity="one">%1$d মিনিট বাকি</item>
     <item quantity="other">%1$d মিনিট বাকি</item>

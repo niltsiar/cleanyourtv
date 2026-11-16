@@ -47,14 +47,24 @@ class ShelfSettingsTestContent :
                         ),
                     )
 
+                val listenerGranted = AtomicBoolean(false)
+
                 fun settings(
                     theme: String = SHELF_ON,
                     listed: List<ShelfPublisher> = publishers,
                     helper: PosterHelper = PosterHelper.Missing,
+                    listenerAvailable: Boolean = true,
                 ): SettingsHarness {
                     harness?.stop()
-                    return SettingsHarness(app, theme, shelfPublishers = listed, shelfAccess = { granted.get() }, posterHelper = { helper })
-                        .also { harness = it }
+                    return SettingsHarness(
+                        app,
+                        theme,
+                        shelfPublishers = listed,
+                        shelfAccess = { granted.get() },
+                        posterHelper = { helper },
+                        nowPlayingAvailable = { listenerAvailable },
+                        nowPlayingAccess = { listenerGranted.get() },
+                    ).also { harness = it }
                 }
 
                 fun SettingsUiState.homeRows() = sections[1].rows.map { it.id }
@@ -187,19 +197,78 @@ class ShelfSettingsTestContent :
 
                 settings.pick(SettingsRowId.AppShelf, 0)
                 settings.awaitState {
-                    it.homeRows().takeLast(3) == listOf(SettingsRowId.AppShelf, SettingsRowId.ShelfCards, SettingsRowId.WebPosters)
+                    it.homeRows().takeLast(4) ==
+                        listOf(SettingsRowId.AppShelf, SettingsRowId.ShelfCards, SettingsRowId.WebPosters, SettingsRowId.NowPlaying)
                 }
                 settings.pick(SettingsRowId.WebPosters, 0)
-                settings.awaitState { it.homeRows().takeLast(2) == listOf(SettingsRowId.WebPosters, SettingsRowId.LanPosters) }
+                settings.awaitState {
+                    it.homeRows().takeLast(3) == listOf(SettingsRowId.WebPosters, SettingsRowId.LanPosters, SettingsRowId.NowPlaying)
+                }
                 settings.pick(SettingsRowId.LanPosters, 0)
                 settings.awaitState { it.row(SettingsRowId.LanPosters).selected == 0 }
                 (settings.config.appShelfWebPosters && settings.config.appShelfLanPosters).shouldBeTrue()
 
                 settings.pick(SettingsRowId.WebPosters, 1)
-                settings.awaitState { it.homeRows().last() == SettingsRowId.WebPosters }
+                settings.awaitState { it.homeRows().takeLast(2) == listOf(SettingsRowId.WebPosters, SettingsRowId.NowPlaying) }
                 settings.pick(SettingsRowId.AppShelf, 1)
                 settings.awaitState { it.homeRows().last() == SettingsRowId.AppShelf }
                 settings.config.appShelfLanPosters.shouldBeTrue()
+            }
+
+            test("now playing shows under app highlights only while it is on, and a pick stores it") {
+                val settings = settings("{}")
+                (SettingsRowId.NowPlaying in settings.state.homeRows()).shouldBeFalse()
+
+                settings.pick(SettingsRowId.AppShelf, 0)
+                settings.awaitState { it.homeRows().last() == SettingsRowId.NowPlaying }.row(SettingsRowId.NowPlaying).selected shouldBe 1
+                settings.pick(SettingsRowId.NowPlaying, 0)
+                settings.awaitState { it.row(SettingsRowId.NowPlaying).selected == 0 }
+                settings.config.nowPlaying.shouldBeTrue()
+
+                settings.pick(SettingsRowId.AppShelf, 1)
+                settings.awaitState { SettingsRowId.NowPlaying !in it.homeRows() }
+                settings.config.nowPlaying.shouldBeTrue()
+            }
+
+            test("now playing turned on without notification access asks for it and says needs access, and ok on that asks again") {
+                val settings = settings()
+
+                settings.pick(SettingsRowId.NowPlaying, 0)
+
+                settings.awaitAskedNowPlayingAccess()
+                val row = settings.awaitState { it.row(SettingsRowId.NowPlaying).selected == 0 }.row(SettingsRowId.NowPlaying)
+                row.options shouldBe
+                    listOf(OptionLabel.Res(R.string.settings_now_playing_needs_access), OptionLabel.Res(R.string.settings_off))
+                settings.pick(SettingsRowId.NowPlaying, 0)
+                settings.awaitAskedNowPlayingAccess()
+            }
+
+            test("access given while the page was away reads again when it comes back, and the row says on") {
+                val settings = settings("""{"app_shelf": true, "now_playing": true}""")
+                settings
+                    .awaitState { SettingsRowId.NowPlaying in it.homeRows() }
+                    .row(SettingsRowId.NowPlaying)
+                    .options
+                    .first() shouldBe OptionLabel.Res(R.string.settings_now_playing_needs_access)
+
+                listenerGranted.set(true)
+                settings.viewModel.actions.onNowPlayingAccessChanged()
+
+                settings.awaitState { it.row(SettingsRowId.NowPlaying).options.first() == OptionLabel.Res(R.string.settings_on) }
+            }
+
+            test("on a tv that gives no notification access now playing says not available on this tv and cannot turn on") {
+                val settings = settings(listenerAvailable = false)
+                val row = settings.awaitState { SettingsRowId.NowPlaying in it.homeRows() }.row(SettingsRowId.NowPlaying)
+                row.options shouldBe
+                    listOf(OptionLabel.Res(R.string.settings_now_playing_unavailable), OptionLabel.Res(R.string.settings_off))
+                row.selected shouldBe 1
+
+                settings.pick(SettingsRowId.NowPlaying, 0)
+
+                settings.staysFollowingTheme().shouldBeTrue()
+                settings.config.nowPlaying.shouldBeFalse()
+                settings.nowPlayingAccessAsked().shouldBeFalse()
             }
 
             test("cards per app shows only while app highlights is on, offers 5, 10 and 20 with 10 held, and a pick stores it") {

@@ -61,6 +61,7 @@
   <string name="launcher_settings_summary">布局、时钟和动效</string>
   <string name="shelf_season_episode">第%1$s季 第%2$s集</string>
   <string name="shelf_episode">第%1$s集</string>
+  <string name="shelf_paused">已暂停</string>
   <plurals name="shelf_minutes_left">
     <item quantity="other">剩余 %1$d 分钟</item>
   </plurals>

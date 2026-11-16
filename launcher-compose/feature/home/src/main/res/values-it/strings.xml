@@ -66,6 +66,7 @@
   <string name="launcher_settings_summary">Layout, orologio e movimento</string>
   <string name="shelf_season_episode">S%1$s E%2$s</string>
   <string name="shelf_episode">E%1$s</string>
+  <string name="shelf_paused">In pausa</string>
   <plurals name="shelf_minutes_left">
     <item quantity="one">Manca %1$d min</item>
     <item quantity="many">Mancano %1$d min</item>

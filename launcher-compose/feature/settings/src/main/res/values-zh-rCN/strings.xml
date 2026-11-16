@@ -57,4 +57,8 @@
   <string name="settings_lan_posters">来自局域网的图片</string>
   <string name="settings_poster_helper_missing">未安装辅助应用</string>
   <string name="settings_poster_helper_other_key">辅助应用的签名密钥不同</string>
+  <string name="settings_now_playing">正在播放</string>
+  <string name="settings_now_playing_needs_access">需要权限</string>
+  <string name="settings_now_playing_unavailable">此电视不支持该功能</string>
+  <string name="settings_now_playing_adb">请用 adb 允许：%1$s</string>
 </resources>

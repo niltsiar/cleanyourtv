@@ -20,6 +20,9 @@ import dev.niltsiar.tvhome.feature.settings.MoleculeSettingsViewModel
 import dev.niltsiar.tvhome.feature.settings.PageNotice
 import dev.niltsiar.tvhome.feature.settings.SettingsEffect
 import dev.niltsiar.tvhome.feature.settings.SettingsScreen
+import dev.niltsiar.tvhome.service.media.NowPlayingAccess
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import dev.niltsiar.tvhome.feature.settings.R as SettingsR
 
 /**
@@ -27,7 +30,8 @@ import dev.niltsiar.tvhome.feature.settings.R as SettingsR
  * write, a stored wallpaper, an empty Apps and channels list and TV settings that [onOpenTvSettings] could not open are told
  * in the page's notice. When App highlights needs READ_TV_LISTINGS the page asks for it; after a refusal the system no longer
  * asks about, the notice says where to allow it and the launcher's App info opens. Whether Home holds it is read again each
- * time the page starts.
+ * time the page starts. When Now playing needs notification access, the Notification access list opens, or where the TV has
+ * none, the notice gives the adb line that allows it; whether the listener has it is read again each time the page resumes.
  */
 @Composable
 internal fun SettingsHost(
@@ -51,6 +55,7 @@ internal fun SettingsHost(
             }
         }
     LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.actions.onShelfAccessAnswered() }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.actions.onNowPlayingAccessChanged() }
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
             when (effect) {
@@ -69,6 +74,15 @@ internal fun SettingsHost(
 
                 SettingsEffect.NoShelfSources -> {
                     notice.show(SettingsR.string.settings_shelf_nothing)
+                }
+
+                SettingsEffect.AskNowPlayingAccess -> {
+                    // The access list shows only an enabled listener; Home enables it too, but may not be running.
+                    withContext(Dispatchers.IO) { NowPlayingAccess.setEnabled(activity, true) }
+                    if (!graph.systemSettings.openNotificationAccess()) {
+                        val component = NowPlayingAccess.component(activity).flattenToShortString()
+                        notice.show(SettingsR.string.settings_now_playing_adb, "cmd notification allow_listener $component")
+                    }
                 }
             }
         }

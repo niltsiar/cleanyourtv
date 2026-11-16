@@ -15,8 +15,10 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.model.NowPlayingItem
 import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.core.model.ShelfKind
+import dev.niltsiar.tvhome.core.model.nowPlayingCard
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -199,6 +201,14 @@ class ShelfLaunchTestContent :
             test("an item without an intent opens the app, and an app without a launch entry opens nothing") {
                 open(null).isLaunchIntent()
                 open("plezy://play", pkg = "com.gone").shouldBeNull()
+            }
+
+            test("ok on a now playing card opens the app that plays") {
+                val playing = NowPlayingItem(APP, "The Sound of Silence", "Disturbed", paused = true, art = null)
+
+                context.startShelfItem(nowPlayingCard(playing)) shouldBe true
+
+                started.last().isLaunchIntent()
             }
 
             test("an intent with file: data is refused") {

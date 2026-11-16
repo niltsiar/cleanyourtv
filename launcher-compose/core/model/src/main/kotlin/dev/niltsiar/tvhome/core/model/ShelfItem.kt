@@ -4,7 +4,10 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 
-/** Which row of the TV provider a [ShelfItem] comes from: Watch Next by its type, or a preview channel. */
+/**
+ * Which row of the TV provider a [ShelfItem] comes from: Watch Next by its type, or a preview channel. [NowPlaying] comes from
+ * the app's media session instead.
+ */
 public enum class ShelfKind {
     Continue,
     Next,
@@ -12,6 +15,7 @@ public enum class ShelfKind {
     Watchlist,
     Live,
     Preview,
+    NowPlaying,
 }
 
 /**
@@ -27,7 +31,7 @@ public data class ShelfChannel(
 /**
  * One item an app publishes in the TV provider, as the shelf shows it. [positionMs] and [durationMs] are null when the app
  * gives none. [intentUri] opens the item and goes through `startShelfItem`. [lastEngagementMs] is null for preview programs,
- * which have no such time.
+ * which have no such time. [playing] is what the session plays, set for a [ShelfKind.NowPlaying] item only.
  */
 @Immutable
 public data class ShelfItem(
@@ -41,7 +45,18 @@ public data class ShelfItem(
     val posterUri: String? = null,
     val intentUri: String? = null,
     val lastEngagementMs: Long? = null,
+    val playing: NowPlayingItem? = null,
 )
+
+/** [playing] as the first card of its app's shelf: no intent, so OK opens the app. */
+public fun nowPlayingCard(playing: NowPlayingItem): ShelfItem =
+    ShelfItem(
+        packageName = playing.packageName,
+        title = playing.title,
+        kind = ShelfKind.NowPlaying,
+        posterUri = (playing.art as? NowPlayingArt.Poster)?.uri,
+        playing = playing,
+    )
 
 /**
  * A shelf item's [picture] as a card draws it. [fill] is unspecified for a picture close enough to the card's shape to cover

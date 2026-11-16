@@ -61,6 +61,7 @@
   <string name="launcher_settings_summary">레이아웃, 시계, 모션</string>
   <string name="shelf_season_episode">시즌 %1$s %2$s화</string>
   <string name="shelf_episode">%1$s화</string>
+  <string name="shelf_paused">일시중지됨</string>
   <plurals name="shelf_minutes_left">
     <item quantity="other">%1$d분 남음</item>
   </plurals>

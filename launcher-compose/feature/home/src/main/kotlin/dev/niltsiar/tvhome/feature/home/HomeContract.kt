@@ -10,6 +10,7 @@ import dev.niltsiar.tvhome.core.model.InputArrival
 import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkState
+import dev.niltsiar.tvhome.core.model.NowPlayingItem
 import dev.niltsiar.tvhome.core.model.OpenedAt
 import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.core.model.ShelfPoster
@@ -229,6 +230,11 @@ public class HomeSources(
     public val shelfPoster: suspend (String, Int, Int) -> ShelfPoster? = { _, _, _ -> null },
     /** Rises each time posters that gave none may have arrived; collected only while the shelf's cards show. */
     public val shelfPosterChanges: Flow<Int> = emptyFlow(),
+    /**
+     * What a package's media session plays (now_playing), null while it plays nothing to show, with its art for a card of
+     * [ShelfCardMaxSize]. Collected only while Home shows and that app's shelf is read.
+     */
+    public val nowPlaying: (String) -> Flow<NowPlayingItem?> = { flowOf(null) },
 )
 
 internal sealed interface HomeEvent {

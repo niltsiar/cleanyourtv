@@ -57,4 +57,8 @@
   <string name="settings_lan_posters">Immagini dalla tua rete</string>
   <string name="settings_poster_helper_missing">Assistente non installato</string>
   <string name="settings_poster_helper_other_key">Assistente firmato con un\'altra chiave</string>
+  <string name="settings_now_playing">In riproduzione</string>
+  <string name="settings_now_playing_needs_access">Serve l\'accesso</string>
+  <string name="settings_now_playing_unavailable">Non disponibile su questa TV</string>
+  <string name="settings_now_playing_adb">Consentilo con adb: %1$s</string>
 </resources>

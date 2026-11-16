@@ -24,6 +24,7 @@ public enum class SettingsRowId {
     ShelfCards,
     WebPosters,
     LanPosters,
+    NowPlaying,
     AppLibrary,
     LibraryLeastUsed,
     UnusedFadeDays,
@@ -147,6 +148,10 @@ public class SettingsSources(
     public val shelfAccess: () -> Boolean = { false },
     /** Whether the poster helper can serve pictures from the web, read when the page starts. */
     public val posterHelper: () -> PosterHelper = { PosterHelper.Missing },
+    /** False on a TV whose system gives no app notification access, read when the page starts. */
+    public val nowPlayingAvailable: () -> Boolean = { false },
+    /** True when the Now playing listener has notification access. */
+    public val nowPlayingAccess: () -> Boolean = { false },
 )
 
 /** The art beside the pickers' entries, loaded off the main thread at a width and height in pixels; null when there is none. */
@@ -170,6 +175,12 @@ public sealed interface SettingsEffect {
 
     /** The Apps and channels picker has nothing to list: no installed app publishes rows. */
     public data object NoShelfSources : SettingsEffect
+
+    /**
+     * Now playing is on without notification access: the host opens the Notification access list, or says the adb line that
+     * gives it, and then calls [SettingsActions.onNowPlayingAccessChanged] when the page comes back.
+     */
+    public data object AskNowPlayingAccess : SettingsEffect
 }
 
 internal sealed interface SettingsEvent {
@@ -206,4 +217,7 @@ internal sealed interface SettingsEvent {
 
     /** The person answered the request for READ_TV_LISTINGS. */
     data object ShelfAccessAnswered : SettingsEvent
+
+    /** The Now playing listener's notification access may have changed. */
+    data object NowPlayingAccessChanged : SettingsEvent
 }

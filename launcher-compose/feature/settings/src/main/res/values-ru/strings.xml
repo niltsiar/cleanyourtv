@@ -57,4 +57,8 @@
   <string name="settings_lan_posters">Изображения из домашней сети</string>
   <string name="settings_poster_helper_missing">Помощник не установлен</string>
   <string name="settings_poster_helper_other_key">Помощник подписан другим ключом</string>
+  <string name="settings_now_playing">Сейчас играет</string>
+  <string name="settings_now_playing_needs_access">Нужен доступ</string>
+  <string name="settings_now_playing_unavailable">Недоступно на этом телевизоре</string>
+  <string name="settings_now_playing_adb">Разрешите через adb: %1$s</string>
 </resources>

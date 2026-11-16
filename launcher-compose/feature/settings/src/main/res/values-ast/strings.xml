@@ -57,4 +57,8 @@
   <string name="settings_lan_posters">Imáxenes de la to rede</string>
   <string name="settings_poster_helper_missing">Ayudante nun instaláu</string>
   <string name="settings_poster_helper_other_key">Ayudante robláu con otra clave</string>
+  <string name="settings_now_playing">Reproduciendo agora</string>
+  <string name="settings_now_playing_needs_access">Precisa accesu</string>
+  <string name="settings_now_playing_unavailable">Non disponible nesta TV</string>
+  <string name="settings_now_playing_adb">Permítilo con adb: %1$s</string>
 </resources>

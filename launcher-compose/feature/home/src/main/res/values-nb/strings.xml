@@ -63,6 +63,7 @@
   <string name="launcher_settings_summary">Oppsett, klokke og bevegelse</string>
   <string name="shelf_season_episode">S%1$s E%2$s</string>
   <string name="shelf_episode">E%1$s</string>
+  <string name="shelf_paused">Satt på pause</string>
   <plurals name="shelf_minutes_left">
     <item quantity="one">%1$d min igjen</item>
     <item quantity="other">%1$d min igjen</item>

@@ -57,4 +57,8 @@
   <string name="settings_lan_posters">來自區域網路的圖片</string>
   <string name="settings_poster_helper_missing">未安裝輔助應用程式</string>
   <string name="settings_poster_helper_other_key">輔助應用程式的簽署金鑰不同</string>
+  <string name="settings_now_playing">正在播放</string>
+  <string name="settings_now_playing_needs_access">需要權限</string>
+  <string name="settings_now_playing_unavailable">這台電視不支援此功能</string>
+  <string name="settings_now_playing_adb">請用 adb 允許：%1$s</string>
 </resources>

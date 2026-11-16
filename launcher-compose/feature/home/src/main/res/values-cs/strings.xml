@@ -67,6 +67,7 @@
   <string name="launcher_settings_summary">Rozložení, hodiny a pohyb</string>
   <string name="shelf_season_episode">S%1$s D%2$s</string>
   <string name="shelf_episode">D%1$s</string>
+  <string name="shelf_paused">Pozastaveno</string>
   <plurals name="shelf_minutes_left">
     <item quantity="one">Zbývá %1$d min</item>
     <item quantity="few">Zbývá %1$d min</item>

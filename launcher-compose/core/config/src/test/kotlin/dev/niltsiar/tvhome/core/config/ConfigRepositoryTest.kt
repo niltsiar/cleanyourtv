@@ -195,6 +195,7 @@ class ConfigRepositoryTestContent :
                 repo.choose(Choices.AppShelfWebPosters, true)
                 repo.choose(Choices.AppShelfLanPosters, true)
                 repo.choose(Choices.AppShelfCards, 20)
+                repo.choose(Choices.NowPlaying, true)
                 repo.choose(Choices.InputArrival, true)
                 awaitConfig(repo) { it.inputArrival }
 
@@ -220,6 +221,7 @@ class ConfigRepositoryTestContent :
                         appShelfWebPosters = true,
                         appShelfLanPosters = true,
                         appShelfCards = 20,
+                        nowPlaying = true,
                     )
             }
 

@@ -64,6 +64,7 @@
   <string name="launcher_settings_summary">Layout, klocka och rörelse</string>
   <string name="shelf_season_episode">S%1$s A%2$s</string>
   <string name="shelf_episode">A%1$s</string>
+  <string name="shelf_paused">Pausad</string>
   <plurals name="shelf_minutes_left">
     <item quantity="one">%1$d min kvar</item>
     <item quantity="other">%1$d min kvar</item>

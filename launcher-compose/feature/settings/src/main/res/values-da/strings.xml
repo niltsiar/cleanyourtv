@@ -57,4 +57,8 @@
   <string name="settings_lan_posters">Billeder fra dit netværk</string>
   <string name="settings_poster_helper_missing">Hjælper ikke installeret</string>
   <string name="settings_poster_helper_other_key">Hjælper signeret med en anden nøgle</string>
+  <string name="settings_now_playing">Afspilles nu</string>
+  <string name="settings_now_playing_needs_access">Kræver adgang</string>
+  <string name="settings_now_playing_unavailable">Ikke tilgængelig på dette TV</string>
+  <string name="settings_now_playing_adb">Giv adgang med adb: %1$s</string>
 </resources>

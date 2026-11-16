@@ -57,4 +57,8 @@
   <string name="settings_lan_posters">Hình ảnh từ mạng của bạn</string>
   <string name="settings_poster_helper_missing">Chưa cài trình trợ giúp</string>
   <string name="settings_poster_helper_other_key">Trình trợ giúp ký bằng khóa khác</string>
+  <string name="settings_now_playing">Đang phát</string>
+  <string name="settings_now_playing_needs_access">Cần quyền truy cập</string>
+  <string name="settings_now_playing_unavailable">TV này không hỗ trợ</string>
+  <string name="settings_now_playing_adb">Cho phép bằng adb: %1$s</string>
 </resources>

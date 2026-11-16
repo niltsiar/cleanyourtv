@@ -21,10 +21,12 @@ import java.io.IOException
  * The settings screen's state logic: the rows are the repository's config read through [settingsGroups], nothing is
  * kept apart from it, and a pick or Follow theme goes to the repository, which answers through the same flow.
  * Only the open pickers, the theme's pictures, the picked app's label, whether Home holds READ_TV_LISTINGS, the sources
- * the Apps and channels picker lists and the poster helper's status, read once, are kept here. [onEffect] gets
+ * the Apps and channels picker lists, the poster helper's status and whether the TV gives notification access, read once,
+ * and whether the Now playing listener has it are kept here. [onEffect] gets
  * [SettingsEffect.SaveFailed] when the store refuses a write, [SettingsEffect.WallpaperApplied] after a picture or None was
  * stored as the wallpaper, [SettingsEffect.AskShelfAccess] when App highlights is turned on or the Apps and channels picker
- * opened without that permission, and [SettingsEffect.NoShelfSources] when that picker would list nothing. That picker closes when App highlights turns off, which
+ * opened without that permission, [SettingsEffect.NoShelfSources] when that picker would list nothing, and
+ * [SettingsEffect.AskNowPlayingAccess] when Now playing's On is picked without notification access. That picker closes when App highlights turns off, which
  * takes its row away.
  */
 @Composable
@@ -42,6 +44,8 @@ internal fun settingsPresenter(
     var shelfEntries by remember { mutableStateOf<List<ShelfSourceEntry>?>(null) }
     var shelfListed by remember { mutableStateOf<Set<String>?>(null) }
     val posterHelper = remember(sources) { sources.posterHelper() }
+    val listenerAvailable = remember(sources) { sources.nowPlayingAvailable() }
+    var listenerGranted by remember { mutableStateOf(sources.nowPlayingAccess()) }
     val pictures by produceState(emptyList<WallpaperPicture>(), sources) { value = sources.wallpaperPictures() }
     val currentPictures by rememberUpdatedState(pictures)
     LaunchedEffect(events, repository, sources) {
@@ -49,8 +53,11 @@ internal fun settingsPresenter(
             try {
                 when (event) {
                     is SettingsEvent.Pick -> {
-                        rowOf(event.row).pick(repository, event.option)
+                        val nowPlayingOn = turnsNowPlayingOn(event.row, event.option)
+                        // A TV without notification access cannot read sessions: its On stays out of reach.
+                        if (!nowPlayingOn || listenerAvailable) rowOf(event.row).pick(repository, event.option)
                         if (turnsShelfOn(event.row, event.option) && !shelfAccess) currentOnEffect(SettingsEffect.AskShelfAccess)
+                        if (nowPlayingOn && listenerAvailable && !listenerGranted) currentOnEffect(SettingsEffect.AskNowPlayingAccess)
                     }
 
                     SettingsEvent.FollowTheme -> {
@@ -103,6 +110,10 @@ internal fun settingsPresenter(
                         shelfAccess = sources.shelfAccess()
                     }
 
+                    SettingsEvent.NowPlayingAccessChanged -> {
+                        listenerGranted = sources.nowPlayingAccess()
+                    }
+
                     is SettingsEvent.PickStartApp -> {
                         picker?.let { open ->
                             picker = null
@@ -150,9 +161,10 @@ internal fun settingsPresenter(
     LaunchedEffect(config.appShelf) { if (!config.appShelf) shelfEntries = null }
     val ticked = config.appShelfSources
     val shelfPicker = remember(shelfEntries, ticked) { shelfEntries?.let { ShelfPicker(it, ticked.toSet()) } }
-    return remember(config, posterHelper, followsTheme, startRow, picker, wallpaperRow, wallpaperPicker, shelfRow, shelfPicker) {
+    val listener = remember(listenerAvailable, listenerGranted) { ListenerAccess(listenerAvailable, listenerGranted) }
+    return remember(config, posterHelper, listener, followsTheme, startRow, picker, wallpaperRow, wallpaperPicker, shelfRow, shelfPicker) {
         SettingsUiState(
-            settingsSections(config, posterHelper),
+            settingsSections(config, posterHelper, listener),
             followsTheme,
             config.launcherSettingsButton,
             startRow,

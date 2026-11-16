@@ -57,4 +57,8 @@
   <string name="settings_lan_posters">รูปภาพจากเครือข่ายของคุณ</string>
   <string name="settings_poster_helper_missing">ไม่ได้ติดตั้งตัวช่วย</string>
   <string name="settings_poster_helper_other_key">ตัวช่วยลงนามด้วยคีย์อื่น</string>
+  <string name="settings_now_playing">กำลังเล่น</string>
+  <string name="settings_now_playing_needs_access">ต้องการสิทธิ์เข้าถึง</string>
+  <string name="settings_now_playing_unavailable">ทีวีเครื่องนี้ไม่รองรับ</string>
+  <string name="settings_now_playing_adb">อนุญาตด้วย adb: %1$s</string>
 </resources>

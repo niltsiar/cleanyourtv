@@ -13,8 +13,10 @@ import dev.niltsiar.tvhome.core.model.InputArrival
 import dev.niltsiar.tvhome.core.model.InputRow
 import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.core.model.InputsMenu
+import dev.niltsiar.tvhome.core.model.NowPlayingItem
 import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.core.model.inputIdOf
+import dev.niltsiar.tvhome.core.model.nowPlayingCard
 import dev.niltsiar.tvhome.core.model.shelfSourceOf
 import kotlinx.coroutines.delay
 
@@ -45,6 +47,12 @@ internal data class Launch(
 
 /** How long a dock tile holds focus before Home reads its app shelf, so moving along the dock reads nothing. */
 internal const val SHELF_HOLD_MS = 600L
+
+/** A dock [tile] whose app shelf was read, and the [items] read for it. */
+private class ReadShelf(
+    val tile: AppEntry,
+    val items: List<ShelfItem>,
+)
 
 /** The Launcher settings page closed and Home has yet to apply what it changed; [reorder] asks for reorder mode next. */
 internal data class SettingsReturn(
@@ -137,9 +145,26 @@ internal class HomeInteraction(
         if (launch?.token == token) launch = null
     }
 
-    /** The app shelf on screen: the focused dock tile's, once [followShelf] has read it. */
-    var appShelf by mutableStateOf<AppShelf?>(null)
-        private set
+    /** The dock tile [followShelf] read the shelf of, and the items it read; null while it has read none. */
+    private var held by mutableStateOf<ReadShelf?>(null)
+
+    /** What the held tile's app plays (now_playing), as [nowPlayingFound] last heard it. */
+    private var playing by mutableStateOf<NowPlayingItem?>(null)
+
+    /** The package whose session Home follows: the held tile's app while now_playing is on, else null. */
+    val playingPackage: String? by derivedStateOf { held?.tile?.packageName?.takeIf { config.value.nowPlaying } }
+
+    /**
+     * The app shelf on screen: the focused dock tile's, once [followShelf] has read it, led by what its app plays. Null while
+     * it has no card.
+     */
+    val appShelf: AppShelf? by derivedStateOf {
+        held?.let { shelf ->
+            val lead = playing?.takeIf { it.packageName == playingPackage }?.let(::nowPlayingCard)
+            val items = listOfNotNull(lead) + shelf.items
+            if (items.isEmpty()) null else AppShelf(shelf.tile.key, items)
+        }
+    }
 
     /** The items read per package, for the app_shelf_sources in [cachedSources]. Home coming to the front drops them. */
     private val shelfCache = HashMap<String, List<ShelfItem>>()
@@ -153,37 +178,49 @@ internal class HomeInteraction(
     private var shelfRoom by mutableStateOf(false)
 
     /**
-     * The dock tile [key] when app_shelf is on, the layout has room and the tile's app has app_shelf_sources ticked, else null.
-     * A tile whose launch_actions switch to an input opens no app, so it has no shelf.
+     * The dock tile [key] when app_shelf is on, the layout has room and the tile's app has app_shelf_sources ticked or
+     * now_playing is on, else null. A tile whose launch_actions switch to an input opens no app, so it has no shelf.
      */
     fun shelfTile(key: String?): AppEntry? {
         val current = config.value
         if (!current.appShelf || !shelfRoom) return null
         val tile = shown.dock.firstOrNull { it.key == key } ?: return null
         if (inputIdOf(current.launchActions[tile.packageName]) != null) return null
-        return tile.takeIf { _ -> current.appShelfSources.any { shelfSourceOf(it).packageName == tile.packageName } }
+        return tile.takeIf { current.nowPlaying || ticks(current, it.packageName) }
     }
+
+    private fun ticks(
+        current: TvConfig,
+        packageName: String,
+    ) = current.appShelfSources.any { shelfSourceOf(it).packageName == packageName }
 
     /**
      * Shows the app shelf of [tile], or none for null. A tile other than the one shown first holds focus for [SHELF_HOLD_MS];
-     * the one shown is read again at once.
+     * the one shown is read again at once. An app without ticked sources has no items, only what it plays.
      */
     suspend fun followShelf(tile: AppEntry?) {
         if (tile == null) {
-            appShelf = null
+            held = null
             return
         }
-        if (appShelf?.key != tile.key) {
-            appShelf = null
+        if (held?.tile?.key != tile.key) {
+            held = null
             delay(SHELF_HOLD_MS)
         }
-        val ticked = config.value.appShelfSources
+        val current = config.value
+        val ticked = current.appShelfSources
         if (ticked != cachedSources) {
             shelfCache.clear()
             cachedSources = ticked
         }
-        val items = shelfCache.getOrPut(tile.packageName) { sources.shelfItems(tile.packageName) }
-        appShelf = if (items.isEmpty()) null else AppShelf(tile.key, items)
+        val pkg = tile.packageName
+        val items = if (ticks(current, pkg)) shelfCache.getOrPut(pkg) { sources.shelfItems(pkg) } else emptyList()
+        held = ReadShelf(tile, items)
+    }
+
+    /** What the app of [playingPackage] plays now, null for nothing to show. */
+    fun nowPlayingFound(item: NowPlayingItem?) {
+        playing = item
     }
 
     /** Set when the Launcher settings page closes, cleared once the presenter has applied the config and [settingsReturned] ran. */

@@ -63,6 +63,7 @@
   <string name="launcher_settings_summary">Asettelu, kello ja liike</string>
   <string name="shelf_season_episode">K%1$s J%2$s</string>
   <string name="shelf_episode">J%1$s</string>
+  <string name="shelf_paused">Keskeytetty</string>
   <plurals name="shelf_minutes_left">
     <item quantity="one">%1$d min jäljellä</item>
     <item quantity="other">%1$d min jäljellä</item>

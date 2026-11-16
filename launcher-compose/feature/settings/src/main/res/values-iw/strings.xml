@@ -57,4 +57,8 @@
   <string name="settings_lan_posters">תמונות מהרשת הביתית</string>
   <string name="settings_poster_helper_missing">העוזר לא מותקן</string>
   <string name="settings_poster_helper_other_key">העוזר חתום במפתח אחר</string>
+  <string name="settings_now_playing">מתנגן עכשיו</string>
+  <string name="settings_now_playing_needs_access">נדרשת גישה</string>
+  <string name="settings_now_playing_unavailable">לא זמין בטלוויזיה זו</string>
+  <string name="settings_now_playing_adb">אפשרו דרך adb: %1$s</string>
 </resources>

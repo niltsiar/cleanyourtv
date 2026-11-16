@@ -61,6 +61,7 @@
   <string name="launcher_settings_summary">Bố cục, đồng hồ và chuyển động</string>
   <string name="shelf_season_episode">Phần %1$s Tập %2$s</string>
   <string name="shelf_episode">Tập %1$s</string>
+  <string name="shelf_paused">Đã tạm dừng</string>
   <plurals name="shelf_minutes_left">
     <item quantity="other">Còn %1$d phút</item>
   </plurals>

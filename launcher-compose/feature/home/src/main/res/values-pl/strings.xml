@@ -66,6 +66,7 @@
   <string name="launcher_settings_summary">Układ, zegar i ruch</string>
   <string name="shelf_season_episode">S%1$s O%2$s</string>
   <string name="shelf_episode">O%1$s</string>
+  <string name="shelf_paused">Wstrzymano</string>
   <plurals name="shelf_minutes_left">
     <item quantity="one">Została %1$d min</item>
     <item quantity="few">Zostały %1$d min</item>

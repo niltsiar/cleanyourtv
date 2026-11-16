@@ -61,6 +61,7 @@
   <string name="launcher_settings_summary">Tata letak, jam, dan gerakan</string>
   <string name="shelf_season_episode">M%1$s E%2$s</string>
   <string name="shelf_episode">E%1$s</string>
+  <string name="shelf_paused">Dijeda</string>
   <plurals name="shelf_minutes_left">
     <item quantity="other">Sisa %1$d mnt</item>
   </plurals>

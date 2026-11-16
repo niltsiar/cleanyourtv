@@ -207,6 +207,11 @@ public data class TvConfig(
     val appShelfLanPosters: Boolean = false,
     /** With [appShelf]: the most cards one app's shelf shows, one of [SHELF_CARD_COUNTS]. */
     val appShelfCards: Int = 10,
+    /**
+     * With [appShelf]: what a dock app's media session plays leads its shelf, read through the launcher's notification listener,
+     * which Home switches on only while this is on.
+     */
+    val nowPlaying: Boolean = false,
     /** OK on an app tile dips it and brightens its ring; a slow start says the app is opening and takes no second OK. */
     val pressFeedback: Boolean = false,
     /** Days, 0 to 3650: a grid tile whose app Home has not opened for more than this many days is drawn faded; 0 fades none. */

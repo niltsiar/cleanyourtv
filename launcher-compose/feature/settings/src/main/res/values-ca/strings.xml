@@ -57,4 +57,8 @@
   <string name="settings_lan_posters">Imatges de la teva xarxa</string>
   <string name="settings_poster_helper_missing">Ajudant no instal·lat</string>
   <string name="settings_poster_helper_other_key">Ajudant signat amb una altra clau</string>
+  <string name="settings_now_playing">S\'està reproduint</string>
+  <string name="settings_now_playing_needs_access">Cal accés</string>
+  <string name="settings_now_playing_unavailable">No disponible en aquest televisor</string>
+  <string name="settings_now_playing_adb">Permet-ho amb adb: %1$s</string>
 </resources>

@@ -57,4 +57,8 @@
   <string name="settings_lan_posters">Obrazy z sieci domowej</string>
   <string name="settings_poster_helper_missing">Pomocnik nie jest zainstalowany</string>
   <string name="settings_poster_helper_other_key">Pomocnik podpisany innym kluczem</string>
+  <string name="settings_now_playing">Teraz odtwarzane</string>
+  <string name="settings_now_playing_needs_access">Wymaga dostępu</string>
+  <string name="settings_now_playing_unavailable">Niedostępne na tym telewizorze</string>
+  <string name="settings_now_playing_adb">Zezwól przez adb: %1$s</string>
 </resources>

@@ -50,6 +50,9 @@ public class SystemSettings internal constructor(
     /** True when the system accepted the intent. */
     public fun openAppInfo(packageName: String): Boolean = open(appInfoIntent(packageName))
 
+    /** True when the system accepted the intent: the Notification access list, which not every TV's settings app has. */
+    public fun openNotificationAccess(): Boolean = open(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+
     /** True when a vendor settings app from the fallback list is installed: it has pages the standard settings lack. */
     public fun hasNativeSettings(): Boolean = vendorIntent() != null
 

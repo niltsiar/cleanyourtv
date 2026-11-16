@@ -6,8 +6,10 @@ import de.infix.testBalloon.framework.core.TestConfig
 import de.infix.testBalloon.framework.core.testScope
 import de.infix.testBalloon.framework.core.testSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.model.NowPlayingItem
 import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.core.model.ShelfKind
+import dev.niltsiar.tvhome.core.model.nowPlayingCard
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
@@ -24,6 +26,11 @@ import java.util.Locale
 
 private fun item(title: String) = ShelfItem(packageName = "pkg.2", title = title, kind = ShelfKind.Continue)
 
+private fun song(
+    title: String,
+    pkg: String = "pkg.2",
+) = NowPlayingItem(pkg, title, "Disturbed", paused = false, art = null)
+
 /** app_shelf on the presenter: when a dock tile's shelf is read, what it shows, the cache, and OK on a card. */
 val AppShelfPresenterTest by testSuite(testConfig = TestConfig.testScope(isEnabled = true)) {
     testFixture {
@@ -34,13 +41,25 @@ val AppShelfPresenterTest by testSuite(testConfig = TestConfig.testScope(isEnabl
             val published = mapOf("pkg.2" to listOf(item("Severance"), item("Andor")), "pkg.3" to emptyList())
             val config = MutableStateFlow(SixColumns.copy(appShelf = true, appShelfSources = listOf("pkg.2", "pkg.3/history", "pkg.8")))
 
+            /** The session each package has, made on its first read; [sessionReads] lists the packages read. */
+            val sessions = mutableMapOf<String, MutableStateFlow<NowPlayingItem?>>()
+            val sessionReads = mutableListOf<String>()
+
+            fun session(pkg: String) = sessions.getOrPut(pkg) { MutableStateFlow(null) }
+
             /** Home with a layout that has [room] for the cards, which the screen reports as it first lays out. */
             fun TestScope.home(room: Boolean = true): StateFlow<HomeUiState> {
                 val sources =
-                    sources(shelfItems = { pkg ->
-                        reads += pkg
-                        published[pkg].orEmpty()
-                    })
+                    sources(
+                        shelfItems = { pkg ->
+                            reads += pkg
+                            published[pkg].orEmpty()
+                        },
+                        nowPlaying = { pkg ->
+                            sessionReads += pkg
+                            session(pkg)
+                        },
+                    )
                 val flow =
                     moleculeFlow(RecompositionMode.Immediate) {
                         homePresenter(events.receiveAsFlow(), sources, config, { effects += it }, Locale.ENGLISH, "EEEE d MMMM")
@@ -203,6 +222,85 @@ val AppShelfPresenterTest by testSuite(testConfig = TestConfig.testScope(isEnabl
                 runCurrent()
 
                 reads shouldBe listOf("pkg.2", "pkg.2")
+            }
+        }
+
+        test("with now_playing off a held dock tile reads no session, even one that plays") {
+            with(it.testScope) {
+                session("pkg.2").value = song("The Sound of Silence")
+                val home = home()
+                focus("pkg.2")
+                pass(10 * SHELF_HOLD_MS)
+
+                sessionReads.shouldBeEmpty()
+                home.value.appShelf shouldBe AppShelf("pkg.2", published.getValue("pkg.2"))
+            }
+        }
+
+        test("what the app plays leads its shelf, ahead of the items it publishes") {
+            with(it.testScope) {
+                configure { copy(nowPlaying = true) }
+                val playing = song("The Sound of Silence")
+                session("pkg.2").value = playing
+                val home = home()
+                focus("pkg.2")
+                pass(SHELF_HOLD_MS)
+
+                sessionReads shouldBe listOf("pkg.2")
+                home.value.appShelf shouldBe AppShelf("pkg.2", listOf(nowPlayingCard(playing)) + published.getValue("pkg.2"))
+            }
+        }
+
+        test("a track change updates the leading card while the tile keeps focus, with no new read") {
+            with(it.testScope) {
+                configure { copy(nowPlaying = true) }
+                session("pkg.2").value = song("The Sound of Silence")
+                val home = home()
+                focus("pkg.2")
+                pass(SHELF_HOLD_MS)
+
+                val next = song("Down with the Sickness")
+                session("pkg.2").value = next
+                runCurrent()
+
+                home.value.appShelf
+                    ?.items
+                    ?.first() shouldBe nowPlayingCard(next)
+                sessionReads shouldBe listOf("pkg.2")
+                reads shouldBe listOf("pkg.2")
+            }
+        }
+
+        test("when the session stops the card goes and the items the app publishes stay") {
+            with(it.testScope) {
+                configure { copy(nowPlaying = true) }
+                session("pkg.2").value = song("The Sound of Silence")
+                val home = home()
+                focus("pkg.2")
+                pass(SHELF_HOLD_MS)
+
+                session("pkg.2").value = null
+                runCurrent()
+
+                home.value.appShelf shouldBe AppShelf("pkg.2", published.getValue("pkg.2"))
+            }
+        }
+
+        test("an app with a session and no ticked source shows its shelf with the playing card alone, and reads no items") {
+            with(it.testScope) {
+                configure { copy(nowPlaying = true) }
+                val playing = song("The Sound of Silence", pkg = "pkg.4")
+                session("pkg.4").value = playing
+                val home = home()
+                focus("pkg.4")
+                pass(SHELF_HOLD_MS)
+
+                reads.shouldBeEmpty()
+                home.value.appShelf shouldBe AppShelf("pkg.4", listOf(nowPlayingCard(playing)))
+
+                session("pkg.4").value = null
+                runCurrent()
+                home.value.appShelf.shouldBeNull()
             }
         }
 

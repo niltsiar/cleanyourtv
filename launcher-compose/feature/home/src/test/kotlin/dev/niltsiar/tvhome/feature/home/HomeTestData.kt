@@ -20,6 +20,7 @@ import dev.niltsiar.tvhome.core.model.InputRow
 import dev.niltsiar.tvhome.core.model.InputTarget
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkState
+import dev.niltsiar.tvhome.core.model.NowPlayingItem
 import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.core.model.ShelfPoster
 import dev.niltsiar.tvhome.core.model.Wallpaper
@@ -65,6 +66,7 @@ internal fun sources(
     timeMillis: () -> Long = System::currentTimeMillis,
     shelfItems: suspend (String) -> List<ShelfItem> = { emptyList() },
     shelfPoster: suspend (String, Int, Int) -> ShelfPoster? = { _, _, _ -> null },
+    nowPlaying: (String) -> Flow<NowPlayingItem?> = { flowOf(null) },
 ) = HomeSources(
     apps,
     clock,
@@ -86,6 +88,7 @@ internal fun sources(
     timeMillis = timeMillis,
     shelfItems = shelfItems,
     shelfPoster = shelfPoster,
+    nowPlaying = nowPlaying,
 )
 
 internal fun port(

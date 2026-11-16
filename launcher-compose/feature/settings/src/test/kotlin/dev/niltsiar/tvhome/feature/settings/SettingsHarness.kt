@@ -56,6 +56,8 @@ internal class SettingsHarness(
     shelfPublishers: List<ShelfPublisher> = emptyList(),
     shelfAccess: () -> Boolean = { false },
     posterHelper: () -> PosterHelper = { PosterHelper.Missing },
+    nowPlayingAvailable: () -> Boolean = { true },
+    nowPlayingAccess: () -> Boolean = { false },
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val presenterScope = if (uiThread) CoroutineScope(SupervisorJob() + Dispatchers.Main) else scope
@@ -66,6 +68,7 @@ internal class SettingsHarness(
     private val failed = Channel<Unit>(Channel.UNLIMITED)
     private val askedShelfAccess = Channel<Unit>(Channel.UNLIMITED)
     private val noShelfSources = Channel<Unit>(Channel.UNLIMITED)
+    private val askedNowPlayingAccess = Channel<Unit>(Channel.UNLIMITED)
     val shelfListings = AtomicInteger()
 
     init {
@@ -88,6 +91,8 @@ internal class SettingsHarness(
                 },
                 shelfAccess,
                 posterHelper,
+                nowPlayingAvailable,
+                nowPlayingAccess,
             )
         viewModel = MoleculeSettingsViewModel(repository, sources, presenterScope, RecompositionMode.Immediate, EmptyCoroutineContext)
         scope.launch {
@@ -97,6 +102,7 @@ internal class SettingsHarness(
                     SettingsEffect.SaveFailed -> failed.trySend(Unit)
                     SettingsEffect.AskShelfAccess -> askedShelfAccess.trySend(Unit)
                     SettingsEffect.NoShelfSources -> noShelfSources.trySend(Unit)
+                    SettingsEffect.AskNowPlayingAccess -> askedNowPlayingAccess.trySend(Unit)
                 }
             }
         }
@@ -128,6 +134,12 @@ internal class SettingsHarness(
 
     /** True when READ_TV_LISTINGS was asked for and not yet awaited: effects arrive in order, so await a later one first. */
     fun shelfAccessAsked(): Boolean = askedShelfAccess.tryReceive().isSuccess
+
+    /** Waits for the next request to open the Notification access list. */
+    fun awaitAskedNowPlayingAccess() = runBlocking { withTimeout(30_000) { askedNowPlayingAccess.receive() } }
+
+    /** True when notification access was asked for and not yet awaited. */
+    fun nowPlayingAccessAsked(): Boolean = askedNowPlayingAccess.tryReceive().isSuccess
 
     /** Waits for the report that the Apps and channels picker has nothing to list. */
     fun awaitNoShelfSources() = runBlocking { withTimeout(30_000) { noShelfSources.receive() } }

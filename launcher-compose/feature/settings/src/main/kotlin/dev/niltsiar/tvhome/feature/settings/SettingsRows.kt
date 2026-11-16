@@ -127,6 +127,7 @@ internal val settingsGroups: List<Group> =
                         Choices.AppShelfLanPosters,
                         { it.appShelf && it.appShelfWebPosters },
                     ) { it.appShelfLanPosters },
+                    onOff(SettingsRowId.NowPlaying, R.string.settings_now_playing, Choices.NowPlaying, { it.appShelf }) { it.nowPlaying },
                 ),
         ),
         Group(
@@ -176,25 +177,48 @@ internal fun rowOf(id: SettingsRowId): ChoiceRow<*> = rowsById.getValue(id)
 
 /**
  * The rows [settingsGroups] lists for [config]. While the Pictures from the web row is On, its On option says what keeps the
- * [helper] from serving, if anything does.
+ * [helper] from serving, if anything does. The Now playing row's On says what [nowPlayingStatus] gives for the listener's
+ * [listener] access.
  */
 internal fun settingsSections(
     config: TvConfig,
     helper: PosterHelper = PosterHelper.Ready,
+    listener: ListenerAccess = ListenerAccess(available = true, granted = true),
 ): List<SettingsSection> =
     settingsGroups.map { group ->
         SettingsSection(
             group.heading,
             group.rows.filter { it.shown(config) }.map { choice ->
                 val row = choice.row(config)
-                val status = helperStatus(helper)
-                if (row.id == SettingsRowId.WebPosters && row.selected == 0 && status != null) {
-                    row.copy(options = listOf(status) + row.options.drop(1))
-                } else {
-                    row
-                }
+                val status =
+                    when (row.id) {
+                        SettingsRowId.WebPosters -> helperStatus(helper).takeIf { row.selected == 0 }
+                        SettingsRowId.NowPlaying -> nowPlayingStatus(listener, on = row.selected == 0)
+                        else -> null
+                    }
+                if (status != null) row.copy(options = listOf(status) + row.options.drop(1)) else row
             },
         )
+    }
+
+/** Whether the TV can give the Now playing listener notification access, and whether it has it. */
+internal data class ListenerAccess(
+    val available: Boolean,
+    val granted: Boolean,
+)
+
+/**
+ * What the Now playing row's On says in place of On: Not available on this TV where the system gives no notification access,
+ * whether on or not, and Needs access while it is [on] without access. Null when On stands.
+ */
+internal fun nowPlayingStatus(
+    listener: ListenerAccess,
+    on: Boolean,
+): OptionLabel? =
+    when {
+        !listener.available -> res(R.string.settings_now_playing_unavailable)
+        on && !listener.granted -> res(R.string.settings_now_playing_needs_access)
+        else -> null
     }
 
 /** What the Pictures from the web row's On says when the [helper] cannot serve; null when it can. */
@@ -204,6 +228,12 @@ internal fun helperStatus(helper: PosterHelper): OptionLabel? =
         PosterHelper.OtherKey -> res(R.string.settings_poster_helper_other_key)
         PosterHelper.Ready -> null
     }
+
+/** True when the option at [option] of the [row] is the Now playing row's On. */
+internal fun turnsNowPlayingOn(
+    row: SettingsRowId,
+    option: Int,
+): Boolean = row == SettingsRowId.NowPlaying && rowOf(row).valueAt(option) == true
 
 /** True when the option at [option] of the [row] is the App highlights row's On. */
 internal fun turnsShelfOn(

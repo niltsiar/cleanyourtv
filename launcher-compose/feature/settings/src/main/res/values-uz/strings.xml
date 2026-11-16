@@ -57,4 +57,8 @@
   <string name="settings_lan_posters">Uy tarmogʻidan rasmlar</string>
   <string name="settings_poster_helper_missing">Yordamchi oʻrnatilmagan</string>
   <string name="settings_poster_helper_other_key">Yordamchi boshqa kalit bilan imzolangan</string>
+  <string name="settings_now_playing">Hozir ijro etilmoqda</string>
+  <string name="settings_now_playing_needs_access">Ruxsat kerak</string>
+  <string name="settings_now_playing_unavailable">Bu televizorda mavjud emas</string>
+  <string name="settings_now_playing_adb">adb orqali ruxsat bering: %1$s</string>
 </resources>

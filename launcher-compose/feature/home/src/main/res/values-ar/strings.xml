@@ -70,6 +70,7 @@
   <string name="launcher_settings_summary">التخطيط والساعة والحركة</string>
   <string name="shelf_season_episode">الموسم %1$s الحلقة %2$s</string>
   <string name="shelf_episode">الحلقة %1$s</string>
+  <string name="shelf_paused">متوقف مؤقتًا</string>
   <plurals name="shelf_minutes_left">
     <item quantity="zero">بقي %1$d د</item>
     <item quantity="one">بقي %1$d د</item>

@@ -12,6 +12,7 @@ import dev.niltsiar.tvhome.data.apps.PackageManagerAppsProvider
 import dev.niltsiar.tvhome.data.inputs.InputLauncher
 import dev.niltsiar.tvhome.data.inputs.InputsProvider
 import dev.niltsiar.tvhome.data.inputs.OpenOnStart
+import dev.niltsiar.tvhome.data.shelf.NowPlaying
 import dev.niltsiar.tvhome.data.shelf.ShelfPosters
 import dev.niltsiar.tvhome.data.shelf.ShelfReader
 import dev.niltsiar.tvhome.data.shelf.posterHelper
@@ -25,10 +26,12 @@ import dev.niltsiar.tvhome.data.wallpaper.WallpaperPictures
 import dev.niltsiar.tvhome.data.wallpaper.WallpaperProvider
 import dev.niltsiar.tvhome.feature.home.FocusMemory
 import dev.niltsiar.tvhome.feature.home.HomeSources
+import dev.niltsiar.tvhome.feature.home.ShelfCardMaxSize
 import dev.niltsiar.tvhome.feature.library.LibrarySources
 import dev.niltsiar.tvhome.feature.settings.PickerArt
 import dev.niltsiar.tvhome.feature.settings.SettingsSources
 import dev.niltsiar.tvhome.service.keys.PowerMenu
+import dev.niltsiar.tvhome.service.media.NowPlayingAccess
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
@@ -38,6 +41,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.map
 import java.io.File
+import kotlin.math.roundToInt
 
 @DependencyGraph(AppScope::class)
 interface AppGraph {
@@ -171,6 +175,8 @@ interface AppGraph {
             shelfReader::publishers,
             shelfReader::hasAccess,
             { posterHelper(application) },
+            { NowPlayingAccess.available(application) },
+            { NowPlayingAccess.granted(application) },
         )
     }
 
@@ -217,8 +223,12 @@ interface AppGraph {
         focusMemory: FocusMemory,
         shelfReader: ShelfReader,
         shelfPosters: ShelfPosters,
-    ): HomeSources =
-        HomeSources(
+        nowPlaying: NowPlaying,
+    ): HomeSources {
+        val density = application.resources.displayMetrics.density
+        val artWidth = (ShelfCardMaxSize.width.value * density).roundToInt()
+        val artHeight = (ShelfCardMaxSize.height.value * density).roundToInt()
+        return HomeSources(
             apps = appsProvider.apps,
             clock = minuteClock.now,
             network = networkMonitor.state,
@@ -240,7 +250,13 @@ interface AppGraph {
             shelfItems = shelfReader::items,
             shelfPoster = shelfPosters::poster,
             shelfPosterChanges = shelfPosters.changes,
+            nowPlaying = { nowPlaying.item(it, artWidth, artHeight) },
         )
+    }
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideNowPlaying(application: Application): NowPlaying = NowPlaying(application, NowPlayingAccess.component(application))
 
     @Provides
     @SingleIn(AppScope::class)

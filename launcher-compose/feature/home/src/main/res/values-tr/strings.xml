@@ -62,6 +62,7 @@
   <string name="launcher_settings_summary">Düzen, saat ve hareket</string>
   <string name="shelf_season_episode">%1$s. Sezon %2$s. Bölüm</string>
   <string name="shelf_episode">%1$s. Bölüm</string>
+  <string name="shelf_paused">Duraklatıldı</string>
   <plurals name="shelf_minutes_left">
     <item quantity="one">%1$d dk kaldı</item>
     <item quantity="other">%1$d dk kaldı</item>
