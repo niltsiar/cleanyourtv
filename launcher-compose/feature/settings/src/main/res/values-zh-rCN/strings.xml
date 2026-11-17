@@ -63,4 +63,5 @@
   <string name="settings_now_playing_needs_access">需要权限</string>
   <string name="settings_now_playing_unavailable">此电视不支持该功能</string>
   <string name="settings_now_playing_adb">请用 adb 允许：%1$s</string>
+  <string name="settings_restart_press">从主屏幕重新启动电视</string>
 </resources>

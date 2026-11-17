@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.designsystem.BesideAnchor
@@ -29,6 +30,8 @@ private fun MenuRow.label(): Int =
         MenuRow.EditDock -> R.string.dock_edit
         MenuRow.Reorder -> R.string.reorder
         MenuRow.PowerMenu -> R.string.power_menu
+        MenuRow.CancelRestart -> R.string.restart_cancel
+        MenuRow.Restart -> R.string.restart_confirm
     }
 
 private val MenuTopLimit = TopBarTop + TopBarHeight + 8.dp
@@ -47,7 +50,8 @@ private val TrayClearance = 20.dp
  * the app's name, which heads it) opens above the tile with shorter rows, ending [TrayClearance] above the dock's panel, which
  * starts [dockPadding] above the tile; a grid tile's sits beside it and under [bandBottom], the bottom of the band over the grid, when it fits there. The
  * Settings menu hangs from the Settings button with shorter rows, so it ends clear of the dock, and a line sets its
- * restart row apart, which draws its text in coral. Focus starts on the row [focus], the first when it is null.
+ * restart row apart, which draws its text in coral. The restart confirm hangs there too, headed by its question, with its
+ * Restart row set apart in the same way. Focus starts on the row [focus], the first when it is null.
  */
 @Composable
 internal fun MenuOverlay(
@@ -102,8 +106,9 @@ internal fun MenuOverlay(
             modifier = modifier,
             topLimit = MenuTopLimit,
             rowHeight = SettingsRowHeight,
-            dividerBefore = { it == MenuRow.PowerMenu },
-            warn = { it == MenuRow.PowerMenu },
+            title = if (MenuRow.Restart in rows) stringResource(R.string.restart_question) else null,
+            dividerBefore = { it == MenuRow.PowerMenu || it == MenuRow.Restart },
+            warn = { it == MenuRow.PowerMenu || it == MenuRow.Restart },
             focusRow = focusRow,
         )
     }

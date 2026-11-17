@@ -9,6 +9,7 @@ import de.infix.testBalloon.framework.core.testScope
 import de.infix.testBalloon.framework.core.testSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppList
+import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -193,7 +194,7 @@ val HomeInteractionTest by testSuite(testConfig = TestConfig.testScope(isEnabled
             }
         }
 
-        test("picking restart asks the host for the power menu and hands focus back to settings") {
+        test("with restart_press off, picking restart asks the host for the power menu and hands focus back to settings") {
             with(it.testScope) {
                 presenter(powerMenu = true).test {
                     awaitMatching { it.dock.isNotEmpty() }
@@ -204,6 +205,65 @@ val HomeInteractionTest by testSuite(testConfig = TestConfig.testScope(isEnabled
                     val state = awaitMatching { it.menu == null && it.focusRequest != null }
 
                     effects.receive() shouldBe HomeEffect.OpenPowerMenu
+                    state.focusRequest?.target shouldBe SETTINGS_FOCUS
+                    cancelAndIgnoreRemainingEvents()
+                }
+            }
+        }
+
+        test("with restart_press, picking restart opens a confirm with cancel focused and no power menu") {
+            with(it.testScope) {
+                presenter(SixColumns.copy(restartPress = true), powerMenu = true).test {
+                    awaitMatching { it.dock.isNotEmpty() }
+                    events.send(HomeEvent.SettingsMenu)
+                    awaitMatching { it.menu != null }
+                    events.send(HomeEvent.MenuPick(MenuRow.PowerMenu))
+
+                    val confirm = awaitMatching { it.menu?.rows?.contains(MenuRow.Restart) == true }.menu
+
+                    confirm shouldBe HomeMenu(null, listOf(MenuRow.CancelRestart, MenuRow.Restart), focus = MenuRow.CancelRestart)
+                    effects.tryReceive().isFailure shouldBe true
+                    cancelAndIgnoreRemainingEvents()
+                }
+            }
+        }
+
+        test("cancel and back close the restart confirm with focus on the settings button and restart nothing") {
+            with(it.testScope) {
+                presenter(SixColumns.copy(restartPress = true), powerMenu = true).test {
+                    var token = awaitMatching { it.dock.isNotEmpty() }.focusRequest?.token ?: 0
+                    for (close in listOf(HomeEvent.MenuPick(MenuRow.CancelRestart), HomeEvent.Back)) {
+                        events.send(HomeEvent.SettingsMenu)
+                        awaitMatching { it.menu != null }
+                        events.send(HomeEvent.MenuPick(MenuRow.PowerMenu))
+                        awaitMatching { it.menu?.rows?.contains(MenuRow.Restart) == true }
+                        events.send(close)
+
+                        val closed = awaitMatching { it.menu == null }
+
+                        closed.focusRequest?.target shouldBe SETTINGS_FOCUS
+                        closed.focusRequest!!.token shouldBeGreaterThan token
+                        token = closed.focusRequest!!.token
+                    }
+                    effects.tryReceive().isFailure shouldBe true
+                    cancelAndIgnoreRemainingEvents()
+                }
+            }
+        }
+
+        test("restart in the confirm asks the host to press restart and hands focus back to settings") {
+            with(it.testScope) {
+                presenter(SixColumns.copy(restartPress = true), powerMenu = true).test {
+                    awaitMatching { it.dock.isNotEmpty() }
+                    events.send(HomeEvent.SettingsMenu)
+                    awaitMatching { it.menu != null }
+                    events.send(HomeEvent.MenuPick(MenuRow.PowerMenu))
+                    awaitMatching { it.menu?.rows?.contains(MenuRow.Restart) == true }
+                    events.send(HomeEvent.MenuPick(MenuRow.Restart))
+
+                    val state = awaitMatching { it.menu == null && it.focusRequest != null }
+
+                    effects.receive() shouldBe HomeEffect.PressRestart
                     state.focusRequest?.target shouldBe SETTINGS_FOCUS
                     cancelAndIgnoreRemainingEvents()
                 }

@@ -68,4 +68,7 @@
     <item quantity="one">%1$d মিনিট বাকি</item>
     <item quantity="other">%1$d মিনিট বাকি</item>
   </plurals>
+  <string name="restart_question">টিভি রিস্টার্ট করবেন?</string>
+  <string name="restart_confirm">রিস্টার্ট</string>
+  <string name="restart_cancel">বাতিল</string>
 </resources>

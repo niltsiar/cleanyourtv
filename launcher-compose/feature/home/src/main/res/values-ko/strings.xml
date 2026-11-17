@@ -66,4 +66,7 @@
   <plurals name="shelf_minutes_left">
     <item quantity="other">%1$d분 남음</item>
   </plurals>
+  <string name="restart_question">TV를 다시 시작할까요?</string>
+  <string name="restart_confirm">다시 시작</string>
+  <string name="restart_cancel">취소</string>
 </resources>

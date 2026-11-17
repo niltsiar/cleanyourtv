@@ -80,4 +80,7 @@
     <item quantity="many">بقي %1$d د</item>
     <item quantity="other">بقي %1$d د</item>
   </plurals>
+  <string name="restart_question">هل تريد إعادة تشغيل التلفاز؟</string>
+  <string name="restart_confirm">إعادة التشغيل</string>
+  <string name="restart_cancel">إلغاء</string>
 </resources>

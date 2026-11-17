@@ -73,4 +73,7 @@
     <item quantity="many">Mancano %1$d min</item>
     <item quantity="other">Mancano %1$d min</item>
   </plurals>
+  <string name="restart_question">Riavviare la TV?</string>
+  <string name="restart_confirm">Riavvia</string>
+  <string name="restart_cancel">Annulla</string>
 </resources>

@@ -63,4 +63,5 @@
   <string name="settings_now_playing_needs_access">Vyžaduje přístup</string>
   <string name="settings_now_playing_unavailable">Na této televizi není k dispozici</string>
   <string name="settings_now_playing_adb">Povolte přes adb: %1$s</string>
+  <string name="settings_restart_press">Restartovat TV z domovské obrazovky</string>
 </resources>

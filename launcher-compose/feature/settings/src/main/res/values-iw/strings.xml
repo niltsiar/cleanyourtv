@@ -63,4 +63,5 @@
   <string name="settings_now_playing_needs_access">נדרשת גישה</string>
   <string name="settings_now_playing_unavailable">לא זמין בטלוויזיה זו</string>
   <string name="settings_now_playing_adb">אפשרו דרך adb: %1$s</string>
+  <string name="settings_restart_press">הפעלת הטלוויזיה מחדש ממסך הבית</string>
 </resources>

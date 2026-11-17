@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="not_available">Na této televizi není k dispozici</string>
+    <string name="restart_not_possible">Tuto televizi nelze restartovat z domovské obrazovky</string>
 </resources>

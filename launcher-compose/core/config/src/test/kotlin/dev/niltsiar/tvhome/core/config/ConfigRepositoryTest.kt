@@ -198,7 +198,8 @@ class ConfigRepositoryTestContent :
                 repo.choose(Choices.NowPlaying, true)
                 repo.choose(Choices.InputArrival, true)
                 repo.choose(Choices.InputTiles, true)
-                awaitConfig(repo) { it.inputArrival && it.inputTiles }
+                repo.choose(Choices.RestartPress, true)
+                awaitConfig(repo) { it.inputArrival && it.inputTiles && it.restartPress }
 
                 repo.config.value shouldBe
                     theme.copy(
@@ -218,6 +219,7 @@ class ConfigRepositoryTestContent :
                         habitHint = true,
                         inputArrival = true,
                         inputTiles = true,
+                        restartPress = true,
                         appShelf = true,
                         appShelfSources = listOf("com.a", "com.b/7"),
                         appShelfWebPosters = true,

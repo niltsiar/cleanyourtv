@@ -71,7 +71,7 @@ private fun onOff(
     current: (TvConfig) -> Boolean,
 ) = ChoiceRow(id, label, choice, listOf(Option(res(R.string.settings_on), true), Option(res(R.string.settings_off), false)), shown, current)
 
-/** Java's rows first, then ours in groups, in the order the screen lists them. */
+/** Java's rows first, then ours in groups, in the order the screen lists them. System is last: the page's fixed rows follow it. */
 internal val settingsGroups: List<Group> =
     listOf(
         Group(
@@ -169,6 +169,10 @@ internal val settingsGroups: List<Group> =
                     onOff(SettingsRowId.InputArrival, R.string.settings_input_arrival, Choices.InputArrival) { it.inputArrival },
                     onOff(SettingsRowId.InputTiles, R.string.settings_input_tiles, Choices.InputTiles) { it.inputTiles },
                 ),
+        ),
+        Group(
+            heading = R.string.settings_group_system,
+            rows = listOf(onOff(SettingsRowId.RestartPress, R.string.settings_restart_press, Choices.RestartPress) { it.restartPress }),
         ),
     )
 

@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Keys only: no accessibilityEventTypes (0), so the system never calls into the launcher for accessibility events.
      Key filtering depends only on flagRequestFilterKeyEvents and canRequestFilterKeyEvents, not on the event types.
-     stock_home_redirect, power_on_home and "front:" app_keys are the exception: the service adds typeWindowStateChanged at runtime. -->
+     stock_home_redirect, power_on_home and "front:" app_keys are the exception: the service adds typeWindowStateChanged at runtime.
+     canRetrieveWindowContent is for restart_press only: the service reads the window in front only while it presses
+     Restart in the system power dialog, for at most 3 s, and nowhere else. -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagRequestFilterKeyEvents"
     android:canRequestFilterKeyEvents="true"
+    android:canRetrieveWindowContent="true"
     android:description="@string/key_service_description" />

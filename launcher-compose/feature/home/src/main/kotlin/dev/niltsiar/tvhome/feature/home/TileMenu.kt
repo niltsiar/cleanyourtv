@@ -23,6 +23,8 @@ public enum class MenuRow {
     EditDock,
     Reorder,
     PowerMenu,
+    CancelRestart,
+    Restart,
 }
 
 /**

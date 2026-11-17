@@ -658,7 +658,20 @@ internal class HomeInteraction(
             }
 
             MenuRow.PowerMenu -> {
-                effect(HomeEffect.OpenPowerMenu)
+                if (config.value.restartPress) {
+                    menu = HomeMenu(null, listOf(MenuRow.CancelRestart, MenuRow.Restart), focus = MenuRow.CancelRestart)
+                } else {
+                    effect(HomeEffect.OpenPowerMenu)
+                    focus(SETTINGS_FOCUS)
+                }
+            }
+
+            MenuRow.CancelRestart -> {
+                focus(SETTINGS_FOCUS)
+            }
+
+            MenuRow.Restart -> {
+                effect(HomeEffect.PressRestart)
                 focus(SETTINGS_FOCUS)
             }
         }

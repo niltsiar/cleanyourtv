@@ -66,4 +66,7 @@
     <item quantity="one">noch %1$d Min.</item>
     <item quantity="other">noch %1$d Min.</item>
   </plurals>
+  <string name="restart_question">TV neu starten?</string>
+  <string name="restart_confirm">Neu starten</string>
+  <string name="restart_cancel">Abbrechen</string>
 </resources>

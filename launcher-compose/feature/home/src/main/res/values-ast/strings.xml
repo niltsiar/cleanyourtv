@@ -67,4 +67,7 @@
     <item quantity="one">Queda %1$d min</item>
     <item quantity="other">Queden %1$d min</item>
   </plurals>
+  <string name="restart_question">¿Reaniciar la TV?</string>
+  <string name="restart_confirm">Reaniciar</string>
+  <string name="restart_cancel">Encaboxar</string>
 </resources>

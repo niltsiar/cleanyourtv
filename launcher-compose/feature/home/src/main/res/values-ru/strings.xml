@@ -75,4 +75,7 @@
     <item quantity="many">Осталось %1$d мин</item>
     <item quantity="other">Осталось %1$d мин</item>
   </plurals>
+  <string name="restart_question">Перезагрузить ТВ?</string>
+  <string name="restart_confirm">Перезагрузить</string>
+  <string name="restart_cancel">Отмена</string>
 </resources>

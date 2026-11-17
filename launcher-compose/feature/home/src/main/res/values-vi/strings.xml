@@ -66,4 +66,7 @@
   <plurals name="shelf_minutes_left">
     <item quantity="other">Còn %1$d phút</item>
   </plurals>
+  <string name="restart_question">Khởi động lại TV?</string>
+  <string name="restart_confirm">Khởi động lại</string>
+  <string name="restart_cancel">Hủy</string>
 </resources>

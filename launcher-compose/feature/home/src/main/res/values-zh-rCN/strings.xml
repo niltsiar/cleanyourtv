@@ -66,4 +66,7 @@
   <plurals name="shelf_minutes_left">
     <item quantity="other">剩余 %1$d 分钟</item>
   </plurals>
+  <string name="restart_question">要重新启动电视吗？</string>
+  <string name="restart_confirm">重新启动</string>
+  <string name="restart_cancel">取消</string>
 </resources>

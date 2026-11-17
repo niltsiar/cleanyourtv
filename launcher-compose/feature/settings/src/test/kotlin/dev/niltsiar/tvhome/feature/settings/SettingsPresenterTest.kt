@@ -102,6 +102,7 @@ class SettingsPresenterTestContent :
                         RowSpec(SettingsRowId.HabitHint, onOff) { it.habitHint },
                         RowSpec(SettingsRowId.InputArrival, onOff) { it.inputArrival },
                         RowSpec(SettingsRowId.InputTiles, onOff) { it.inputTiles },
+                        RowSpec(SettingsRowId.RestartPress, onOff) { it.restartPress },
                     )
 
                 fun SettingsHarness.openWallpaperPicker(): WallpaperPicker {
@@ -155,6 +156,7 @@ class SettingsPresenterTestContent :
                         R.string.settings_group_library,
                         R.string.settings_group_clock,
                         R.string.settings_group_motion,
+                        R.string.settings_group_system,
                     )
                 (sections.map { section -> section.rows.map { it.id } }) shouldBe
                     listOf(
@@ -182,6 +184,7 @@ class SettingsPresenterTestContent :
                             SettingsRowId.InputArrival,
                             SettingsRowId.InputTiles,
                         ),
+                        listOf(SettingsRowId.RestartPress),
                     )
             }
 
@@ -193,6 +196,17 @@ class SettingsPresenterTestContent :
                 settings.awaitState { it.row(SettingsRowId.InputTiles).selected == onOff.indexOf(true) }
 
                 settings.config.inputTiles shouldBe true
+                settings.state.followsTheme.shouldBeFalse()
+            }
+
+            test("the Restart from Home row is off by default and stores restart_press") {
+                val settings = settings()
+                settings.row(SettingsRowId.RestartPress).selected shouldBe onOff.indexOf(false)
+
+                settings.pick(SettingsRowId.RestartPress, onOff.indexOf(true))
+                settings.awaitState { it.row(SettingsRowId.RestartPress).selected == onOff.indexOf(true) }
+
+                settings.config.restartPress shouldBe true
                 settings.state.followsTheme.shouldBeFalse()
             }
 
@@ -623,4 +637,4 @@ private const val LAST_OPTIONS =
     "app_library": false,
     "library_least_used": false, "unused_fade_days": 90, "home_idle_clock_minutes": 60, "back_opens_clock": false,
     "clock_wallpaper": false, "reduced_motion": false, "focus_overshoot": false, "press_feedback": false, "habit_hint": false,
-    "input_arrival": false, "input_tiles": false}"""
+    "input_arrival": false, "input_tiles": false, "restart_press": false}"""

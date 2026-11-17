@@ -69,4 +69,7 @@
     <item quantity="one">%1$d min igjen</item>
     <item quantity="other">%1$d min igjen</item>
   </plurals>
+  <string name="restart_question">Starte TV-en på nytt?</string>
+  <string name="restart_confirm">Start på nytt</string>
+  <string name="restart_cancel">Avbryt</string>
 </resources>

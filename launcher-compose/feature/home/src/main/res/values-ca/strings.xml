@@ -71,4 +71,7 @@
     <item quantity="many">Queden %1$d min</item>
     <item quantity="other">Queden %1$d min</item>
   </plurals>
+  <string name="restart_question">Vols reiniciar la TV?</string>
+  <string name="restart_confirm">Reinicia</string>
+  <string name="restart_cancel">Cancel·la</string>
 </resources>

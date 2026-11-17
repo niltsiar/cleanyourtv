@@ -63,4 +63,7 @@
   <plurals name="shelf_minutes_left">
     <item quantity="other">เหลือ %1$d นาที</item>
   </plurals>
+  <string name="restart_question">รีสตาร์ททีวีไหม</string>
+  <string name="restart_confirm">รีสตาร์ท</string>
+  <string name="restart_cancel">ยกเลิก</string>
 </resources>

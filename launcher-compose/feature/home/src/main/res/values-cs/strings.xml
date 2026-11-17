@@ -75,4 +75,7 @@
     <item quantity="many">Zbývá %1$d min</item>
     <item quantity="other">Zbývá %1$d min</item>
   </plurals>
+  <string name="restart_question">Restartovat TV?</string>
+  <string name="restart_confirm">Restartovat</string>
+  <string name="restart_cancel">Zrušit</string>
 </resources>

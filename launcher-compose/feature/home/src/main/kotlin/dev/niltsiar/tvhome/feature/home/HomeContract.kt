@@ -174,6 +174,9 @@ public sealed interface HomeEffect {
     /** Open the system power menu through the key service. */
     public data object OpenPowerMenu : HomeEffect
 
+    /** restart_press: the key service opens the power menu and presses its Restart item. */
+    public data object PressRestart : HomeEffect
+
     /** Switch to what an Inputs row stands for: a TV input, a Coocaa source, the source panel or Live TV. */
     public data class OpenInput(
         val target: InputTarget,

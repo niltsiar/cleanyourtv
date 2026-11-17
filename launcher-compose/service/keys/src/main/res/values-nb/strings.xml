@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="not_available">Ikke tilgjengelig på denne TV-en</string>
+    <string name="restart_not_possible">Denne TV-en kan ikke startes på nytt fra startskjermen</string>
 </resources>

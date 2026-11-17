@@ -66,6 +66,9 @@
   <string name="shelf_season_episode">S%1$s E%2$s</string>
   <string name="shelf_episode">E%1$s</string>
   <string name="shelf_paused">Paused</string>
+  <string name="restart_question">Restart the TV?</string>
+  <string name="restart_confirm">Restart</string>
+  <string name="restart_cancel">Cancel</string>
   <plurals name="shelf_minutes_left">
     <item quantity="one">%1$d min left</item>
     <item quantity="other">%1$d min left</item>

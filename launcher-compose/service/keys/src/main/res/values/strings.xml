@@ -3,4 +3,5 @@
     <string name="key_service_name">Remote buttons</string>
     <string name="key_service_description">Makes the remote\'s Home, Input, Settings and app buttons open this launcher and the apps you chose.</string>
     <string name="not_available">Not available on this TV</string>
+    <string name="restart_not_possible">Restarting is not possible from Home on this TV</string>
 </resources>

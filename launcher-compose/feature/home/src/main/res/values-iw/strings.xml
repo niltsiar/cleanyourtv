@@ -73,4 +73,7 @@
     <item quantity="two">נותרו %1$d דק׳</item>
     <item quantity="other">נותרו %1$d דק׳</item>
   </plurals>
+  <string name="restart_question">להפעיל מחדש את הטלוויזיה?</string>
+  <string name="restart_confirm">הפעלה מחדש</string>
+  <string name="restart_cancel">ביטול</string>
 </resources>

@@ -69,4 +69,7 @@
     <item quantity="one">nog %1$d min</item>
     <item quantity="other">nog %1$d min</item>
   </plurals>
+  <string name="restart_question">Tv herstarten?</string>
+  <string name="restart_confirm">Herstarten</string>
+  <string name="restart_cancel">Annuleren</string>
 </resources>

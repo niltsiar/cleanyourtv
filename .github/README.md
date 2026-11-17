@@ -104,7 +104,13 @@ Motion and hints:
   whether a device is connected, and OK on it switches to that input. Hold OK on the row again, or use the tile's menu, to
   remove it.
 
-The System group at the end resets the page's choices to the theme's, opens the TV's home picker and opens the TV's own
+System:
+
+- **Restart TV from Home.** Restart TV in the Settings button's menu asks on Home first, with Cancel focused. Restart then
+  presses Restart in the TV's own power menu for you, for TVs where the remote cannot move in that menu. Where Home
+  cannot find that Restart item, it presses nothing, closes the menu and says so.
+
+The System group also resets the page's choices to the theme's, opens the TV's home picker and opens the TV's own
 settings.
 
 ### The poster helper

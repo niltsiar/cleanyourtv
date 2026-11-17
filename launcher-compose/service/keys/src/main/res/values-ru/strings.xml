@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="not_available">Недоступно на этом телевизоре</string>
+    <string name="restart_not_possible">Этот телевизор нельзя перезагрузить с главного экрана</string>
 </resources>

@@ -187,7 +187,7 @@ private data object TvSettingsItem : Focusable {
 
 /**
  * Java's order: the Wallpaper row follows the Clock row, the Open on start row follows the first section's rows. The Apps and
- * channels row follows the App highlights row.
+ * channels row follows the App highlights row. Follow theme, Default home and TV settings end the last section, System.
  */
 private fun pageItems(ui: SettingsUiState): List<PageItem> =
     buildList {
@@ -201,7 +201,6 @@ private fun pageItems(ui: SettingsUiState): List<PageItem> =
             }
             if (position == 0) ui.openOnStart?.let { add(OpenOnStartItem(it)) }
         }
-        add(PageItem.Heading(R.string.settings_group_system))
         add(FollowThemeItem)
         add(DefaultHomeItem)
         add(TvSettingsItem)

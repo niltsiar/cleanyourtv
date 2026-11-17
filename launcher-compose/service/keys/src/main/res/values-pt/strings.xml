@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="not_available">Não disponível nesta TV</string>
+    <string name="restart_not_possible">Não é possível reiniciar esta TV pela tela inicial</string>
 </resources>

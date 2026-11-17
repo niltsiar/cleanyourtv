@@ -140,6 +140,7 @@ class HomeHostConfigTestContent :
                                     onOpenNativeSettings = {},
                                     onOpenLauncherSettings = {},
                                     onOpenPowerMenu = {},
+                                    onPressRestart = {},
                                     onOrderNotSaved = {},
                                     onLibrarySaveFailed = {},
                                     onOpenInput = {},

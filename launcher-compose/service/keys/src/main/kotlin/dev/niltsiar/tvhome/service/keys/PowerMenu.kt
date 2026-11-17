@@ -26,4 +26,9 @@ public object PowerMenu {
     public fun open() {
         bound?.performGlobalAction(AccessibilityService.GLOBAL_ACTION_POWER_DIALOG)
     }
+
+    /** restart_press: opens the power menu and presses its Restart item, or says Home cannot (see [RestartPress]). */
+    public fun restart() {
+        bound?.pressRestart()
+    }
 }

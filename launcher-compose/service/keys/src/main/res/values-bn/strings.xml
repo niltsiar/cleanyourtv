@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="not_available">এই টিভিতে এভাইলেবল নেই</string>
+    <string name="restart_not_possible">এই টিভি হোম থেকে রিস্টার্ট করা যায় না</string>
 </resources>

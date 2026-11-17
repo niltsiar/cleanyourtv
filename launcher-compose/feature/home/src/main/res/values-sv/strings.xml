@@ -70,4 +70,7 @@
     <item quantity="one">%1$d min kvar</item>
     <item quantity="other">%1$d min kvar</item>
   </plurals>
+  <string name="restart_question">Starta om TV:n?</string>
+  <string name="restart_confirm">Starta om</string>
+  <string name="restart_cancel">Avbryt</string>
 </resources>

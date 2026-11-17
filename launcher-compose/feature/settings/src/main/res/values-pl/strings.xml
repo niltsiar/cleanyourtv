@@ -63,4 +63,5 @@
   <string name="settings_now_playing_needs_access">Wymaga dostępu</string>
   <string name="settings_now_playing_unavailable">Niedostępne na tym telewizorze</string>
   <string name="settings_now_playing_adb">Zezwól przez adb: %1$s</string>
+  <string name="settings_restart_press">Restart TV z ekranu głównego</string>
 </resources>

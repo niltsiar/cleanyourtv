@@ -238,12 +238,12 @@ class SettingsEdgesUiTestContent :
 
             test("the focused row stays out of the fade from the first row to the last and back") {
                 show()
-                assertFocusClearOfTheFade(entries = 24)
+                assertFocusClearOfTheFade(entries = 25)
             }
 
             test("the focused row stays out of the fade with the reorder row and a short list") {
                 show(reorder = true) { 190.dp }
-                assertFocusClearOfTheFade(entries = 25)
+                assertFocusClearOfTheFade(entries = 26)
             }
 
             test("a button row is one option row pitch from the rows around it and its pill keeps a margin") {

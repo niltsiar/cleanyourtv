@@ -74,4 +74,7 @@
     <item quantity="many">Zostało %1$d min</item>
     <item quantity="other">Zostało %1$d min</item>
   </plurals>
+  <string name="restart_question">Zrestartować TV?</string>
+  <string name="restart_confirm">Zrestartuj</string>
+  <string name="restart_cancel">Anuluj</string>
 </resources>

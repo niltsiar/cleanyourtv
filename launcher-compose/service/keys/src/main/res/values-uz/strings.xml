@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="not_available">Bu televizorda mavjud emas</string>
+    <string name="restart_not_possible">Bu televizorni bosh ekrandan qayta yoqib boʻlmaydi</string>
 </resources>

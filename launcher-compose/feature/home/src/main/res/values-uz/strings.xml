@@ -69,4 +69,7 @@
     <item quantity="one">%1$d daqiqa qoldi</item>
     <item quantity="other">%1$d daqiqa qoldi</item>
   </plurals>
+  <string name="restart_question">TV qayta yoqilsinmi?</string>
+  <string name="restart_confirm">Qayta yoqish</string>
+  <string name="restart_cancel">Bekor qilish</string>
 </resources>

@@ -48,7 +48,8 @@ private const val PROBE_BOOT_KEY = "probe_boot"
  * Home key itself, which opens Home. Every other key passes through untouched. Also the redirects that bring Home back:
  * stock_home_redirect, power_on_home and power_on_home_always. With restore_key_services, [ServiceRepair] puts the service
  * back on the enabled list after a force stop. With the opt-in broadcast of [GuardConfig], the service leaves the list while
- * the screen is off and [GuardKeep] lists it again at screen-on.
+ * the screen is off and [GuardKeep] lists it again at screen-on. With restart_press, [RestartPress] presses Restart in the
+ * system power dialog for Home.
  *
  * The config and the Open on start pick come from the app's [ConfigRepositoryOwner] and are followed: the maps are read in
  * again when a value the service uses changes (see [KeyServiceConfig]). An app a key opens is noted through the app's
@@ -72,6 +73,7 @@ public class KeyService : AccessibilityService() {
     private var unlockReceiver: BroadcastReceiver? = null
     private var screenOnReceiver: BroadcastReceiver? = null
     private var gamepads: GamepadPassthrough? = null
+    private var restartPress: RestartPress? = null
     private var recorded = false
 
     /** True after the first [start] of a bind: only that one arms the boot window, so a pick changed in Settings cannot send Home again. */
@@ -355,6 +357,15 @@ public class KeyService : AccessibilityService() {
         homeOpener?.open()
     }
 
+    /** restart_press, from Home's confirm: the only place the service reads window content. */
+    internal fun pressRestart() {
+        restartPress?.cancel()
+        restartPress =
+            RestartPress(timer, ::performGlobalAction, { rootInActiveWindow }, packageName) {
+                Toast.makeText(this, R.string.restart_not_possible, Toast.LENGTH_LONG).show()
+            }.also { it.start() }
+    }
+
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         handleWindow(event.eventType, event.packageName, event.className)
     }
@@ -394,6 +405,7 @@ public class KeyService : AccessibilityService() {
 
     override fun onDestroy() {
         PowerMenu.unbind(this)
+        restartPress?.cancel()
         scope.cancel()
         stopWaitingForUnlock()
         tearDown()

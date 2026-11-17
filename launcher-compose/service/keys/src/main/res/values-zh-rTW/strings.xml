@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="not_available">這台電視不支援此功能</string>
+    <string name="restart_not_possible">無法從主畫面重新啟動這台電視</string>
 </resources>

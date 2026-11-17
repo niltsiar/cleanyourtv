@@ -132,6 +132,7 @@ class MainActivity : ComponentActivity() {
                     onOpenNativeSettings = ::openNativeSettings,
                     onOpenLauncherSettings = ::openLauncherSettings,
                     onOpenPowerMenu = PowerMenu::open,
+                    onPressRestart = PowerMenu::restart,
                     onOrderNotSaved = ::orderNotSaved,
                     onLibrarySaveFailed = ::librarySaveFailed,
                     onOpenInput = ::openInput,

@@ -63,4 +63,5 @@
   <string name="settings_now_playing_needs_access">Toegang nodig</string>
   <string name="settings_now_playing_unavailable">Niet beschikbaar op deze tv</string>
   <string name="settings_now_playing_adb">Sta toe met adb: %1$s</string>
+  <string name="settings_restart_press">Tv herstarten vanuit Home</string>
 </resources>

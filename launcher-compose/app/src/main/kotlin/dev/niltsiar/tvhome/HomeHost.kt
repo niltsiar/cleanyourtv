@@ -53,6 +53,7 @@ internal fun HomeHost(
     onOpenNativeSettings: () -> Unit,
     onOpenLauncherSettings: () -> Unit,
     onOpenPowerMenu: () -> Unit,
+    onPressRestart: () -> Unit,
     onOrderNotSaved: () -> Unit,
     onLibrarySaveFailed: () -> Unit,
     onOpenInput: (InputTarget) -> Unit,
@@ -83,6 +84,7 @@ internal fun HomeHost(
                 HomeEffect.OpenNativeSettings -> onOpenNativeSettings()
                 HomeEffect.OpenLauncherSettings -> onOpenLauncherSettings()
                 HomeEffect.OpenPowerMenu -> onOpenPowerMenu()
+                HomeEffect.PressRestart -> onPressRestart()
                 HomeEffect.OrderNotSaved -> onOrderNotSaved()
                 HomeEffect.LibrarySaveFailed -> onLibrarySaveFailed()
                 is HomeEffect.OpenInput -> onOpenInput(effect.target)

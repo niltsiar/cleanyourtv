@@ -66,4 +66,7 @@
   <plurals name="shelf_minutes_left">
     <item quantity="other">Sisa %1$d mnt</item>
   </plurals>
+  <string name="restart_question">Mulai ulang TV?</string>
+  <string name="restart_confirm">Mulai ulang</string>
+  <string name="restart_cancel">Batal</string>
 </resources>

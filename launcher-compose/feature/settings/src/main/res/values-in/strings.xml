@@ -63,4 +63,5 @@
   <string name="settings_now_playing_needs_access">Perlu akses</string>
   <string name="settings_now_playing_unavailable">Tidak tersedia di TV ini</string>
   <string name="settings_now_playing_adb">Izinkan dengan adb: %1$s</string>
+  <string name="settings_restart_press">Mulai ulang TV dari Beranda</string>
 </resources>

@@ -68,4 +68,7 @@
     <item quantity="one">%1$d dk kaldı</item>
     <item quantity="other">%1$d dk kaldı</item>
   </plurals>
+  <string name="restart_question">TV yeniden başlatılsın mı?</string>
+  <string name="restart_confirm">Yeniden başlat</string>
+  <string name="restart_cancel">İptal</string>
 </resources>

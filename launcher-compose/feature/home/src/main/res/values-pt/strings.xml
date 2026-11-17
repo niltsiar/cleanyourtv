@@ -72,4 +72,7 @@
     <item quantity="many">Faltam %1$d min</item>
     <item quantity="other">Faltam %1$d min</item>
   </plurals>
+  <string name="restart_question">Reiniciar a TV?</string>
+  <string name="restart_confirm">Reiniciar</string>
+  <string name="restart_cancel">Cancelar</string>
 </resources>

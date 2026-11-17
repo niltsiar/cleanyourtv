@@ -13,6 +13,7 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
@@ -268,6 +269,33 @@ class HeroBandUiTestContent :
                 compose.onNode(hasTestTag("menu:EditDock") and hasText("Choose dock apps")).assertExists()
                 compose.onNode(hasTestTag("menu:PowerMenu") and hasText("Restart TV")).assertExists()
             }
+
+            test("with restart_press, restart tv asks restart the tv with cancel focused") {
+                showHome(cinematic.copy(restartPress = true), powerMenu = true)
+                openRestartConfirm()
+
+                textOf("menu:title") shouldBe "Restart the TV?"
+                compose.onNode(hasTestTag("menu:CancelRestart") and hasText("Cancel")).assertIsFocused()
+                compose.onNode(hasTestTag("menu:Restart") and hasText("Restart")).assertExists()
+            }
+
+            test("back and cancel on the restart confirm close it with focus on the settings button") {
+                showHome(cinematic.copy(restartPress = true), powerMenu = true)
+                for (close in listOf("Back", "Cancel")) {
+                    openRestartConfirm()
+                    if (close == "Back") {
+                        compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+                        compose.waitForIdle()
+                    } else {
+                        press(Key.DirectionCenter)
+                    }
+
+                    withClue(close) {
+                        compose.onNodeWithTag("menu").assertDoesNotExist()
+                        compose.onNodeWithContentDescription("Settings").assertIsFocused()
+                    }
+                }
+            }
         }
     })
 
@@ -324,6 +352,16 @@ private class HeroBandUiTestFixture : JUnit4RulesContext() {
         compose.mainClock.advanceTimeBy(600)
         compose.onRoot().performKeyInput { keyUp(Key.DirectionCenter) }
         compose.waitForIdle()
+    }
+
+    /** From the first dock tile: the Settings menu, then OK on its Restart TV row. */
+    fun openRestartConfirm() {
+        press(Key.DirectionUp)
+        repeat(2) { press(Key.DirectionRight) }
+        holdOk()
+        repeat(5) { press(Key.DirectionDown) }
+        compose.onNodeWithTag("menu:PowerMenu").assertIsFocused()
+        press(Key.DirectionCenter)
     }
 
     fun bounds(tag: String): DpRect = compose.onNodeWithTag(tag).getBoundsInRoot()

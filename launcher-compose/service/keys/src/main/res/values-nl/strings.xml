@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="not_available">Niet beschikbaar op deze tv</string>
+    <string name="restart_not_possible">Deze tv kan niet vanuit Home worden herstart</string>
 </resources>

@@ -64,4 +64,7 @@
     <item quantity="one">%1$d min tilbage</item>
     <item quantity="other">%1$d min tilbage</item>
   </plurals>
+  <string name="restart_question">Genstart TV?</string>
+  <string name="restart_confirm">Genstart</string>
+  <string name="restart_cancel">Annuller</string>
 </resources>

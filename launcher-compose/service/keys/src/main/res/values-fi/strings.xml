@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="not_available">Ei käytettävissä tässä televisiossa</string>
+    <string name="restart_not_possible">Tätä televisiota ei voi käynnistää uudelleen kotinäkymästä</string>
 </resources>

@@ -69,4 +69,7 @@
     <item quantity="one">%1$d min jäljellä</item>
     <item quantity="other">%1$d min jäljellä</item>
   </plurals>
+  <string name="restart_question">Käynnistetäänkö TV uudelleen?</string>
+  <string name="restart_confirm">Käynnistä uudelleen</string>
+  <string name="restart_cancel">Peruuta</string>
 </resources>
