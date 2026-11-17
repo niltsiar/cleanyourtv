@@ -2,9 +2,12 @@ package dev.niltsiar.tvhome.data.shelf
 
 import android.content.ContentResolver
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Process
 import android.util.Log
 import android.util.LruCache
 import androidx.compose.ui.graphics.Color
@@ -51,8 +54,15 @@ internal const val POSTER_CACHE_BYTES: Int = 12 * 1024 * 1024
 internal const val POSTER_MAX_PIXELS: Long = 1920L * 1080L
 
 /**
- * When Home tries again a poster its app refused to let it read, counted from the first refusal while Home is started: an app
- * grants its URIs again on BOOT_COMPLETED, tens of seconds after Home has read them.
+ * How often Home checks, while a poster is refused and Home is started, whether its app has granted Home the URI again: the
+ * check opens no provider and starts no process, so a picture can show this soon after the grant.
+ */
+internal val POSTER_GRANT_CHECK: Duration = 2.seconds
+
+/**
+ * When Home tries again every poster its app refused to let it read, counted from the first refusal while Home is started,
+ * for an app whose access the check of [POSTER_GRANT_CHECK] does not report: an app grants its URIs again on BOOT_COMPLETED,
+ * tens of seconds after Home has read them. The checks end with the last step.
  */
 internal val POSTER_GRANT_RETRIES: List<Duration> = listOf(10.seconds, 20.seconds, 40.seconds, 80.seconds, 160.seconds, 320.seconds)
 
@@ -61,13 +71,17 @@ internal val POSTER_GRANT_RETRIES: List<Duration> = listOf(10.seconds, 20.second
  * [POSTER_CACHE_BYTES]. A `content://` or `android.resource://` poster is read as it is; Home has no network, so an `https`
  * or `http` one is read through the poster helper app as [WebPosters] allows, else not at all. A poster that cannot be read
  * or decoded is not tried again until the next [onStart], which raises [changes] so its card asks again; one the helper
- * has not fetched yet is tried again once [changes] rises for it; one the app refused is also tried again at each step of
- * [POSTER_GRANT_RETRIES] while Home stays started.
+ * has not fetched yet is tried again once [changes] rises for it; one the app refused is also tried again while Home stays
+ * started, once [hasGrant] says the app granted it or at the next step of [POSTER_GRANT_RETRIES].
  */
 public class ShelfPosters(
     private val context: Context,
     config: StateFlow<TvConfig>,
     private val io: CoroutineDispatcher = Dispatchers.IO,
+    private val hasGrant: (Uri) -> Boolean = { uri ->
+        context.checkUriPermission(uri, Process.myPid(), Process.myUid(), Intent.FLAG_GRANT_READ_URI_PERMISSION) ==
+            PackageManager.PERMISSION_GRANTED
+    },
 ) {
     private val web = WebPosters(context, config)
 
@@ -85,13 +99,17 @@ public class ShelfPosters(
     private val refused = MutableStateFlow(emptySet<String>())
     private val started = MutableStateFlow(false)
 
-    /** The steps of [POSTER_GRANT_RETRIES] taken since the last [onStart]. */
-    @Volatile private var retries = 0
+    /** The time the refused posters have been checked for since the last [onStart], in steps of [POSTER_GRANT_CHECK]. */
+    @Volatile private var checked = Duration.ZERO
+
+    /** The refused posters whose grant a check found since the last [onStart]; later checks do not raise [changes] for them. */
+    private val granted: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     /**
-     * Rises each time a poster the helper had not fetched may have arrived, on an [onStart] after a poster failed, and at each
-     * step of [POSTER_GRANT_RETRIES] while a poster is refused; a card without a picture then asks again. While collected, it
-     * watches the helper once Home has asked it for a poster, and stops watching when Home stops.
+     * Rises each time a poster the helper had not fetched may have arrived, on an [onStart] after a poster failed, and while a
+     * poster is refused, when a check finds its grant and at each step of [POSTER_GRANT_RETRIES]; a card without a picture then
+     * asks again. While collected, it watches the helper once Home has asked it for a poster, and stops watching when Home
+     * stops.
      */
     public val changes: Flow<Int> =
         channelFlow {
@@ -135,7 +153,8 @@ public class ShelfPosters(
         val retry = failed.isNotEmpty()
         failed.clear()
         refused.value = emptySet()
-        retries = 0
+        checked = Duration.ZERO
+        granted.clear()
         web.onStart(retry)
         started.value = true
     }
@@ -177,14 +196,27 @@ public class ShelfPosters(
         return poster
     }
 
-    /** Lets the refused posters be read again at each step of [POSTER_GRANT_RETRIES] left, raising [changes] for their cards. */
+    /**
+     * Until the last step of [POSTER_GRANT_RETRIES], lets each refused poster that [hasGrant] first finds granted be read again
+     * at that check of [POSTER_GRANT_CHECK], and every refused poster at each step, raising [changes] for their cards.
+     */
     private suspend fun retryRefused() {
-        while (retries < POSTER_GRANT_RETRIES.size) {
-            val previous = if (retries == 0) Duration.ZERO else POSTER_GRANT_RETRIES[retries - 1]
-            delay(POSTER_GRANT_RETRIES[retries] - previous)
-            retries++
-            failed -= refused.value
-            web.raise()
+        while (checked < POSTER_GRANT_RETRIES.last()) {
+            delay(POSTER_GRANT_CHECK)
+            val step = POSTER_GRANT_RETRIES.any { it > checked && it <= checked + POSTER_GRANT_CHECK }
+            checked += POSTER_GRANT_CHECK
+            val keys = refused.value
+            val ready =
+                if (step) {
+                    keys
+                } else {
+                    withContext(io) { (keys - granted).filter { hasGrant(Uri.parse(it.substringBeforeLast('@'))) } }
+                        .also { granted += it }
+                }
+            if (ready.isNotEmpty()) {
+                failed -= ready
+                web.raise()
+            }
         }
     }
 

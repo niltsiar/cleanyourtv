@@ -93,7 +93,8 @@ class ShelfPostersTestContent :
         testFixture {
             object {
                 val app = RuntimeEnvironment.getApplication()
-                val posters = ShelfPosters(app, MutableStateFlow(TvConfig()), Dispatchers.Unconfined)
+                val granted = HashSet<String>()
+                val posters = ShelfPosters(app, MutableStateFlow(TvConfig()), Dispatchers.Unconfined) { it.toString() in granted }
                 val opened = HashMap<String, Int>()
 
                 fun serve(
@@ -130,6 +131,12 @@ class ShelfPostersTestContent :
                         opened.merge(uri, 1, Int::plus)
                         throw SecurityException("Permission Denial: opening provider not exported")
                     }
+                }
+
+                /** The app at [uri] grants Home read access to it and serves its picture, as after a restart. */
+                fun grant(uri: String) {
+                    granted += uri
+                    serve(uri, png(480, 270))
                 }
 
                 fun poster(
@@ -279,7 +286,39 @@ class ShelfPostersTestContent :
                 }
             }
 
-            test("the retries of a refused poster stop after the last step of the backoff, ten minutes after the refusal") {
+            test("a refused poster shows within one check of the app's grant, between two steps of the backoff") {
+                runTest {
+                    val uri = "content://app.posters/granted-between-steps"
+                    refuse(uri)
+                    posters.onStart()
+                    val raised = cardAsking(uri)
+                    posters.poster(uri, 480, 270).shouldBeNull()
+
+                    wait(43.seconds)
+                    grant(uri)
+                    wait(POSTER_GRANT_CHECK)
+
+                    raised shouldBe listOf(10_000L, 20_000L, 40_000L, 44_000L)
+                    posters.poster(uri, 480, 270).shouldNotBeNull()
+                }
+            }
+
+            test("a check that finds no new grant raises no changes, so the card does not ask at every check") {
+                runTest {
+                    val uri = "content://app.posters/granted-still-refused"
+                    refuse(uri)
+                    posters.onStart()
+                    val raised = cardAsking(uri)
+                    posters.poster(uri, 480, 270).shouldBeNull()
+
+                    granted += uri
+                    wait(30.seconds)
+
+                    raised shouldBe listOf(2_000L, 10_000L, 20_000L)
+                }
+            }
+
+            test("the retries and checks of a refused poster stop after the last step of the backoff, 320 s after the refusal") {
                 runTest {
                     val uri = "content://app.posters/never-granted"
                     refuse(uri)
@@ -287,6 +326,8 @@ class ShelfPostersTestContent :
                     val raised = cardAsking(uri)
                     posters.poster(uri, 480, 270).shouldBeNull()
 
+                    wait(POSTER_GRANT_RETRIES.last())
+                    granted += uri
                     wait(1.hours)
 
                     raised shouldBe listOf(10L, 20L, 40L, 80L, 160L, 320L).map { it * 1000 }
@@ -294,7 +335,7 @@ class ShelfPostersTestContent :
                 }
             }
 
-            test("a stopped home makes no retries of a refused poster") {
+            test("a stopped home makes no retries or checks of a refused poster") {
                 runTest {
                     val uri = "content://app.posters/refused-while-stopped"
                     refuse(uri)
@@ -303,6 +344,7 @@ class ShelfPostersTestContent :
                     posters.poster(uri, 480, 270).shouldBeNull()
 
                     posters.onStop()
+                    granted += uri
                     wait(1.hours)
 
                     raised shouldBe emptyList()
