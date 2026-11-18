@@ -33,11 +33,12 @@ gets the short table there too. Everything outside the markers is hand-written.
 The counts are the card's alt text ("N TV models · B brands · L languages · "), the "| **L languages** |"
 feature row and STATS in tools/readme_stats.py. Exit codes: 0 up to date (or written), 1 out of date
 (--check), or a count moved and --font could not draw one of the pictures (the tables are written; the
-picture is not - redraw it before committing). --font draws with the checkout's tools/venv/bin/python when
-that venv has Pillow, the interpreter docs/workflows/press.md installs it into and the one the two card
-scripts' own usage lines name; a checkout with no such venv - or one whose bin/python cannot be started at
-all - uses the Python that ran this script, and an interpreter that starts for the Pillow probe but not for
-the picture is reported as a picture that was not drawn, not as a traceback.
+picture is not - redraw it before committing). --font draws with the checkout's venv - tools/venv/bin/python
+when that venv has Pillow, tools/venv/Scripts/python.exe on Windows - the interpreter docs/workflows/press.md
+installs Pillow into and the one the two card scripts' own usage lines name; a checkout with no such venv - or
+one whose venv interpreter cannot be started at all - uses the Python that ran this script, and an interpreter
+that starts for the Pillow probe but not for the picture is reported as a picture that was not drawn, not as a
+traceback.
 2 what it was given cannot be read: a tv.json, a marker, or the path in --root or --adopt (nothing is written
 then), or a page or a tv.json it cannot write: the pages
 are written beside themselves and replaced only once all of them are, so such a run leaves every page with
@@ -47,10 +48,12 @@ apply are on disk and the message names them, the tables are not regenerated, so
 its tv.json by hand and the script run again.
 """
 import argparse
+import errno
 import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -84,7 +87,10 @@ def check_cell(where, key, value):
     if not isinstance(value, str) or not value.strip():
         return [f"{where}: \"{key}\" must be a non-empty string"]
     out = []
-    if value != value.strip() or "\n" in value:
+    # A CR is a line ending to a Markdown reader, and `read_text` reads the table back with universal
+    # newlines, so a written CR would come back as an LF and `--check` would never agree with the run
+    # that had just written it. Both line endings are refused; a CRLF already carries the LF.
+    if value != value.strip() or "\n" in value or "\r" in value:
         out.append(f"{where}: \"{key}\" must be one line with no space at either end")
     if re.search(r"(?<!\\)\|", value):
         out.append(f"{where}: \"{key}\" has a | that would split the table cell; write \\| instead")
@@ -477,6 +483,26 @@ def adopt(root, patch_text):
     return out
 
 
+def stat_folder(path):
+    """(it is a folder, why the filesystem would not look at it or None) for one path.
+
+    The four errnos here are the answers `Path.is_dir()` itself gave before Python 3.14: ENOENT and
+    ENOTDIR, the two ordinary ways a path is not a folder, and ELOOP and EBADF, which it also read as
+    "no". Every other refusal to look - ENAMETOOLONG for a name over NAME_MAX, EACCES under a folder
+    this user may not traverse, EINVAL, EIO - came out of is_dir() as an OSError, and the caller below
+    names it. On 3.14 is_dir() answers False for those too (it swallows every OSError), so asking it
+    alone would put "not a folder" - the sentence for a typo - over a path that is there and could not
+    be read, and the refusal this file grew for that case (#4032) would not be printed at all.
+    """
+    try:
+        info = path.stat()
+    except OSError as e:
+        if e.errno in (errno.ENOENT, errno.ENOTDIR, errno.ELOOP, errno.EBADF):
+            return False, None
+        return False, (e.strerror or e)
+    return stat.S_ISDIR(info.st_mode), None
+
+
 def read_inputs(root, patch):
     """(the patch's text or None, the reason this run cannot start or None).
 
@@ -486,7 +512,17 @@ def read_inputs(root, patch):
     not there both ended in a FileNotFoundError traceback before, which is exit 1 - the one answer that
     says the generated files are stale when in fact nothing was read at all.
     """
-    if not root.is_dir():
+    # A `--root` the filesystem refuses to stat - a name longer than NAME_MAX, or a path under a folder
+    # this user may not traverse - used to end the run in an OSError as a traceback, exit 1: the answer
+    # this docstring keeps for tables that are out of date, over a run that read nothing. Both are the
+    # "cannot be read" case the exit paragraph names, and the sentence quotes the path either way.
+    # stat_folder() asks the filesystem rather than `Path.is_dir()`, which stopped raising for those on
+    # Python 3.14 and would answer "not a folder" for a path it never looked at.
+    is_folder, refused = stat_folder(root)
+    if refused:
+        return None, (f"--root '{root}': cannot be looked at ({refused}). "
+                      f"Nothing was read or written.")
+    if not is_folder:
         return None, f"--root '{root}': not a folder. Nothing was read or written."
     # examples/ is what it reads; the three OWNED files are the parts of the checkout it writes.
     needs = ["examples"] + list(OWNED)
@@ -509,23 +545,40 @@ def read_inputs(root, patch):
         return None, f"--adopt: '{patch}' is not UTF-8 or UTF-16 text. Nothing was written."
 
 
+def venv_python(root):
+    """The checkout's venv interpreter, at the path that venv has: `bin/python`, or `Scripts/python.exe`.
+
+    A venv made by `python -m venv` on macOS or Linux keeps `tools/venv/bin/python`; the one Windows makes keeps
+    `tools/venv/Scripts/python.exe`. Asking only for the first meant a Windows checkout's venv, Pillow and all,
+    was never the interpreter the two card scripts were handed: the redraw fell back to the Python that ran this
+    script and answered with the Pillow line while the venv that could draw sat beside it (#3897). tools/bench.py
+    already asks both paths, so a checkout either way round is read here too.
+    """
+    for candidate in (root / "tools" / "venv" / "bin" / "python",
+                      root / "tools" / "venv" / "Scripts" / "python.exe"):
+        if candidate.is_file():
+            return candidate
+    return root / "tools" / "venv" / "bin" / "python"
+
+
 def card_python(root):
     """The interpreter the two card scripts are run with, as a path: the checkout's venv when it has Pillow.
 
     The scripts need Pillow, and requirements.txt has none: docs/workflows/press.md installs
     requirements-perf.txt into tools/venv, which is the interpreter both scripts' own usage lines name
-    (`tools/venv/bin/python -I tools/readme_stats.py ...`). sys.executable is whatever ran this script, and
-    the run this script asks for in its own messages - and CI's, and docs/workflows/tv-list.md's - is
+    (`tools/venv/bin/python -I tools/readme_stats.py ...`, or `tools/venv/Scripts/python.exe` on Windows -
+    see venv_python()). sys.executable is whatever ran this script, and the run this script asks for in its own
+    messages - and CI's, and docs/workflows/tv-list.md's - is
     `python3 tools/gen_tables.py`, i.e. the system Python: on a stock Ubuntu 24.04 that is
     /usr/bin/python3, which has no Pillow and cannot pip install one (PEP 668, EXTERNALLY-MANAGED). So a
     maintainer who installed Pillow exactly as PRESS.md says, and ran the command this script prints, got
     "docs/stats.png was not redrawn ... python3 tools/readme_stats.py" twice over, with a venv that could
     have drawn it sitting beside the list. A checkout with no venv - a contributor's own virtualenv, CI's
     setup-python - keeps sys.executable, which is how every existing run works. So does a checkout whose
-    bin/python is there and executable but cannot be started: an optional interpreter this machine cannot
-    run is an optional interpreter it does not have.
+    venv interpreter is there and executable but cannot be started: an optional interpreter this machine
+    cannot run is an optional interpreter it does not have.
     """
-    venv = root / "tools" / "venv" / "bin" / "python"
+    venv = venv_python(root)
     if venv.is_file() and os.access(venv, os.X_OK):
         # `-I` so a PYTHON* variable in the caller's shell cannot shadow the venv's own site-packages.
         try:
