@@ -53,7 +53,7 @@ public class SystemSettings internal constructor(
     /** True when the system accepted the intent: the Notification access list, which not every TV's settings app has. */
     public fun openNotificationAccess(): Boolean = open(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
 
-    /** True when a vendor settings app from the fallback list is installed: it has pages the standard settings lack. */
+    /** True when a vendor settings activity from the fallback list exists: it has pages the standard settings lack. */
     public fun hasNativeSettings(): Boolean = vendorIntent() != null
 
     /** True when the system accepted the intent. */
@@ -61,7 +61,7 @@ public class SystemSettings internal constructor(
 
     /**
      * The standard settings intent, or, when nothing usable answers it, the first vendor entry of [fallbackComponents]
-     * whose package is installed, else the AOSP TV settings app's main screen where it is installed. Fire OS
+     * whose activity exists, else the AOSP TV settings app's main screen where it is installed. Fire OS
      * resolves the standard actions to a compliance stub that opens nothing (CTSDummy), which counts as missing.
      */
     internal fun intent(action: String): Intent {
@@ -77,12 +77,20 @@ public class SystemSettings internal constructor(
         fallbackComponents
             .asSequence()
             .mapNotNull(ComponentName::unflattenFromString)
-            .firstOrNull { isInstalled(it.packageName) }
+            .firstOrNull(::hasActivity)
             ?.let { Intent().setComponent(it) }
 
     private fun appInfoIntent(packageName: String) = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:$packageName".toUri())
 
     private fun vpnAppIntent(): Intent? = vpnApp()?.let(context.packageManager::tvLaunchIntent)
+
+    private fun hasActivity(component: ComponentName): Boolean =
+        try {
+            context.packageManager.getActivityInfo(component, 0)
+            true
+        } catch (e: PackageManager.NameNotFoundException) {
+            false
+        }
 
     private fun isInstalled(packageName: String): Boolean =
         try {

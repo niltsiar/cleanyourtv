@@ -51,6 +51,8 @@ class SystemSettingsTestContent :
 
                 fun install(packageName: String) = packages.installPackage(PackageInfo().apply { this.packageName = packageName })
 
+                fun installVendorSettings() = packages.addActivityIfNotPresent(ComponentName.unflattenFromString(vendor)!!)
+
                 fun installVpnApp() {
                     val component = ComponentName("com.vpn.app", "com.vpn.app.Main")
                     packages.addActivityIfNotPresent(component)
@@ -63,7 +65,7 @@ class SystemSettingsTestContent :
         } asContextForEach {
             test("a standard handler is used as it is") {
                 answerStandardAction("com.android.settings.Settings")
-                install("com.vendor.settings")
+                installVendorSettings()
 
                 settings().intent(Settings.ACTION_SETTINGS).action shouldBe Settings.ACTION_SETTINGS
             }
@@ -79,7 +81,7 @@ class SystemSettingsTestContent :
             }
 
             test("a vendor settings activity keeps the clear task flag") {
-                install("com.vendor.settings")
+                installVendorSettings()
 
                 settings().openSettings(clearTask = true).shouldBeTrue()
 
@@ -90,7 +92,7 @@ class SystemSettingsTestContent :
 
             test("the fire os stub counts as missing and the installed vendor entry opens") {
                 answerStandardAction("com.amazon.CTSDummyActivity")
-                install("com.vendor.settings")
+                installVendorSettings()
 
                 settings().intent(Settings.ACTION_SETTINGS).component shouldBe ComponentName.unflattenFromString(vendor)
             }
@@ -148,9 +150,15 @@ class SystemSettingsTestContent :
             }
 
             test("the default constructor knows the vendor settings activities") {
-                packages.installPackage(PackageInfo().apply { packageName = "com.tcl.settings" })
+                packages.addActivityIfNotPresent(ComponentName("com.tcl.settings", "com.tcl.settings.ui.MainActivity"))
 
                 SystemSettings(app).intent(Settings.ACTION_SETTINGS).component?.className shouldBe "com.tcl.settings.ui.MainActivity"
+            }
+
+            test("a tcl settings app whose main activity sits outside ui opens that activity") {
+                packages.addActivityIfNotPresent(ComponentName("com.tcl.settings", "com.tcl.settings.MainActivity"))
+
+                SystemSettings(app).intent(Settings.ACTION_SETTINGS).component?.className shouldBe "com.tcl.settings.MainActivity"
             }
 
             test("app info is offered only where the tv has a page for it") {
@@ -182,7 +190,7 @@ class SystemSettingsTestContent :
                 settings().hasNativeSettings().shouldBeFalse()
                 settings().openNativeSettings().shouldBeFalse()
 
-                install("com.vendor.settings")
+                installVendorSettings()
 
                 settings().hasNativeSettings().shouldBeTrue()
                 settings().openNativeSettings().shouldBeTrue()
