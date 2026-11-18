@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -38,7 +39,10 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -61,6 +65,7 @@ private const val SKY_GLOW_Y = 0.80f
 private const val SKY_GLOW_RADIUS = 0.55f
 private const val MAX_ALPHA = 255f
 private val CaptionMaxWidth = 520.dp
+private const val ELLIPSIS = "\u2026"
 private const val TOP_SCRIM_REACH = 0.45f
 private const val LEFT_SCRIM_REACH = 0.55f
 
@@ -398,20 +403,33 @@ internal fun WallpaperCaption(
         if (target != null) alpha.animateTo(1f, tween(if (crossfade) CAPTION_IN_MS else 0))
     }
     val text = shown ?: return
-    val density = LocalDensity.current.density
+    val density = LocalDensity.current
     val base = TvTheme.typography.caption
-    val style = remember(base, density) { base.copy(shadow = Shadow(Color(0xCC000000), Offset(0f, density), 6 * density)) }
+    val style = remember(base, density) { base.copy(shadow = Shadow(Color(0xCC000000), Offset(0f, density.density), 6 * density.density)) }
+    // Compose clips an ellipsized line to its box, which cuts the shadow in hard edges: the name is cut here instead, and
+    // drawn as a line that fits.
+    val measurer = rememberTextMeasurer()
+    val maxWidth = with(density) { CaptionMaxWidth.roundToPx() }
+    val cut =
+        remember(text, style, maxWidth, measurer) {
+            measurer.measure(text, style, TextOverflow.Ellipsis, maxLines = 1, constraints = Constraints(maxWidth = maxWidth)).cutLine(text)
+        }
     BasicText(
-        text = text,
+        text = cut ?: text,
         style = style,
+        softWrap = false,
         maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
+        overflow = TextOverflow.Visible,
         modifier =
             modifier
-                .widthIn(max = CaptionMaxWidth)
+                .then(if (cut == null) Modifier.widthIn(max = CaptionMaxWidth) else Modifier.width(CaptionMaxWidth))
                 .graphicsLayer {
                     compositingStrategy = CompositingStrategy.ModulateAlpha
                     this.alpha = alpha.value
                 },
     )
 }
+
+/** The one line this layout shows, with its ellipsis, when it cut [text] short; null when [text] fits. */
+private fun TextLayoutResult.cutLine(text: String): String? =
+    if (isLineEllipsized(0)) text.substring(0, getLineEnd(0, visibleEnd = true)) + ELLIPSIS else null
