@@ -35,11 +35,11 @@
   <string name="dock_edit">Välj appar i favoritraden</string>
   <string name="reorder">Ändra ordning på appar</string>
   <string name="power_menu">Starta om TV:n</string>
-  <string name="dock_edit_hint">Välj platsen i favoritraden som du vill ändra och tryck OK. Tillbaka för att avsluta.</string>
+  <string name="dock_edit_hint">Välj platsen i favoritraden som du vill ändra och tryck på OK. Tryck på Tillbaka för att avsluta.</string>
   <string name="dock_edit_slot">Plats %1$d av %2$d · nu %3$s</string>
   <string name="dock_edit_put_here">lägg här</string>
   <string name="dock_edit_other_place">annan plats</string>
-  <string name="dock_edit_pick_place">Välj en plats i favoritraden för appen och tryck OK. Tillbaka för att avbryta.</string>
+  <string name="dock_edit_pick_place">Välj en plats i favoritraden för appen och tryck på OK. Tryck på Tillbaka för att avbryta.</string>
   <string name="reorder_key_ok">OK</string>
   <string name="reorder_pick_up">plocka upp</string>
   <string name="reorder_key_arrows">Pilar</string>
