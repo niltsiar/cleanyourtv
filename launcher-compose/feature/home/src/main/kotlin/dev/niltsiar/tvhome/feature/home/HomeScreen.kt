@@ -395,6 +395,8 @@ internal const val GRID_ITEMS_BEFORE = 2
  * shelf label updates.
  * The shelf title stays under the top bar; rows fade out as they scroll up to it.
  * [homePresses] counts Home key presses that reach Home while it shows; each one scrolls to the top and focuses the first dock tile.
+ * [arrivalPress] is the Home press that brought Home back from outside, 0 for a Home started in a new process, or
+ * [NO_ARRIVAL]: once focus is on the first tile, that arrival lets focus_habit_app move it to the usual app's tile.
  * [layout] is the theme's: dock size and grid columns, rows that must fit below the dock, one sideways row.
  * [topBar] is the theme's top bar: which buttons show and how.
  * [wallpaperLayout] is the theme's say over the picture behind Home, which [HomeUiState.wallpaper] supplies.
@@ -426,6 +428,7 @@ public fun HomeScreen(
     onClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     homePresses: () -> Int = { 0 },
+    arrivalPress: () -> Int = { NO_ARRIVAL },
     topBar: TopBarLayout = TopBarLayout(),
     wallpaperLayout: WallpaperLayout = WallpaperLayout(),
     shelfLayout: ShelfLayout = ShelfLayout(),
@@ -625,6 +628,7 @@ public fun HomeScreen(
                 onFocus,
                 onClick,
                 homePresses,
+                arrivalPress,
                 libraryOpen,
                 onOpenLibrary,
                 shelfUp = remember(cards, shelfVisible) { { cards.first.takeIf { shelfVisible.value } } },
@@ -780,6 +784,7 @@ private fun HomeContent(
     onFocus: (String) -> Unit,
     onClick: (String) -> Unit,
     homePresses: () -> Int,
+    arrivalPress: () -> Int,
     libraryOpen: () -> Boolean,
     onOpenLibrary: () -> Unit,
     shelfUp: () -> FocusRequester?,
@@ -819,6 +824,7 @@ private fun HomeContent(
             val shown = state()
             val target = shown.focusedKey?.takeIf { key -> (shown.dock + shown.grid).any { it.key == key } } ?: shown.dock.first().key
             focusOn(target, gridState, dockRow, currentLayout.value.singleRow, state, input)
+            input.arrive(arrivalPress(), homePresses())
         }
     }
     LaunchedEffect(gridState) {
@@ -834,6 +840,7 @@ private fun HomeContent(
     LaunchedEffect(gridState) {
         var wasOpen = false
         snapshotFlow(libraryOpen).collect { open ->
+            if (open) input.endArrival()
             if (wasOpen && !open) {
                 val target = if (input.fromTopBar) LIBRARY_BUTTON_FOCUS else LIBRARY_FOCUS
                 input.fromTopBar = false
@@ -851,6 +858,7 @@ private fun HomeContent(
                 withFrameNanos { }
                 input.travel.reset()
                 firstDockTile.requestFocus()
+                input.arrive(arrivalPress(), homePresses())
             }
         }
     }

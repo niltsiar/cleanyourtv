@@ -32,6 +32,7 @@
   <string name="settings_focus_overshoot">Focus overshoot</string>
   <string name="settings_press_feedback">Press feedback</string>
   <string name="settings_habit_hint">Habit hint</string>
+  <string name="settings_focus_habit_app">Start on the usual app</string>
   <string name="settings_input_arrival">Input arrival</string>
   <string name="settings_input_tiles">Input tiles</string>
   <string name="settings_restart_press">Restart TV from Home</string>

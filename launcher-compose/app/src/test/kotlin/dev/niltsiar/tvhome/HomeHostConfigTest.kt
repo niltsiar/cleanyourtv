@@ -30,6 +30,7 @@ import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.Wallpaper
 import dev.niltsiar.tvhome.feature.home.HomeSources
 import dev.niltsiar.tvhome.feature.home.MoleculeHomeViewModel
+import dev.niltsiar.tvhome.feature.home.NO_ARRIVAL
 import io.kotest.assertions.withClue
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
@@ -150,6 +151,7 @@ class HomeHostConfigTestContent :
                                     libraryOpen = { false },
                                     onOpenLibrary = {},
                                     homePresses = { 0 },
+                                    arrivalPress = { NO_ARRIVAL },
                                     inputsRequests = { 0 },
                                     settingsClosing = { null },
                                     overlays = {},

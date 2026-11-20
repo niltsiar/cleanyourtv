@@ -223,7 +223,7 @@ public class KeyService : AccessibilityService() {
         armedUntil: Long,
         atBind: Boolean,
     ) {
-        val power = PowerOnHome(plan, SystemClock::elapsedRealtime, timer, armedUntil, ::openHome).also { powerOn = it }
+        val power = PowerOnHome(plan, SystemClock::elapsedRealtime, timer, armedUntil) { openHome(powerOn = true) }.also { powerOn = it }
         if (atBind) power.armAtBind()
         val receiver =
             object : BroadcastReceiver() {
@@ -357,8 +357,9 @@ public class KeyService : AccessibilityService() {
         }
     }
 
-    private fun openHome() {
-        homeOpener?.open()
+    /** [powerOn] marks the Home that the TV coming on brings up, which focus_habit_app leaves on the first tile. */
+    private fun openHome(powerOn: Boolean = false) {
+        homeOpener?.open(powerOn)
     }
 
     /** restart_press, from Home's confirm: the only place the service reads window content. */
@@ -392,7 +393,7 @@ public class KeyService : AccessibilityService() {
         }
         // power_on_home: the firmware opened Live TV by itself at power-on, before anyone pressed a key.
         if (powerOn?.redirects(pkg) == true) {
-            openHome()
+            openHome(powerOn = true)
             return
         }
         // stock_home_redirect: the firmware turned the stock launcher back on and its home screen came up. Any app can send this

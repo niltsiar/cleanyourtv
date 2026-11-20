@@ -190,6 +190,7 @@ class ConfigRepositoryTestContent :
                 repo.choose(Choices.FocusOvershoot, true)
                 repo.choose(Choices.PressFeedback, true)
                 repo.choose(Choices.HabitHint, true)
+                repo.choose(Choices.FocusHabitApp, true)
                 repo.choose(Choices.AppShelf, true)
                 repo.choose(Choices.AppShelfSources, setOf("com.b/7", "com.a"))
                 repo.choose(Choices.AppShelfWebPosters, true)
@@ -217,6 +218,7 @@ class ConfigRepositoryTestContent :
                         focusOvershoot = true,
                         pressFeedback = true,
                         habitHint = true,
+                        focusHabitApp = true,
                         inputArrival = true,
                         inputTiles = true,
                         restartPress = true,

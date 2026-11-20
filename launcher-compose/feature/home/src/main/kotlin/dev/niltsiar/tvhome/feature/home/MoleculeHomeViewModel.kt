@@ -112,6 +112,8 @@ public class MoleculeHomeViewModel(
             onReorderMove = { events.trySend(HomeEvent.ReorderMove(it)) },
             onReorderOk = { events.trySend(HomeEvent.ReorderOk) },
             onHomePressed = { events.trySend(HomeEvent.HomePressed) },
+            onArrived = { events.trySend(HomeEvent.Arrived) },
+            onArrivalEnded = { events.trySend(HomeEvent.ArrivalEnded) },
         )
 
     /** Home came to the front. */

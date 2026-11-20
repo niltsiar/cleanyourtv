@@ -160,6 +160,7 @@ public fun parseTvConfig(json: String): ParsedConfig {
             inputArrival = o.bool("input_arrival", d.inputArrival),
             inputTiles = o.bool("input_tiles", d.inputTiles),
             habitHint = o.bool("habit_hint", d.habitHint),
+            focusHabitApp = o.bool("focus_habit_app", d.focusHabitApp),
             appShelf = o.bool("app_shelf", d.appShelf),
             appShelfSources = o.stringList("app_shelf_sources", d.appShelfSources).distinct(),
             appShelfWebPosters = o.bool("app_shelf_web_posters", d.appShelfWebPosters),

@@ -78,6 +78,10 @@ public class HomeMenuActions(
     public val onReorderOk: () -> Unit = {},
     /** The Home key was pressed while Home shows: close the menu, the Inputs list and any mode. */
     public val onHomePressed: () -> Unit = {},
+    /** Home was arrived at from outside, at its start or with the Home key from an app, and focus is on the first tile. */
+    public val onArrived: () -> Unit = {},
+    /** A key went down or the library opened since the last arrival. */
+    public val onArrivalEnded: () -> Unit = {},
 )
 
 /**

@@ -132,8 +132,20 @@ internal class HomeInteraction(
     var habit by mutableStateOf<String?>(null)
         private set
 
+    /** Counts the arrivals focus_habit_app acts on; each one looks the habit up again. */
+    var arrivals by mutableIntStateOf(0)
+        private set
+
+    /** The last arrival still waits for the habit: no key, Home key or stop came since. */
+    private var arrivalWaits = false
+
+    /** With an arrival waiting and no menu, mode or list open, focus goes to the tile of [packageName] in the dock or grid. */
     fun habitFound(packageName: String?) {
         habit = packageName
+        if (!arrivalWaits) return
+        arrivalWaits = false
+        if (packageName == null || menu != null || session != null || inputsOpen) return
+        (shown.dock + shown.grid).firstOrNull { it.packageName == packageName }?.let { focus(it.key) }
     }
 
     /**
@@ -333,6 +345,7 @@ internal class HomeInteraction(
 
             HomeEvent.Stopped -> {
                 showing = false
+                arrivalWaits = false
                 launch = null
                 closeAll()
                 inputs = inputs?.copy(arrival = null)
@@ -349,8 +362,20 @@ internal class HomeInteraction(
             }
 
             HomeEvent.HomePressed -> {
+                arrivalWaits = false
                 closeAll()
                 shown.all.firstOrNull()?.let { rememberFocus(it.key, slot = 0) }
+            }
+
+            HomeEvent.Arrived -> {
+                if (config.value.habitHint && config.value.focusHabitApp) {
+                    arrivals++
+                    arrivalWaits = true
+                }
+            }
+
+            HomeEvent.ArrivalEnded -> {
+                arrivalWaits = false
             }
 
             is HomeEvent.Click -> {

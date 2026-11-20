@@ -54,6 +54,21 @@ class HomeRequestsTestContent :
             homeRequestOf(null, PACKAGE) shouldBe HomeRequest.None
         }
 
+        test("the home key arrives from outside without window focus or when brought to front and never for a power on") {
+            val brought = Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT
+
+            fun powerOn() = home().putExtra(LauncherIntents.EXTRA_POWER_ON, true)
+
+            homeKeyArrives(windowFocused = true, home()) shouldBe false
+            homeKeyArrives(windowFocused = true, home().addFlags(brought)) shouldBe true
+            homeKeyArrives(windowFocused = false, home()) shouldBe true
+            homeKeyArrives(windowFocused = false, home().addFlags(brought)) shouldBe true
+            homeKeyArrives(windowFocused = true, powerOn()) shouldBe false
+            homeKeyArrives(windowFocused = true, powerOn().addFlags(brought)) shouldBe false
+            homeKeyArrives(windowFocused = false, powerOn()) shouldBe false
+            homeKeyArrives(windowFocused = false, powerOn().addFlags(brought)) shouldBe false
+        }
+
         test("the view inputs handler is enabled when asked and back to the manifest default when not") {
             val enabled = PackageManager.COMPONENT_ENABLED_STATE_ENABLED
             val default = PackageManager.COMPONENT_ENABLED_STATE_DEFAULT

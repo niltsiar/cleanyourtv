@@ -682,6 +682,7 @@ val TvConfigParserTest by testSuite {
             "input_arrival" to ("true" to defaults.copy(inputArrival = true)),
             "input_tiles" to ("true" to defaults.copy(inputTiles = true)),
             "habit_hint" to ("true" to defaults.copy(habitHint = true)),
+            "focus_habit_app" to ("true" to defaults.copy(focusHabitApp = true)),
             "app_shelf" to ("true" to defaults.copy(appShelf = true)),
             "app_shelf_sources" to ("""["com.a", "com.b/7", "com.a"]""" to defaults.copy(appShelfSources = listOf("com.a", "com.b/7"))),
             "app_shelf_web_posters" to ("true" to defaults.copy(appShelfWebPosters = true)),

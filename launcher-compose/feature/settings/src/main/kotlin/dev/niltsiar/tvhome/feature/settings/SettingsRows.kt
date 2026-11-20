@@ -166,6 +166,9 @@ internal val settingsGroups: List<Group> =
                     onOff(SettingsRowId.FocusOvershoot, R.string.settings_focus_overshoot, Choices.FocusOvershoot) { it.focusOvershoot },
                     onOff(SettingsRowId.PressFeedback, R.string.settings_press_feedback, Choices.PressFeedback) { it.pressFeedback },
                     onOff(SettingsRowId.HabitHint, R.string.settings_habit_hint, Choices.HabitHint) { it.habitHint },
+                    onOff(SettingsRowId.FocusHabitApp, R.string.settings_focus_habit_app, Choices.FocusHabitApp, { it.habitHint }) {
+                        it.focusHabitApp
+                    },
                     onOff(SettingsRowId.InputArrival, R.string.settings_input_arrival, Choices.InputArrival) { it.inputArrival },
                     onOff(SettingsRowId.InputTiles, R.string.settings_input_tiles, Choices.InputTiles) { it.inputTiles },
                 ),

@@ -193,6 +193,8 @@ public data class TvConfig(
     val inputTiles: Boolean = false,
     /** A quiet mark on the app the household usually opens at this time of day; Home keeps a log of its launches for it. */
     val habitHint: Boolean = false,
+    /** With [habitHint]: arriving on Home at boot or with the Home key from an app, focus goes to the usual app's tile. */
+    val focusHabitApp: Boolean = false,
     /** With focus on a dock app, Home shows that app's own items from the TV provider; needs READ_TV_LISTINGS. */
     val appShelf: Boolean = false,
     /**

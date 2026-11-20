@@ -522,6 +522,38 @@ class KeyServiceTestContent :
                 started()?.hasCategory(Intent.CATEGORY_HOME) shouldBe true
             }
 
+            test("the home power on home always brings up after a wake is marked as a power on") {
+                shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMinutes(10))
+                service.start(TvConfig(powerOnHomeAlways = true))
+                idleFor(2_000)
+
+                screenOn()
+                idleFor(POWER_ON_ALWAYS_DELAY_MS)
+
+                started()?.getBooleanExtra(LauncherIntents.EXTRA_POWER_ON, false) shouldBe true
+            }
+
+            test("the home the live tv redirect brings up at power on is marked as a power on") {
+                service.start(TvConfig(powerOnHome = true))
+                screenOn()
+
+                service.handleWindow(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED, "com.mediatek.wwtv.tvcenter", null)
+
+                started()?.getBooleanExtra(LauncherIntents.EXTRA_POWER_ON, false) shouldBe true
+            }
+
+            test("the home a home press opens over the stock home is not marked as a power on") {
+                stockLauncherIsHome("com.stock.launcher")
+                service.start(TvConfig(stockHomeRedirect = "com.stock.launcher"))
+
+                service.handleKey(key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_HOME))
+                service.handleKey(key(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_HOME, at = 1_120))
+                idleFor(HOME_KEY_DELAY_MS)
+
+                val home = started().shouldNotBeNull()
+                home.getBooleanExtra(LauncherIntents.EXTRA_POWER_ON, false) shouldBe false
+            }
+
             test("power on home always waits when a key was pressed after the screen came on") {
                 shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMinutes(10))
                 service.start(TvConfig(powerOnHomeAlways = true))

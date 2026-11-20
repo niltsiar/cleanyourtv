@@ -118,6 +118,9 @@ public const val LIBRARY_FOCUS: String = "library"
 /** The [FocusRequest.target] of the library button in the top bar. */
 public const val LIBRARY_BUTTON_FOCUS: String = "library-button"
 
+/** The arrival press of a Home that nobody has arrived at from outside since it was created. */
+public const val NO_ARRIVAL: Int = -1
+
 /**
  * The dock app the cinematic shelf shows: its [key] and [label], the [accent] colour of its art, its [position] among
  * the [count] dock apps (one dot each), [lastOpened], when Home last opened it, null if it never did or the time is not
@@ -338,6 +341,12 @@ internal sealed interface HomeEvent {
 
     /** The Home key was pressed while Home shows. */
     data object HomePressed : HomeEvent
+
+    /** Home was arrived at from outside, at its start or with the Home key from an app, and focus is on the first tile. */
+    data object Arrived : HomeEvent
+
+    /** A key went down or the library opened since the last [Arrived]. */
+    data object ArrivalEnded : HomeEvent
 
     /** The host started no app for the tile [key]: the launch failed, or the tile switched input instead. */
     data class AppNotStarted(

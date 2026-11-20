@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import dev.niltsiar.tvhome.core.model.LauncherIntents
 import dev.niltsiar.tvhome.core.model.startActivitySafely
 
 /** This app's Home activity, found the way Android finds it, so the service needs no class from the app module. */
@@ -31,13 +32,14 @@ internal class HomeOpener(
     private val stockPackage: String?,
     private val stockActivities: Set<String>,
 ) {
-    fun open() {
+    fun open(powerOn: Boolean) {
         val component = if (stockHomeStays()) context.homeComponent() else null
         val intent = if (component != null) Intent().setComponent(component) else Intent(Intent.ACTION_MAIN).setPackage(context.packageName)
         context.startActivitySafely(
             intent
                 .addCategory(Intent.CATEGORY_HOME)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED),
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+                .apply { if (powerOn) putExtra(LauncherIntents.EXTRA_POWER_ON, true) },
         )
     }
 

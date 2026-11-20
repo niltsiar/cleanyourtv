@@ -97,6 +97,9 @@ Motion and hints:
   says that it is opening.
 - **Habit hint.** A small mark shows under the app that you usually open at this time of day. For this, Home keeps a
   private log of the apps it opens. With the option off, Home logs nothing.
+- **Start on the usual app.** With Habit hint on, focus starts on the usual app's tile when the TV starts and when you
+  press Home in an app. A key pressed before Home finds that app keeps focus where you put it. Waking the TV, Back from
+  an app and Home pressed on Home never move focus to it.
 - **Input arrival.** When you switch on a device on an HDMI port while Home shows, the Inputs button names the device and
   its port. OK on the button switches to that input. Home never switches input by itself.
 - **Input tiles.** Hold OK on an HDMI or AV row of the Inputs list and pick Add to Home: the input gets a tile at the end of

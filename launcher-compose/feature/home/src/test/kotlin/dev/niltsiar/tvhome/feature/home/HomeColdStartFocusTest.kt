@@ -82,6 +82,51 @@ class HomeColdStartFocusTestContent :
                 seen.filter { it != "tile:pkg.1" }.distinct() shouldBe (emptyList<String>())
             }
 
+            test("a cold start with a usual app focuses the first tile then the usual one and never the top bar") {
+                val usualFocus = config.copy(habitHint = true, focusHabitApp = true)
+                val sources = sources(apps = apps, habit = { "pkg.8" })
+                compose.runOnUiThread {
+                    compose.activity.window.decorView
+                        .requestFocusFromTouch()
+                }
+                compose.setContent {
+                    TvTheme {
+                        val viewModel = rememberHomeViewModel(sources, usualFocus, mutableListOf())
+                        val state = viewModel.uiState.collectAsState()
+                        HomeScreen(
+                            state = { state.value },
+                            layout = usualFocus.homeLayout(),
+                            onFocus = viewModel::onFocus,
+                            onClick = {},
+                            arrivalPress = { 0 },
+                            topBar = usualFocus.topBarLayout(),
+                            shelfLayout = usualFocus.shelfLayout().copy(scrimAlpha = 0f),
+                            actions = viewModel.actions,
+                        )
+                    }
+                }
+                compose.mainClock.autoAdvance = false
+                compose.runOnUiThread {
+                    compose.activity.window.decorView
+                        .requestFocus()
+                }
+                val seen = mutableListOf<String>()
+                repeat(10) {
+                    compose.mainClock.advanceTimeByFrame()
+                    seen += focusedTags()
+                }
+                apps.tryEmit(AppList(NineApps))
+                repeat(30) {
+                    compose.mainClock.advanceTimeByFrame()
+                    seen += focusedTags()
+                }
+                compose.mainClock.autoAdvance = true
+                compose.waitForIdle()
+
+                compose.onNodeWithTag("tile:pkg.8").assertIsFocused()
+                seen.distinct() shouldBe listOf("tile:pkg.1", "tile:pkg.8")
+            }
+
             test("the name on a tile without art reads 4 5 to 1 on its fill under the dock shade of top bar focus") {
                 val ratio = nameContrastUnderTopBarShade(darkTheme = true)
 

@@ -30,6 +30,7 @@ import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.core.model.startActivitySafely
 import dev.niltsiar.tvhome.data.apps.LaunchResult
 import dev.niltsiar.tvhome.data.shelf.startShelfItem
+import dev.niltsiar.tvhome.feature.home.NO_ARRIVAL
 import dev.niltsiar.tvhome.feature.library.MoleculeLibraryViewModel
 import dev.niltsiar.tvhome.service.keys.PowerMenu
 import dev.niltsiar.tvhome.service.keys.ServiceRepair
@@ -50,6 +51,9 @@ class MainActivity : ComponentActivity() {
     /** The stored choices over the theme: composition follows the flow, a key handler reads the value when the key arrives. */
     private val config get() = graph.configRepository.config
     private var homePresses by mutableIntStateOf(0)
+
+    /** The Home press that brought Home back from outside ([homeKeyArrives]), 0 for this Home's start, or [NO_ARRIVAL]. */
+    private var arrivalPress by mutableIntStateOf(NO_ARRIVAL)
     private var inputsRequests by mutableIntStateOf(0)
     private var bootOpening: Job? = null
     private var wakeOpening: Job? = null
@@ -97,8 +101,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // This is Home: Back has nowhere to go, unless back_opens_clock.
         onBackPressedDispatcher.addCallback(this) { if (config.value.backOpensClock) showClock() }
-        // Not after a recreate: the launch intent survives it and would open the library or the list again.
-        if (savedInstanceState == null) homeRequestOf(intent, packageName).takeIf { it != HomeRequest.HomeKey }?.let(::handle)
+        // Not after a recreate: the launch intent survives it and would open the library or the list again. A new Home that
+        // opens nothing is an arrival: it has no window focus yet.
+        if (savedInstanceState == null) {
+            when (val request = homeRequestOf(intent, packageName)) {
+                HomeRequest.HomeKey, HomeRequest.None -> if (homeKeyArrives(windowFocused = false, intent)) arrivalPress = 0
+                else -> handle(request)
+            }
+        }
         // handle_view_inputs and restore_key_services are theme-only: read once, here.
         applyViewInputsHandler(config.value.handleViewInputs)
         lifecycleScope.launch {
@@ -143,6 +153,7 @@ class MainActivity : ComponentActivity() {
                     libraryOpen = { libraryOpen?.value?.open == true },
                     onOpenLibrary = { library.onOpen() },
                     homePresses = { homePresses },
+                    arrivalPress = { arrivalPress },
                     inputsRequests = { inputsRequests },
                     settingsClosing = { settingsClosing },
                     overlays = {
@@ -238,9 +249,13 @@ class MainActivity : ComponentActivity() {
         idleClock.cancel()
     }
 
+    /** The Home key that ends the Launcher settings page is no arrival: Home's focus is as for a press on Home. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        handle(homeRequestOf(intent, packageName))
+        val request = homeRequestOf(intent, packageName)
+        val arrives = request == HomeRequest.HomeKey && !settingsOpen && homeKeyArrives(hasWindowFocus(), intent)
+        handle(request)
+        if (arrives) arrivalPress = homePresses
     }
 
     /**

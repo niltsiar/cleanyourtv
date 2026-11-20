@@ -101,6 +101,7 @@ public object Choices {
     public val FocusOvershoot: Choice<Boolean> = boolChoice("focus_overshoot") { copy(focusOvershoot = it) }
     public val PressFeedback: Choice<Boolean> = boolChoice("press_feedback") { copy(pressFeedback = it) }
     public val HabitHint: Choice<Boolean> = boolChoice("habit_hint") { copy(habitHint = it) }
+    public val FocusHabitApp: Choice<Boolean> = boolChoice("focus_habit_app") { copy(focusHabitApp = it) }
     public val InputArrival: Choice<Boolean> = boolChoice("input_arrival") { copy(inputArrival = it) }
     public val InputTiles: Choice<Boolean> = boolChoice("input_tiles") { copy(inputTiles = it) }
     public val RestartPress: Choice<Boolean> = boolChoice("restart_press") { copy(restartPress = it) }
@@ -147,6 +148,7 @@ public object Choices {
             FocusOvershoot,
             PressFeedback,
             HabitHint,
+            FocusHabitApp,
             InputArrival,
             InputTiles,
             RestartPress,

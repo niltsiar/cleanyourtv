@@ -32,6 +32,7 @@
   <string name="settings_focus_overshoot">Sprężysty fokus</string>
   <string name="settings_press_feedback">Reakcja na naciśnięcie</string>
   <string name="settings_habit_hint">Podpowiedź z nawyku</string>
+  <string name="settings_focus_habit_app">Zaczynaj od zwykłej aplikacji</string>
   <string name="settings_input_arrival">Powiadomienie o nowym wejściu</string>
   <string name="settings_input_tiles">Kafelki wejść</string>
   <string name="settings_follow_theme">Użyj motywu (zresetuj wybór)</string>

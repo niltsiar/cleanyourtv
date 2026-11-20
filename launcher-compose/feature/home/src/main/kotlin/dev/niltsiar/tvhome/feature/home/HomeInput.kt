@@ -96,6 +96,33 @@ internal class HomeInput(
     /** The library was opened from the top bar button, so closing it returns there. */
     var fromTopBar = false
 
+    /** The arrival press [arrive] last told Home's state of. */
+    private var arrivalSent = NO_ARRIVAL
+
+    /** An arrival was told and no key has gone down since. */
+    private var arrivalOpen = false
+
+    /**
+     * Once focus is on the first tile: tells Home's state of the arrival when [arrivalPress], the Home press that brought Home
+     * back from outside (0 for a new Home), is the latest of [homePresses] and was not told before.
+     */
+    fun arrive(
+        arrivalPress: Int,
+        homePresses: Int,
+    ) {
+        if (arrivalPress == NO_ARRIVAL || arrivalPress != homePresses || arrivalPress == arrivalSent) return
+        arrivalSent = arrivalPress
+        arrivalOpen = true
+        actions.onArrived()
+    }
+
+    /** A key down or the library opening after an arrival: Home's state no longer moves focus for it. */
+    fun endArrival() {
+        if (!arrivalOpen) return
+        arrivalOpen = false
+        actions.onArrivalEnded()
+    }
+
     /** The system asking for the list. */
     fun openInputs() {
         actions.onInputs()
@@ -130,6 +157,7 @@ internal class HomeInput(
         event: KeyEvent,
         state: HomeUiState,
     ): Boolean {
+        if (event.type == KeyEventType.KeyDown) endArrival()
         if (hold.eatsOkUp(event)) return true
         val ok = event.key.isOk()
         val reorder = state.reorder

@@ -104,7 +104,7 @@ internal fun homePresenter(
             interaction.launchEnded(launch.token)
         }
     }
-    LaunchedEffect(interaction, showing, current.habitHint) {
+    LaunchedEffect(interaction, showing, current.habitHint, interaction.arrivals) {
         if (current.habitHint && showing) {
             while (true) {
                 interaction.habitFound(sources.habit())

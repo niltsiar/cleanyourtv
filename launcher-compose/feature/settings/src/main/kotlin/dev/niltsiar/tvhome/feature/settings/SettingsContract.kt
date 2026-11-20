@@ -38,6 +38,7 @@ public enum class SettingsRowId {
     FocusOvershoot,
     PressFeedback,
     HabitHint,
+    FocusHabitApp,
     InputArrival,
     InputTiles,
     RestartPress,

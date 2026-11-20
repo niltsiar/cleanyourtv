@@ -199,6 +199,30 @@ class SettingsPresenterTestContent :
                 settings.state.followsTheme.shouldBeFalse()
             }
 
+            test("the Start on the usual app row shows after Habit hint only while it is on and stores focus_habit_app") {
+                val settings = settings()
+
+                fun motionRows(state: SettingsUiState) =
+                    state.sections
+                        .single { it.heading == R.string.settings_group_motion }
+                        .rows
+                        .map { it.id }
+                (SettingsRowId.FocusHabitApp in motionRows(settings.state)).shouldBeFalse()
+
+                settings.pick(SettingsRowId.HabitHint, onOff.indexOf(true))
+                settings.awaitState { SettingsRowId.FocusHabitApp in motionRows(it) }
+                val rows = motionRows(settings.state)
+                rows[rows.indexOf(SettingsRowId.HabitHint) + 1] shouldBe SettingsRowId.FocusHabitApp
+                settings.row(SettingsRowId.FocusHabitApp).selected shouldBe onOff.indexOf(false)
+
+                settings.pick(SettingsRowId.FocusHabitApp, onOff.indexOf(true))
+                settings.awaitState { it.row(SettingsRowId.FocusHabitApp).selected == onOff.indexOf(true) }
+                settings.config.focusHabitApp shouldBe true
+
+                settings.pick(SettingsRowId.HabitHint, onOff.indexOf(false))
+                settings.awaitState { SettingsRowId.FocusHabitApp !in motionRows(it) }
+            }
+
             test("the Restart from Home row is off by default and stores restart_press") {
                 val settings = settings()
                 settings.row(SettingsRowId.RestartPress).selected shouldBe onOff.indexOf(false)

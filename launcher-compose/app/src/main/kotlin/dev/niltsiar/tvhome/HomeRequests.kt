@@ -42,6 +42,18 @@ internal fun homeRequestOf(
 }
 
 /**
+ * Whether a Home key [intent] brings Home back from outside it, as Launcher3 tells it: Home with window focus and not
+ * brought to the front was already on screen. The order of onNewIntent and onResume is no contract, so the resumed state
+ * cannot tell it. A Home the key service brings up when the TV comes on ([LauncherIntents.EXTRA_POWER_ON]) never arrives.
+ */
+internal fun homeKeyArrives(
+    windowFocused: Boolean,
+    intent: Intent,
+): Boolean =
+    !intent.getBooleanExtra(LauncherIntents.EXTRA_POWER_ON, false) &&
+        (!windowFocused || intent.flags and Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT != 0)
+
+/**
  * The state to write for InputsRequestActivity when handle_view_inputs is [on], or null when [current] already is it.
  * Off is DEFAULT, not DISABLED: the manifest keeps the activity disabled.
  */
