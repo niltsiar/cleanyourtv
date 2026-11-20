@@ -1,6 +1,7 @@
 package dev.niltsiar.tvhome.data.inputs
 
 import android.content.Context
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import androidx.core.net.toUri
@@ -35,22 +36,27 @@ internal class CoocaaSources(
     private val context: Context,
 ) {
     private val sourceList = "content://com.skyworth.tv.provider/system/source_list".toUri()
+
+    /** Some Coocaa builds answer nothing on [sourceList] and have the list here, where a projection is mandatory. */
+    private val sdkSourceList = "content://com.skyworth.tv.sdk.provider/system/source_list".toUri()
     private val method = "content://com.skyworth.tv.sdk.provider/method".toUri()
 
-    /** The sources in menu order; empty where the provider is missing. */
-    fun list(): List<CoocaaSource> =
+    /** The sources in menu order, from [sourceList] or, when it lists none, [sdkSourceList]; empty where both are missing. */
+    fun list(): List<CoocaaSource> = sortedCoocaaSources(query(sourceList).ifEmpty { query(sdkSourceList) })
+
+    private fun query(uri: Uri): List<CoocaaSource> =
         try {
             val out = mutableListOf<CoocaaSource>()
-            context.contentResolver.query(sourceList, Columns, null, null, null)?.use { cursor ->
+            context.contentResolver.query(uri, Columns, null, null, null)?.use { cursor ->
                 while (cursor.moveToNext()) {
                     val name = cursor.getString(0) ?: continue
                     val label = cursor.getString(2)
                     out += CoocaaSource(name, cursor.getInt(1), if (label.isNullOrEmpty()) name else label)
                 }
             }
-            sortedCoocaaSources(out)
+            out
         } catch (e: RuntimeException) {
-            Log.w(TAG, "cannot list the Coocaa sources: $e")
+            Log.w(TAG, "cannot list the Coocaa sources at $uri: $e")
             emptyList()
         }
 
