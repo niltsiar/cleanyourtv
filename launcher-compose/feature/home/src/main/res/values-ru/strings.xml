@@ -78,4 +78,7 @@
   <string name="restart_question">Перезагрузить ТВ?</string>
   <string name="restart_confirm">Перезагрузить</string>
   <string name="restart_cancel">Отмена</string>
+  <string name="sleep_timer">Таймер сна</string>
+  <string name="sleep_timer_off">Выкл.</string>
+  <string name="sleep_timer_minutes">%1$d мин</string>
 </resources>

@@ -76,4 +76,7 @@
   <string name="restart_question">¿Reiniciar el televisor?</string>
   <string name="restart_confirm">Reiniciar</string>
   <string name="restart_cancel">Cancelar</string>
+  <string name="sleep_timer">Temporizador de apagado</string>
+  <string name="sleep_timer_off">Desactivado</string>
+  <string name="sleep_timer_minutes">%1$d min</string>
 </resources>

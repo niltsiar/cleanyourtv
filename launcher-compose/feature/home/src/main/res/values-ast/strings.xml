@@ -70,4 +70,7 @@
   <string name="restart_question">¿Reaniciar la TV?</string>
   <string name="restart_confirm">Reaniciar</string>
   <string name="restart_cancel">Encaboxar</string>
+  <string name="sleep_timer">Temporizador d\'apagáu</string>
+  <string name="sleep_timer_off">Non</string>
+  <string name="sleep_timer_minutes">%1$d min</string>
 </resources>

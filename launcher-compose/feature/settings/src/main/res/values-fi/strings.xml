@@ -65,4 +65,5 @@
   <string name="settings_now_playing_unavailable">Ei käytettävissä tässä televisiossa</string>
   <string name="settings_now_playing_adb">Salli adb:llä: %1$s</string>
   <string name="settings_restart_press">Käynnistä TV uudelleen kotinäkymästä</string>
+  <string name="settings_sleep_timer">Uniajastin</string>
 </resources>

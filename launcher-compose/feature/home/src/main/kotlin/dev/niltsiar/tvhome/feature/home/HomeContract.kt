@@ -44,6 +44,8 @@ import java.util.Locale
  * [inputTiles] is what each input tile shows now, by key, apart from the app list so a change ends no session; [focusedInput] is
  * the focused tile's when it is an input tile, whose line then says its state and never when Home last opened it.
  * [inputMenu] is the small menu a held OK on an Inputs row opened over the list (input_tiles), null while none is.
+ * [sleepStep] is the sleep timer's step in minutes and [sleepMinutesLeft] the minutes it has left (sleep_timer), 0 and null
+ * while it is off.
  * [config] is the config this state was made with. The layouts are read from it, so they always match the split of [dock] and
  * [grid].
  */
@@ -79,6 +81,8 @@ public data class HomeUiState(
     val inputTiles: Map<String, InputTileLive> = emptyMap(),
     val focusedInput: InputTileLive? = null,
     val inputMenu: InputPinMenu? = null,
+    val sleepStep: Int = 0,
+    val sleepMinutesLeft: Int? = null,
     val config: TvConfig = TvConfig(),
 )
 
@@ -180,6 +184,9 @@ public sealed interface HomeEffect {
     /** restart_press: the key service opens the power menu and presses its Restart item. */
     public data object PressRestart : HomeEffect
 
+    /** sleep_timer: the key service steps its timer to the next of Off, 15, 30, 60, 90 and 120 minutes. */
+    public data object StepSleepTimer : HomeEffect
+
     /** Switch to what an Inputs row stands for: a TV input, a Coocaa source, the source panel or Live TV. */
     public data class OpenInput(
         val target: InputTarget,
@@ -231,6 +238,12 @@ public class HomeSources(
     public val hasNativeSettings: () -> Boolean = { false },
     /** Whether the key service is bound and can open the system power menu, for the Settings menu's "Restart". */
     public val powerMenuAvailable: () -> Boolean = { false },
+    /** Whether the key service can run the sleep timer (sleep_timer): bound, on Android 9 or later. */
+    public val sleepTimerAvailable: () -> Boolean = { false },
+    /** The sleep timer's step in minutes, 0 while it is off. */
+    public val sleepTimerStep: Flow<Int> = flowOf(0),
+    /** The whole minutes the sleep timer has left, again each time they change; null while it is off. */
+    public val sleepMinutesLeft: Flow<Int?> = flowOf(null),
     /** The Inputs button and its list; never emits for a TV that cannot say, which leaves the button showing. */
     public val inputs: Flow<InputsMenu> = emptyFlow(),
     /** Where focus was last, kept across the activity being created again. */
@@ -433,6 +446,8 @@ internal fun homeUiState(
     appShelf: AppShelf? = null,
     inputTiles: Map<String, InputTileLive> = emptyMap(),
     inputMenu: InputPinMenu? = null,
+    sleepStep: Int = 0,
+    sleepMinutesLeft: Int? = null,
     config: TvConfig = TvConfig(),
 ): HomeUiState {
     val focused = apps.all.firstOrNull { it.key == focusedKey } ?: apps.all.firstOrNull()
@@ -475,6 +490,8 @@ internal fun homeUiState(
         inputTiles = inputTiles,
         focusedInput = focusedInput,
         inputMenu = inputMenu,
+        sleepStep = sleepStep,
+        sleepMinutesLeft = sleepMinutesLeft,
         config = config,
     )
 }

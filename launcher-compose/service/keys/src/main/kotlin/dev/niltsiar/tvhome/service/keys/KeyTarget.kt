@@ -16,6 +16,7 @@ internal enum class ActionWord(
     Settings("settings"),
     Wifi("wifi"),
     Library("library"),
+    SleepTimer("sleep_timer"),
     Ignore("ignore"),
 }
 

@@ -56,6 +56,7 @@ class TargetLauncherTestContent :
                     performGlobal = { false },
                     liveTvPackage = liveTvPackage,
                     opened = appLauncher,
+                    sleepTimer = {},
                 )
 
                 fun installTvApp(pkg: String) {

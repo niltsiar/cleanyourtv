@@ -78,4 +78,7 @@
   <string name="restart_question">Перезапустити ТВ?</string>
   <string name="restart_confirm">Перезапустити</string>
   <string name="restart_cancel">Скасувати</string>
+  <string name="sleep_timer">Таймер сну</string>
+  <string name="sleep_timer_off">Вимк.</string>
+  <string name="sleep_timer_minutes">%1$d хв</string>
 </resources>

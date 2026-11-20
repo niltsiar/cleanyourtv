@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">Non disponibile su questa TV</string>
     <string name="restart_not_possible">Non è possibile riavviare questa TV da Home</string>
+    <string name="sleep_card">La TV si spegne tra %1$d s. OK: altri 15 minuti.</string>
+    <string name="sleep_notice_minutes">Timer di spegnimento: %1$d min</string>
+    <string name="sleep_notice_off">Timer di spegnimento disattivato</string>
 </resources>

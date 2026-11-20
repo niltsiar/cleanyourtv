@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">Ikke tilgjengelig på denne TV-en</string>
     <string name="restart_not_possible">Denne TV-en kan ikke startes på nytt fra startskjermen</string>
+    <string name="sleep_card">TV-en slår seg av om %1$d s. OK: 15 minutter til.</string>
+    <string name="sleep_notice_minutes">Innsovningstimer: %1$d min</string>
+    <string name="sleep_notice_off">Innsovningstimer av</string>
 </resources>

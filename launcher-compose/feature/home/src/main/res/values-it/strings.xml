@@ -76,4 +76,7 @@
   <string name="restart_question">Riavviare la TV?</string>
   <string name="restart_confirm">Riavvia</string>
   <string name="restart_cancel">Annulla</string>
+  <string name="sleep_timer">Timer di spegnimento</string>
+  <string name="sleep_timer_off">Disattivato</string>
+  <string name="sleep_timer_minutes">%1$d min</string>
 </resources>

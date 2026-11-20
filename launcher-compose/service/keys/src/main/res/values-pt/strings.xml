@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">Não disponível nesta TV</string>
     <string name="restart_not_possible">Não é possível reiniciar esta TV pela tela inicial</string>
+    <string name="sleep_card">A TV desliga em %1$d s. OK: mais 15 minutos.</string>
+    <string name="sleep_notice_minutes">Timer de desligamento: %1$d min</string>
+    <string name="sleep_notice_off">Timer de desligamento desativado</string>
 </resources>

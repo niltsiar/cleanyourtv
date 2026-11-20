@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">TV này không hỗ trợ</string>
     <string name="restart_not_possible">Không thể khởi động lại TV này từ màn hình chính</string>
+    <string name="sleep_card">TV sẽ tắt sau %1$d giây. OK: thêm 15 phút.</string>
+    <string name="sleep_notice_minutes">Hẹn giờ tắt: %1$d phút</string>
+    <string name="sleep_notice_off">Đã tắt hẹn giờ</string>
 </resources>

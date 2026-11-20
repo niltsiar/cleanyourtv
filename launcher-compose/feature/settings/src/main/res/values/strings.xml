@@ -36,6 +36,7 @@
   <string name="settings_input_arrival">Input arrival</string>
   <string name="settings_input_tiles">Input tiles</string>
   <string name="settings_restart_press">Restart TV from Home</string>
+  <string name="settings_sleep_timer">Sleep timer</string>
   <string name="settings_follow_theme">Follow theme (reset on-TV choices)</string>
   <string name="settings_tv_settings">TV system settings</string>
   <string name="home_settings">Choose default home</string>

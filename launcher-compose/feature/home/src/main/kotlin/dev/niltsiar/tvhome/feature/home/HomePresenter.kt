@@ -19,6 +19,7 @@ import dev.niltsiar.tvhome.core.model.unusedKeys
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOf
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -131,6 +132,13 @@ internal fun homePresenter(
             }
         }
     }
+    val sleepOn = current.sleepTimer
+    val sleepStep by remember(sources, sleepOn) { if (sleepOn) sources.sleepTimerStep else flowOf(0) }.collectAsState(0)
+    var sleepMinutesLeft by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(interaction, showing, sleepOn) {
+        sleepMinutesLeft = null
+        if (showing && sleepOn) sources.sleepMinutesLeft.collect { sleepMinutesLeft = it }
+    }
     val now by sources.clock.collectAsState(null)
     val network by sources.network.collectAsState(NoNetwork)
     val wallpaper by sources.wallpaper.collectAsState(NoWallpaper)
@@ -183,6 +191,8 @@ internal fun homePresenter(
         appShelf = interaction.appShelf,
         inputTiles = inputTiles,
         inputMenu = interaction.inputMenu,
+        sleepStep = sleepStep,
+        sleepMinutesLeft = sleepMinutesLeft,
         config = current,
     )
 }

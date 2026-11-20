@@ -38,6 +38,7 @@ import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import java.time.ZoneId
@@ -270,6 +271,27 @@ class HeroBandUiTestContent :
                 compose.onNode(hasTestTag("menu:PowerMenu") and hasText("Restart TV")).assertExists()
             }
 
+            test("the sleep timer row names its step and home shows a moon with the minutes left beside the clock") {
+                val step = MutableStateFlow(0)
+                showHome(cinematic.copy(sleepTimer = true), powerMenu = true, sleepStep = step, minutesLeft = flowOf(28))
+
+                compose.onNode(hasTestTag("sleep_timer") and hasText("28 min")).assertExists()
+                compose.onNodeWithTag("sleep_timer").getBoundsInRoot().left shouldBeGreaterThanOrEqualTo
+                    compose.onNodeWithTag("clock").getBoundsInRoot().right
+                press(Key.DirectionUp)
+                repeat(2) { press(Key.DirectionRight) }
+                holdOk()
+                repeat(3) { press(Key.DirectionDown) }
+                val row = compose.onNodeWithTag("menu:SleepTimer")
+                row.assertIsFocused()
+                compose.onNode(hasTestTag("menu:SleepTimer") and hasText("Sleep timer") and hasText("Off")).assertExists()
+
+                step.value = 30
+                compose.waitForIdle()
+
+                compose.onNode(hasTestTag("menu:SleepTimer") and hasText("30 min")).assertIsFocused()
+            }
+
             test("with restart_press, restart tv asks restart the tv with cancel focused") {
                 showHome(cinematic.copy(restartPress = true), powerMenu = true)
                 openRestartConfirm()
@@ -310,12 +332,17 @@ private class HeroBandUiTestFixture : JUnit4RulesContext() {
         libraryCount: Flow<Int> = emptyFlow(),
         powerMenu: Boolean = false,
         lastOpened: Map<String, Long> = emptyMap(),
+        sleepStep: Flow<Int> = flowOf(0),
+        minutesLeft: Flow<Int?> = flowOf(null),
     ) {
         val sources =
             sources(
                 apps = flowOf(AppList(apps)),
                 libraryCount = libraryCount,
                 powerMenuAvailable = { powerMenu },
+                sleepTimerAvailable = { powerMenu },
+                sleepTimerStep = sleepStep,
+                sleepMinutesLeft = minutesLeft,
                 lastOpened = flowOf(lastOpened),
             )
         // A TV has no touch screen; the native graphics mode starts in touch mode, where nothing takes key focus.

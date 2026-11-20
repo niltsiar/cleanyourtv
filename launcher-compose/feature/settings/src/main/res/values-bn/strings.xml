@@ -65,4 +65,5 @@
   <string name="settings_now_playing_unavailable">এই টিভিতে এভাইলেবল নেই</string>
   <string name="settings_now_playing_adb">adb দিয়ে অনুমতি দিন: %1$s</string>
   <string name="settings_restart_press">হোম থেকে টিভি রিস্টার্ট</string>
+  <string name="settings_sleep_timer">স্লিপ টাইমার</string>
 </resources>

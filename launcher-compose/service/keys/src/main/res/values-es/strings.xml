@@ -4,4 +4,7 @@
     <string name="key_service_name">Botones del mando</string>
     <string name="key_service_description">Hace que los botones Inicio, Entrada, Ajustes y de aplicaciones del mando abran este lanzador y las apps que has elegido.</string>
     <string name="restart_not_possible">No se puede reiniciar este TV desde Inicio</string>
+    <string name="sleep_card">El TV se apaga en %1$d s. OK: 15 minutos más.</string>
+    <string name="sleep_notice_minutes">Temporizador de apagado: %1$d min</string>
+    <string name="sleep_notice_off">Temporizador de apagado desactivado</string>
 </resources>

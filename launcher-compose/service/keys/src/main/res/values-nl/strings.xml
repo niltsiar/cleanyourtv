@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">Niet beschikbaar op deze tv</string>
     <string name="restart_not_possible">Deze tv kan niet vanuit Home worden herstart</string>
+    <string name="sleep_card">De tv gaat over %1$d s uit. OK: 15 minuten langer.</string>
+    <string name="sleep_notice_minutes">Slaaptimer: %1$d min</string>
+    <string name="sleep_notice_off">Slaaptimer uit</string>
 </resources>

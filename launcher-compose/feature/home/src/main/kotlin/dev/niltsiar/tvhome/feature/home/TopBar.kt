@@ -15,6 +15,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.interaction.FocusInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
@@ -65,6 +67,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
@@ -106,6 +109,7 @@ private const val DATE_INK_ALPHA = 0.88f
 private val NetworkIconRise = 6.dp
 private val DigitRise = 10.dp
 private val ClockPillPadding = 24.dp
+private val SleepPillPadding = 20.dp
 private val GreetingGap = 20.dp
 private val ClockBaselineTop = 29.dp
 private val DateBaselineTop = 47.dp
@@ -252,6 +256,7 @@ internal fun TopBar(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         ClockPill(glass, state, layout.dateBelowClock)
+        SleepPill(glass, state)
         Spacer(Modifier.weight(1f))
         if (layout.showInputsPill && inputsAvailable) {
             val inputsSource = remember { MutableInteractionSource() }
@@ -386,6 +391,37 @@ internal fun ClockPill(
             DateBelowClock(state, dateInk)
         } else {
             DateBesideClock(state, dateInk)
+        }
+    }
+}
+
+/** sleep_timer: a moon and the minutes the timer has left, while it runs. */
+@Composable
+private fun SleepPill(
+    glass: GlassState,
+    state: () -> HomeUiState,
+) {
+    val minutes by remember(state) { derivedStateOf { state().sleepMinutesLeft } }
+    val left = minutes ?: return
+    val ink = TvTheme.colors.onSurface
+    GlassSurface(
+        glass = glass,
+        modifier = Modifier.fillMaxHeight().testTag("sleep_timer").semantics(mergeDescendants = true) {},
+        shape = CircleShape,
+        shadow = ChromeShadow.Pill,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxHeight().padding(horizontal = SleepPillPadding),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Box(Modifier.size(20.dp)) { IconPart(R.drawable.ic_sleep_moon, { ink }) }
+            BasicText(
+                stringResource(R.string.sleep_timer_minutes, left),
+                style = TvTheme.typography.pillLabel,
+                maxLines = 1,
+                color = { ink },
+            )
         }
     }
 }

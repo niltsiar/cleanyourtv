@@ -65,4 +65,5 @@
   <string name="settings_now_playing_unavailable">이 TV에서 사용할 수 없음</string>
   <string name="settings_now_playing_adb">adb로 허용하세요: %1$s</string>
   <string name="settings_restart_press">홈에서 TV 다시 시작</string>
+  <string name="settings_sleep_timer">취침 타이머</string>
 </resources>

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -90,10 +91,10 @@ public class BesideAnchor(
  * An overlay panel of [rows] hanging from [anchor] (in the root's coordinates): below it, or above when it would not
  * fit, from its left edge, or from its right edge when [alignEnd]; from the other edge when the panel would pass
  * [edgeMargin] from the side of the screen it grows towards and the other edge keeps it inside; or [beside] it. Each
- * row is [rowHeight] tall, shows the string [label] gives and carries the test tag [rowTag]; the panel's own tag is
- * `menu`, [padding] inside its edge, and the rows' corners are concentric with the panel's. It rises and fades in with
- * a spring and takes focus on the row at [focusRow], the first by default, and never goes above [topLimit]; focus cannot
- * leave it. A [title] is a header row over the rows, tagged `menu:title`. A row for which [dividerBefore] is true, and
+ * row is [rowHeight] tall, shows the string [label] gives, with the text [value] gives at its end when not null, and
+ * carries the test tag [rowTag]; the panel's own tag is `menu`, [padding] inside its edge, and the rows' corners are
+ * concentric with the panel's. It rises and fades in with a spring and takes focus on the row at [focusRow], the first
+ * by default, and never goes above [topLimit]; focus cannot leave it. A [title] is a header row over the rows, tagged `menu:title`. A row for which [dividerBefore] is true, and
  * that is not the first, has a [MenuDivider] above it. A row for which [warn] is true draws its text in coral (dark red on the light surface)
  * until it has focus, and the line above it is white 0.18. [above], [anchorGap], [columnGap] and [edgeMargin] are
  * [GlassDropdown]'s.
@@ -119,6 +120,7 @@ public fun <T> GlassMenu(
     dividerBefore: (T) -> Boolean = { false },
     warn: (T) -> Boolean = { false },
     focusRow: Int = 0,
+    value: (T) -> String? = { null },
 ) {
     val opening = remember { FocusRequester() }
     val rowShape = remember(padding) { menuRowShape(padding) }
@@ -140,7 +142,7 @@ public fun <T> GlassMenu(
             val warned = warn(row)
             if (index > 0 && dividerBefore(row)) MenuDivider(alpha = if (warned) WARN_DIVIDER_ALPHA else DIVIDER_ALPHA)
             val focus = if (index == focusRow) Modifier.focusRequester(opening) else Modifier
-            MenuItem(label(row), rowTag(row), { onPick(row) }, rowHeight, rowShape, focus, warned)
+            MenuItem(label(row), rowTag(row), { onPick(row) }, rowHeight, rowShape, focus, warned, value(row))
         }
     }
 }
@@ -431,16 +433,23 @@ private fun MenuItem(
     shape: Shape,
     modifier: Modifier = Modifier,
     warn: Boolean = false,
+    value: String? = null,
 ) {
     val surfaces = TvTheme.surfaces
     val warnInk = if (surfaces.dark) WarnInkOnDark else WarnInkOnLight
     FocusPill(onClick = onClick, modifier = modifier.fillMaxWidth().height(height).testTag(tag), shape = shape) { ink ->
-        BasicText(
-            text = stringResource(label),
-            style = TvTheme.typography.pillLabel,
-            maxLines = 1,
-            color = if (warn) ColorProducer { lerp(warnInk, surfaces.pillContent, ink.progress()) } else ink.content,
+        Row(
             modifier = Modifier.align(Alignment.CenterStart).fillMaxWidth().padding(horizontal = 16.dp),
-        )
+            horizontalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            BasicText(
+                text = stringResource(label),
+                style = TvTheme.typography.pillLabel,
+                maxLines = 1,
+                color = if (warn) ColorProducer { lerp(warnInk, surfaces.pillContent, ink.progress()) } else ink.content,
+                modifier = Modifier.weight(1f),
+            )
+            if (value != null) BasicText(value, style = TvTheme.typography.pillLabel, maxLines = 1, color = ink.content)
+        }
     }
 }

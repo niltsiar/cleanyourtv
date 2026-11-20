@@ -69,4 +69,7 @@
   <string name="restart_question">Khởi động lại TV?</string>
   <string name="restart_confirm">Khởi động lại</string>
   <string name="restart_cancel">Hủy</string>
+  <string name="sleep_timer">Hẹn giờ tắt</string>
+  <string name="sleep_timer_off">Tắt</string>
+  <string name="sleep_timer_minutes">%1$d phút</string>
 </resources>

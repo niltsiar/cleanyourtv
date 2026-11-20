@@ -259,6 +259,11 @@ public data class TvConfig(
     val restoreKeyServices: Boolean = false,
     /** Restart TV in the Settings menu asks on Home, then the key service presses Restart in the system power dialog. */
     val restartPress: Boolean = false,
+    /**
+     * A sleep timer in the Settings menu and the app_keys word sleep_timer: the key service puts the TV in standby when it
+     * ends, after a card over the last 60 s. Needs the key service bound and Android 9.
+     */
+    val sleepTimer: Boolean = false,
     /** Minutes Home may sit untouched before the clock screensaver, 0 to 1440; 0 is off. */
     val homeIdleClockMinutes: Int = 0,
     /** Back on Home opens the clock screensaver instead of doing nothing. */

@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">Auf diesem TV nicht verfügbar</string>
     <string name="restart_not_possible">Dieser TV kann nicht vom Startbildschirm aus neu gestartet werden</string>
+    <string name="sleep_card">Der Fernseher schaltet sich in %1$d s aus. OK: 15 Minuten länger.</string>
+    <string name="sleep_notice_minutes">Sleep-Timer: %1$d Min.</string>
+    <string name="sleep_notice_off">Sleep-Timer aus</string>
 </resources>

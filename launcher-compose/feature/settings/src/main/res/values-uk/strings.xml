@@ -65,4 +65,5 @@
   <string name="settings_now_playing_unavailable">Недоступно на цьому телевізорі</string>
   <string name="settings_now_playing_adb">Дозвольте через adb: %1$s</string>
   <string name="settings_restart_press">Перезапуск ТВ з головного екрана</string>
+  <string name="settings_sleep_timer">Таймер сну</string>
 </resources>

@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">Non disponible nesta TV</string>
     <string name="restart_not_possible">Nun ye posible reaniciar esta TV dende Aniciu</string>
+    <string name="sleep_card">La TV apágase en %1$d s. OK: 15 minutos más.</string>
+    <string name="sleep_notice_minutes">Temporizador d\'apagáu: %1$d min</string>
+    <string name="sleep_notice_off">Temporizador d\'apagáu desactiváu</string>
 </resources>

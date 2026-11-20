@@ -78,4 +78,7 @@
   <string name="restart_question">Restartovat TV?</string>
   <string name="restart_confirm">Restartovat</string>
   <string name="restart_cancel">Zrušit</string>
+  <string name="sleep_timer">Časovač vypnutí</string>
+  <string name="sleep_timer_off">Vypnuto</string>
+  <string name="sleep_timer_minutes">%1$d min</string>
 </resources>

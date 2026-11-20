@@ -73,4 +73,7 @@
   <string name="restart_question">Starta om TV:n?</string>
   <string name="restart_confirm">Starta om</string>
   <string name="restart_cancel">Avbryt</string>
+  <string name="sleep_timer">Insomningstimer</string>
+  <string name="sleep_timer_off">Av</string>
+  <string name="sleep_timer_minutes">%1$d min</string>
 </resources>

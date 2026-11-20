@@ -31,6 +31,7 @@ import dev.niltsiar.tvhome.feature.library.LibrarySources
 import dev.niltsiar.tvhome.feature.settings.PickerArt
 import dev.niltsiar.tvhome.feature.settings.SettingsSources
 import dev.niltsiar.tvhome.service.keys.PowerMenu
+import dev.niltsiar.tvhome.service.keys.SleepTimer
 import dev.niltsiar.tvhome.service.media.NowPlayingAccess
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
@@ -251,6 +252,9 @@ interface AppGraph {
             hasAppInfo = systemSettings::hasAppInfo,
             hasNativeSettings = systemSettings::hasNativeSettings,
             powerMenuAvailable = PowerMenu::available,
+            sleepTimerAvailable = SleepTimer::available,
+            sleepTimerStep = SleepTimer.current.map { it.step },
+            sleepMinutesLeft = SleepTimer.minutesLeft(),
             saveOrder = appsProvider::saveOrder,
             removeFromHome = { libraryCatalog.setOnHome(it, false) },
             inputs = inputsProvider.menu,

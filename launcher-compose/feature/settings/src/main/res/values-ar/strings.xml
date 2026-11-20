@@ -65,4 +65,5 @@
   <string name="settings_now_playing_unavailable">غير متاح على هذا التلفاز</string>
   <string name="settings_now_playing_adb">اسمح به عبر adb: %1$s</string>
   <string name="settings_restart_press">إعادة تشغيل التلفاز من الرئيسية</string>
+  <string name="settings_sleep_timer">مؤقت النوم</string>
 </resources>

@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">לא זמין בטלוויזיה זו</string>
     <string name="restart_not_possible">אי אפשר להפעיל מחדש את הטלוויזיה הזו ממסך הבית</string>
+    <string name="sleep_card">הטלוויזיה תיכבה בעוד %1$d שניות. OK: עוד 15 דקות.</string>
+    <string name="sleep_notice_minutes">טיימר שינה: %1$d דק׳</string>
+    <string name="sleep_notice_off">טיימר שינה כבוי</string>
 </resources>

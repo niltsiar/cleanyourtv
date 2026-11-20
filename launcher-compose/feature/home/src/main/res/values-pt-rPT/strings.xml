@@ -17,4 +17,7 @@
   <string name="opening_app">A abrir %1$s&#8230;</string>
   <string name="launcher_settings">Definições do launcher</string>
   <string name="launcher_settings_summary">Disposição, relógio e movimento</string>
+  <string name="sleep_timer">Temporizador para desligar</string>
+  <string name="sleep_timer_off">Desligado</string>
+  <string name="sleep_timer_minutes">%1$d min</string>
 </resources>

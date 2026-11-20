@@ -69,4 +69,7 @@
   <string name="restart_question">要重新启动电视吗？</string>
   <string name="restart_confirm">重新启动</string>
   <string name="restart_cancel">取消</string>
+  <string name="sleep_timer">睡眠定时</string>
+  <string name="sleep_timer_off">关</string>
+  <string name="sleep_timer_minutes">%1$d 分钟</string>
 </resources>

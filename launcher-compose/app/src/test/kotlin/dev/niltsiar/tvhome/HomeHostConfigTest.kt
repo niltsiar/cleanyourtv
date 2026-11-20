@@ -142,6 +142,7 @@ class HomeHostConfigTestContent :
                                     onOpenLauncherSettings = {},
                                     onOpenPowerMenu = {},
                                     onPressRestart = {},
+                                    onStepSleepTimer = {},
                                     onOrderNotSaved = {},
                                     onLibrarySaveFailed = {},
                                     onOpenInput = {},

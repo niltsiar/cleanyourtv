@@ -72,4 +72,7 @@
   <string name="restart_question">TV qayta yoqilsinmi?</string>
   <string name="restart_confirm">Qayta yoqish</string>
   <string name="restart_cancel">Bekor qilish</string>
+  <string name="sleep_timer">Uyqu taymeri</string>
+  <string name="sleep_timer_off">Oʻchiq</string>
+  <string name="sleep_timer_minutes">%1$d daq</string>
 </resources>

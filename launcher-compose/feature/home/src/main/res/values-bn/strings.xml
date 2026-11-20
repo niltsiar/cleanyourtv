@@ -71,4 +71,7 @@
   <string name="restart_question">টিভি রিস্টার্ট করবেন?</string>
   <string name="restart_confirm">রিস্টার্ট</string>
   <string name="restart_cancel">বাতিল</string>
+  <string name="sleep_timer">স্লিপ টাইমার</string>
+  <string name="sleep_timer_off">বন্ধ</string>
+  <string name="sleep_timer_minutes">%1$d মিনিট</string>
 </resources>

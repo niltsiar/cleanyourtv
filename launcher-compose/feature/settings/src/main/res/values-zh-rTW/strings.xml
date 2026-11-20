@@ -65,4 +65,5 @@
   <string name="settings_now_playing_unavailable">這台電視不支援此功能</string>
   <string name="settings_now_playing_adb">請用 adb 允許：%1$s</string>
   <string name="settings_restart_press">從主畫面重新啟動電視</string>
+  <string name="settings_sleep_timer">睡眠定時</string>
 </resources>

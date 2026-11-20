@@ -69,4 +69,7 @@
   <string name="restart_question">TV neu starten?</string>
   <string name="restart_confirm">Neu starten</string>
   <string name="restart_cancel">Abbrechen</string>
+  <string name="sleep_timer">Sleep-Timer</string>
+  <string name="sleep_timer_off">Aus</string>
+  <string name="sleep_timer_minutes">%1$d Min.</string>
 </resources>

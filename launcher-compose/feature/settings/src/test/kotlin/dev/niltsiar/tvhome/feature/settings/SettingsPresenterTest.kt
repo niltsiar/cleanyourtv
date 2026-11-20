@@ -103,6 +103,7 @@ class SettingsPresenterTestContent :
                         RowSpec(SettingsRowId.InputArrival, onOff) { it.inputArrival },
                         RowSpec(SettingsRowId.InputTiles, onOff) { it.inputTiles },
                         RowSpec(SettingsRowId.RestartPress, onOff) { it.restartPress },
+                        RowSpec(SettingsRowId.SleepTimer, onOff) { it.sleepTimer },
                     )
 
                 fun SettingsHarness.openWallpaperPicker(): WallpaperPicker {
@@ -184,7 +185,7 @@ class SettingsPresenterTestContent :
                             SettingsRowId.InputArrival,
                             SettingsRowId.InputTiles,
                         ),
-                        listOf(SettingsRowId.RestartPress),
+                        listOf(SettingsRowId.RestartPress, SettingsRowId.SleepTimer),
                     )
             }
 
@@ -231,6 +232,17 @@ class SettingsPresenterTestContent :
                 settings.awaitState { it.row(SettingsRowId.RestartPress).selected == onOff.indexOf(true) }
 
                 settings.config.restartPress shouldBe true
+                settings.state.followsTheme.shouldBeFalse()
+            }
+
+            test("the Sleep timer row is off by default and stores sleep_timer") {
+                val settings = settings()
+                settings.row(SettingsRowId.SleepTimer).selected shouldBe onOff.indexOf(false)
+
+                settings.pick(SettingsRowId.SleepTimer, onOff.indexOf(true))
+                settings.awaitState { it.row(SettingsRowId.SleepTimer).selected == onOff.indexOf(true) }
+
+                settings.config.sleepTimer shouldBe true
                 settings.state.followsTheme.shouldBeFalse()
             }
 
@@ -661,4 +673,4 @@ private const val LAST_OPTIONS =
     "app_library": false,
     "library_least_used": false, "unused_fade_days": 90, "home_idle_clock_minutes": 60, "back_opens_clock": false,
     "clock_wallpaper": false, "reduced_motion": false, "focus_overshoot": false, "press_feedback": false, "habit_hint": false,
-    "input_arrival": false, "input_tiles": false, "restart_press": false}"""
+    "input_arrival": false, "input_tiles": false, "restart_press": false, "sleep_timer": false}"""

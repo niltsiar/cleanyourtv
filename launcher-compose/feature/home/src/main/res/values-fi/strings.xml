@@ -72,4 +72,7 @@
   <string name="restart_question">Käynnistetäänkö TV uudelleen?</string>
   <string name="restart_confirm">Käynnistä uudelleen</string>
   <string name="restart_cancel">Peruuta</string>
+  <string name="sleep_timer">Uniajastin</string>
+  <string name="sleep_timer_off">Pois</string>
+  <string name="sleep_timer_minutes">%1$d min</string>
 </resources>

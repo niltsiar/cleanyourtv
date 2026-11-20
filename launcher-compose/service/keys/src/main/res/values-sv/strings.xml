@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">Inte tillgängligt på den här TV:n</string>
     <string name="restart_not_possible">Den här TV:n kan inte startas om från startskärmen</string>
+    <string name="sleep_card">Tv:n stängs av om %1$d s. OK: 15 minuter till.</string>
+    <string name="sleep_notice_minutes">Insomningstimer: %1$d min</string>
+    <string name="sleep_notice_off">Insomningstimer av</string>
 </resources>

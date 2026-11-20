@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">이 TV에서 사용할 수 없음</string>
     <string name="restart_not_possible">이 TV는 홈에서 다시 시작할 수 없음</string>
+    <string name="sleep_card">%1$d초 후 TV가 꺼집니다. OK: 15분 연장</string>
+    <string name="sleep_notice_minutes">취침 타이머: %1$d분</string>
+    <string name="sleep_notice_off">취침 타이머 꺼짐</string>
 </resources>

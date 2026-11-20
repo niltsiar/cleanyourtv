@@ -77,4 +77,7 @@
   <string name="restart_question">Zrestartować TV?</string>
   <string name="restart_confirm">Zrestartuj</string>
   <string name="restart_cancel">Anuluj</string>
+  <string name="sleep_timer">Wyłącznik czasowy</string>
+  <string name="sleep_timer_off">Wył.</string>
+  <string name="sleep_timer_minutes">%1$d min</string>
 </resources>

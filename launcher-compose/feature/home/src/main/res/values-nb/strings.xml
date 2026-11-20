@@ -72,4 +72,7 @@
   <string name="restart_question">Starte TV-en på nytt?</string>
   <string name="restart_confirm">Start på nytt</string>
   <string name="restart_cancel">Avbryt</string>
+  <string name="sleep_timer">Innsovningstimer</string>
+  <string name="sleep_timer_off">Av</string>
+  <string name="sleep_timer_minutes">%1$d min</string>
 </resources>

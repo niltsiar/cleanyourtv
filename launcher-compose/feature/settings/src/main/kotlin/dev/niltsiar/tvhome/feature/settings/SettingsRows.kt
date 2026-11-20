@@ -175,7 +175,11 @@ internal val settingsGroups: List<Group> =
         ),
         Group(
             heading = R.string.settings_group_system,
-            rows = listOf(onOff(SettingsRowId.RestartPress, R.string.settings_restart_press, Choices.RestartPress) { it.restartPress }),
+            rows =
+                listOf(
+                    onOff(SettingsRowId.RestartPress, R.string.settings_restart_press, Choices.RestartPress) { it.restartPress },
+                    onOff(SettingsRowId.SleepTimer, R.string.settings_sleep_timer, Choices.SleepTimer) { it.sleepTimer },
+                ),
         ),
     )
 

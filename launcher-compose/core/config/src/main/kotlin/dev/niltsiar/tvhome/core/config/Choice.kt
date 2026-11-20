@@ -105,6 +105,7 @@ public object Choices {
     public val InputArrival: Choice<Boolean> = boolChoice("input_arrival") { copy(inputArrival = it) }
     public val InputTiles: Choice<Boolean> = boolChoice("input_tiles") { copy(inputTiles = it) }
     public val RestartPress: Choice<Boolean> = boolChoice("restart_press") { copy(restartPress = it) }
+    public val SleepTimer: Choice<Boolean> = boolChoice("sleep_timer") { copy(sleepTimer = it) }
     public val AppShelf: Choice<Boolean> = boolChoice("app_shelf") { copy(appShelf = it) }
 
     /** The ticked shelf sources; a stored empty set ticks none, whatever the theme lists. [ConfigRepository.toggleShelfSource] changes it. */
@@ -152,6 +153,7 @@ public object Choices {
             InputArrival,
             InputTiles,
             RestartPress,
+            SleepTimer,
             AppShelf,
             AppShelfSources,
             AppShelfWebPosters,

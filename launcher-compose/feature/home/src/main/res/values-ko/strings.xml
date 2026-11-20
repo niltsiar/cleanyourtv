@@ -69,4 +69,7 @@
   <string name="restart_question">TV를 다시 시작할까요?</string>
   <string name="restart_confirm">다시 시작</string>
   <string name="restart_cancel">취소</string>
+  <string name="sleep_timer">취침 타이머</string>
+  <string name="sleep_timer_off">꺼짐</string>
+  <string name="sleep_timer_minutes">%1$d분</string>
 </resources>

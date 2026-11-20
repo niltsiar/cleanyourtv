@@ -65,4 +65,5 @@
   <string name="settings_now_playing_unavailable">Nije dostupno na ovom televizoru</string>
   <string name="settings_now_playing_adb">Dozvolite preko adb-a: %1$s</string>
   <string name="settings_restart_press">Ponovo pokreni TV sa početnog ekrana</string>
+  <string name="settings_sleep_timer">Tajmer za isključivanje</string>
 </resources>

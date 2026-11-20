@@ -75,4 +75,7 @@
   <string name="restart_question">Reiniciar a TV?</string>
   <string name="restart_confirm">Reiniciar</string>
   <string name="restart_cancel">Cancelar</string>
+  <string name="sleep_timer">Timer de desligamento</string>
+  <string name="sleep_timer_off">Desativado</string>
+  <string name="sleep_timer_minutes">%1$d min</string>
 </resources>

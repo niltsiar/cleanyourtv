@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">ทีวีเครื่องนี้ไม่รองรับ</string>
     <string name="restart_not_possible">ทีวีเครื่องนี้รีสตาร์ทจากหน้าหลักไม่ได้</string>
+    <string name="sleep_card">ทีวีจะปิดใน %1$d วินาที OK: เพิ่มอีก 15 นาที</string>
+    <string name="sleep_notice_minutes">ตั้งเวลาปิด: %1$d นาที</string>
+    <string name="sleep_notice_off">ปิดการตั้งเวลาปิดแล้ว</string>
 </resources>

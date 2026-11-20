@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">此电视不支持该功能</string>
     <string name="restart_not_possible">无法从主屏幕重新启动此电视</string>
+    <string name="sleep_card">电视将在 %1$d 秒后关闭。OK：再延长 15 分钟。</string>
+    <string name="sleep_notice_minutes">睡眠定时：%1$d 分钟</string>
+    <string name="sleep_notice_off">睡眠定时已关闭</string>
 </resources>

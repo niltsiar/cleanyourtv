@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">Nije dostupno na ovom televizoru</string>
     <string name="restart_not_possible">Ovaj televizor nije moguće ponovo pokrenuti sa početnog ekrana</string>
+    <string name="sleep_card">TV se isključuje za %1$d s. OK: još 15 minuta.</string>
+    <string name="sleep_notice_minutes">Tajmer za isključivanje: %1$d min</string>
+    <string name="sleep_notice_off">Tajmer za isključivanje je isključen</string>
 </resources>

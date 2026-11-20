@@ -29,6 +29,7 @@ private fun MenuRow.label(): Int =
         MenuRow.NativeSettings -> R.string.native_settings
         MenuRow.EditDock -> R.string.dock_edit
         MenuRow.Reorder -> R.string.reorder
+        MenuRow.SleepTimer -> R.string.sleep_timer
         MenuRow.PowerMenu -> R.string.power_menu
         MenuRow.CancelRestart -> R.string.restart_cancel
         MenuRow.Restart -> R.string.restart_confirm
@@ -51,7 +52,8 @@ private val TrayClearance = 20.dp
  * starts [dockPadding] above the tile; a grid tile's sits beside it and under [bandBottom], the bottom of the band over the grid, when it fits there. The
  * Settings menu hangs from the Settings button with shorter rows, so it ends clear of the dock, and a line sets its
  * restart row apart, which draws its text in coral. The restart confirm hangs there too, headed by its question, with its
- * Restart row set apart in the same way. Focus starts on the row [focus], the first when it is null.
+ * Restart row set apart in the same way. Focus starts on the row [focus], the first when it is null. The Sleep timer row ends
+ * with [sleepStep]: Off, or its minutes.
  */
 @Composable
 internal fun MenuOverlay(
@@ -64,6 +66,7 @@ internal fun MenuOverlay(
     dockTile: String? = null,
     dockPadding: Dp = TileGap,
     focus: MenuRow? = null,
+    sleepStep: Int = 0,
 ) {
     val focusRow = rows.indexOf(focus).coerceAtLeast(0)
     if (tileMenu) {
@@ -96,6 +99,14 @@ internal fun MenuOverlay(
             focusRow = focusRow,
         )
     } else {
+        val sleepValue =
+            if (sleepStep ==
+                0
+            ) {
+                stringResource(R.string.sleep_timer_off)
+            } else {
+                stringResource(R.string.sleep_timer_minutes, sleepStep)
+            }
         GlassMenu(
             rows,
             anchor,
@@ -110,6 +121,7 @@ internal fun MenuOverlay(
             dividerBefore = { it == MenuRow.PowerMenu || it == MenuRow.Restart },
             warn = { it == MenuRow.PowerMenu || it == MenuRow.Restart },
             focusRow = focusRow,
+            value = { if (it == MenuRow.SleepTimer) sleepValue else null },
         )
     }
 }

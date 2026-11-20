@@ -74,4 +74,7 @@
   <string name="restart_question">Ponovo pokrenuti TV?</string>
   <string name="restart_confirm">Ponovo pokreni</string>
   <string name="restart_cancel">Otkaži</string>
+  <string name="sleep_timer">Tajmer za isključivanje</string>
+  <string name="sleep_timer_off">Isklj.</string>
+  <string name="sleep_timer_minutes">%1$d min</string>
 </resources>

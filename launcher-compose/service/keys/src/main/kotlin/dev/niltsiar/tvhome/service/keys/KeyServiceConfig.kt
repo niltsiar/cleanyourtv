@@ -23,6 +23,7 @@ internal data class KeyServiceConfig(
     val settingsKeyClearTask: Boolean,
     val inputKeyKeycodes: List<Int>,
     val captureInputKeys: Boolean,
+    val sleepTimer: Boolean,
 )
 
 /** [pick] is the Open on start app ([dev.niltsiar.tvhome.core.config.ConfigRepository.openOnStartApp]), which only the power-on plan reads. */
@@ -43,4 +44,5 @@ internal fun TvConfig.forKeyService(pick: String?): KeyServiceConfig =
         settingsKeyClearTask = settingsKeyClearTask,
         inputKeyKeycodes = inputKeyKeycodes,
         captureInputKeys = captureInputKeys,
+        sleepTimer = sleepTimer,
     )

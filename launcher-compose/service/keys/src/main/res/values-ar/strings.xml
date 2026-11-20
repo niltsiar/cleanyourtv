@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">غير متاح على هذا التلفاز</string>
     <string name="restart_not_possible">لا يمكن إعادة تشغيل هذا التلفاز من الرئيسية</string>
+    <string name="sleep_card">يُطفأ التلفزيون خلال %1$d ثانية. OK: ‏15 دقيقة أخرى.</string>
+    <string name="sleep_notice_minutes">مؤقت النوم: %1$d دقيقة</string>
+    <string name="sleep_notice_off">مؤقت النوم متوقف</string>
 </resources>

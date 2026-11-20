@@ -65,4 +65,5 @@
   <string name="settings_now_playing_unavailable">Bu TV’de kullanılamıyor</string>
   <string name="settings_now_playing_adb">adb ile izin verin: %1$s</string>
   <string name="settings_restart_press">TV’yi ana ekrandan yeniden başlat</string>
+  <string name="settings_sleep_timer">Uyku zamanlayıcısı</string>
 </resources>

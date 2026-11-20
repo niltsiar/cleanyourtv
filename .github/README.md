@@ -112,6 +112,10 @@ System:
 - **Restart TV from Home.** Restart TV in the Settings button's menu asks on Home first, with Cancel focused. Restart then
   presses Restart in the TV's own power menu for you, for TVs where the remote cannot move in that menu. Where Home
   cannot find that Restart item, it presses nothing, closes the menu and says so.
+- **Sleep timer.** With the key service on, a Sleep timer row in the Settings button's menu steps Off, 15, 30,
+  60, 90 and 120 minutes, and a remote button can do the same. A moon and the minutes left show beside the clock on Home.
+  One minute before the end a small card shows over what plays: OK gives 15 more minutes, Back hides it. Then the TV goes
+  to standby. Turning the TV off cancels the timer.
 
 The System group also resets the page's choices to the theme's, opens the TV's home picker and opens the TV's own
 settings.

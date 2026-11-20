@@ -72,4 +72,7 @@
   <string name="restart_question">Tv herstarten?</string>
   <string name="restart_confirm">Herstarten</string>
   <string name="restart_cancel">Annuleren</string>
+  <string name="sleep_timer">Slaaptimer</string>
+  <string name="sleep_timer_off">Uit</string>
+  <string name="sleep_timer_minutes">%1$d min</string>
 </resources>

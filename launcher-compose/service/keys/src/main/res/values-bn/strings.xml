@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">এই টিভিতে এভাইলেবল নেই</string>
     <string name="restart_not_possible">এই টিভি হোম থেকে রিস্টার্ট করা যায় না</string>
+    <string name="sleep_card">টিভি %1$d সেকেন্ডে বন্ধ হবে। OK: আরও 15 মিনিট।</string>
+    <string name="sleep_notice_minutes">স্লিপ টাইমার: %1$d মিনিট</string>
+    <string name="sleep_notice_off">স্লিপ টাইমার বন্ধ</string>
 </resources>

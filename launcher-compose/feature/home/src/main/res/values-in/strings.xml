@@ -69,4 +69,7 @@
   <string name="restart_question">Mulai ulang TV?</string>
   <string name="restart_confirm">Mulai ulang</string>
   <string name="restart_cancel">Batal</string>
+  <string name="sleep_timer">Timer tidur</string>
+  <string name="sleep_timer_off">Mati</string>
+  <string name="sleep_timer_minutes">%1$d mnt</string>
 </resources>

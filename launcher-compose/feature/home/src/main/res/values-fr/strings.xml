@@ -75,4 +75,7 @@
   <string name="restart_question">Redémarrer la TV ?</string>
   <string name="restart_confirm">Redémarrer</string>
   <string name="restart_cancel">Annuler</string>
+  <string name="sleep_timer">Minuterie de veille</string>
+  <string name="sleep_timer_off">Désactivé</string>
+  <string name="sleep_timer_minutes">%1$d min</string>
 </resources>

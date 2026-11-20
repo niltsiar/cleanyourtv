@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">No disponible en este televisor</string>
     <string name="restart_not_possible">No es posible reiniciar este televisor desde Inicio</string>
+    <string name="sleep_card">El TV se apaga en %1$d s. OK: 15 minutos más.</string>
+    <string name="sleep_notice_minutes">Temporizador de apagado: %1$d min</string>
+    <string name="sleep_notice_off">Temporizador de apagado desactivado</string>
 </resources>

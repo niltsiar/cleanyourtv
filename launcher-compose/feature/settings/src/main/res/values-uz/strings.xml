@@ -65,4 +65,5 @@
   <string name="settings_now_playing_unavailable">Bu televizorda mavjud emas</string>
   <string name="settings_now_playing_adb">adb orqali ruxsat bering: %1$s</string>
   <string name="settings_restart_press">TVni bosh ekrandan qayta yoqish</string>
+  <string name="settings_sleep_timer">Uyqu taymeri</string>
 </resources>

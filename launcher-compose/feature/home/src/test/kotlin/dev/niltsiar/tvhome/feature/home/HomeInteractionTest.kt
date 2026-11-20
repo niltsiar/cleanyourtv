@@ -16,7 +16,9 @@ import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.test.runCurrent
 import java.util.Locale
 
 val HomeInteractionTest by testSuite(testConfig = TestConfig.testScope(isEnabled = true)) {
@@ -56,6 +58,9 @@ val HomeInteractionTest by testSuite(testConfig = TestConfig.testScope(isEnabled
                 nativeSettings: Boolean = false,
                 powerMenu: Boolean = false,
                 focusMemory: FocusMemory = FocusMemory(),
+                sleepTimer: Boolean = false,
+                sleepStep: Flow<Int> = flowOf(0),
+                minutesLeft: Flow<Int?> = flowOf(null),
             ): Flow<HomeUiState> {
                 val sources =
                     sources(
@@ -63,6 +68,9 @@ val HomeInteractionTest by testSuite(testConfig = TestConfig.testScope(isEnabled
                         hasAppInfo = { appInfo },
                         hasNativeSettings = { nativeSettings },
                         powerMenuAvailable = { powerMenu },
+                        sleepTimerAvailable = { sleepTimer },
+                        sleepTimerStep = sleepStep,
+                        sleepMinutesLeft = minutesLeft,
                         saveOrder = ::saveOrder,
                         removeFromHome = ::removeFromHome,
                         focusMemory = focusMemory,
@@ -189,6 +197,67 @@ val HomeInteractionTest by testSuite(testConfig = TestConfig.testScope(isEnabled
                             null,
                             listOf(MenuRow.LauncherSettings, MenuRow.EditDock, MenuRow.Reorder, MenuRow.PowerMenu),
                         )
+                    cancelAndIgnoreRemainingEvents()
+                }
+            }
+        }
+
+        test("with sleep_timer and the key service bound the settings menu has sleep timer before restart") {
+            with(it.testScope) {
+                presenter(SixColumns.copy(sleepTimer = true), powerMenu = true, sleepTimer = true).test {
+                    awaitMatching { it.dock.isNotEmpty() }
+                    events.send(HomeEvent.SettingsMenu)
+
+                    awaitMatching { it.menu != null }.menu?.rows shouldBe
+                        listOf(MenuRow.LauncherSettings, MenuRow.EditDock, MenuRow.Reorder, MenuRow.SleepTimer, MenuRow.PowerMenu)
+                    cancelAndIgnoreRemainingEvents()
+                }
+            }
+        }
+
+        test("with sleep_timer off or no timer to run the settings menu has no sleep timer") {
+            with(it.testScope) {
+                for ((config, available) in listOf(SixColumns to true, SixColumns.copy(sleepTimer = true) to false)) {
+                    presenter(config, powerMenu = true, sleepTimer = available).test {
+                        awaitMatching { it.dock.isNotEmpty() }
+                        events.send(HomeEvent.SettingsMenu)
+
+                        awaitMatching { it.menu != null }.menu?.rows shouldBe
+                            listOf(MenuRow.LauncherSettings, MenuRow.EditDock, MenuRow.Reorder, MenuRow.PowerMenu)
+                        cancelAndIgnoreRemainingEvents()
+                    }
+                }
+            }
+        }
+
+        test("ok on sleep timer asks the host to step it and leaves the menu open") {
+            with(it.testScope) {
+                presenter(SixColumns.copy(sleepTimer = true), powerMenu = true, sleepTimer = true).test {
+                    awaitMatching { it.dock.isNotEmpty() }
+                    events.send(HomeEvent.SettingsMenu)
+                    awaitMatching { it.menu != null }
+                    events.send(HomeEvent.MenuPick(MenuRow.SleepTimer))
+
+                    effects.receive() shouldBe HomeEffect.StepSleepTimer
+                    runCurrent()
+                    expectNoEvents()
+                    cancelAndIgnoreRemainingEvents()
+                }
+            }
+        }
+
+        test("the sleep timer's step and minutes left reach home only with sleep_timer on") {
+            with(it.testScope) {
+                presenter(SixColumns.copy(sleepTimer = true), sleepTimer = true, sleepStep = flowOf(30), minutesLeft = flowOf(28)).test {
+                    val state = awaitMatching { it.sleepMinutesLeft != null }
+                    state.sleepStep shouldBe 30
+                    state.sleepMinutesLeft shouldBe 28
+                    cancelAndIgnoreRemainingEvents()
+                }
+                presenter(SixColumns, sleepTimer = true, sleepStep = flowOf(30), minutesLeft = flowOf(28)).test {
+                    val state = awaitMatching { it.dock.isNotEmpty() }
+                    state.sleepStep shouldBe 0
+                    state.sleepMinutesLeft shouldBe null
                     cancelAndIgnoreRemainingEvents()
                 }
             }

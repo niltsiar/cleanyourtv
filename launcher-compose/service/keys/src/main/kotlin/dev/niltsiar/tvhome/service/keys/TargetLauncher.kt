@@ -17,7 +17,7 @@ private const val CHANNEL_TYPE = "vnd.android.cursor.item/channel"
 
 /**
  * Runs what an app_keys target stands for. [performGlobal] runs a global action (back, home, recents, sleep). An app or
- * activity target that started is passed to [opened].
+ * activity target that started is passed to [opened]. [sleepTimer] steps the sleep timer.
  */
 internal class TargetLauncher(
     private val context: Context,
@@ -25,6 +25,7 @@ internal class TargetLauncher(
     private val performGlobal: (Int) -> Boolean,
     private val liveTvPackage: String?,
     private val opened: AppOpened,
+    private val sleepTimer: () -> Unit,
 ) {
     fun launch(target: String) {
         when (val parsed = parseTarget(target)) {
@@ -100,6 +101,10 @@ internal class TargetLauncher(
 
             ActionWord.Library -> {
                 context.homeIntent(LauncherIntents.APP_LIBRARY)?.let(::start)
+            }
+
+            ActionWord.SleepTimer -> {
+                sleepTimer()
             }
 
             // "ignore", or "sleep" below Android 9: consumed, nothing to do

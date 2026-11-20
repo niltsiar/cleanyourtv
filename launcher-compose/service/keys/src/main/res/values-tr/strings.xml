@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">Bu TV’de kullanılamıyor</string>
     <string name="restart_not_possible">Bu TV ana ekrandan yeniden başlatılamıyor</string>
+    <string name="sleep_card">TV %1$d sn içinde kapanacak. OK: 15 dakika daha.</string>
+    <string name="sleep_notice_minutes">Uyku zamanlayıcısı: %1$d dk</string>
+    <string name="sleep_notice_off">Uyku zamanlayıcısı kapalı</string>
 </resources>

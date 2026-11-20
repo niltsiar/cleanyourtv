@@ -67,4 +67,7 @@
   <string name="restart_question">Genstart TV?</string>
   <string name="restart_confirm">Genstart</string>
   <string name="restart_cancel">Annuller</string>
+  <string name="sleep_timer">Slukketimer</string>
+  <string name="sleep_timer_off">Fra</string>
+  <string name="sleep_timer_minutes">%1$d min</string>
 </resources>

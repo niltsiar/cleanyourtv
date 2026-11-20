@@ -238,12 +238,12 @@ class SettingsEdgesUiTestContent :
 
             test("the focused row stays out of the fade from the first row to the last and back") {
                 show()
-                assertFocusClearOfTheFade(entries = 25)
+                assertFocusClearOfTheFade(entries = 26)
             }
 
             test("the focused row stays out of the fade with the reorder row and a short list") {
                 show(reorder = true) { 190.dp }
-                assertFocusClearOfTheFade(entries = 26)
+                assertFocusClearOfTheFade(entries = 27)
             }
 
             test("a button row is one option row pitch from the rows around it and its pill keeps a margin") {
@@ -325,7 +325,7 @@ class SettingsEdgesUiTestContent :
 
             test("a divider stays 38 dp or more over a focused first row with its heading between them and never meets a focused row") {
                 show(reorder = true)
-                val steps = List(26) { Key.DirectionDown } + List(26) { Key.DirectionUp }
+                val steps = List(27) { Key.DirectionDown } + List(27) { Key.DirectionUp }
                 val firstsSeen = mutableSetOf<String>()
                 for ((index, key) in listOf<Key?>(null).plus(steps).withIndex()) {
                     if (key != null) press(key)
@@ -356,7 +356,7 @@ class SettingsEdgesUiTestContent :
             test("no row heading or divider moves in the list while focus moves within and across groups") {
                 show(reorder = true)
                 val before = placesInList()
-                val steps = List(26) { Key.DirectionDown } + List(26) { Key.DirectionUp }
+                val steps = List(27) { Key.DirectionDown } + List(27) { Key.DirectionUp }
                 for ((index, key) in steps.withIndex()) {
                     press(key)
                     val now = placesInList()

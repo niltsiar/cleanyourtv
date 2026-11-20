@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">Tidak tersedia di TV ini</string>
     <string name="restart_not_possible">TV ini tidak dapat dimulai ulang dari Beranda</string>
+    <string name="sleep_card">TV mati dalam %1$d dtk. OK: 15 menit lagi.</string>
+    <string name="sleep_notice_minutes">Timer tidur: %1$d mnt</string>
+    <string name="sleep_notice_off">Timer tidur mati</string>
 </resources>

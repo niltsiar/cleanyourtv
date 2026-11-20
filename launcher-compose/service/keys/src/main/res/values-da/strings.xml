@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">Ikke tilgængelig på dette TV</string>
     <string name="restart_not_possible">Dette TV kan ikke genstartes fra startskærmen</string>
+    <string name="sleep_card">Tv\'et slukker om %1$d s. OK: 15 minutter mere.</string>
+    <string name="sleep_notice_minutes">Slukketimer: %1$d min</string>
+    <string name="sleep_notice_off">Slukketimer slået fra</string>
 </resources>

@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">Bu televizorda mavjud emas</string>
     <string name="restart_not_possible">Bu televizorni bosh ekrandan qayta yoqib boʻlmaydi</string>
+    <string name="sleep_card">Televizor %1$d soniyada oʻchadi. OK: yana 15 daqiqa.</string>
+    <string name="sleep_notice_minutes">Uyqu taymeri: %1$d daq</string>
+    <string name="sleep_notice_off">Uyqu taymeri oʻchiq</string>
 </resources>

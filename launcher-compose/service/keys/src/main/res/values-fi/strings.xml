@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">Ei käytettävissä tässä televisiossa</string>
     <string name="restart_not_possible">Tätä televisiota ei voi käynnistää uudelleen kotinäkymästä</string>
+    <string name="sleep_card">Televisio sammuu %1$d sekunnin kuluttua. OK: 15 minuuttia lisää.</string>
+    <string name="sleep_notice_minutes">Uniajastin: %1$d min</string>
+    <string name="sleep_notice_off">Uniajastin pois</string>
 </resources>

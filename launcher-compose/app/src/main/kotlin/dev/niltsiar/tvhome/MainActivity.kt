@@ -34,6 +34,7 @@ import dev.niltsiar.tvhome.feature.home.NO_ARRIVAL
 import dev.niltsiar.tvhome.feature.library.MoleculeLibraryViewModel
 import dev.niltsiar.tvhome.service.keys.PowerMenu
 import dev.niltsiar.tvhome.service.keys.ServiceRepair
+import dev.niltsiar.tvhome.service.keys.SleepTimer
 import dev.niltsiar.tvhome.service.keys.VendorKeys
 import dev.niltsiar.tvhome.service.keys.keyPressedOnHome
 import dev.niltsiar.tvhome.service.media.NowPlayingAccess
@@ -144,6 +145,7 @@ class MainActivity : ComponentActivity() {
                     onOpenLauncherSettings = ::openLauncherSettings,
                     onOpenPowerMenu = PowerMenu::open,
                     onPressRestart = PowerMenu::restart,
+                    onStepSleepTimer = SleepTimer::step,
                     onOrderNotSaved = ::orderNotSaved,
                     onLibrarySaveFailed = ::librarySaveFailed,
                     onOpenInput = ::openInput,

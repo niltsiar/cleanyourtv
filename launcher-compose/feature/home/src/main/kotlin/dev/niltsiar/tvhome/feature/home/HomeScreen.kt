@@ -482,6 +482,7 @@ public fun HomeScreen(
         }
     val menu by remember { derivedStateOf { currentState.value().menu } }
     val inputsOpen by remember { derivedStateOf { currentState.value().inputsOpen } }
+    val sleepStep by remember { derivedStateOf { currentState.value().sleepStep } }
     val inputMenu by remember { derivedStateOf { currentState.value().inputMenu } }
     val menuDockTile by remember {
         derivedStateOf {
@@ -736,6 +737,7 @@ public fun HomeScreen(
                         dockTile = menuDockTile,
                         dockPadding = dockPadding.top,
                         focus = open.focus,
+                        sleepStep = sleepStep,
                     )
                 }
             }

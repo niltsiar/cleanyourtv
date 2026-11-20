@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.media.AudioManager
+import android.os.Build
 import android.os.PowerManager
 import android.os.SystemClock
 import android.os.UserManager
@@ -49,7 +50,7 @@ private const val PROBE_BOOT_KEY = "probe_boot"
  * stock_home_redirect, power_on_home and power_on_home_always. With restore_key_services, [ServiceRepair] puts the service
  * back on the enabled list after a force stop. With the opt-in broadcast of [GuardConfig], the service leaves the list while
  * the screen is off and [GuardKeep] lists it again at screen-on. With restart_press, [RestartPress] presses Restart in the
- * system power dialog for Home.
+ * system power dialog for Home. With sleep_timer, [SleepCountdown] puts the TV in standby when the timer Home or a key set ends.
  *
  * The config and the Open on start pick come from the app's [ConfigRepositoryOwner] and are followed: the maps are read in
  * again when a value the service uses changes (see [KeyServiceConfig]). An app a key opens is noted through the app's
@@ -74,6 +75,8 @@ public class KeyService : AccessibilityService() {
     private var screenOnReceiver: BroadcastReceiver? = null
     private var gamepads: GamepadPassthrough? = null
     private var restartPress: RestartPress? = null
+    private var sleepTimer: SleepCountdown? = null
+    private var sleepScreenOff: BroadcastReceiver? = null
     private var recorded = false
 
     /** True after the first [start] of a bind: only that one arms the boot window, so a pick changed in Settings cannot send Home again. */
@@ -163,7 +166,8 @@ public class KeyService : AccessibilityService() {
         if (recorded) ServiceRepair.connected(this, javaClass)
         keys = AppKeys(config.appKeys)
         val settings = SystemSettings(this).also { settings = it }
-        launcher = TargetLauncher(this, settings, ::performGlobalAction, config.liveTvPackage, application as AppOpened)
+        launcher =
+            TargetLauncher(this, settings, ::performGlobalAction, config.liveTvPackage, application as AppOpened, ::sleepTimerWord)
         if (config.consumeVolumeKeys) {
             val audio = getSystemService(AudioManager::class.java)
             volume = VolumeRepeat(timer) { audio?.adjustVolume(it, AudioManager.FLAG_SHOW_UI) }
@@ -187,6 +191,49 @@ public class KeyService : AccessibilityService() {
                 }.also { it.start() }
         }
         applyStandbyOptIn()
+        applySleepTimer(config.sleepTimer && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+    }
+
+    /**
+     * Not part of [tearDown]: a change of another value the service reads keeps a running timer. Turning the key off cancels
+     * it, and so does the screen going off, so a timer never fires after a later wake.
+     */
+    private fun applySleepTimer(on: Boolean) {
+        if (on == (sleepTimer != null)) return
+        if (!on) {
+            sleepTimer?.cancel()
+            sleepTimer = null
+            sleepScreenOff?.let(::unregisterReceiver)
+            sleepScreenOff = null
+            return
+        }
+        val boot = Settings.Global.getInt(contentResolver, Settings.Global.BOOT_COUNT, -1)
+        val prefs = getSharedPreferences(BOOT_PREFS, MODE_PRIVATE)
+        val countdown =
+            SleepCountdown(timer, SystemClock::elapsedRealtime, boot, prefs, SleepTimer.state, OverlaySleepCard(this)) {
+                performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
+            }
+        sleepTimer = countdown
+        val receiver =
+            object : BroadcastReceiver() {
+                override fun onReceive(
+                    context: Context,
+                    intent: Intent,
+                ) = countdown.cancel()
+            }
+        sleepScreenOff = receiver
+        registerReceiver(receiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
+        countdown.restore()
+    }
+
+    /** sleep_timer: the next step, or null while the key is off or Android is older than 9. */
+    internal fun stepSleepTimer(): Int? = sleepTimer?.step()
+
+    /** The app_keys word sleep_timer: steps the timer and says the new value. */
+    internal fun sleepTimerWord() {
+        val step = stepSleepTimer() ?: return
+        val notice = if (step == 0) getString(R.string.sleep_notice_off) else getString(R.string.sleep_notice_minutes, step)
+        Toast.makeText(this, notice, Toast.LENGTH_SHORT).show()
     }
 
     /** Arms or disarms the standby exit from the opt-in; [GuardKeep] calls it so a bound service sees an opt-in that arrives later. */
@@ -275,6 +322,7 @@ public class KeyService : AccessibilityService() {
      */
     internal fun handleKey(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) powerOn?.onKeyDown(event.keyCode)
+        if (sleepTimer?.handleKey(event) == true) return true
         if (volume?.handle(event) == true) return true
         val launch = launcher?.let { it::launch } ?: return false
         if (handleAppKey(event, keys.scanTap(event.scanCode, frontPackage), keys.holdScancodes[event.scanCode], this, launch)) return true
@@ -411,6 +459,12 @@ public class KeyService : AccessibilityService() {
     override fun onDestroy() {
         PowerMenu.unbind(this)
         restartPress?.cancel()
+        // A service that the screen going off took away (GuardKeep) must not carry the timer to the next wake.
+        val interactive = getSystemService(PowerManager::class.java).isInteractive
+        sleepTimer?.let { if (interactive) it.stop() else it.cancel() }
+        sleepTimer = null
+        sleepScreenOff?.let(::unregisterReceiver)
+        sleepScreenOff = null
         scope.cancel()
         stopWaitingForUnlock()
         tearDown()

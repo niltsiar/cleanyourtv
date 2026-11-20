@@ -83,4 +83,7 @@
   <string name="restart_question">هل تريد إعادة تشغيل التلفاز؟</string>
   <string name="restart_confirm">إعادة التشغيل</string>
   <string name="restart_cancel">إلغاء</string>
+  <string name="sleep_timer">مؤقت النوم</string>
+  <string name="sleep_timer_off">إيقاف</string>
+  <string name="sleep_timer_minutes">%1$d دقيقة</string>
 </resources>

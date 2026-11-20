@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">Na této televizi není k dispozici</string>
     <string name="restart_not_possible">Tuto televizi nelze restartovat z domovské obrazovky</string>
+    <string name="sleep_card">Televize se vypne za %1$d s. OK: o 15 minut déle.</string>
+    <string name="sleep_notice_minutes">Časovač vypnutí: %1$d min</string>
+    <string name="sleep_notice_off">Časovač vypnutí je vypnutý</string>
 </resources>

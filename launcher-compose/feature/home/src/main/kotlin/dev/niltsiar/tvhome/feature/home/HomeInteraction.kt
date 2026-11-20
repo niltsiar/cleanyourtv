@@ -602,7 +602,9 @@ internal class HomeInteraction(
 
     private fun openSettingsMenu() {
         if (session != null || menu != null) return
-        menu = HomeMenu(null, settingsMenuRows(config.value.dockRow, sources.hasNativeSettings(), sources.powerMenuAvailable()))
+        val current = config.value
+        val sleepTimer = current.sleepTimer && sources.sleepTimerAvailable()
+        menu = HomeMenu(null, settingsMenuRows(current.dockRow, sources.hasNativeSettings(), sources.powerMenuAvailable(), sleepTimer))
     }
 
     /** The dock row's tiles: the first [TvConfig.columns] with a single row, else the tiles the dock shows. */
@@ -616,7 +618,8 @@ internal class HomeInteraction(
 
     private suspend fun pick(row: MenuRow) {
         val open = menu ?: return
-        menu = null
+        // Sleep timer stays open: its row shows the step it sets.
+        if (row != MenuRow.SleepTimer) menu = null
         val key = open.tileKey
         when (row) {
             MenuRow.Move -> {
@@ -689,6 +692,10 @@ internal class HomeInteraction(
                     effect(HomeEffect.OpenPowerMenu)
                     focus(SETTINGS_FOCUS)
                 }
+            }
+
+            MenuRow.SleepTimer -> {
+                effect(HomeEffect.StepSleepTimer)
             }
 
             MenuRow.CancelRestart -> {

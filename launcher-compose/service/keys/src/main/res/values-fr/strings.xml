@@ -2,4 +2,7 @@
 <resources>
     <string name="not_available">Indisponible sur cette TV</string>
     <string name="restart_not_possible">Impossible de redémarrer cette TV depuis l’accueil</string>
+    <string name="sleep_card">Le téléviseur s\'éteint dans %1$d s. OK : 15 minutes de plus.</string>
+    <string name="sleep_notice_minutes">Minuterie de veille : %1$d min</string>
+    <string name="sleep_notice_off">Minuterie de veille désactivée</string>
 </resources>

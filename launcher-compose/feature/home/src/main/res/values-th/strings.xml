@@ -66,4 +66,7 @@
   <string name="restart_question">รีสตาร์ททีวีไหม</string>
   <string name="restart_confirm">รีสตาร์ท</string>
   <string name="restart_cancel">ยกเลิก</string>
+  <string name="sleep_timer">ตั้งเวลาปิด</string>
+  <string name="sleep_timer_off">ปิด</string>
+  <string name="sleep_timer_minutes">%1$d นาที</string>
 </resources>

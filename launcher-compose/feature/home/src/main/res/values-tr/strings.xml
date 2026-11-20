@@ -71,4 +71,7 @@
   <string name="restart_question">TV yeniden başlatılsın mı?</string>
   <string name="restart_confirm">Yeniden başlat</string>
   <string name="restart_cancel">İptal</string>
+  <string name="sleep_timer">Uyku zamanlayıcısı</string>
+  <string name="sleep_timer_off">Kapalı</string>
+  <string name="sleep_timer_minutes">%1$d dk</string>
 </resources>

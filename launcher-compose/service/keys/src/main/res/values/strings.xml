@@ -4,4 +4,7 @@
     <string name="key_service_description">Makes the remote\'s Home, Input, Settings and app buttons open this launcher and the apps you chose.</string>
     <string name="not_available">Not available on this TV</string>
     <string name="restart_not_possible">Restarting is not possible from Home on this TV</string>
+    <string name="sleep_card">The TV turns off in %1$d s. OK: 15 more minutes.</string>
+    <string name="sleep_notice_minutes">Sleep timer: %1$d min</string>
+    <string name="sleep_notice_off">Sleep timer off</string>
 </resources>
