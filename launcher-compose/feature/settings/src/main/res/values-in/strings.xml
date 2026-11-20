@@ -66,4 +66,5 @@
   <string name="settings_now_playing_adb">Izinkan dengan adb: %1$s</string>
   <string name="settings_restart_press">Mulai ulang TV dari Beranda</string>
   <string name="settings_sleep_timer">Timer tidur</string>
+  <string name="settings_quick_panel">Panel cepat</string>
 </resources>

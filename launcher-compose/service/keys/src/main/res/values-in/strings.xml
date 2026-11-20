@@ -5,4 +5,16 @@
     <string name="sleep_card">TV mati dalam %1$d dtk. OK: 15 menit lagi.</string>
     <string name="sleep_notice_minutes">Timer tidur: %1$d mnt</string>
     <string name="sleep_notice_off">Timer tidur mati</string>
+    <string name="panel_title">Panel cepat</string>
+    <string name="panel_sleep_timer">Timer tidur</string>
+    <string name="panel_sleep_off">Mati</string>
+    <string name="panel_sleep_minutes">%1$d mnt</string>
+    <string name="panel_inputs">Input</string>
+    <string name="panel_screensaver">Screensaver</string>
+    <string name="panel_mute">Bisukan</string>
+    <string name="panel_restart">Mulai ulang TV</string>
+    <string name="panel_launcher_settings">Setelan antarmuka</string>
+    <string name="panel_restart_question">Mulai ulang TV?</string>
+    <string name="panel_restart_cancel">Batal</string>
+    <string name="panel_restart_confirm">Mulai ulang</string>
 </resources>

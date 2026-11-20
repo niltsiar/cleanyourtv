@@ -4,6 +4,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.config.parseTvConfig
 import dev.niltsiar.tvhome.core.designsystem.FocusStyle
+import dev.niltsiar.tvhome.core.designsystem.focusStyle
 import io.kotest.matchers.shouldBe
 
 val ConfigFocusStyleTest by testSuite {

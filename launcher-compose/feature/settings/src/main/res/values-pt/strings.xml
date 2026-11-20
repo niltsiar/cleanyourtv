@@ -66,4 +66,5 @@
   <string name="settings_now_playing_adb">Permita com adb: %1$s</string>
   <string name="settings_restart_press">Reiniciar TV pela tela inicial</string>
   <string name="settings_sleep_timer">Timer de desligamento</string>
+  <string name="settings_quick_panel">Painel rápido</string>
 </resources>

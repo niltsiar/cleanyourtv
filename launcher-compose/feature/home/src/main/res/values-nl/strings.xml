@@ -75,4 +75,5 @@
   <string name="sleep_timer">Slaaptimer</string>
   <string name="sleep_timer_off">Uit</string>
   <string name="sleep_timer_minutes">%1$d min</string>
+  <string name="quick_panel">Snelpaneel</string>
 </resources>

@@ -5,4 +5,16 @@
     <string name="sleep_card">TV-en slår seg av om %1$d s. OK: 15 minutter til.</string>
     <string name="sleep_notice_minutes">Innsovningstimer: %1$d min</string>
     <string name="sleep_notice_off">Innsovningstimer av</string>
+    <string name="panel_title">Hurtigpanel</string>
+    <string name="panel_sleep_timer">Innsovningstimer</string>
+    <string name="panel_sleep_off">Av</string>
+    <string name="panel_sleep_minutes">%1$d min</string>
+    <string name="panel_inputs">Innganger</string>
+    <string name="panel_screensaver">Skjermsparer</string>
+    <string name="panel_mute">Lyd av</string>
+    <string name="panel_restart">Start TV-en på nytt</string>
+    <string name="panel_launcher_settings">Innstillinger for startskjermen</string>
+    <string name="panel_restart_question">Starte TV-en på nytt?</string>
+    <string name="panel_restart_cancel">Avbryt</string>
+    <string name="panel_restart_confirm">Start på nytt</string>
 </resources>

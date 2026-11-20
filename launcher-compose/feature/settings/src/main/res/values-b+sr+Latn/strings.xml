@@ -66,4 +66,5 @@
   <string name="settings_now_playing_adb">Dozvolite preko adb-a: %1$s</string>
   <string name="settings_restart_press">Ponovo pokreni TV sa početnog ekrana</string>
   <string name="settings_sleep_timer">Tajmer za isključivanje</string>
+  <string name="settings_quick_panel">Brzi panel</string>
 </resources>

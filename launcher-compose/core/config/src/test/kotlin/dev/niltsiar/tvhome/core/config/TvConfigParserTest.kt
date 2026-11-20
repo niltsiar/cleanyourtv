@@ -713,6 +713,7 @@ val TvConfigParserTest by testSuite {
             "restore_key_services" to ("true" to defaults.copy(restoreKeyServices = true)),
             "restart_press" to ("true" to defaults.copy(restartPress = true)),
             "sleep_timer" to ("true" to defaults.copy(sleepTimer = true)),
+            "quick_panel" to ("true" to defaults.copy(quickPanel = true)),
             "home_idle_clock_minutes" to ("10" to defaults.copy(homeIdleClockMinutes = 10)),
             "back_opens_clock" to ("true" to defaults.copy(backOpensClock = true)),
             "clock_wallpaper" to ("true" to defaults.copy(clockWallpaper = true)),

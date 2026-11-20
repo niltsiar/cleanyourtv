@@ -70,6 +70,7 @@
   <string name="sleep_timer">Sleep timer</string>
   <string name="sleep_timer_off">Off</string>
   <string name="sleep_timer_minutes">%1$d min</string>
+  <string name="quick_panel">Quick panel</string>
   <string name="restart_confirm">Restart</string>
   <string name="restart_cancel">Cancel</string>
   <plurals name="shelf_minutes_left">

@@ -5,4 +5,16 @@
     <string name="sleep_card">電視將在 %1$d 秒後關閉。OK：再延長 15 分鐘。</string>
     <string name="sleep_notice_minutes">睡眠定時：%1$d 分鐘</string>
     <string name="sleep_notice_off">睡眠定時已關閉</string>
+    <string name="panel_title">快速面板</string>
+    <string name="panel_sleep_timer">睡眠定時</string>
+    <string name="panel_sleep_off">關</string>
+    <string name="panel_sleep_minutes">%1$d 分鐘</string>
+    <string name="panel_inputs">輸入來源</string>
+    <string name="panel_screensaver">螢幕保護程式</string>
+    <string name="panel_mute">靜音</string>
+    <string name="panel_restart">重新啟動電視</string>
+    <string name="panel_launcher_settings">桌面設定</string>
+    <string name="panel_restart_question">要重新啟動電視嗎？</string>
+    <string name="panel_restart_cancel">取消</string>
+    <string name="panel_restart_confirm">重新啟動</string>
 </resources>

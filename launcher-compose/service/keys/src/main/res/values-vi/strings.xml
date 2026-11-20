@@ -5,4 +5,16 @@
     <string name="sleep_card">TV sẽ tắt sau %1$d giây. OK: thêm 15 phút.</string>
     <string name="sleep_notice_minutes">Hẹn giờ tắt: %1$d phút</string>
     <string name="sleep_notice_off">Đã tắt hẹn giờ</string>
+    <string name="panel_title">Bảng nhanh</string>
+    <string name="panel_sleep_timer">Hẹn giờ tắt</string>
+    <string name="panel_sleep_off">Tắt</string>
+    <string name="panel_sleep_minutes">%1$d phút</string>
+    <string name="panel_inputs">Nguồn vào</string>
+    <string name="panel_screensaver">Trình bảo vệ màn hình</string>
+    <string name="panel_mute">Tắt tiếng</string>
+    <string name="panel_restart">Khởi động lại TV</string>
+    <string name="panel_launcher_settings">Cài đặt launcher</string>
+    <string name="panel_restart_question">Khởi động lại TV?</string>
+    <string name="panel_restart_cancel">Hủy</string>
+    <string name="panel_restart_confirm">Khởi động lại</string>
 </resources>

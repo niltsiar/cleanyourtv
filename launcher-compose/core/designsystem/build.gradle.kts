@@ -16,6 +16,7 @@ android {
 }
 
 dependencies {
+    api(project(":core:config"))
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.compose.ui.test.junit4)

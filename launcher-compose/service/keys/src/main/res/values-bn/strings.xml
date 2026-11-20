@@ -5,4 +5,16 @@
     <string name="sleep_card">টিভি %1$d সেকেন্ডে বন্ধ হবে। OK: আরও 15 মিনিট।</string>
     <string name="sleep_notice_minutes">স্লিপ টাইমার: %1$d মিনিট</string>
     <string name="sleep_notice_off">স্লিপ টাইমার বন্ধ</string>
+    <string name="panel_title">দ্রুত প্যানেল</string>
+    <string name="panel_sleep_timer">স্লিপ টাইমার</string>
+    <string name="panel_sleep_off">বন্ধ</string>
+    <string name="panel_sleep_minutes">%1$d মিনিট</string>
+    <string name="panel_inputs">ইনপুট</string>
+    <string name="panel_screensaver">স্ক্রিন সেভার</string>
+    <string name="panel_mute">মিউট করুন</string>
+    <string name="panel_restart">টিভি রিস্টার্ট করুন</string>
+    <string name="panel_launcher_settings">লঞ্চার সেটিংস</string>
+    <string name="panel_restart_question">টিভি রিস্টার্ট করবেন?</string>
+    <string name="panel_restart_cancel">বাতিল</string>
+    <string name="panel_restart_confirm">রিস্টার্ট</string>
 </resources>

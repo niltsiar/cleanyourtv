@@ -5,4 +5,16 @@
     <string name="sleep_card">הטלוויזיה תיכבה בעוד %1$d שניות. OK: עוד 15 דקות.</string>
     <string name="sleep_notice_minutes">טיימר שינה: %1$d דק׳</string>
     <string name="sleep_notice_off">טיימר שינה כבוי</string>
+    <string name="panel_title">לוח מהיר</string>
+    <string name="panel_sleep_timer">טיימר שינה</string>
+    <string name="panel_sleep_off">כבוי</string>
+    <string name="panel_sleep_minutes">%1$d דק׳</string>
+    <string name="panel_inputs">כניסות</string>
+    <string name="panel_screensaver">שומר מסך</string>
+    <string name="panel_mute">השתקה</string>
+    <string name="panel_restart">הפעלת הטלוויזיה מחדש</string>
+    <string name="panel_launcher_settings">הגדרות מסך הבית</string>
+    <string name="panel_restart_question">להפעיל מחדש את הטלוויזיה?</string>
+    <string name="panel_restart_cancel">ביטול</string>
+    <string name="panel_restart_confirm">הפעלה מחדש</string>
 </resources>

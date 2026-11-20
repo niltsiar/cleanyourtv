@@ -264,6 +264,11 @@ public data class TvConfig(
      * ends, after a card over the last 60 s. Needs the key service bound and Android 9.
      */
     val sleepTimer: Boolean = false,
+    /**
+     * A held Home opens a panel of quick actions over any app, from the key service with the key filter on; a short press
+     * still goes Home. Also a row in the Settings menu.
+     */
+    val quickPanel: Boolean = false,
     /** Minutes Home may sit untouched before the clock screensaver, 0 to 1440; 0 is off. */
     val homeIdleClockMinutes: Int = 0,
     /** Back on Home opens the clock screensaver instead of doing nothing. */

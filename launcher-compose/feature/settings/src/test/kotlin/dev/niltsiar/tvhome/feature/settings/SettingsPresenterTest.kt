@@ -104,6 +104,7 @@ class SettingsPresenterTestContent :
                         RowSpec(SettingsRowId.InputTiles, onOff) { it.inputTiles },
                         RowSpec(SettingsRowId.RestartPress, onOff) { it.restartPress },
                         RowSpec(SettingsRowId.SleepTimer, onOff) { it.sleepTimer },
+                        RowSpec(SettingsRowId.QuickPanel, onOff) { it.quickPanel },
                     )
 
                 fun SettingsHarness.openWallpaperPicker(): WallpaperPicker {
@@ -185,7 +186,7 @@ class SettingsPresenterTestContent :
                             SettingsRowId.InputArrival,
                             SettingsRowId.InputTiles,
                         ),
-                        listOf(SettingsRowId.RestartPress, SettingsRowId.SleepTimer),
+                        listOf(SettingsRowId.RestartPress, SettingsRowId.SleepTimer, SettingsRowId.QuickPanel),
                     )
             }
 
@@ -243,6 +244,17 @@ class SettingsPresenterTestContent :
                 settings.awaitState { it.row(SettingsRowId.SleepTimer).selected == onOff.indexOf(true) }
 
                 settings.config.sleepTimer shouldBe true
+                settings.state.followsTheme.shouldBeFalse()
+            }
+
+            test("the Quick panel row is off by default and stores quick_panel") {
+                val settings = settings()
+                settings.row(SettingsRowId.QuickPanel).selected shouldBe onOff.indexOf(false)
+
+                settings.pick(SettingsRowId.QuickPanel, onOff.indexOf(true))
+                settings.awaitState { it.row(SettingsRowId.QuickPanel).selected == onOff.indexOf(true) }
+
+                settings.config.quickPanel shouldBe true
                 settings.state.followsTheme.shouldBeFalse()
             }
 
@@ -673,4 +685,4 @@ private const val LAST_OPTIONS =
     "app_library": false,
     "library_least_used": false, "unused_fade_days": 90, "home_idle_clock_minutes": 60, "back_opens_clock": false,
     "clock_wallpaper": false, "reduced_motion": false, "focus_overshoot": false, "press_feedback": false, "habit_hint": false,
-    "input_arrival": false, "input_tiles": false, "restart_press": false, "sleep_timer": false}"""
+    "input_arrival": false, "input_tiles": false, "restart_press": false, "sleep_timer": false, "quick_panel": false}"""

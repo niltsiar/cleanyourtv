@@ -72,4 +72,5 @@
   <string name="sleep_timer">睡眠定時</string>
   <string name="sleep_timer_off">關</string>
   <string name="sleep_timer_minutes">%1$d 分鐘</string>
+  <string name="quick_panel">快速面板</string>
 </resources>

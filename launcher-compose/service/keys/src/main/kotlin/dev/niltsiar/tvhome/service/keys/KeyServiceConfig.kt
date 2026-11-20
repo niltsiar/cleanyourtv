@@ -1,6 +1,8 @@
 package dev.niltsiar.tvhome.service.keys
 
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.designsystem.focusStyle
+import dev.niltsiar.tvhome.core.designsystem.motion
 
 /**
  * What [KeyService] reads from the config and the Open on start pick, and nothing else: a change to any other field, such as
@@ -24,6 +26,9 @@ internal data class KeyServiceConfig(
     val inputKeyKeycodes: List<Int>,
     val captureInputKeys: Boolean,
     val sleepTimer: Boolean,
+    val quickPanel: Boolean,
+    val restartPress: Boolean,
+    val panelLook: PanelLook,
 )
 
 /** [pick] is the Open on start app ([dev.niltsiar.tvhome.core.config.ConfigRepository.openOnStartApp]), which only the power-on plan reads. */
@@ -45,4 +50,7 @@ internal fun TvConfig.forKeyService(pick: String?): KeyServiceConfig =
         inputKeyKeycodes = inputKeyKeycodes,
         captureInputKeys = captureInputKeys,
         sleepTimer = sleepTimer,
+        quickPanel = quickPanel,
+        restartPress = restartPress,
+        panelLook = PanelLook(motion(), focusStyle()),
     )

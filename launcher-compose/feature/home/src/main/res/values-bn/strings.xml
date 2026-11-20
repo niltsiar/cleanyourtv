@@ -74,4 +74,5 @@
   <string name="sleep_timer">স্লিপ টাইমার</string>
   <string name="sleep_timer_off">বন্ধ</string>
   <string name="sleep_timer_minutes">%1$d মিনিট</string>
+  <string name="quick_panel">দ্রুত প্যানেল</string>
 </resources>

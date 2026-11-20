@@ -55,6 +55,7 @@ internal fun HomeHost(
     onOpenPowerMenu: () -> Unit,
     onPressRestart: () -> Unit,
     onStepSleepTimer: () -> Unit,
+    onOpenQuickPanel: () -> Unit,
     onOrderNotSaved: () -> Unit,
     onLibrarySaveFailed: () -> Unit,
     onOpenInput: (InputTarget) -> Unit,
@@ -88,6 +89,7 @@ internal fun HomeHost(
                 HomeEffect.OpenPowerMenu -> onOpenPowerMenu()
                 HomeEffect.PressRestart -> onPressRestart()
                 HomeEffect.StepSleepTimer -> onStepSleepTimer()
+                HomeEffect.OpenQuickPanel -> onOpenQuickPanel()
                 HomeEffect.OrderNotSaved -> onOrderNotSaved()
                 HomeEffect.LibrarySaveFailed -> onLibrarySaveFailed()
                 is HomeEffect.OpenInput -> onOpenInput(effect.target)

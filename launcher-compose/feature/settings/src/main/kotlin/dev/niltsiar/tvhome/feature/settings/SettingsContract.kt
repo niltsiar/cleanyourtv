@@ -43,6 +43,7 @@ public enum class SettingsRowId {
     InputTiles,
     RestartPress,
     SleepTimer,
+    QuickPanel,
 }
 
 /** What an option says: a number or a string of the module. */

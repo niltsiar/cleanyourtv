@@ -179,6 +179,7 @@ internal val settingsGroups: List<Group> =
                 listOf(
                     onOff(SettingsRowId.RestartPress, R.string.settings_restart_press, Choices.RestartPress) { it.restartPress },
                     onOff(SettingsRowId.SleepTimer, R.string.settings_sleep_timer, Choices.SleepTimer) { it.sleepTimer },
+                    onOff(SettingsRowId.QuickPanel, R.string.settings_quick_panel, Choices.QuickPanel) { it.quickPanel },
                 ),
         ),
     )

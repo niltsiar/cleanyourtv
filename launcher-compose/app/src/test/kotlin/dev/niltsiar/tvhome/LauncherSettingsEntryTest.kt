@@ -21,6 +21,7 @@ import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.Choice
 import dev.niltsiar.tvhome.core.config.Choices
+import dev.niltsiar.tvhome.core.model.LauncherIntents
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -139,7 +140,7 @@ class LauncherSettingsEntryTestContent :
                     whileOpen: () -> Unit = {},
                     choices: () -> Unit,
                 ) {
-                    send(Intent(launcherSettingsAction(app.packageName)))
+                    send(Intent(LauncherIntents.launcherSettings(app.packageName)))
                     val page = openedPage()
                     page.shouldNotBeNull()
                     home.pause().stop()
@@ -158,7 +159,7 @@ class LauncherSettingsEntryTestContent :
                 send(Intent("dev.example.other.action.LAUNCHER_SETTINGS"))
                 openedPage().shouldBeNull()
 
-                send(Intent(launcherSettingsAction(app.packageName)))
+                send(Intent(LauncherIntents.launcherSettings(app.packageName)))
                 openedPage().intent.component?.className shouldBe SettingsActivity::class.java.name
             }
 

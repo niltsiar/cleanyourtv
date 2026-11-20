@@ -66,4 +66,5 @@
   <string name="settings_now_playing_adb">Autorisez-le avec adb : %1$s</string>
   <string name="settings_restart_press">Redémarrer la TV depuis l’accueil</string>
   <string name="settings_sleep_timer">Minuterie de veille</string>
+  <string name="settings_quick_panel">Panneau rapide</string>
 </resources>

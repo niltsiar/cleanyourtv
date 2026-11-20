@@ -61,6 +61,7 @@ val HomeInteractionTest by testSuite(testConfig = TestConfig.testScope(isEnabled
                 sleepTimer: Boolean = false,
                 sleepStep: Flow<Int> = flowOf(0),
                 minutesLeft: Flow<Int?> = flowOf(null),
+                quickPanel: Boolean = false,
             ): Flow<HomeUiState> {
                 val sources =
                     sources(
@@ -71,6 +72,7 @@ val HomeInteractionTest by testSuite(testConfig = TestConfig.testScope(isEnabled
                         sleepTimerAvailable = { sleepTimer },
                         sleepTimerStep = sleepStep,
                         sleepMinutesLeft = minutesLeft,
+                        quickPanelAvailable = { quickPanel },
                         saveOrder = ::saveOrder,
                         removeFromHome = ::removeFromHome,
                         focusMemory = focusMemory,
@@ -242,6 +244,38 @@ val HomeInteractionTest by testSuite(testConfig = TestConfig.testScope(isEnabled
                     runCurrent()
                     expectNoEvents()
                     cancelAndIgnoreRemainingEvents()
+                }
+            }
+        }
+
+        test("with quick_panel and the panel available the settings menu has quick panel before restart and ok opens it") {
+            with(it.testScope) {
+                presenter(SixColumns.copy(quickPanel = true), powerMenu = true, quickPanel = true).test {
+                    awaitMatching { it.dock.isNotEmpty() }
+                    events.send(HomeEvent.SettingsMenu)
+
+                    awaitMatching { it.menu != null }.menu?.rows shouldBe
+                        listOf(MenuRow.LauncherSettings, MenuRow.EditDock, MenuRow.Reorder, MenuRow.QuickPanel, MenuRow.PowerMenu)
+                    events.send(HomeEvent.MenuPick(MenuRow.QuickPanel))
+
+                    effects.receive() shouldBe HomeEffect.OpenQuickPanel
+                    awaitMatching { it.menu == null }
+                    cancelAndIgnoreRemainingEvents()
+                }
+            }
+        }
+
+        test("with quick_panel off or the key filter off or no key service the settings menu has no quick panel") {
+            with(it.testScope) {
+                for ((config, available) in listOf(SixColumns to true, SixColumns.copy(quickPanel = true) to false)) {
+                    presenter(config, powerMenu = true, quickPanel = available).test {
+                        awaitMatching { it.dock.isNotEmpty() }
+                        events.send(HomeEvent.SettingsMenu)
+
+                        awaitMatching { it.menu != null }.menu?.rows shouldBe
+                            listOf(MenuRow.LauncherSettings, MenuRow.EditDock, MenuRow.Reorder, MenuRow.PowerMenu)
+                        cancelAndIgnoreRemainingEvents()
+                    }
                 }
             }
         }

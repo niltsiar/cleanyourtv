@@ -66,4 +66,5 @@
   <string name="settings_now_playing_adb">אפשרו דרך adb: %1$s</string>
   <string name="settings_restart_press">הפעלת הטלוויזיה מחדש ממסך הבית</string>
   <string name="settings_sleep_timer">טיימר שינה</string>
+  <string name="settings_quick_panel">לוח מהיר</string>
 </resources>

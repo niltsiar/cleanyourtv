@@ -15,6 +15,8 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.designsystem.focusStyle
+import dev.niltsiar.tvhome.core.designsystem.motion
 import dev.niltsiar.tvhome.data.shelf.READ_TV_LISTINGS
 import dev.niltsiar.tvhome.feature.settings.MoleculeSettingsViewModel
 import dev.niltsiar.tvhome.feature.settings.PageNotice

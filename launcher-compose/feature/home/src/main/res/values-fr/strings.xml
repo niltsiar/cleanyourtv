@@ -78,4 +78,5 @@
   <string name="sleep_timer">Minuterie de veille</string>
   <string name="sleep_timer_off">Désactivé</string>
   <string name="sleep_timer_minutes">%1$d min</string>
+  <string name="quick_panel">Panneau rapide</string>
 </resources>

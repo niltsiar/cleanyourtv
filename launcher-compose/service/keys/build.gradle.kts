@@ -1,5 +1,5 @@
 plugins {
-    id("tvhome.android.library")
+    id("tvhome.android.library.compose")
     id("tvhome.android.testballoon")
 }
 
@@ -17,10 +17,13 @@ dependencies {
     implementation(project(":core:model"))
     implementation(project(":data:inputs"))
     implementation(project(":data:system"))
+    implementation(project(":core:designsystem"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.android)
 
     testImplementation(project(":data:apps"))
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

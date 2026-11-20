@@ -5,4 +5,16 @@
     <string name="sleep_card">Телевизор выключится через %1$d с. OK: ещё 15 минут.</string>
     <string name="sleep_notice_minutes">Таймер сна: %1$d мин</string>
     <string name="sleep_notice_off">Таймер сна выключен</string>
+    <string name="panel_title">Быстрая панель</string>
+    <string name="panel_sleep_timer">Таймер сна</string>
+    <string name="panel_sleep_off">Выкл.</string>
+    <string name="panel_sleep_minutes">%1$d мин</string>
+    <string name="panel_inputs">Источники</string>
+    <string name="panel_screensaver">Заставка</string>
+    <string name="panel_mute">Без звука</string>
+    <string name="panel_restart">Перезагрузить ТВ</string>
+    <string name="panel_launcher_settings">Настройки главного экрана</string>
+    <string name="panel_restart_question">Перезагрузить ТВ?</string>
+    <string name="panel_restart_cancel">Отмена</string>
+    <string name="panel_restart_confirm">Перезагрузить</string>
 </resources>

@@ -72,4 +72,5 @@
   <string name="sleep_timer">Sleep-Timer</string>
   <string name="sleep_timer_off">Aus</string>
   <string name="sleep_timer_minutes">%1$d Min.</string>
+  <string name="quick_panel">Schnellmenü</string>
 </resources>

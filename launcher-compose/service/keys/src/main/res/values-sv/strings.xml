@@ -5,4 +5,16 @@
     <string name="sleep_card">Tv:n stängs av om %1$d s. OK: 15 minuter till.</string>
     <string name="sleep_notice_minutes">Insomningstimer: %1$d min</string>
     <string name="sleep_notice_off">Insomningstimer av</string>
+    <string name="panel_title">Snabbpanel</string>
+    <string name="panel_sleep_timer">Insomningstimer</string>
+    <string name="panel_sleep_off">Av</string>
+    <string name="panel_sleep_minutes">%1$d min</string>
+    <string name="panel_inputs">Ingångar</string>
+    <string name="panel_screensaver">Skärmsläckare</string>
+    <string name="panel_mute">Ljud av</string>
+    <string name="panel_restart">Starta om TV:n</string>
+    <string name="panel_launcher_settings">Startskärmsinställningar</string>
+    <string name="panel_restart_question">Starta om TV:n?</string>
+    <string name="panel_restart_cancel">Avbryt</string>
+    <string name="panel_restart_confirm">Starta om</string>
 </resources>

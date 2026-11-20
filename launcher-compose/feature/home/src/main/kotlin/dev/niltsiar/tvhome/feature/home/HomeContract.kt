@@ -187,6 +187,9 @@ public sealed interface HomeEffect {
     /** sleep_timer: the key service steps its timer to the next of Off, 15, 30, 60, 90 and 120 minutes. */
     public data object StepSleepTimer : HomeEffect
 
+    /** quick_panel: the key service opens its panel over Home. */
+    public data object OpenQuickPanel : HomeEffect
+
     /** Switch to what an Inputs row stands for: a TV input, a Coocaa source, the source panel or Live TV. */
     public data class OpenInput(
         val target: InputTarget,
@@ -244,6 +247,8 @@ public class HomeSources(
     public val sleepTimerStep: Flow<Int> = flowOf(0),
     /** The whole minutes the sleep timer has left, again each time they change; null while it is off. */
     public val sleepMinutesLeft: Flow<Int?> = flowOf(null),
+    /** Whether the key service can open the quick panel (quick_panel): bound, with the key filter on. */
+    public val quickPanelAvailable: () -> Boolean = { false },
     /** The Inputs button and its list; never emits for a TV that cannot say, which leaves the button showing. */
     public val inputs: Flow<InputsMenu> = emptyFlow(),
     /** Where focus was last, kept across the activity being created again. */

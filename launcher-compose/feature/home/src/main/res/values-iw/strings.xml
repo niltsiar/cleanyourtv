@@ -79,4 +79,5 @@
   <string name="sleep_timer">טיימר שינה</string>
   <string name="sleep_timer_off">כבוי</string>
   <string name="sleep_timer_minutes">%1$d דק׳</string>
+  <string name="quick_panel">לוח מהיר</string>
 </resources>

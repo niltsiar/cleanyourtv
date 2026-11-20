@@ -81,4 +81,5 @@
   <string name="sleep_timer">Časovač vypnutí</string>
   <string name="sleep_timer_off">Vypnuto</string>
   <string name="sleep_timer_minutes">%1$d min</string>
+  <string name="quick_panel">Rychlý panel</string>
 </resources>

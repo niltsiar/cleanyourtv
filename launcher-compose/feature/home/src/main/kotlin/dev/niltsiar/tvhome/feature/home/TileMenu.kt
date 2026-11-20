@@ -23,6 +23,7 @@ public enum class MenuRow {
     EditDock,
     Reorder,
     SleepTimer,
+    QuickPanel,
     PowerMenu,
     CancelRestart,
     Restart,
@@ -106,14 +107,15 @@ internal fun tileMenuRows(
 
 /**
  * The Settings button's long-press menu: "Launcher settings", "Native settings" while a vendor settings app is installed,
- * "Edit dock" with dock_row, "Reorder", "Sleep timer" while the key service can run it (sleep_timer), and "Restart" while the
- * key service is bound and can open the power menu.
+ * "Edit dock" with dock_row, "Reorder", "Sleep timer" while the key service can run it (sleep_timer), "Quick panel" while the
+ * key service can open it (quick_panel), and "Restart" while the key service is bound and can open the power menu.
  */
 internal fun settingsMenuRows(
     dockRow: Boolean,
     nativeSettings: Boolean,
     powerMenu: Boolean = false,
     sleepTimer: Boolean = false,
+    quickPanel: Boolean = false,
 ): List<MenuRow> =
     buildList {
         add(MenuRow.LauncherSettings)
@@ -121,5 +123,6 @@ internal fun settingsMenuRows(
         if (dockRow) add(MenuRow.EditDock)
         add(MenuRow.Reorder)
         if (sleepTimer) add(MenuRow.SleepTimer)
+        if (quickPanel) add(MenuRow.QuickPanel)
         if (powerMenu) add(MenuRow.PowerMenu)
     }

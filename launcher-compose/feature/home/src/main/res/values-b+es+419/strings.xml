@@ -79,4 +79,5 @@
   <string name="sleep_timer">Temporizador de apagado</string>
   <string name="sleep_timer_off">Desactivado</string>
   <string name="sleep_timer_minutes">%1$d min</string>
+  <string name="quick_panel">Panel rápido</string>
 </resources>

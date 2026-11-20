@@ -5,4 +5,16 @@
     <string name="sleep_card">TV %1$d sn içinde kapanacak. OK: 15 dakika daha.</string>
     <string name="sleep_notice_minutes">Uyku zamanlayıcısı: %1$d dk</string>
     <string name="sleep_notice_off">Uyku zamanlayıcısı kapalı</string>
+    <string name="panel_title">Hızlı panel</string>
+    <string name="panel_sleep_timer">Uyku zamanlayıcısı</string>
+    <string name="panel_sleep_off">Kapalı</string>
+    <string name="panel_sleep_minutes">%1$d dk</string>
+    <string name="panel_inputs">Girişler</string>
+    <string name="panel_screensaver">Ekran koruyucu</string>
+    <string name="panel_mute">Sesi kapat</string>
+    <string name="panel_restart">TV’yi yeniden başlat</string>
+    <string name="panel_launcher_settings">Başlatıcı ayarları</string>
+    <string name="panel_restart_question">TV yeniden başlatılsın mı?</string>
+    <string name="panel_restart_cancel">İptal</string>
+    <string name="panel_restart_confirm">Yeniden başlat</string>
 </resources>

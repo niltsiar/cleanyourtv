@@ -5,4 +5,16 @@
     <string name="sleep_card">De tv gaat over %1$d s uit. OK: 15 minuten langer.</string>
     <string name="sleep_notice_minutes">Slaaptimer: %1$d min</string>
     <string name="sleep_notice_off">Slaaptimer uit</string>
+    <string name="panel_title">Snelpaneel</string>
+    <string name="panel_sleep_timer">Slaaptimer</string>
+    <string name="panel_sleep_off">Uit</string>
+    <string name="panel_sleep_minutes">%1$d min</string>
+    <string name="panel_inputs">Ingangen</string>
+    <string name="panel_screensaver">Screensaver</string>
+    <string name="panel_mute">Dempen</string>
+    <string name="panel_restart">Tv herstarten</string>
+    <string name="panel_launcher_settings">Launcher-instellingen</string>
+    <string name="panel_restart_question">Tv herstarten?</string>
+    <string name="panel_restart_cancel">Annuleren</string>
+    <string name="panel_restart_confirm">Herstarten</string>
 </resources>

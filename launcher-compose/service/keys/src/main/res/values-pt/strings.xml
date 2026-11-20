@@ -5,4 +5,16 @@
     <string name="sleep_card">A TV desliga em %1$d s. OK: mais 15 minutos.</string>
     <string name="sleep_notice_minutes">Timer de desligamento: %1$d min</string>
     <string name="sleep_notice_off">Timer de desligamento desativado</string>
+    <string name="panel_title">Painel rápido</string>
+    <string name="panel_sleep_timer">Timer de desligamento</string>
+    <string name="panel_sleep_off">Desativado</string>
+    <string name="panel_sleep_minutes">%1$d min</string>
+    <string name="panel_inputs">Entradas</string>
+    <string name="panel_screensaver">Protetor de tela</string>
+    <string name="panel_mute">Desativar som</string>
+    <string name="panel_restart">Reiniciar TV</string>
+    <string name="panel_launcher_settings">Configurações do launcher</string>
+    <string name="panel_restart_question">Reiniciar a TV?</string>
+    <string name="panel_restart_cancel">Cancelar</string>
+    <string name="panel_restart_confirm">Reiniciar</string>
 </resources>

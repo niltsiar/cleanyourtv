@@ -66,4 +66,5 @@
   <string name="settings_now_playing_adb">Zezwól przez adb: %1$s</string>
   <string name="settings_restart_press">Restart TV z ekranu głównego</string>
   <string name="settings_sleep_timer">Wyłącznik czasowy</string>
+  <string name="settings_quick_panel">Szybki panel</string>
 </resources>

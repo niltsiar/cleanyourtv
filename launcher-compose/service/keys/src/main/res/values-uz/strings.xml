@@ -5,4 +5,16 @@
     <string name="sleep_card">Televizor %1$d soniyada oʻchadi. OK: yana 15 daqiqa.</string>
     <string name="sleep_notice_minutes">Uyqu taymeri: %1$d daq</string>
     <string name="sleep_notice_off">Uyqu taymeri oʻchiq</string>
+    <string name="panel_title">Tezkor panel</string>
+    <string name="panel_sleep_timer">Uyqu taymeri</string>
+    <string name="panel_sleep_off">Oʻchiq</string>
+    <string name="panel_sleep_minutes">%1$d daq</string>
+    <string name="panel_inputs">Manbalar</string>
+    <string name="panel_screensaver">Ekran saqlovchi</string>
+    <string name="panel_mute">Ovozsiz</string>
+    <string name="panel_restart">TVni qayta yoqish</string>
+    <string name="panel_launcher_settings">Launcher sozlamalari</string>
+    <string name="panel_restart_question">TV qayta yoqilsinmi?</string>
+    <string name="panel_restart_cancel">Bekor qilish</string>
+    <string name="panel_restart_confirm">Qayta yoqish</string>
 </resources>

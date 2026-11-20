@@ -191,6 +191,7 @@ public fun parseTvConfig(json: String): ParsedConfig {
             restoreKeyServices = o.bool("restore_key_services", d.restoreKeyServices),
             restartPress = o.bool("restart_press", d.restartPress),
             sleepTimer = o.bool("sleep_timer", d.sleepTimer),
+            quickPanel = o.bool("quick_panel", d.quickPanel),
             homeIdleClockMinutes = o.int("home_idle_clock_minutes", d.homeIdleClockMinutes, 0..1440),
             backOpensClock = o.bool("back_opens_clock", d.backOpensClock),
             clockWallpaper = o.bool("clock_wallpaper", d.clockWallpaper),

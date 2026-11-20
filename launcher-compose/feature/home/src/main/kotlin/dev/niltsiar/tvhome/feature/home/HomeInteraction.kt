@@ -604,7 +604,12 @@ internal class HomeInteraction(
         if (session != null || menu != null) return
         val current = config.value
         val sleepTimer = current.sleepTimer && sources.sleepTimerAvailable()
-        menu = HomeMenu(null, settingsMenuRows(current.dockRow, sources.hasNativeSettings(), sources.powerMenuAvailable(), sleepTimer))
+        val quickPanel = current.quickPanel && sources.quickPanelAvailable()
+        menu =
+            HomeMenu(
+                null,
+                settingsMenuRows(current.dockRow, sources.hasNativeSettings(), sources.powerMenuAvailable(), sleepTimer, quickPanel),
+            )
     }
 
     /** The dock row's tiles: the first [TvConfig.columns] with a single row, else the tiles the dock shows. */
@@ -696,6 +701,10 @@ internal class HomeInteraction(
 
             MenuRow.SleepTimer -> {
                 effect(HomeEffect.StepSleepTimer)
+            }
+
+            MenuRow.QuickPanel -> {
+                effect(HomeEffect.OpenQuickPanel)
             }
 
             MenuRow.CancelRestart -> {

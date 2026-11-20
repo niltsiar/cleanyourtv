@@ -143,6 +143,7 @@ class HomeHostConfigTestContent :
                                     onOpenPowerMenu = {},
                                     onPressRestart = {},
                                     onStepSleepTimer = {},
+                                    onOpenQuickPanel = {},
                                     onOrderNotSaved = {},
                                     onLibrarySaveFailed = {},
                                     onOpenInput = {},

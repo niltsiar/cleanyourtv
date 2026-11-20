@@ -5,4 +5,16 @@
     <string name="sleep_card">%1$d초 후 TV가 꺼집니다. OK: 15분 연장</string>
     <string name="sleep_notice_minutes">취침 타이머: %1$d분</string>
     <string name="sleep_notice_off">취침 타이머 꺼짐</string>
+    <string name="panel_title">빠른 패널</string>
+    <string name="panel_sleep_timer">취침 타이머</string>
+    <string name="panel_sleep_off">꺼짐</string>
+    <string name="panel_sleep_minutes">%1$d분</string>
+    <string name="panel_inputs">입력</string>
+    <string name="panel_screensaver">화면 보호기</string>
+    <string name="panel_mute">음소거</string>
+    <string name="panel_restart">TV 다시 시작</string>
+    <string name="panel_launcher_settings">런처 설정</string>
+    <string name="panel_restart_question">TV를 다시 시작할까요?</string>
+    <string name="panel_restart_cancel">취소</string>
+    <string name="panel_restart_confirm">다시 시작</string>
 </resources>

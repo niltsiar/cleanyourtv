@@ -75,4 +75,5 @@
   <string name="sleep_timer">Uyqu taymeri</string>
   <string name="sleep_timer_off">Oʻchiq</string>
   <string name="sleep_timer_minutes">%1$d daq</string>
+  <string name="quick_panel">Tezkor panel</string>
 </resources>

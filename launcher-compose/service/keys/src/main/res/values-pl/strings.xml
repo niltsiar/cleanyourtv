@@ -5,4 +5,16 @@
     <string name="sleep_card">Telewizor wyłączy się za %1$d s. OK: jeszcze 15 minut.</string>
     <string name="sleep_notice_minutes">Wyłącznik czasowy: %1$d min</string>
     <string name="sleep_notice_off">Wyłącznik czasowy wyłączony</string>
+    <string name="panel_title">Szybki panel</string>
+    <string name="panel_sleep_timer">Wyłącznik czasowy</string>
+    <string name="panel_sleep_off">Wył.</string>
+    <string name="panel_sleep_minutes">%1$d min</string>
+    <string name="panel_inputs">Wejścia</string>
+    <string name="panel_screensaver">Wygaszacz ekranu</string>
+    <string name="panel_mute">Wycisz</string>
+    <string name="panel_restart">Zrestartuj TV</string>
+    <string name="panel_launcher_settings">Ustawienia ekranu głównego</string>
+    <string name="panel_restart_question">Zrestartować TV?</string>
+    <string name="panel_restart_cancel">Anuluj</string>
+    <string name="panel_restart_confirm">Zrestartuj</string>
 </resources>

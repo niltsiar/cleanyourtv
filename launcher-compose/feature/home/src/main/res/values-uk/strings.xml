@@ -81,4 +81,5 @@
   <string name="sleep_timer">Таймер сну</string>
   <string name="sleep_timer_off">Вимк.</string>
   <string name="sleep_timer_minutes">%1$d хв</string>
+  <string name="quick_panel">Швидка панель</string>
 </resources>

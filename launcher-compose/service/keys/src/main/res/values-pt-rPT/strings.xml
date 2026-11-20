@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="panel_title">Painel rápido</string>
+    <string name="panel_screensaver">Proteção de ecrã</string>
+    <string name="panel_sleep_timer">Temporizador para desligar</string>
+    <string name="panel_sleep_off">Desligado</string>
+    <string name="panel_sleep_minutes">%1$d min</string>
+    <string name="panel_launcher_settings">Definições do launcher</string>
+</resources>

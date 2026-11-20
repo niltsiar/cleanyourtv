@@ -30,6 +30,7 @@ private fun MenuRow.label(): Int =
         MenuRow.EditDock -> R.string.dock_edit
         MenuRow.Reorder -> R.string.reorder
         MenuRow.SleepTimer -> R.string.sleep_timer
+        MenuRow.QuickPanel -> R.string.quick_panel
         MenuRow.PowerMenu -> R.string.power_menu
         MenuRow.CancelRestart -> R.string.restart_cancel
         MenuRow.Restart -> R.string.restart_confirm

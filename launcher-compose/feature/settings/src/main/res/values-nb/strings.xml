@@ -66,4 +66,5 @@
   <string name="settings_now_playing_adb">Gi tilgang med adb: %1$s</string>
   <string name="settings_restart_press">Start TV-en på nytt fra startskjermen</string>
   <string name="settings_sleep_timer">Innsovningstimer</string>
+  <string name="settings_quick_panel">Hurtigpanel</string>
 </resources>

@@ -5,4 +5,16 @@
     <string name="sleep_card">La TV si spegne tra %1$d s. OK: altri 15 minuti.</string>
     <string name="sleep_notice_minutes">Timer di spegnimento: %1$d min</string>
     <string name="sleep_notice_off">Timer di spegnimento disattivato</string>
+    <string name="panel_title">Pannello rapido</string>
+    <string name="panel_sleep_timer">Timer di spegnimento</string>
+    <string name="panel_sleep_off">Disattivato</string>
+    <string name="panel_sleep_minutes">%1$d min</string>
+    <string name="panel_inputs">Ingressi</string>
+    <string name="panel_screensaver">Salvaschermo</string>
+    <string name="panel_mute">Disattiva audio</string>
+    <string name="panel_restart">Riavvia la TV</string>
+    <string name="panel_launcher_settings">Impostazioni del launcher</string>
+    <string name="panel_restart_question">Riavviare la TV?</string>
+    <string name="panel_restart_cancel">Annulla</string>
+    <string name="panel_restart_confirm">Riavvia</string>
 </resources>

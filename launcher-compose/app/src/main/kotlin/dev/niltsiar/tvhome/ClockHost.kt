@@ -15,6 +15,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.config.is24Hour
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.designsystem.motion
 import dev.niltsiar.tvhome.feature.clock.ClockScene
 import dev.niltsiar.tvhome.feature.clock.clockFace
 

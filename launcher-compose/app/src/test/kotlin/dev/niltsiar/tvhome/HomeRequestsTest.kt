@@ -27,11 +27,14 @@ class HomeRequestsTestContent :
         }
 
         test("the launcher settings action of this package opens the page and no other does") {
-            homeRequestOf(Intent(launcherSettingsAction(PACKAGE)), PACKAGE) shouldBe HomeRequest.OpenLauncherSettings
-            launcherSettingsAction("dev.example.tv") shouldBe "dev.example.tv.action.LAUNCHER_SETTINGS"
-            homeRequestOf(Intent(launcherSettingsAction("dev.example.tv")), PACKAGE) shouldBe HomeRequest.None
+            homeRequestOf(Intent(LauncherIntents.launcherSettings(PACKAGE)), PACKAGE) shouldBe HomeRequest.OpenLauncherSettings
+            LauncherIntents.launcherSettings("dev.example.tv") shouldBe "dev.example.tv.action.LAUNCHER_SETTINGS"
+            homeRequestOf(Intent(LauncherIntents.launcherSettings("dev.example.tv")), PACKAGE) shouldBe HomeRequest.None
             homeRequestOf(Intent(LauncherIntents.CLOCK), PACKAGE) shouldBe HomeRequest.None
-            homeRequestOf(Intent(launcherSettingsAction(PACKAGE)).addFlags(Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY), PACKAGE) shouldBe
+            homeRequestOf(
+                Intent(LauncherIntents.launcherSettings(PACKAGE)).addFlags(Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY),
+                PACKAGE,
+            ) shouldBe
                 HomeRequest.None
         }
 

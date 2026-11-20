@@ -72,4 +72,5 @@
   <string name="sleep_timer">취침 타이머</string>
   <string name="sleep_timer_off">꺼짐</string>
   <string name="sleep_timer_minutes">%1$d분</string>
+  <string name="quick_panel">빠른 패널</string>
 </resources>

@@ -7,4 +7,16 @@
     <string name="sleep_card">El TV se apaga en %1$d s. OK: 15 minutos más.</string>
     <string name="sleep_notice_minutes">Temporizador de apagado: %1$d min</string>
     <string name="sleep_notice_off">Temporizador de apagado desactivado</string>
+    <string name="panel_title">Panel rápido</string>
+    <string name="panel_sleep_timer">Temporizador de apagado</string>
+    <string name="panel_sleep_off">Desactivado</string>
+    <string name="panel_sleep_minutes">%1$d min</string>
+    <string name="panel_inputs">Entradas</string>
+    <string name="panel_screensaver">Salvapantallas</string>
+    <string name="panel_mute">Silenciar</string>
+    <string name="panel_restart">Reiniciar TV</string>
+    <string name="panel_launcher_settings">Ajustes del lanzador</string>
+    <string name="panel_restart_question">¿Reiniciar el TV?</string>
+    <string name="panel_restart_cancel">Cancelar</string>
+    <string name="panel_restart_confirm">Reiniciar</string>
 </resources>

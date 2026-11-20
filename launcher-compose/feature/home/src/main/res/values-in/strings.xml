@@ -72,4 +72,5 @@
   <string name="sleep_timer">Timer tidur</string>
   <string name="sleep_timer_off">Mati</string>
   <string name="sleep_timer_minutes">%1$d mnt</string>
+  <string name="quick_panel">Panel cepat</string>
 </resources>

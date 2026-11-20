@@ -5,4 +5,16 @@
     <string name="sleep_card">El televisor s\'apaga d\'aquí a %1$d s. OK: 15 minuts més.</string>
     <string name="sleep_notice_minutes">Temporitzador d\'apagada: %1$d min</string>
     <string name="sleep_notice_off">Temporitzador d\'apagada desactivat</string>
+    <string name="panel_title">Tauler ràpid</string>
+    <string name="panel_sleep_timer">Temporitzador d\'apagada</string>
+    <string name="panel_sleep_off">Desactivat</string>
+    <string name="panel_sleep_minutes">%1$d min</string>
+    <string name="panel_inputs">Entrades</string>
+    <string name="panel_screensaver">Estalvi de pantalla</string>
+    <string name="panel_mute">Silencia</string>
+    <string name="panel_restart">Reinicia la TV</string>
+    <string name="panel_launcher_settings">Configuració del llançador</string>
+    <string name="panel_restart_question">Vols reiniciar la TV?</string>
+    <string name="panel_restart_cancel">Cancel·la</string>
+    <string name="panel_restart_confirm">Reinicia</string>
 </resources>

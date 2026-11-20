@@ -69,4 +69,5 @@
   <string name="sleep_timer">ตั้งเวลาปิด</string>
   <string name="sleep_timer_off">ปิด</string>
   <string name="sleep_timer_minutes">%1$d นาที</string>
+  <string name="quick_panel">แผงด่วน</string>
 </resources>

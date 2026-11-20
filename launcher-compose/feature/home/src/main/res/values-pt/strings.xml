@@ -78,4 +78,5 @@
   <string name="sleep_timer">Timer de desligamento</string>
   <string name="sleep_timer_off">Desativado</string>
   <string name="sleep_timer_minutes">%1$d min</string>
+  <string name="quick_panel">Painel rápido</string>
 </resources>

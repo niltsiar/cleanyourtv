@@ -86,4 +86,5 @@
   <string name="sleep_timer">مؤقت النوم</string>
   <string name="sleep_timer_off">إيقاف</string>
   <string name="sleep_timer_minutes">%1$d دقيقة</string>
+  <string name="quick_panel">اللوحة السريعة</string>
 </resources>

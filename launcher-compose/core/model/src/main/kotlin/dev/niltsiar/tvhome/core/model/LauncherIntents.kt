@@ -13,4 +13,7 @@ public object LauncherIntents {
 
     /** A boolean extra on the Home intent the key service sends when the TV comes on (power_on_home and power_on_home_always). */
     public const val EXTRA_POWER_ON: String = "dev.niltsiar.tvhome.extra.POWER_ON"
+
+    /** The action that opens the Launcher settings page. It follows the package, so a launcherApplicationId build answers to its own. */
+    public fun launcherSettings(packageName: String): String = "$packageName.action.LAUNCHER_SETTINGS"
 }

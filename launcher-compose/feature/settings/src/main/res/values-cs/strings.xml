@@ -66,4 +66,5 @@
   <string name="settings_now_playing_adb">Povolte přes adb: %1$s</string>
   <string name="settings_restart_press">Restartovat TV z domovské obrazovky</string>
   <string name="settings_sleep_timer">Časovač vypnutí</string>
+  <string name="settings_quick_panel">Rychlý panel</string>
 </resources>

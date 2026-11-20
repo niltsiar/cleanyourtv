@@ -23,6 +23,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.designsystem.focusStyle
+import dev.niltsiar.tvhome.core.designsystem.motion
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.InputTarget
@@ -33,6 +35,7 @@ import dev.niltsiar.tvhome.data.shelf.startShelfItem
 import dev.niltsiar.tvhome.feature.home.NO_ARRIVAL
 import dev.niltsiar.tvhome.feature.library.MoleculeLibraryViewModel
 import dev.niltsiar.tvhome.service.keys.PowerMenu
+import dev.niltsiar.tvhome.service.keys.QuickPanel
 import dev.niltsiar.tvhome.service.keys.ServiceRepair
 import dev.niltsiar.tvhome.service.keys.SleepTimer
 import dev.niltsiar.tvhome.service.keys.VendorKeys
@@ -146,6 +149,7 @@ class MainActivity : ComponentActivity() {
                     onOpenPowerMenu = PowerMenu::open,
                     onPressRestart = PowerMenu::restart,
                     onStepSleepTimer = SleepTimer::step,
+                    onOpenQuickPanel = QuickPanel::open,
                     onOrderNotSaved = ::orderNotSaved,
                     onLibrarySaveFailed = ::librarySaveFailed,
                     onOpenInput = ::openInput,

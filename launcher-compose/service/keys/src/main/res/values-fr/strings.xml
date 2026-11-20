@@ -5,4 +5,16 @@
     <string name="sleep_card">Le téléviseur s\'éteint dans %1$d s. OK : 15 minutes de plus.</string>
     <string name="sleep_notice_minutes">Minuterie de veille : %1$d min</string>
     <string name="sleep_notice_off">Minuterie de veille désactivée</string>
+    <string name="panel_title">Panneau rapide</string>
+    <string name="panel_sleep_timer">Minuterie de veille</string>
+    <string name="panel_sleep_off">Désactivé</string>
+    <string name="panel_sleep_minutes">%1$d min</string>
+    <string name="panel_inputs">Sources</string>
+    <string name="panel_screensaver">Économiseur d\'écran</string>
+    <string name="panel_mute">Couper le son</string>
+    <string name="panel_restart">Redémarrer la TV</string>
+    <string name="panel_launcher_settings">Paramètres du lanceur</string>
+    <string name="panel_restart_question">Redémarrer la TV ?</string>
+    <string name="panel_restart_cancel">Annuler</string>
+    <string name="panel_restart_confirm">Redémarrer</string>
 </resources>

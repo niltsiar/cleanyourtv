@@ -75,4 +75,5 @@
   <string name="sleep_timer">Uniajastin</string>
   <string name="sleep_timer_off">Pois</string>
   <string name="sleep_timer_minutes">%1$d min</string>
+  <string name="quick_panel">Pikapaneeli</string>
 </resources>

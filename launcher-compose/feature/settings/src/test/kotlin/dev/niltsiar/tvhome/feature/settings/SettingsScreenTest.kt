@@ -265,7 +265,7 @@ class SettingsScreenTestContent :
                 compose.waitForIdle()
                 compose.onNodeWithTag("settings:follow_theme").assertIsNotSelected()
 
-                goTo(SettingsRowId.SleepTimer)
+                goTo(SettingsRowId.QuickPanel)
                 press(Key.DirectionDown)
                 press(Key.DirectionCenter)
                 waitUntilIdle { settings.state.followsTheme }

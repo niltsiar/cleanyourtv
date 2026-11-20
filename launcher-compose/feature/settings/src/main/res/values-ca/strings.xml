@@ -66,4 +66,5 @@
   <string name="settings_now_playing_adb">Permet-ho amb adb: %1$s</string>
   <string name="settings_restart_press">Reinicia la TV des de l’inici</string>
   <string name="settings_sleep_timer">Temporitzador d\'apagada</string>
+  <string name="settings_quick_panel">Tauler ràpid</string>
 </resources>

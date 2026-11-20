@@ -51,6 +51,7 @@ private const val PROBE_BOOT_KEY = "probe_boot"
  * back on the enabled list after a force stop. With the opt-in broadcast of [GuardConfig], the service leaves the list while
  * the screen is off and [GuardKeep] lists it again at screen-on. With restart_press, [RestartPress] presses Restart in the
  * system power dialog for Home. With sleep_timer, [SleepCountdown] puts the TV in standby when the timer Home or a key set ends.
+ * With quick_panel and the key filter on, [QuickPanelControl] takes the Home key and opens its panel on a held press.
  *
  * The config and the Open on start pick come from the app's [ConfigRepositoryOwner] and are followed: the maps are read in
  * again when a value the service uses changes (see [KeyServiceConfig]). An app a key opens is noted through the app's
@@ -77,6 +78,10 @@ public class KeyService : AccessibilityService() {
     private var restartPress: RestartPress? = null
     private var sleepTimer: SleepCountdown? = null
     private var sleepScreenOff: BroadcastReceiver? = null
+
+    /** quick_panel, while the key filter is on. */
+    internal var quickPanel: QuickPanelControl? = null
+        private set
     private var recorded = false
 
     /** True after the first [start] of a bind: only that one arms the boot window, so a pick changed in Settings cannot send Home again. */
@@ -186,12 +191,30 @@ public class KeyService : AccessibilityService() {
             gamepads =
                 GamepadPassthrough(this, config.gamepadPassthrough, config.volumePausesFilter, timer) {
                     SharedPresses.release(this)
+                    quickPanel?.release()
                     // consume_volume_keys: the held key's UP will not come either.
                     volume?.stop()
                 }.also { it.start() }
         }
         applyStandbyOptIn()
         applySleepTimer(config.sleepTimer && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+        if (config.quickPanel && config.keyFilter) {
+            quickPanel =
+                QuickPanelControl(this, timer, config.panelLook, sleepTimer != null, config.restartPress, ::openHome, ::runPanelRow)
+        }
+    }
+
+    private fun runPanelRow(row: PanelRow) {
+        when (row) {
+            PanelRow.SleepTimer -> stepSleepTimer()
+            PanelRow.Inputs -> openInputSwitcher()
+            PanelRow.Screensaver -> launcher?.launch(ActionWord.Screensaver.word)
+            PanelRow.Mute -> launcher?.launch(ActionWord.Mute.word)
+            PanelRow.Restart -> performGlobalAction(GLOBAL_ACTION_POWER_DIALOG)
+            PanelRow.ConfirmRestart -> pressRestart()
+            PanelRow.LauncherSettings -> homeIntent(LauncherIntents.launcherSettings(packageName))?.let { startActivitySafely(it) }
+            PanelRow.CancelRestart -> Unit
+        }
     }
 
     /**
@@ -311,17 +334,20 @@ public class KeyService : AccessibilityService() {
         timer.cancel(homeAfterKey)
         gamepads?.stop()
         gamepads = null
+        quickPanel?.close()
+        quickPanel = null
     }
 
     public override fun onKeyEvent(event: KeyEvent): Boolean = handleKey(event)
 
     /**
-     * The order matters: a volume key, then a scancode entry (more specific than any keycode), keycode entries, the Settings
-     * key, the Home keys, the Input button. A keycode entry with a tap target wins over the Settings keycodes but not over a
+     * The order matters: a key while the quick panel shows, a volume key, then a scancode entry (more specific than any
+     * keycode), keycode entries, the Settings key, the Home keys (quick_panel first), the Input button. A keycode entry with a tap target wins over the Settings keycodes but not over a
      * button named in settings_key_scancodes; a "hold:" entry alone leaves the tap to Settings and still runs its hold.
      */
     internal fun handleKey(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) powerOn?.onKeyDown(event.keyCode)
+        quickPanel?.handleKey(event)?.let { return it }
         if (sleepTimer?.handleKey(event) == true) return true
         if (volume?.handle(event) == true) return true
         val launch = launcher?.let { it::launch } ?: return false
@@ -340,6 +366,7 @@ public class KeyService : AccessibilityService() {
             if (released(event) && !held) openSettings()
             return true
         }
+        if (event.keyCode == KeyEvent.KEYCODE_HOME) quickPanel?.let { return it.homeKey(event) }
         // home_long_press_home: Android never sees the Home key, so a held press cannot turn into ALL_APPS.
         if (config.homeLongPressHome && event.keyCode == KeyEvent.KEYCODE_HOME) {
             if (released(event)) openHome()
@@ -452,6 +479,7 @@ public class KeyService : AccessibilityService() {
     /** Unbound by Android: no UP will reach the service to cancel a hold it saw go down. */
     override fun onUnbind(intent: Intent): Boolean {
         SharedPresses.release(this)
+        quickPanel?.close()
         if (recorded && !steppingOut) ServiceRepair.disconnected(this, javaClass)
         return super.onUnbind(intent)
     }
