@@ -105,3 +105,13 @@ internal class PowerOnHome(
         timer.cancel(homeAtPowerOn)
     }
 }
+
+/**
+ * power_on_home: a key pressed on Home hands the TV to the user too, as [PowerOnHome.onKeyDown] does for the keys the
+ * [KeyService] sees. With key_filter false the service sees none, and without this an input picked from Home's Inputs menu
+ * goes back to Home until the window runs out. Home passes the keys its window receives, not onUserInteraction, which also
+ * runs when the firmware starts Live TV over Home at power-on.
+ */
+public fun keyPressedOnHome(event: KeyEvent) {
+    if (event.action == KeyEvent.ACTION_DOWN) PowerMenu.bound()?.keyOnHome(event.keyCode)
+}

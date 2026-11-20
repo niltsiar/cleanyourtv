@@ -312,6 +312,10 @@ public class KeyService : AccessibilityService() {
         return false
     }
 
+    internal fun keyOnHome(keyCode: Int) {
+        powerOn?.onKeyDown(keyCode)
+    }
+
     private fun released(event: KeyEvent) = event.action == KeyEvent.ACTION_UP && !event.isCanceled
 
     private fun isSettingsKey(event: KeyEvent): Boolean =

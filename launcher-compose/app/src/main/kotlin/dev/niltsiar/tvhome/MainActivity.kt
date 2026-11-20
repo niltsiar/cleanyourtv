@@ -34,6 +34,7 @@ import dev.niltsiar.tvhome.feature.library.MoleculeLibraryViewModel
 import dev.niltsiar.tvhome.service.keys.PowerMenu
 import dev.niltsiar.tvhome.service.keys.ServiceRepair
 import dev.niltsiar.tvhome.service.keys.VendorKeys
+import dev.niltsiar.tvhome.service.keys.keyPressedOnHome
 import dev.niltsiar.tvhome.service.media.NowPlayingAccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -216,13 +217,16 @@ class MainActivity : ComponentActivity() {
      * Vendor keys (TCL's Netflix button, 4062) never reach the key service, only the focused window, so their app_keys
      * entries run here too or nowhere; so does a Settings button the service is not there to take. Only while resumed:
      * onPause releases Home's holds, and a DOWN taken after that would arm one nothing releases. Channel Up and Down with
-     * home_ignore_channel_keys go first and need no resume: Home only has to be the window that receives them.
+     * home_ignore_channel_keys go first and need no resume: Home only has to be the window that receives them. Any key
+     * first disarms power_on_home ([keyPressedOnHome]).
      */
     @SuppressLint("RestrictedApi") // androidx marks the override restricted, but it is the only hook that sees every key first
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean =
-        isIgnoredChannelKey(config.value.homeIgnoreChannelKeys, event.keyCode) ||
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        keyPressedOnHome(event)
+        return isIgnoredChannelKey(config.value.homeIgnoreChannelKeys, event.keyCode) ||
             (resumed && vendorKeys.handle(event)) ||
             super.dispatchKeyEvent(event)
+    }
 
     /** Leaving Home before the network came back keeps the boot's or the wake's app closed; the boot is already written. */
     override fun onPause() {

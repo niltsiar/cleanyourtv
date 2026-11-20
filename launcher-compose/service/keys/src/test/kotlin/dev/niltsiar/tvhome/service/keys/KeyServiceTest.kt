@@ -552,6 +552,29 @@ class KeyServiceTestContent :
                 homeStarted().shouldBeTrue()
             }
 
+            test("with key filter false a key pressed on home disarms the live tv redirect") {
+                service.start(TvConfig(powerOnHome = true, keyFilter = false))
+                PowerMenu.bind(service)
+                screenOn()
+
+                keyPressedOnHome(key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER))
+                service.handleWindow(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED, "com.mediatek.wwtv.tvcenter", null)
+
+                homeStarted().shouldBeFalse()
+            }
+
+            test("the power and wake keys pressed on home leave the live tv redirect armed") {
+                service.start(TvConfig(powerOnHome = true, keyFilter = false))
+                PowerMenu.bind(service)
+                screenOn()
+
+                keyPressedOnHome(key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_POWER))
+                keyPressedOnHome(key(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_WAKEUP))
+                service.handleWindow(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED, "com.mediatek.wwtv.tvcenter", null)
+
+                homeStarted().shouldBeTrue()
+            }
+
             test("a pick written after the bind stops the live tv redirect when it is live tv") {
                 val picks = MutableStateFlow<String?>("com.netflix.ninja")
                 service.follow(MutableStateFlow(TvConfig(powerOnHome = true, openOnStartChoice = true)), picks)
