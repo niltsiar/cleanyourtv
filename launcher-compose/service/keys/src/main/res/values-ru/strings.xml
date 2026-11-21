@@ -2,7 +2,7 @@
 <resources>
     <string name="not_available">Недоступно на этом телевизоре</string>
     <string name="restart_not_possible">Этот телевизор нельзя перезагрузить с главного экрана</string>
-    <string name="sleep_card">Телевизор выключится через %1$d с. OK: ещё 15 минут.</string>
+    <string name="sleep_card">Телевизор выключится через %1$d с. OK: ещё 15 минут. Назад: отмена.</string>
     <string name="sleep_notice_minutes">Таймер сна: %1$d мин</string>
     <string name="sleep_notice_off">Таймер сна выключен</string>
     <string name="panel_title">Быстрая панель</string>
@@ -11,7 +11,8 @@
     <string name="panel_sleep_minutes">%1$d мин</string>
     <string name="panel_inputs">Источники</string>
     <string name="panel_screensaver">Заставка</string>
-    <string name="panel_mute">Выключить или включить звук</string>
+    <string name="panel_mute">Без звука</string>
+    <string name="panel_unmute">Включить звук</string>
     <string name="panel_restart">Перезагрузить ТВ</string>
     <string name="panel_launcher_settings">Настройки главного экрана</string>
     <string name="panel_restart_question">Перезагрузить ТВ?</string>

@@ -2,7 +2,7 @@
 <resources>
     <string name="not_available">Non disponible nesta TV</string>
     <string name="restart_not_possible">Nun ye posible reaniciar esta TV dende Aniciu</string>
-    <string name="sleep_card">La TV apágase en %1$d s. OK: 15 minutos más.</string>
+    <string name="sleep_card">La TV apágase en %1$d s. OK: 15 minutos más. Atrás: encaboxar.</string>
     <string name="sleep_notice_minutes">Temporizador d\'apagáu: %1$d min</string>
     <string name="sleep_notice_off">Temporizador d\'apagáu desactiváu</string>
     <string name="panel_title">Panel rápidu</string>
@@ -11,7 +11,8 @@
     <string name="panel_sleep_minutes">%1$d min</string>
     <string name="panel_inputs">Entraes</string>
     <string name="panel_screensaver">Curiapantalles</string>
-    <string name="panel_mute">Silenciar o activar el soníu</string>
+    <string name="panel_mute">Silenciar</string>
+    <string name="panel_unmute">Activar el soníu</string>
     <string name="panel_restart">Reaniciar TV</string>
     <string name="panel_launcher_settings">Axustes del llanzador</string>
     <string name="panel_restart_question">¿Reaniciar la TV?</string>

@@ -4,7 +4,7 @@
     <string name="key_service_name">Botones del mando</string>
     <string name="key_service_description">Hace que los botones Inicio, Entrada, Ajustes y de aplicaciones del mando abran este lanzador y las apps que has elegido.</string>
     <string name="restart_not_possible">No se puede reiniciar este TV desde Inicio</string>
-    <string name="sleep_card">El TV se apaga en %1$d s. OK: 15 minutos más.</string>
+    <string name="sleep_card">El TV se apaga en %1$d s. OK: 15 minutos más. Atrás: cancelar.</string>
     <string name="sleep_notice_minutes">Temporizador de apagado: %1$d min</string>
     <string name="sleep_notice_off">Temporizador de apagado desactivado</string>
     <string name="panel_title">Panel rápido</string>
@@ -13,7 +13,8 @@
     <string name="panel_sleep_minutes">%1$d min</string>
     <string name="panel_inputs">Entradas</string>
     <string name="panel_screensaver">Salvapantallas</string>
-    <string name="panel_mute">Silenciar o activar sonido</string>
+    <string name="panel_mute">Silenciar</string>
+    <string name="panel_unmute">Activar sonido</string>
     <string name="panel_restart">Reiniciar TV</string>
     <string name="panel_launcher_settings">Ajustes del lanzador</string>
     <string name="panel_restart_question">¿Reiniciar el TV?</string>

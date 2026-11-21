@@ -2,7 +2,7 @@
 <resources>
     <string name="not_available">Недоступно на цьому телевізорі</string>
     <string name="restart_not_possible">Цей телевізор не можна перезапустити з головного екрана</string>
-    <string name="sleep_card">Телевізор вимкнеться через %1$d с. OK: ще 15 хвилин.</string>
+    <string name="sleep_card">Телевізор вимкнеться через %1$d с. OK: ще 15 хвилин. Назад: скасувати.</string>
     <string name="sleep_notice_minutes">Таймер сну: %1$d хв</string>
     <string name="sleep_notice_off">Таймер сну вимкнено</string>
     <string name="panel_title">Швидка панель</string>
@@ -11,7 +11,8 @@
     <string name="panel_sleep_minutes">%1$d хв</string>
     <string name="panel_inputs">Джерела</string>
     <string name="panel_screensaver">Заставка</string>
-    <string name="panel_mute">Вимкнути або ввімкнути звук</string>
+    <string name="panel_mute">Вимкнути звук</string>
+    <string name="panel_unmute">Увімкнути звук</string>
     <string name="panel_restart">Перезапустити ТВ</string>
     <string name="panel_launcher_settings">Налаштування лаунчера</string>
     <string name="panel_restart_question">Перезапустити ТВ?</string>

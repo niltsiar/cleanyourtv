@@ -4,7 +4,7 @@
     <string name="key_service_description">Makes the remote\'s Home, Input, Settings and app buttons open this launcher and the apps you chose.</string>
     <string name="not_available">Not available on this TV</string>
     <string name="restart_not_possible">Restarting is not possible from Home on this TV</string>
-    <string name="sleep_card">The TV turns off in %1$d s. OK: 15 more minutes.</string>
+    <string name="sleep_card">The TV turns off in %1$d s. OK: 15 more minutes. Back: cancel.</string>
     <string name="sleep_notice_minutes">Sleep timer: %1$d min</string>
     <string name="sleep_notice_off">Sleep timer off</string>
     <string name="panel_title">Quick panel</string>
@@ -13,7 +13,8 @@
     <string name="panel_sleep_minutes">%1$d min</string>
     <string name="panel_inputs">Inputs</string>
     <string name="panel_screensaver">Screen saver</string>
-    <string name="panel_mute">Mute or unmute</string>
+    <string name="panel_mute">Mute</string>
+    <string name="panel_unmute">Unmute</string>
     <string name="panel_restart">Restart TV</string>
     <string name="panel_launcher_settings">Launcher settings</string>
     <string name="panel_restart_question">Restart the TV?</string>

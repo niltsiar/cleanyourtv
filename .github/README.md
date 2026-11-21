@@ -114,11 +114,12 @@ System:
   cannot find that Restart item, it presses nothing, closes the menu and says so.
 - **Sleep timer.** With the key service on, a Sleep timer row in the Settings button's menu steps Off, 15, 30,
   60, 90 and 120 minutes, and a remote button can do the same. A moon and the minutes left show beside the clock on Home.
-  One minute before the end a small card shows over what plays: OK gives 15 more minutes, Back hides it. Then the TV goes
-  to standby. Turning the TV off cancels the timer.
+  One minute before the end a small card shows over what plays: OK gives 15 more minutes, Back cancels the timer.
+  Without either, the TV then goes to standby. Turning the TV off cancels the timer.
 - **Quick panel.** With the key service on, hold Home over any app or on Home and a panel opens on the right of the
-  screen while the film keeps playing: Sleep timer, Inputs, Screen saver, Mute, Restart TV and Launcher settings. A short
-  press still goes Home. Back or Home closes it. The Settings button's menu can open it too.
+  screen while the film keeps playing: Sleep timer, Inputs, Screen saver, Mute (Unmute while the sound is off), Restart
+  TV and Launcher settings. A short press still goes Home. Back or Home closes it. The Settings button's menu can open it
+  too.
 
 The System group also resets the page's choices to the theme's, opens the TV's home picker and opens the TV's own
 settings.

@@ -338,13 +338,47 @@ class QuickPanelTestContent :
                 started().map { it.action } shouldBe listOf(LauncherIntents.launcherSettings(app.packageName))
             }
 
-            test("mute toggles the sound and leaves the panel open") {
+            test("mute toggles the sound, leaves the panel open and the row follows the new state") {
                 open()
                 val audio = service.getSystemService(AudioManager::class.java)
+                panel().muted.shouldBeFalse()
 
                 panel().pick(PanelRow.Mute)
 
                 audio.isStreamMute(AudioManager.STREAM_MUSIC).shouldBeTrue()
+                panel().muted.shouldBeTrue()
+                panels() shouldHaveSize 1
+
+                panel().pick(PanelRow.Mute)
+                panel().muted.shouldBeFalse()
+            }
+
+            test("the panel reads the mute state when it opens") {
+                service.getSystemService(AudioManager::class.java).adjustStreamVolume(
+                    AudioManager.STREAM_MUSIC,
+                    AudioManager.ADJUST_TOGGLE_MUTE,
+                    0,
+                )
+
+                open()
+
+                panel().muted.shouldBeTrue()
+            }
+
+            test("a mute or volume key while the panel shows updates the mute row once the change settles") {
+                open()
+                val audio = service.getSystemService(AudioManager::class.java)
+
+                // What the TV does with the remote's own mute key, out of the service's hands.
+                audio.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_TOGGLE_MUTE, 0)
+                press(KeyEvent.KEYCODE_VOLUME_MUTE) shouldBe (false to false)
+                idleFor(MUTE_SETTLE_MS)
+                panel().muted.shouldBeTrue()
+
+                audio.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_TOGGLE_MUTE, 0)
+                press(KeyEvent.KEYCODE_VOLUME_UP) shouldBe (false to false)
+                idleFor(MUTE_SETTLE_MS)
+                panel().muted.shouldBeFalse()
                 panels() shouldHaveSize 1
             }
 

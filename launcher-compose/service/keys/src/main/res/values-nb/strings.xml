@@ -2,7 +2,7 @@
 <resources>
     <string name="not_available">Ikke tilgjengelig på denne TV-en</string>
     <string name="restart_not_possible">Denne TV-en kan ikke startes på nytt fra startskjermen</string>
-    <string name="sleep_card">TV-en slår seg av om %1$d s. OK: 15 minutter til.</string>
+    <string name="sleep_card">TV-en slår seg av om %1$d s. OK: 15 minutter til. Tilbake: avbryt.</string>
     <string name="sleep_notice_minutes">Innsovningstimer: %1$d min</string>
     <string name="sleep_notice_off">Innsovningstimer av</string>
     <string name="panel_title">Hurtigpanel</string>
@@ -11,7 +11,8 @@
     <string name="panel_sleep_minutes">%1$d min</string>
     <string name="panel_inputs">Innganger</string>
     <string name="panel_screensaver">Skjermsparer</string>
-    <string name="panel_mute">Lyd av eller på</string>
+    <string name="panel_mute">Lyd av</string>
+    <string name="panel_unmute">Lyd på</string>
     <string name="panel_restart">Start TV-en på nytt</string>
     <string name="panel_launcher_settings">Innstillinger for startskjermen</string>
     <string name="panel_restart_question">Starte TV-en på nytt?</string>

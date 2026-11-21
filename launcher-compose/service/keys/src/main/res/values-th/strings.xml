@@ -2,7 +2,7 @@
 <resources>
     <string name="not_available">ทีวีเครื่องนี้ไม่รองรับ</string>
     <string name="restart_not_possible">ทีวีเครื่องนี้รีสตาร์ทจากหน้าหลักไม่ได้</string>
-    <string name="sleep_card">ทีวีจะปิดใน %1$d วินาที OK: เพิ่มอีก 15 นาที</string>
+    <string name="sleep_card">ทีวีจะปิดใน %1$d วินาที OK: เพิ่มอีก 15 นาที ย้อนกลับ: ยกเลิก</string>
     <string name="sleep_notice_minutes">ตั้งเวลาปิด: %1$d นาที</string>
     <string name="sleep_notice_off">ปิดการตั้งเวลาปิดแล้ว</string>
     <string name="panel_title">แผงด่วน</string>
@@ -11,7 +11,8 @@
     <string name="panel_sleep_minutes">%1$d นาที</string>
     <string name="panel_inputs">แหล่งสัญญาณ</string>
     <string name="panel_screensaver">โปรแกรมรักษาหน้าจอ</string>
-    <string name="panel_mute">ปิดหรือเปิดเสียง</string>
+    <string name="panel_mute">ปิดเสียง</string>
+    <string name="panel_unmute">เปิดเสียง</string>
     <string name="panel_restart">รีสตาร์ททีวี</string>
     <string name="panel_launcher_settings">การตั้งค่าหน้าหลัก</string>
     <string name="panel_restart_question">รีสตาร์ททีวีไหม</string>

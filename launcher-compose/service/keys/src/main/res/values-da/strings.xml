@@ -2,7 +2,7 @@
 <resources>
     <string name="not_available">Ikke tilgængelig på dette TV</string>
     <string name="restart_not_possible">Dette TV kan ikke genstartes fra startskærmen</string>
-    <string name="sleep_card">Tv\'et slukker om %1$d s. OK: 15 minutter mere.</string>
+    <string name="sleep_card">Tv\'et slukker om %1$d s. OK: 15 minutter mere. Tilbage: annuller.</string>
     <string name="sleep_notice_minutes">Slukketimer: %1$d min</string>
     <string name="sleep_notice_off">Slukketimer slået fra</string>
     <string name="panel_title">Hurtigpanel</string>
@@ -11,7 +11,8 @@
     <string name="panel_sleep_minutes">%1$d min</string>
     <string name="panel_inputs">Indgange</string>
     <string name="panel_screensaver">Pauseskærm</string>
-    <string name="panel_mute">Slå lyden fra eller til</string>
+    <string name="panel_mute">Slå lyden fra</string>
+    <string name="panel_unmute">Slå lyden til</string>
     <string name="panel_restart">Genstart TV</string>
     <string name="panel_launcher_settings">Launcher-indstillinger</string>
     <string name="panel_restart_question">Genstart TV?</string>

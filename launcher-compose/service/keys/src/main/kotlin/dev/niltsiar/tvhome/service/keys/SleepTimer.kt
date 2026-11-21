@@ -77,8 +77,8 @@ internal fun sleepTimerAvailable(
 /**
  * The sleep timer of a bound [KeyService], on [timer] and the [now] clock (elapsed time since boot). It keeps the end in
  * [prefs] with the [boot] count, so a service bound again in the same boot carries it on and one after a reboot drops it.
- * [CARD_MS] before the end it shows [card]; while the card shows, OK adds 15 minutes and Back hides it. At the end it calls
- * [sleep]. [state] follows what it is set to.
+ * [CARD_MS] before the end it shows [card]; while the card shows, OK adds 15 minutes and Back cancels the timer. At the end
+ * it calls [sleep]. [state] follows what it is set to.
  */
 internal class SleepCountdown(
     private val timer: Timer,
@@ -153,7 +153,7 @@ internal class SleepCountdown(
             }
 
             KeyEvent.KEYCODE_BACK -> {
-                hideCard()
+                cancel()
             }
 
             else -> {

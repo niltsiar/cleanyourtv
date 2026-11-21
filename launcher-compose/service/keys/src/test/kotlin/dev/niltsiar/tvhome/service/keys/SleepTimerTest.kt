@@ -144,7 +144,7 @@ class SleepTimerTestContent :
                 val flags = (card.layoutParams as WindowManager.LayoutParams).flags
                 (flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE != 0).shouldBeTrue()
                 (flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE != 0).shouldBeTrue()
-                (card as TextView).text.toString() shouldBe "The TV turns off in 60 s. OK: 15 more minutes."
+                (card as TextView).text.toString() shouldBe "The TV turns off in 60 s. OK: 15 more minutes. Back: cancel."
             }
 
             test("ok on the sleep card adds 15 minutes and hides it") {
@@ -161,7 +161,7 @@ class SleepTimerTestContent :
                 slept() shouldBe 1
             }
 
-            test("back on the sleep card hides it and the timer still fires") {
+            test("back on the sleep card cancels the timer so it never fires and the state is off") {
                 service.start(SleepOn)
                 setTimer(15)
                 idleFor(14 * MINUTE)
@@ -169,8 +169,11 @@ class SleepTimerTestContent :
                 tap(KeyEvent.KEYCODE_BACK) shouldBe (true to true)
 
                 cards().shouldBeEmpty()
-                idleFor(MINUTE)
-                slept() shouldBe 1
+                SleepTimer.state.value shouldBe SleepState()
+                rebind()
+                SleepTimer.state.value shouldBe SleepState()
+                idleFor(2 * MINUTE)
+                slept() shouldBe 0
             }
 
             test("other keys pass through while the sleep card shows and so does an ok pressed before it") {

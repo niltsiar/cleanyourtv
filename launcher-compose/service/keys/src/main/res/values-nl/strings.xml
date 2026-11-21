@@ -2,7 +2,7 @@
 <resources>
     <string name="not_available">Niet beschikbaar op deze tv</string>
     <string name="restart_not_possible">Deze tv kan niet vanuit Home worden herstart</string>
-    <string name="sleep_card">De tv gaat over %1$d s uit. OK: 15 minuten langer.</string>
+    <string name="sleep_card">De tv gaat over %1$d s uit. OK: 15 minuten langer. Terug: annuleren.</string>
     <string name="sleep_notice_minutes">Slaaptimer: %1$d min</string>
     <string name="sleep_notice_off">Slaaptimer uit</string>
     <string name="panel_title">Snelpaneel</string>
@@ -11,7 +11,8 @@
     <string name="panel_sleep_minutes">%1$d min</string>
     <string name="panel_inputs">Ingangen</string>
     <string name="panel_screensaver">Screensaver</string>
-    <string name="panel_mute">Dempen of dempen opheffen</string>
+    <string name="panel_mute">Dempen</string>
+    <string name="panel_unmute">Dempen opheffen</string>
     <string name="panel_restart">Tv herstarten</string>
     <string name="panel_launcher_settings">Launcher-instellingen</string>
     <string name="panel_restart_question">Tv herstarten?</string>

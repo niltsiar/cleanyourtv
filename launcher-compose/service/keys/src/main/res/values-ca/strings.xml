@@ -2,7 +2,7 @@
 <resources>
     <string name="not_available">No disponible en aquest televisor</string>
     <string name="restart_not_possible">No es pot reiniciar aquest televisor des de l’inici</string>
-    <string name="sleep_card">El televisor s\'apaga d\'aquí a %1$d s. OK: 15 minuts més.</string>
+    <string name="sleep_card">El televisor s\'apaga d\'aquí a %1$d s. OK: 15 minuts més. Enrere: cancel·la.</string>
     <string name="sleep_notice_minutes">Temporitzador d\'apagada: %1$d min</string>
     <string name="sleep_notice_off">Temporitzador d\'apagada desactivat</string>
     <string name="panel_title">Tauler ràpid</string>
@@ -11,7 +11,8 @@
     <string name="panel_sleep_minutes">%1$d min</string>
     <string name="panel_inputs">Entrades</string>
     <string name="panel_screensaver">Estalvi de pantalla</string>
-    <string name="panel_mute">Silencia o activa el so</string>
+    <string name="panel_mute">Silencia</string>
+    <string name="panel_unmute">Activa el so</string>
     <string name="panel_restart">Reinicia la TV</string>
     <string name="panel_launcher_settings">Configuració del llançador</string>
     <string name="panel_restart_question">Vols reiniciar la TV?</string>

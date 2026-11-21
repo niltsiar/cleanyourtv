@@ -1,7 +1,9 @@
 package dev.niltsiar.tvhome.service.keys
 
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -41,6 +43,7 @@ class QuickPanelContentTestContent :
                 val compose = rule(createComposeRule())
                 val picked = mutableListOf<PanelRow>()
                 var backs = 0
+                val muted = mutableStateOf(false)
 
                 fun show(
                     rows: List<PanelRow> = MainRows,
@@ -50,7 +53,7 @@ class QuickPanelContentTestContent :
                 ) {
                     compose.setContent {
                         TvTheme(motion = Motion(animations = false)) {
-                            QuickPanelContent(rows, confirming, focus, sleepStep, { picked += it }, { backs += 1 })
+                            QuickPanelContent(rows, confirming, focus, sleepStep, muted.value, { picked += it }, { backs += 1 })
                         }
                     }
                     compose.mainClock.advanceTimeBy(1_000)
@@ -85,6 +88,16 @@ class QuickPanelContentTestContent :
 
                 compose.onNodeWithText("Restart the TV?").assertExists()
                 compose.onNodeWithTag("panel:CancelRestart").assertIsFocused()
+            }
+
+            test("the mute row says unmute while the stream is muted and mute while not") {
+                show()
+                compose.onNodeWithTag("panel:Mute").assertTextEquals("Mute")
+
+                muted.value = true
+                compose.waitForIdle()
+
+                compose.onNodeWithTag("panel:Mute").assertTextEquals("Unmute")
             }
 
             test("back that reaches the panel window closes it") {

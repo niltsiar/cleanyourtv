@@ -2,7 +2,7 @@
 <resources>
     <string name="not_available">Nije dostupno na ovom televizoru</string>
     <string name="restart_not_possible">Ovaj televizor nije moguće ponovo pokrenuti sa početnog ekrana</string>
-    <string name="sleep_card">TV se isključuje za %1$d s. OK: još 15 minuta.</string>
+    <string name="sleep_card">TV se isključuje za %1$d s. OK: još 15 minuta. Nazad: otkaži.</string>
     <string name="sleep_notice_minutes">Tajmer za isključivanje: %1$d min</string>
     <string name="sleep_notice_off">Tajmer za isključivanje je isključen</string>
     <string name="panel_title">Brzi panel</string>
@@ -11,7 +11,8 @@
     <string name="panel_sleep_minutes">%1$d min</string>
     <string name="panel_inputs">Ulazi</string>
     <string name="panel_screensaver">Čuvar ekrana</string>
-    <string name="panel_mute">Isključi ili uključi zvuk</string>
+    <string name="panel_mute">Isključi zvuk</string>
+    <string name="panel_unmute">Uključi zvuk</string>
     <string name="panel_restart">Ponovo pokreni TV</string>
     <string name="panel_launcher_settings">Podešavanja početnog ekrana</string>
     <string name="panel_restart_question">Ponovo pokrenuti TV?</string>

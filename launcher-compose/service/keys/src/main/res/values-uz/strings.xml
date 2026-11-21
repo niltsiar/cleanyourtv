@@ -2,7 +2,7 @@
 <resources>
     <string name="not_available">Bu televizorda mavjud emas</string>
     <string name="restart_not_possible">Bu televizorni bosh ekrandan qayta yoqib boʻlmaydi</string>
-    <string name="sleep_card">Televizor %1$d soniyada oʻchadi. OK: yana 15 daqiqa.</string>
+    <string name="sleep_card">Televizor %1$d soniyada oʻchadi. OK: yana 15 daqiqa. Back: bekor qilish.</string>
     <string name="sleep_notice_minutes">Uyqu taymeri: %1$d daq</string>
     <string name="sleep_notice_off">Uyqu taymeri oʻchiq</string>
     <string name="panel_title">Tezkor panel</string>
@@ -11,7 +11,8 @@
     <string name="panel_sleep_minutes">%1$d daq</string>
     <string name="panel_inputs">Manbalar</string>
     <string name="panel_screensaver">Ekran saqlovchi</string>
-    <string name="panel_mute">Ovozni oʻchirish yoki yoqish</string>
+    <string name="panel_mute">Ovozsiz</string>
+    <string name="panel_unmute">Ovozni yoqish</string>
     <string name="panel_restart">TVni qayta yoqish</string>
     <string name="panel_launcher_settings">Launcher sozlamalari</string>
     <string name="panel_restart_question">TV qayta yoqilsinmi?</string>

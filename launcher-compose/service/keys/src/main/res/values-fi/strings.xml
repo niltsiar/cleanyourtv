@@ -2,7 +2,7 @@
 <resources>
     <string name="not_available">Ei käytettävissä tässä televisiossa</string>
     <string name="restart_not_possible">Tätä televisiota ei voi käynnistää uudelleen kotinäkymästä</string>
-    <string name="sleep_card">Televisio sammuu %1$d sekunnin kuluttua. OK: 15 minuuttia lisää.</string>
+    <string name="sleep_card">Televisio sammuu %1$d sekunnin kuluttua. OK: 15 minuuttia lisää. Takaisin: peruuta.</string>
     <string name="sleep_notice_minutes">Uniajastin: %1$d min</string>
     <string name="sleep_notice_off">Uniajastin pois</string>
     <string name="panel_title">Pikapaneeli</string>
@@ -11,7 +11,8 @@
     <string name="panel_sleep_minutes">%1$d min</string>
     <string name="panel_inputs">Lähteet</string>
     <string name="panel_screensaver">Näytönsäästäjä</string>
-    <string name="panel_mute">Mykistä tai poista mykistys</string>
+    <string name="panel_mute">Mykistä</string>
+    <string name="panel_unmute">Poista mykistys</string>
     <string name="panel_restart">Käynnistä TV uudelleen</string>
     <string name="panel_launcher_settings">Käynnistimen asetukset</string>
     <string name="panel_restart_question">Käynnistetäänkö TV uudelleen?</string>

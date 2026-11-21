@@ -2,7 +2,7 @@
 <resources>
     <string name="not_available">Não disponível nesta TV</string>
     <string name="restart_not_possible">Não é possível reiniciar esta TV pela tela inicial</string>
-    <string name="sleep_card">A TV desliga em %1$d s. OK: mais 15 minutos.</string>
+    <string name="sleep_card">A TV desliga em %1$d s. OK: mais 15 minutos. Voltar: cancelar.</string>
     <string name="sleep_notice_minutes">Timer de desligamento: %1$d min</string>
     <string name="sleep_notice_off">Timer de desligamento desativado</string>
     <string name="panel_title">Painel rápido</string>
@@ -11,7 +11,8 @@
     <string name="panel_sleep_minutes">%1$d min</string>
     <string name="panel_inputs">Entradas</string>
     <string name="panel_screensaver">Protetor de tela</string>
-    <string name="panel_mute">Desativar ou ativar som</string>
+    <string name="panel_mute">Desativar som</string>
+    <string name="panel_unmute">Ativar som</string>
     <string name="panel_restart">Reiniciar TV</string>
     <string name="panel_launcher_settings">Configurações do launcher</string>
     <string name="panel_restart_question">Reiniciar a TV?</string>

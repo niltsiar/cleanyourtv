@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.PixelFormat
+import android.media.AudioManager
 import android.os.PowerManager
 import android.util.Log
 import android.view.KeyEvent
@@ -48,6 +49,9 @@ private const val TAG = "TvHome.Panel"
 private val EdgeX = 48.dp
 private val EdgeY = 27.dp
 
+/** How long after a mute or volume key the panel reads the mute state again, for a TV that applies the change later. */
+internal const val MUTE_SETTLE_MS: Long = 500
+
 /** The rows of the quick panel; the last two are the Restart question's. */
 internal enum class PanelRow {
     SleepTimer,
@@ -83,6 +87,8 @@ internal data class PanelLook(
  * and Home close it, the D-pad and OK reach its window, the volume keys go on as usual, and any other key closes it and
  * goes on. The screen going off closes it. A row runs through [run]; the rows that leave the screen close the panel first,
  * Sleep timer and Mute keep it open. With [restartAsks] (restart_press) Restart asks first in the panel, Cancel focused.
+ * No public broadcast tells of a mute change, so [muted] is read on open, at once after the Mute row, and [MUTE_SETTLE_MS]
+ * after that row or a mute or volume key.
  */
 internal class QuickPanelControl(
     private val context: Context,
@@ -111,8 +117,14 @@ internal class QuickPanelControl(
             held = true
             open()
         }
+    private val audio = context.getSystemService(AudioManager::class.java)
+    private val readMute = Runnable { muted = audio?.isStreamMute(AudioManager.STREAM_MUSIC) == true }
 
     var isOpen: Boolean = false
+        private set
+
+    /** Whether the media stream is muted; the Mute row follows it. */
+    var muted: Boolean by mutableStateOf(false)
         private set
 
     val rows: List<PanelRow> get() = if (confirming) listOf(PanelRow.CancelRestart, PanelRow.ConfirmRestart) else mainRows
@@ -122,6 +134,7 @@ internal class QuickPanelControl(
         if (isOpen || !context.getSystemService(PowerManager::class.java).isInteractive) return
         confirming = false
         focus = null
+        readMute.run()
         isOpen = window.show { Content() }
         if (!isOpen) return
         val receiver =
@@ -138,6 +151,7 @@ internal class QuickPanelControl(
     /** Closes the panel and drops a Home press it saw go down. */
     fun close() {
         release()
+        timer.cancel(readMute)
         screenOff?.let(context::unregisterReceiver)
         screenOff = null
         window.hide()
@@ -194,6 +208,7 @@ internal class QuickPanelControl(
             }
 
             KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN, KeyEvent.KEYCODE_VOLUME_MUTE -> {
+                if (event.action == KeyEvent.ACTION_DOWN) readMuteLater()
                 null
             }
 
@@ -206,8 +221,14 @@ internal class QuickPanelControl(
 
     fun pick(row: PanelRow) {
         when {
-            row == PanelRow.SleepTimer || row == PanelRow.Mute -> {
+            row == PanelRow.SleepTimer -> {
                 run(row)
+            }
+
+            row == PanelRow.Mute -> {
+                run(row)
+                readMute.run()
+                readMuteLater()
             }
 
             row == PanelRow.Restart && restartAsks -> {
@@ -227,11 +248,16 @@ internal class QuickPanelControl(
         }
     }
 
+    private fun readMuteLater() {
+        timer.cancel(readMute)
+        timer.post(readMute, MUTE_SETTLE_MS)
+    }
+
     @Composable
     private fun Content() {
         val step by SleepTimer.current.collectAsState()
         TvTheme(motion = look.motion, focusStyle = look.focusStyle) {
-            QuickPanelContent(rows, confirming, focus, step.step, ::pick, ::close)
+            QuickPanelContent(rows, confirming, focus, step.step, muted, ::pick, ::close)
         }
     }
 }
@@ -239,7 +265,8 @@ internal class QuickPanelControl(
 /**
  * The panel: [rows] in a glass menu at the top right of the screen, under its title (the Restart question while
  * [confirming]), with focus on [focus], the first row when it is null. The Sleep timer row ends with [sleepStep]: Off, or
- * its minutes. OK on a row calls [onPick]; Back, should it reach the window, calls [onBack].
+ * its minutes. The Mute row says Unmute while [muted]. OK on a row calls [onPick]; Back, should it reach the window, calls
+ * [onBack].
  */
 @Composable
 internal fun QuickPanelContent(
@@ -247,6 +274,7 @@ internal fun QuickPanelContent(
     confirming: Boolean,
     focus: PanelRow?,
     sleepStep: Int,
+    muted: Boolean,
     onPick: (PanelRow) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -277,7 +305,7 @@ internal fun QuickPanelContent(
                 rows,
                 anchor,
                 alignEnd = true,
-                label = PanelRow::label,
+                label = { if (it == PanelRow.Mute && muted) R.string.panel_unmute else it.label() },
                 rowTag = { "panel:${it.name}" },
                 onPick = onPick,
                 title = stringResource(if (confirming) R.string.panel_restart_question else R.string.panel_title),
