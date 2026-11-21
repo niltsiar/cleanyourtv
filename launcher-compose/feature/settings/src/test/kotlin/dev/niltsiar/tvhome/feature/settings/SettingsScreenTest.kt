@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
@@ -25,7 +26,9 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -33,6 +36,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import de.infix.testBalloon.framework.core.JUnit4RulesContext
 import de.infix.testBalloon.framework.core.TestConfig
@@ -99,6 +103,50 @@ class SettingsScreenTestContent :
                 option(SettingsRowId.Columns, 2).assertIsFocused()
                 option(SettingsRowId.Columns, 2).assertIsSelected()
                 option(SettingsRowId.Columns, 0).assertIsNotSelected()
+            }
+
+            test("a notice with a command shows the whole command and stays until a key, which only closes it") {
+                show()
+                compose.runOnUiThread { notice.showCommand(R.string.settings_now_playing_adb, ADB_LINE) }
+                compose.waitForIdle()
+                compose.mainClock.advanceTimeBy(10_000)
+                compose.waitForIdle()
+
+                val text = compose.onNode(hasText("Allow it with adb: $ADB_LINE") and hasAnyAncestor(hasTestTag("settings:notice")))
+                val layouts = mutableListOf<TextLayoutResult>()
+                text
+                    .fetchSemanticsNode()
+                    .config[SemanticsActions.GetTextLayoutResult]
+                    .action
+                    ?.invoke(layouts)
+                withClue("the whole command is laid out") { layouts.single().hasVisualOverflow shouldBe false }
+                withClue("the notice is inside the panel") {
+                    text.getBoundsInRoot().right shouldBeLessThanOrEqualTo compose.onNodeWithTag("settings:panel").getBoundsInRoot().right
+                }
+
+                press(Key.DirectionDown)
+
+                compose
+                    .onAllNodesWithTag("settings:notice")
+                    .fetchSemanticsNodes()
+                    .isEmpty()
+                    .shouldBeTrue()
+                option(SettingsRowId.Columns, 0).assertIsFocused()
+            }
+
+            test("back closes a notice with a command and leaves the page open") {
+                show()
+                compose.runOnUiThread { notice.showCommand(R.string.settings_now_playing_adb, ADB_LINE) }
+                compose.waitForIdle()
+
+                back()
+
+                compose
+                    .onAllNodesWithTag("settings:notice")
+                    .fetchSemanticsNodes()
+                    .isEmpty()
+                    .shouldBeTrue()
+                compose.activity.isFinishing shouldBe false
             }
 
             test("up on the first row stays on the screen") {
@@ -588,6 +636,26 @@ class SettingsScreenTestContent :
                 compose.onAllNodes(isFocused()).fetchSemanticsNodes().size shouldBe 1
             }
 
+            test("a picker whose row goes away while it is open returns focus to the row now in its place") {
+                showEveryPickerRow()
+                moveTo("settings:shelf_sources", Key.DirectionDown)
+                press(Key.DirectionCenter)
+                waitUntilIdle { settings.state.shelfPicker != null }
+                compose.waitForIdle()
+
+                runBlocking { settings.repository.set(Choices.AppShelf, false) }
+                waitUntilIdle { settings.state.shelfSources == null && settings.state.shelfPicker == null }
+                compose.waitForIdle()
+
+                compose.onAllNodes(isFocused()).fetchSemanticsNodes().size shouldBe 1
+                press(Key.DirectionUp)
+                val appShelf =
+                    settings.state.sections
+                        .flatMap { it.rows }
+                        .single { it.id == SettingsRowId.AppShelf }
+                option(SettingsRowId.AppShelf, appShelf.selected).assertIsFocused()
+            }
+
             test("the wallpaper row sits between clock and animations") {
                 showWallpaperRow()
 
@@ -871,6 +939,7 @@ private class SettingsScreenFixture : JUnit4RulesContext() {
     var tvSettingsOpened = 0
     var defaultHomeOpened = 0
     var reordered = 0
+    val notice = PageNotice()
 
     val installed = (1..12).map { OpenOnStartApp("App %02d".format(it), "com.app$it") }
 
@@ -900,6 +969,7 @@ private class SettingsScreenFixture : JUnit4RulesContext() {
                     onChooseDefaultHome = { defaultHomeOpened++ },
                     onOpenTvSettings = { tvSettingsOpened++ },
                     onReorder = { reordered++ },
+                    notice = notice,
                 )
             }
         }
@@ -1050,3 +1120,7 @@ private const val EVERY_PICKER = """{"app_shelf": true, "open_on_start_choice": 
 
 private const val WITH_CHOICE = """{"open_on_start_choice": true}"""
 private val pictures = listOf(WallpaperPicture("wallpaper.jpg", single = true), WallpaperPicture("dusk.jpg"), WallpaperPicture("dawn.jpg"))
+
+/** The adb line a benchmark build gives, whose package does not shorten its listener's name. */
+private const val ADB_LINE =
+    "cmd notification allow_listener dev.niltsiar.tvhome.benchmark/dev.niltsiar.tvhome.service.media.NowPlayingListener"

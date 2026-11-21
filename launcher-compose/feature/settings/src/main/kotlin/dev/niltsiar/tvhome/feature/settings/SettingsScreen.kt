@@ -1,6 +1,7 @@
 package dev.niltsiar.tvhome.feature.settings
 
 import android.view.View
+import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -34,6 +36,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -62,6 +65,11 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -128,6 +136,8 @@ private const val FOCUSED_ROW_ALPHA = 0.10f
 private const val NOTICE_MS = 2_000L
 private const val NOTICE_FADE_MS = 200
 private val NoticeHeight = 36.dp
+private val CommandNoticeShape = RoundedCornerShape(12.dp)
+private val CommandNoticeInset = 8.dp
 
 private const val WALLPAPER_STOP = "wallpaper"
 private val NoPickerArt = PickerArt()
@@ -215,7 +225,10 @@ private fun focusStops(keys: List<String>): Map<String, FocusStop> {
     }
 }
 
-/** A short message in the page's title band, in place of a system toast: [show] puts one there for 2 s, in place of any still showing. */
+/**
+ * A short message in the page's title band, in place of a system toast: [show] puts one there for 2 s, in place of any still
+ * showing. [showCommand] puts one with a command under the title instead, whole, until a key or Back.
+ */
 @Stable
 public class PageNotice {
     internal var shown: Shown? by mutableStateOf(null)
@@ -229,14 +242,23 @@ public class PageNotice {
         shown = Shown(text, args.toList())
     }
 
+    /** Shows [text], formatted with [command], wrapped as needed, until the person presses a key, which does nothing else, or Back. */
+    public fun showCommand(
+        @StringRes text: Int,
+        command: String,
+    ) {
+        shown = Shown(text, listOf(command), held = true)
+    }
+
     internal fun clear(of: Shown) {
         if (shown === of) shown = null
     }
 
-    /** One showing of a message: the same text shown again is a new one, with its own 2 s. */
+    /** One showing of a message: the same text shown again is a new one, with its own 2 s, or [held] until a key. */
     internal class Shown(
         @StringRes val text: Int,
         val args: List<Any>,
+        val held: Boolean = false,
     )
 }
 
@@ -246,7 +268,7 @@ public class PageNotice {
  * listing its options side by side, with the Wallpaper row after Clock and the Open on start row after the first group when the
  * state has them. Their pickers open over the panel. Follow theme, Choose default home ([onChooseDefaultHome]) and TV system
  * settings ([onOpenTvSettings]) end the list. OK on an option stores it, unless it is the selected one. A [notice] shows at the
- * end of the title band. The pickers show [art] beside their entries.
+ * end of the title band, or under it when it carries a command. The pickers show [art] beside their entries.
  * Up and Down move between rows, onto the selected option of the next one; Left and Right move between a row's options and
  * stop at its ends. Focus cannot leave the screen.
  */
@@ -268,6 +290,7 @@ public fun SettingsScreen(
     val keys = items.filterIsInstance<Focusable>().map { it.stop }
     val stops = remember(keys) { focusStops(keys) }
     val currentStops by rememberUpdatedState(stops)
+    val currentKeys by rememberUpdatedState(keys)
     LaunchedEffect(Unit) {
         withFrameNanos { }
         currentStops.getValue(keys.first()).entry.requestFocus()
@@ -283,17 +306,28 @@ public fun SettingsScreen(
             null
         }
     var returnTo by remember { mutableStateOf<String?>(null) }
+    var returnAt by remember { mutableIntStateOf(0) }
+
+    // A closing picker's row, or when that row has gone, the row now in its place, or the last row.
+    fun returnEntry(): FocusRequester? {
+        val stop = returnTo ?: return null
+        val inPlace = currentKeys.getOrNull(returnAt.coerceAtMost(currentKeys.lastIndex))
+        return (currentStops[stop] ?: inPlace?.let(currentStops::get))?.entry
+    }
     LaunchedEffect(pickerStop) {
         if (pickerStop != null) {
             returnTo = pickerStop
-        } else {
-            returnTo?.let {
-                withFrameNanos { }
-                currentStops[it]?.entry?.requestFocus()
-                returnTo = null
-            }
+            returnAt = currentKeys.indexOf(pickerStop).coerceAtLeast(0)
+        } else if (returnTo != null) {
+            withFrameNanos { }
+            returnEntry()?.requestFocus()
+            returnTo = null
         }
     }
+    val held = notice.shown?.takeIf { it.held }
+    BackHandler(enabled = held != null) { held?.let(notice::clear) }
+    // The key that closed a held notice: its release is eaten too, so it does nothing on the page.
+    val closingKey = remember { mutableStateOf<Key?>(null) }
     val scroll = rememberScrollState()
     // The launcher does not opt into right-to-left layouts, so a language written right to left sets the direction here.
     val rtl = LocalConfiguration.current.layoutDirection == View.LAYOUT_DIRECTION_RTL
@@ -303,10 +337,28 @@ public fun SettingsScreen(
                 modifier
                     .fillMaxSize()
                     .testTag("settings")
-                    .focusProperties {
+                    .onPreviewKeyEvent { event ->
+                        val showing = notice.shown?.takeIf { it.held }
+                        when {
+                            event.type == KeyEventType.KeyUp && event.key == closingKey.value -> {
+                                closingKey.value = null
+                                true
+                            }
+
+                            event.type == KeyEventType.KeyDown && showing != null -> {
+                                notice.clear(showing)
+                                closingKey.value = event.key
+                                true
+                            }
+
+                            else -> {
+                                false
+                            }
+                        }
+                    }.focusProperties {
                         exit = { FocusRequester.Cancel }
                         // A closing picker drops focus back into this group; entering on the first row would scroll the list to it.
-                        enter = { returnTo?.let { currentStops[it]?.entry } ?: FocusRequester.Default }
+                        enter = { returnEntry() ?: FocusRequester.Default }
                     }.focusGroup(),
             contentAlignment = Alignment.Center,
         ) {
@@ -326,8 +378,9 @@ public fun SettingsScreen(
                 Column(Modifier.fillMaxSize()) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         PanelTitle(stringResource(R.string.settings_title), "settings:title", Modifier.weight(1f))
-                        notice.shown?.let { NoticePill(it, notice::clear) }
+                        notice.shown?.takeIf { !it.held }?.let { NoticePill(it, notice::clear) }
                     }
+                    held?.let { CommandNotice(it) }
                     ScrollsClearOfEdge(ScrollClear) {
                         Column(
                             Modifier
@@ -553,6 +606,32 @@ private fun NoticePill(
             style = style,
             maxLines = 1,
             modifier = Modifier.padding(horizontal = ChipPadding),
+        )
+    }
+}
+
+/** The [shown] message with a command, under the title as wide as the list and wrapped, which fades in and stays. */
+@Composable
+private fun CommandNotice(shown: PageNotice.Shown) {
+    val motion = TvTheme.motion
+    val typography = TvTheme.typography
+    val ink = TvTheme.colors.onSurface
+    val style = remember(typography, ink) { typography.pillLabel.copy(fontSize = 16.sp, color = ink) }
+    val alpha = remember(shown) { Animatable(0f) }
+    LaunchedEffect(shown) { alpha.animateTo(1f, motion.tweenSpec(NOTICE_FADE_MS)) }
+    Box(
+        Modifier
+            .padding(start = PanelSide, end = PanelSide, bottom = TitleBottom)
+            .graphicsLayer { this.alpha = alpha.value }
+            .fillMaxWidth()
+            .background(ink.copy(alpha = SELECTED_FILL_ALPHA), CommandNoticeShape)
+            .border(1.dp, ink.copy(alpha = SELECTED_RIM_ALPHA), CommandNoticeShape)
+            .testTag("settings:notice"),
+    ) {
+        BasicText(
+            stringResource(shown.text, *shown.args.toTypedArray()),
+            style = style,
+            modifier = Modifier.padding(horizontal = ChipPadding, vertical = CommandNoticeInset),
         )
     }
 }

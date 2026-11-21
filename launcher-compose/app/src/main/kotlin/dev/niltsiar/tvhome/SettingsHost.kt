@@ -83,7 +83,7 @@ internal fun SettingsHost(
                     withContext(Dispatchers.IO) { NowPlayingAccess.setEnabled(activity, true) }
                     if (!graph.systemSettings.openNotificationAccess()) {
                         val component = NowPlayingAccess.component(activity).flattenToShortString()
-                        notice.show(SettingsR.string.settings_now_playing_adb, "cmd notification allow_listener $component")
+                        notice.showCommand(SettingsR.string.settings_now_playing_adb, "cmd notification allow_listener $component")
                     }
                 }
             }
