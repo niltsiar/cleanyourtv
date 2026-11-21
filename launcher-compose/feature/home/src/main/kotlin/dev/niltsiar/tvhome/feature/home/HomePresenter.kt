@@ -50,8 +50,8 @@ private val UnknownInputs = InputsMenu(available = false)
 /**
  * Home's state logic for any host that runs a composable: Molecule today. It uses the Compose runtime only. It follows
  * [config] only while Home shows: a choice made on another screen reaches Home when it comes back, not under the
- * person's feet, and all at once. While a press opens an app (press_feedback), the line under the title keeps the
- * last-opened record of the press, and shows the new one once the press ends.
+ * person's feet, and all at once. While a press opens an app (press_feedback), the line under the title and the faded
+ * tiles keep the last-opened record of the press, and show the new one once the press ends.
  */
 @Composable
 internal fun homePresenter(
@@ -142,7 +142,7 @@ internal fun homePresenter(
     val now by sources.clock.collectAsState(null)
     val network by sources.network.collectAsState(NoNetwork)
     val wallpaper by sources.wallpaper.collectAsState(NoWallpaper)
-    val lastOpened = recorded.value
+    val lastOpened = launch?.openedBefore ?: recorded.value
     val libraryCount by sources.libraryCount.collectAsState(null)
     val openedSince by sources.openedSince.collectAsState(null)
     // Read again with each new time, which also follows the TV's 12/24-hour setting after a stop and start of Home.
@@ -173,7 +173,7 @@ internal fun homePresenter(
         interaction.topBarApps,
         wallpaper,
         cinematic = current.cinematicHome,
-        lastOpened = launch?.openedBefore ?: lastOpened,
+        lastOpened = lastOpened,
         menu = interaction.menu,
         reorder =
             remember(session, shown, inputTiles) {

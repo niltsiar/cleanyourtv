@@ -50,7 +50,7 @@ val HomePressFeedbackTest by testSuite(testConfig = TestConfig.testScope(isEnabl
             val eventFlow = events.receiveAsFlow()
 
             fun presenter(config: TvConfig = SixColumns.copy(pressFeedback = true)): Flow<HomeUiState> {
-                val sources = sources(lastOpened = opened)
+                val sources = sources(lastOpened = opened, timeMillis = { OPENED_AT })
                 return moleculeFlow(RecompositionMode.Immediate) {
                     homePresenter(eventFlow, sources, config, ::open, Locale.ENGLISH, "EEEE d MMMM")
                 }
@@ -181,6 +181,24 @@ val HomePressFeedbackTest by testSuite(testConfig = TestConfig.testScope(isEnabl
             }
         }
 
+        test("a press on a faded tile keeps it faded until the opening ends, then shows it unfaded") {
+            with(it.testScope) {
+                opened.value = mapOf("pkg.7" to OPENED_AT - 61 * DAY_MS)
+                presenter(SixColumns.copy(pressFeedback = true, unusedFadeDays = 60)).test {
+                    awaitMatching { "pkg.7" in it.faded }
+                    events.send(HomeEvent.Focus("pkg.7"))
+                    press("pkg.7")
+                    pass(OPENING_SAYS_MS)
+                    latest().faded shouldBe setOf("pkg.7")
+
+                    events.send(HomeEvent.Stopped)
+
+                    awaitMatching { it.opening == null }.faded shouldBe emptySet()
+                    cancelAndIgnoreRemainingEvents()
+                }
+            }
+        }
+
         test("a card press keeps the line's never opened until the opening ends") {
             with(it.testScope) {
                 presenter().test {
@@ -231,3 +249,5 @@ val HomePressFeedbackTest by testSuite(testConfig = TestConfig.testScope(isEnabl
 }
 
 private val OPENED_AT = Evening.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+private const val DAY_MS = 24 * 60 * 60 * 1_000L
