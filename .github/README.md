@@ -96,10 +96,13 @@ Motion and hints:
 - **Press feedback.** OK on a tile dips it and brightens its ring. When the app is slow to start, the line under the title
   says that it is opening.
 - **Habit hint.** A small mark shows under the app that you usually open at this time of day. For this, Home keeps a
-  private log of the apps it opens. With the option off, Home logs nothing.
+  private log of the apps it opens, from the moment you turn the option on. With the option off, Home logs nothing. An
+  app becomes the usual one after Home opened it at least 4 times on at least 3 different dates, within 45 minutes of
+  the time now and on the same kind of day (Monday to Friday, or the weekend), in the last 8 weeks. Those openings must
+  also be at least half of all the openings in that time window.
 - **Start on the usual app.** With Habit hint on, focus starts on the usual app's tile when the TV starts and when you
-  press Home in an app. A key pressed before Home finds that app keeps focus where you put it. Waking the TV, Back from
-  an app and Home pressed on Home never move focus to it.
+  press Home in an app. Until an app is the usual one, focus starts on the first tile. A key pressed before Home finds
+  that app keeps focus where you put it. Waking the TV, Back from an app and Home pressed on Home never move focus to it.
 - **Input arrival.** When you switch on a device on an HDMI port while Home shows, the Inputs button names the device and
   its port. OK on the button switches to that input. Home never switches input by itself.
 - **Input tiles.** Hold OK on an HDMI or AV row of the Inputs list and pick Add to Home: the input gets a tile at the end of
