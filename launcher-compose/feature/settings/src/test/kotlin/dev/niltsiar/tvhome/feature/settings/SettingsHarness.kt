@@ -16,10 +16,12 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -160,9 +162,10 @@ internal class SettingsHarness(
     fun awaitState(until: (SettingsUiState) -> Boolean): SettingsUiState =
         runBlocking { withTimeout(30_000) { viewModel.uiState.first(until) } }
 
+    /** Waits for [scope] to end, as the store frees its file only then and a next harness on the same app opens that file. */
     fun stop() {
         presenterScope.cancel()
-        scope.cancel()
+        runBlocking { scope.coroutineContext.job.cancelAndJoin() }
     }
 }
 

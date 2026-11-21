@@ -556,7 +556,7 @@ class SettingsScreenTestContent :
                 entry(1).assertIsSelected()
                 settings.config.appShelfSources shouldBe listOf("com.plezy", "org.smarttube.stable/history")
 
-                back()
+                backAfterTick()
                 compose.onAllNodesWithTag("settings:picker").fetchSemanticsNodes().size shouldBe 0
                 shelfRow.assertIsFocused()
                 shelfRow.assertTextEquals("Apps and channels", "2")
@@ -577,7 +577,7 @@ class SettingsScreenTestContent :
                         press(Key.DirectionCenter)
                         waitUntilIdle { settings.state.shelfSources == OptionLabel.Text("1") }
                         compose.waitForIdle()
-                        back()
+                        backAfterTick()
                     },
                     PickerReturn("back from the open on start picker", "settings:open_on_start", true, startOpen) { back() },
                     PickerReturn("a pick in the open on start picker", "settings:open_on_start", true, startOpen) {
@@ -1008,6 +1008,13 @@ private class SettingsScreenFixture : JUnit4RulesContext() {
 
     fun back() {
         compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.waitForIdle()
+    }
+
+    /** Back from the Apps and channels picker after a tick: the presenter takes the close only once the tick's write returns. */
+    fun backAfterTick() {
+        back()
+        waitUntilIdle { settings.state.shelfPicker == null }
         compose.waitForIdle()
     }
 
