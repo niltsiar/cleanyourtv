@@ -11,7 +11,7 @@
     <string name="panel_sleep_minutes">%1$d min</string>
     <string name="panel_inputs">Ulazi</string>
     <string name="panel_screensaver">Čuvar ekrana</string>
-    <string name="panel_mute">Isključi zvuk</string>
+    <string name="panel_mute">Isključi ili uključi zvuk</string>
     <string name="panel_restart">Ponovo pokreni TV</string>
     <string name="panel_launcher_settings">Podešavanja početnog ekrana</string>
     <string name="panel_restart_question">Ponovo pokrenuti TV?</string>

@@ -11,7 +11,7 @@
     <string name="panel_sleep_minutes">%1$d min</string>
     <string name="panel_inputs">Wejścia</string>
     <string name="panel_screensaver">Wygaszacz ekranu</string>
-    <string name="panel_mute">Wycisz</string>
+    <string name="panel_mute">Wycisz lub włącz dźwięk</string>
     <string name="panel_restart">Zrestartuj TV</string>
     <string name="panel_launcher_settings">Ustawienia ekranu głównego</string>
     <string name="panel_restart_question">Zrestartować TV?</string>

@@ -11,7 +11,7 @@
     <string name="panel_sleep_minutes">%1$d хв</string>
     <string name="panel_inputs">Джерела</string>
     <string name="panel_screensaver">Заставка</string>
-    <string name="panel_mute">Вимкнути звук</string>
+    <string name="panel_mute">Вимкнути або ввімкнути звук</string>
     <string name="panel_restart">Перезапустити ТВ</string>
     <string name="panel_launcher_settings">Налаштування лаунчера</string>
     <string name="panel_restart_question">Перезапустити ТВ?</string>

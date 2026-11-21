@@ -11,7 +11,7 @@
     <string name="panel_sleep_minutes">%1$d دقيقة</string>
     <string name="panel_inputs">المدخلات</string>
     <string name="panel_screensaver">شاشة التوقف</string>
-    <string name="panel_mute">كتم الصوت</string>
+    <string name="panel_mute">كتม الصوت أو إلغاء الكتم</string>
     <string name="panel_restart">إعادة تشغيل التلفاز</string>
     <string name="panel_launcher_settings">إعدادات المشغّل</string>
     <string name="panel_restart_question">هل تريد إعادة تشغيل التلفاز؟</string>

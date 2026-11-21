@@ -11,7 +11,7 @@
     <string name="panel_sleep_minutes">%1$d min</string>
     <string name="panel_inputs">Vstupy</string>
     <string name="panel_screensaver">Spořič obrazovky</string>
-    <string name="panel_mute">Ztlumit</string>
+    <string name="panel_mute">Ztlumit nebo zrušit ztlumení</string>
     <string name="panel_restart">Restartovat TV</string>
     <string name="panel_launcher_settings">Nastavení domovské obrazovky</string>
     <string name="panel_restart_question">Restartovat TV?</string>

@@ -11,7 +11,7 @@
     <string name="panel_sleep_minutes">%1$d분</string>
     <string name="panel_inputs">입력</string>
     <string name="panel_screensaver">화면 보호기</string>
-    <string name="panel_mute">음소거</string>
+    <string name="panel_mute">음소거 또는 음소거 해제</string>
     <string name="panel_restart">TV 다시 시작</string>
     <string name="panel_launcher_settings">런처 설정</string>
     <string name="panel_restart_question">TV를 다시 시작할까요?</string>

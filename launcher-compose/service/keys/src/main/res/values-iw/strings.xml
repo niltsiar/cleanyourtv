@@ -11,7 +11,7 @@
     <string name="panel_sleep_minutes">%1$d דק׳</string>
     <string name="panel_inputs">כניסות</string>
     <string name="panel_screensaver">שומר מסך</string>
-    <string name="panel_mute">השתקה</string>
+    <string name="panel_mute">השתקה או ביטול השתקה</string>
     <string name="panel_restart">הפעלת הטלוויזיה מחדש</string>
     <string name="panel_launcher_settings">הגדרות מסך הבית</string>
     <string name="panel_restart_question">להפעיל מחדש את הטלוויזיה?</string>

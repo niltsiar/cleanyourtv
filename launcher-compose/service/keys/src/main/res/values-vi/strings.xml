@@ -11,7 +11,7 @@
     <string name="panel_sleep_minutes">%1$d phút</string>
     <string name="panel_inputs">Nguồn vào</string>
     <string name="panel_screensaver">Trình bảo vệ màn hình</string>
-    <string name="panel_mute">Tắt tiếng</string>
+    <string name="panel_mute">Tắt hoặc bật tiếng</string>
     <string name="panel_restart">Khởi động lại TV</string>
     <string name="panel_launcher_settings">Cài đặt launcher</string>
     <string name="panel_restart_question">Khởi động lại TV?</string>

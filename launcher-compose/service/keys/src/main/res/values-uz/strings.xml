@@ -11,7 +11,7 @@
     <string name="panel_sleep_minutes">%1$d daq</string>
     <string name="panel_inputs">Manbalar</string>
     <string name="panel_screensaver">Ekran saqlovchi</string>
-    <string name="panel_mute">Ovozsiz</string>
+    <string name="panel_mute">Ovozni oʻchirish yoki yoqish</string>
     <string name="panel_restart">TVni qayta yoqish</string>
     <string name="panel_launcher_settings">Launcher sozlamalari</string>
     <string name="panel_restart_question">TV qayta yoqilsinmi?</string>

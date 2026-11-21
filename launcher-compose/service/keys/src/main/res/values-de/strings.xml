@@ -11,7 +11,7 @@
     <string name="panel_sleep_minutes">%1$d Min.</string>
     <string name="panel_inputs">Quellen</string>
     <string name="panel_screensaver">Bildschirmschoner</string>
-    <string name="panel_mute">Stummschalten</string>
+    <string name="panel_mute">Ton aus oder an</string>
     <string name="panel_restart">TV neu starten</string>
     <string name="panel_launcher_settings">Launcher-Einstellungen</string>
     <string name="panel_restart_question">TV neu starten?</string>

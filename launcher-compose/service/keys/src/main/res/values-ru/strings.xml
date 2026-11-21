@@ -11,7 +11,7 @@
     <string name="panel_sleep_minutes">%1$d мин</string>
     <string name="panel_inputs">Источники</string>
     <string name="panel_screensaver">Заставка</string>
-    <string name="panel_mute">Без звука</string>
+    <string name="panel_mute">Выключить или включить звук</string>
     <string name="panel_restart">Перезагрузить ТВ</string>
     <string name="panel_launcher_settings">Настройки главного экрана</string>
     <string name="panel_restart_question">Перезагрузить ТВ?</string>

@@ -11,7 +11,7 @@
     <string name="panel_sleep_minutes">%1$d min</string>
     <string name="panel_inputs">Entradas</string>
     <string name="panel_screensaver">Protetor de tela</string>
-    <string name="panel_mute">Desativar som</string>
+    <string name="panel_mute">Desativar ou ativar som</string>
     <string name="panel_restart">Reiniciar TV</string>
     <string name="panel_launcher_settings">Configurações do launcher</string>
     <string name="panel_restart_question">Reiniciar a TV?</string>

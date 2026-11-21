@@ -11,7 +11,7 @@
     <string name="panel_sleep_minutes">%1$d min</string>
     <string name="panel_inputs">Entraes</string>
     <string name="panel_screensaver">Curiapantalles</string>
-    <string name="panel_mute">Silenciar</string>
+    <string name="panel_mute">Silenciar o activar el soníu</string>
     <string name="panel_restart">Reaniciar TV</string>
     <string name="panel_launcher_settings">Axustes del llanzador</string>
     <string name="panel_restart_question">¿Reaniciar la TV?</string>

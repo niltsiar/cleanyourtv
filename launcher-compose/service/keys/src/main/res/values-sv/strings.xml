@@ -11,7 +11,7 @@
     <string name="panel_sleep_minutes">%1$d min</string>
     <string name="panel_inputs">Ingångar</string>
     <string name="panel_screensaver">Skärmsläckare</string>
-    <string name="panel_mute">Ljud av</string>
+    <string name="panel_mute">Ljud av eller på</string>
     <string name="panel_restart">Starta om TV:n</string>
     <string name="panel_launcher_settings">Startskärmsinställningar</string>
     <string name="panel_restart_question">Starta om TV:n?</string>

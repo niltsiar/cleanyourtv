@@ -11,7 +11,7 @@
     <string name="panel_sleep_minutes">%1$d mnt</string>
     <string name="panel_inputs">Input</string>
     <string name="panel_screensaver">Screensaver</string>
-    <string name="panel_mute">Bisukan</string>
+    <string name="panel_mute">Bisukan atau bunyikan</string>
     <string name="panel_restart">Mulai ulang TV</string>
     <string name="panel_launcher_settings">Setelan antarmuka</string>
     <string name="panel_restart_question">Mulai ulang TV?</string>

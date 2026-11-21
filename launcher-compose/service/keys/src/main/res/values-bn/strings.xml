@@ -11,7 +11,7 @@
     <string name="panel_sleep_minutes">%1$d মিনিট</string>
     <string name="panel_inputs">ইনপুট</string>
     <string name="panel_screensaver">স্ক্রিন সেভার</string>
-    <string name="panel_mute">মিউট করুন</string>
+    <string name="panel_mute">মিউট বা আনমিউট করুন</string>
     <string name="panel_restart">টিভি রিস্টার্ট করুন</string>
     <string name="panel_launcher_settings">লঞ্চার সেটিংস</string>
     <string name="panel_restart_question">টিভি রিস্টার্ট করবেন?</string>

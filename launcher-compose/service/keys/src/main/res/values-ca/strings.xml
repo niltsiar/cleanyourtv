@@ -11,7 +11,7 @@
     <string name="panel_sleep_minutes">%1$d min</string>
     <string name="panel_inputs">Entrades</string>
     <string name="panel_screensaver">Estalvi de pantalla</string>
-    <string name="panel_mute">Silencia</string>
+    <string name="panel_mute">Silencia o activa el so</string>
     <string name="panel_restart">Reinicia la TV</string>
     <string name="panel_launcher_settings">Configuració del llançador</string>
     <string name="panel_restart_question">Vols reiniciar la TV?</string>

@@ -11,7 +11,7 @@
     <string name="panel_sleep_minutes">%1$d min</string>
     <string name="panel_inputs">Sources</string>
     <string name="panel_screensaver">Économiseur d\'écran</string>
-    <string name="panel_mute">Couper le son</string>
+    <string name="panel_mute">Couper ou rétablir le son</string>
     <string name="panel_restart">Redémarrer la TV</string>
     <string name="panel_launcher_settings">Paramètres du lanceur</string>
     <string name="panel_restart_question">Redémarrer la TV ?</string>

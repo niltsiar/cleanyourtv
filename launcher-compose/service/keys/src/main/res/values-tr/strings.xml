@@ -11,7 +11,7 @@
     <string name="panel_sleep_minutes">%1$d dk</string>
     <string name="panel_inputs">Girişler</string>
     <string name="panel_screensaver">Ekran koruyucu</string>
-    <string name="panel_mute">Sesi kapat</string>
+    <string name="panel_mute">Sesi kapat veya aç</string>
     <string name="panel_restart">TV’yi yeniden başlat</string>
     <string name="panel_launcher_settings">Başlatıcı ayarları</string>
     <string name="panel_restart_question">TV yeniden başlatılsın mı?</string>

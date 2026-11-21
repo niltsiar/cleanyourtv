@@ -11,7 +11,7 @@
     <string name="panel_sleep_minutes">%1$d min</string>
     <string name="panel_inputs">Lähteet</string>
     <string name="panel_screensaver">Näytönsäästäjä</string>
-    <string name="panel_mute">Mykistä</string>
+    <string name="panel_mute">Mykistä tai poista mykistys</string>
     <string name="panel_restart">Käynnistä TV uudelleen</string>
     <string name="panel_launcher_settings">Käynnistimen asetukset</string>
     <string name="panel_restart_question">Käynnistetäänkö TV uudelleen?</string>

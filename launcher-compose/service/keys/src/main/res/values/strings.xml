@@ -13,7 +13,7 @@
     <string name="panel_sleep_minutes">%1$d min</string>
     <string name="panel_inputs">Inputs</string>
     <string name="panel_screensaver">Screen saver</string>
-    <string name="panel_mute">Mute</string>
+    <string name="panel_mute">Mute or unmute</string>
     <string name="panel_restart">Restart TV</string>
     <string name="panel_launcher_settings">Launcher settings</string>
     <string name="panel_restart_question">Restart the TV?</string>
