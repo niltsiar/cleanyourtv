@@ -484,6 +484,34 @@ class ConfigRepositoryTestContent :
                 }
             }
 
+            test("each write is in the config when it returns, before the collection of the store runs") {
+                pushTheme("""{"columns": 5, "app_shelf_sources": ["com.plezy"]}""")
+                val collecting = Gate()
+                try {
+                    val repo = repository(CoroutineScope(SupervisorJob() + collecting))
+
+                    repo.choose(Choices.Columns, 7)
+                    repo.config.value.columns shouldBe 7
+                    repo.followsTheme.value.shouldBeFalse()
+
+                    runBlocking { repo.clear(Choices.Columns) }
+                    repo.config.value.columns shouldBe 5
+
+                    runBlocking { repo.toggleShelfSource("com.dazn") }
+                    repo.config.value.appShelfSources
+                        .toSet() shouldBe setOf("com.plezy", "com.dazn")
+
+                    repo.choose(Choices.OpenOnStart, "com.app")
+                    repo.openOnStartApp.value shouldBe "com.app"
+                    runBlocking { repo.followTheme() }
+                    repo.openOnStartApp.value.shouldBeNull()
+                    repo.followsTheme.value.shouldBeTrue()
+                    repo.config.value.appShelfSources shouldBe listOf("com.plezy")
+                } finally {
+                    collecting.open()
+                }
+            }
+
             test("a stored empty pick is off") {
                 pushTheme("{}")
                 val repo = repository()

@@ -23,9 +23,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicReference
 
@@ -61,6 +64,7 @@ public class ConfigRepository(
     private val unlockReceiver = AtomicReference<BroadcastReceiver?>()
 
     private val following = MutableStateFlow(true)
+    private val publishing = Mutex()
 
     public val config: StateFlow<TvConfig>
 
@@ -89,17 +93,17 @@ public class ConfigRepository(
         }
     }
 
-    /** Stores [value] for [choice]; [config] follows through the store's flow. */
+    /** Stores [value] for [choice]; [config] holds it once this returns. */
     public suspend fun <T> set(
         choice: Choice<T>,
         value: T,
     ) {
-        store.await().edit { choice.put(it, value) }
+        write { choice.put(it, value) }
     }
 
     /** Removes the stored value of [choice], so the theme's stands again (Off, for open on start). */
     public suspend fun <T> clear(choice: Choice<T>) {
-        store.await().edit { it.remove(choice.key) }
+        write { it.remove(choice.key) }
     }
 
     /**
@@ -107,7 +111,7 @@ public class ConfigRepository(
      * one changed. The read and the write are one edit, so toggles in quick succession all count.
      */
     public suspend fun toggleShelfSource(source: String) {
-        store.await().edit { prefs ->
+        write { prefs ->
             val ticked = prefs.stored(AppShelfSourcesKey) ?: theme.appShelfSources.toSet()
             prefs[AppShelfSourcesKey] = if (source in ticked) ticked - source else ticked + source
         }
@@ -115,7 +119,26 @@ public class ConfigRepository(
 
     /** "Follow theme": removes every stored choice, open on start too. */
     public suspend fun followTheme() {
-        store.await().edit { prefs -> Choices.all.forEach { prefs.remove(it.key) } }
+        write { prefs -> Choices.all.forEach { prefs.remove(it.key) } }
+    }
+
+    /**
+     * Edits the store and publishes what it then holds, so a screen that closes after the write finds it in [config]: the
+     * store's flow could bring it later, after Home has taken the config the page left.
+     */
+    private suspend fun write(transform: suspend (MutablePreferences) -> Unit) {
+        val opened = store.await()
+        opened.edit(transform)
+        publishStored(opened)
+    }
+
+    /** Publishes the store's current choices. One call at a time, each reading after the last, so [config] never goes back. */
+    private suspend fun publishStored(opened: DataStore<Preferences>) {
+        try {
+            publishing.withLock { publish(opened.data.first()) }
+        } catch (e: IOException) {
+            Log.w(TAG, "could not read the stored choices: ${e.message}")
+        }
     }
 
     private suspend fun open(theme: TvConfig) {
@@ -128,18 +151,15 @@ public class ConfigRepository(
         store.complete(opened)
         val signature = themes.signature().takeIf { themes.mounted }
         try {
-            val first = opened.updateData { current -> current.toMutablePreferences().apply { signature?.let { resetForNewTheme(it) } } }
-            publish(theme, first)
+            opened.updateData { current -> current.toMutablePreferences().apply { signature?.let { resetForNewTheme(it) } } }
+            publishStored(opened)
         } catch (e: IOException) {
             Log.w(TAG, "could not read the stored choices: ${e.message}")
         }
-        scope.launch { opened.choices().collect { publish(theme, it) } }
+        scope.launch { opened.choices().collect { publishStored(opened) } }
     }
 
-    private fun publish(
-        theme: TvConfig,
-        prefs: Preferences,
-    ) {
+    private fun publish(prefs: Preferences) {
         state.value = overlay(theme, prefs)
         following.value = Choices.all.none { it.key in prefs }
         picked.value = prefs.stored(OpenOnStartKey)?.takeIf { it.isNotEmpty() }
