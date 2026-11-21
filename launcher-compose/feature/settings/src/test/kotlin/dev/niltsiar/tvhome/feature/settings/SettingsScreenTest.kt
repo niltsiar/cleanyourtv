@@ -107,7 +107,7 @@ class SettingsScreenTestContent :
 
             test("a notice with a command shows the whole command and stays until a key, which only closes it") {
                 show()
-                compose.runOnUiThread { notice.showCommand(R.string.settings_now_playing_adb, ADB_LINE) }
+                compose.runOnUiThread { notice.showHeld(R.string.settings_now_playing_adb, ADB_LINE) }
                 compose.waitForIdle()
                 compose.mainClock.advanceTimeBy(10_000)
                 compose.waitForIdle()
@@ -136,7 +136,7 @@ class SettingsScreenTestContent :
 
             test("back closes a notice with a command and leaves the page open") {
                 show()
-                compose.runOnUiThread { notice.showCommand(R.string.settings_now_playing_adb, ADB_LINE) }
+                compose.runOnUiThread { notice.showHeld(R.string.settings_now_playing_adb, ADB_LINE) }
                 compose.waitForIdle()
 
                 back()
@@ -147,6 +147,27 @@ class SettingsScreenTestContent :
                     .isEmpty()
                     .shouldBeTrue()
                 compose.activity.isFinishing shouldBe false
+            }
+
+            test("a notice that stays without a command shows its text until a key, which only closes it") {
+                show()
+                compose.runOnUiThread { notice.showHeld(R.string.settings_shelf_allow_access) }
+                compose.waitForIdle()
+                compose.mainClock.advanceTimeBy(10_000)
+                compose.waitForIdle()
+
+                compose
+                    .onNode(hasText("Allow access in App info, under Permissions") and hasAnyAncestor(hasTestTag("settings:notice")))
+                    .assertExists()
+
+                press(Key.DirectionDown)
+
+                compose
+                    .onAllNodesWithTag("settings:notice")
+                    .fetchSemanticsNodes()
+                    .isEmpty()
+                    .shouldBeTrue()
+                option(SettingsRowId.Columns, 0).assertIsFocused()
             }
 
             test("up on the first row stays on the screen") {

@@ -31,9 +31,10 @@ import dev.niltsiar.tvhome.feature.settings.R as SettingsR
  * Launcher settings in the TV theme of the config, which the choices on this screen change as they are made. A refused
  * write, a stored wallpaper, an empty Apps and channels list and TV settings that [onOpenTvSettings] could not open are told
  * in the page's notice. When App highlights needs READ_TV_LISTINGS the page asks for it; after a refusal the system no longer
- * asks about, the notice says where to allow it and the launcher's App info opens. Whether Home holds it is read again each
- * time the page starts. When Now playing needs notification access, the Notification access list opens, or where the TV has
- * none, the notice gives the adb line that allows it; whether the listener has it is read again each time the page resumes.
+ * asks about, the notice says where to allow it until a key or Back, and the launcher's App info opens. Whether Home holds it
+ * is read again each time the page starts, and once it does, that notice goes. When Now playing needs notification access,
+ * the Notification access list opens, or where the TV has none, the notice gives the adb line that allows it; whether the
+ * listener has it is read again each time the page resumes.
  */
 @Composable
 internal fun SettingsHost(
@@ -52,11 +53,14 @@ internal fun SettingsHost(
             viewModel.actions.onShelfAccessAnswered()
             // No rationale before the request or after it: the system refused with no dialog, as it does once it stops asking.
             if (!granted && !refusedBefore && !activity.shouldShowRequestPermissionRationale(READ_TV_LISTINGS)) {
-                notice.show(SettingsR.string.settings_shelf_allow_access)
+                notice.showHeld(SettingsR.string.settings_shelf_allow_access)
                 graph.systemSettings.openAppInfo(activity.packageName)
             }
         }
-    LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.actions.onShelfAccessAnswered() }
+    LifecycleEventEffect(Lifecycle.Event.ON_START) {
+        viewModel.actions.onShelfAccessAnswered()
+        if (graph.settingsSources.shelfAccess()) notice.clearHeld(SettingsR.string.settings_shelf_allow_access)
+    }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.actions.onNowPlayingAccessChanged() }
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
@@ -83,7 +87,7 @@ internal fun SettingsHost(
                     withContext(Dispatchers.IO) { NowPlayingAccess.setEnabled(activity, true) }
                     if (!graph.systemSettings.openNotificationAccess()) {
                         val component = NowPlayingAccess.component(activity).flattenToShortString()
-                        notice.showCommand(SettingsR.string.settings_now_playing_adb, "cmd notification allow_listener $component")
+                        notice.showHeld(SettingsR.string.settings_now_playing_adb, "cmd notification allow_listener $component")
                     }
                 }
             }

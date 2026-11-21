@@ -205,6 +205,33 @@ class SettingsHostTestContent :
                 opened.data shouldBe "package:${compose.activity.packageName}".toUri()
             }
 
+            test("after a refusal the system no longer asks about, the allow-access notice stays when the page starts again") {
+                show(SHELF_ON)
+                openShelfSources(rationale = false)
+                refuseShelfAccess(rationale = false)
+
+                compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+                compose.mainClock.advanceTimeBy(10_000)
+                compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+                compose.waitForIdle()
+
+                noticeSays(ALLOW_ACCESS)
+            }
+
+            test("the allow-access notice goes when the page starts again with access allowed") {
+                show(SHELF_ON)
+                openShelfSources(rationale = false)
+                refuseShelfAccess(rationale = false)
+                noticeSays(ALLOW_ACCESS)
+
+                compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+                shadowOf(compose.activity.application).grantPermissions(READ_TV_LISTINGS)
+                compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+                compose.waitForIdle()
+
+                noticeShows(ALLOW_ACCESS).shouldBeFalse()
+            }
+
             test("when app info cannot open, the notice alone says where to allow access") {
                 // Only the permission request resolves: App info has no activity to open.
                 shadowOf(compose.activity.packageManager).apply {

@@ -136,8 +136,8 @@ private const val FOCUSED_ROW_ALPHA = 0.10f
 private const val NOTICE_MS = 2_000L
 private const val NOTICE_FADE_MS = 200
 private val NoticeHeight = 36.dp
-private val CommandNoticeShape = RoundedCornerShape(12.dp)
-private val CommandNoticeInset = 8.dp
+private val HeldNoticeShape = RoundedCornerShape(12.dp)
+private val HeldNoticeInset = 8.dp
 
 private const val WALLPAPER_STOP = "wallpaper"
 private val NoPickerArt = PickerArt()
@@ -227,7 +227,7 @@ private fun focusStops(keys: List<String>): Map<String, FocusStop> {
 
 /**
  * A short message in the page's title band, in place of a system toast: [show] puts one there for 2 s, in place of any still
- * showing. [showCommand] puts one with a command under the title instead, whole, until a key or Back.
+ * showing. [showHeld] puts one under the title instead, whole, until a key or Back.
  */
 @Stable
 public class PageNotice {
@@ -242,12 +242,22 @@ public class PageNotice {
         shown = Shown(text, args.toList())
     }
 
-    /** Shows [text], formatted with [command], wrapped as needed, until the person presses a key, which does nothing else, or Back. */
-    public fun showCommand(
+    /**
+     * Shows [text], formatted with [args] when it takes any, wrapped as needed, until the person presses a key, which does
+     * nothing else, or Back.
+     */
+    public fun showHeld(
         @StringRes text: Int,
-        command: String,
+        vararg args: Any,
     ) {
-        shown = Shown(text, listOf(command), held = true)
+        shown = Shown(text, args.toList(), held = true)
+    }
+
+    /** Takes away the notice [showHeld] put there, when it shows [text]. */
+    public fun clearHeld(
+        @StringRes text: Int,
+    ) {
+        if (shown?.let { it.held && it.text == text } == true) shown = null
     }
 
     internal fun clear(of: Shown) {
@@ -268,7 +278,7 @@ public class PageNotice {
  * listing its options side by side, with the Wallpaper row after Clock and the Open on start row after the first group when the
  * state has them. Their pickers open over the panel. Follow theme, Choose default home ([onChooseDefaultHome]) and TV system
  * settings ([onOpenTvSettings]) end the list. OK on an option stores it, unless it is the selected one. A [notice] shows at the
- * end of the title band, or under it when it carries a command. The pickers show [art] beside their entries.
+ * end of the title band, or under it when it stays until a key. The pickers show [art] beside their entries.
  * Up and Down move between rows, onto the selected option of the next one; Left and Right move between a row's options and
  * stop at its ends. Focus cannot leave the screen.
  */
@@ -380,7 +390,7 @@ public fun SettingsScreen(
                         PanelTitle(stringResource(R.string.settings_title), "settings:title", Modifier.weight(1f))
                         notice.shown?.takeIf { !it.held }?.let { NoticePill(it, notice::clear) }
                     }
-                    held?.let { CommandNotice(it) }
+                    held?.let { HeldNotice(it) }
                     ScrollsClearOfEdge(ScrollClear) {
                         Column(
                             Modifier
@@ -610,9 +620,9 @@ private fun NoticePill(
     }
 }
 
-/** The [shown] message with a command, under the title as wide as the list and wrapped, which fades in and stays. */
+/** The [shown] message that stays until a key, under the title as wide as the list and wrapped, which fades in. */
 @Composable
-private fun CommandNotice(shown: PageNotice.Shown) {
+private fun HeldNotice(shown: PageNotice.Shown) {
     val motion = TvTheme.motion
     val typography = TvTheme.typography
     val ink = TvTheme.colors.onSurface
@@ -624,14 +634,14 @@ private fun CommandNotice(shown: PageNotice.Shown) {
             .padding(start = PanelSide, end = PanelSide, bottom = TitleBottom)
             .graphicsLayer { this.alpha = alpha.value }
             .fillMaxWidth()
-            .background(ink.copy(alpha = SELECTED_FILL_ALPHA), CommandNoticeShape)
-            .border(1.dp, ink.copy(alpha = SELECTED_RIM_ALPHA), CommandNoticeShape)
+            .background(ink.copy(alpha = SELECTED_FILL_ALPHA), HeldNoticeShape)
+            .border(1.dp, ink.copy(alpha = SELECTED_RIM_ALPHA), HeldNoticeShape)
             .testTag("settings:notice"),
     ) {
         BasicText(
             stringResource(shown.text, *shown.args.toTypedArray()),
             style = style,
-            modifier = Modifier.padding(horizontal = ChipPadding, vertical = CommandNoticeInset),
+            modifier = Modifier.padding(horizontal = ChipPadding, vertical = HeldNoticeInset),
         )
     }
 }
