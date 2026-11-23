@@ -185,6 +185,23 @@ key, and a helper signed with another key does not install next to it.
 adb -s <tv ip>:5555 install -r companion/posters/build/outputs/apk/release/posters-release.apk
 ```
 
+## Dependency updates
+
+Two tasks in `launcher-compose` look for newer versions. Neither proposes a prerelease (alpha, beta, rc, milestone,
+preview, eap, dev, snapshot) for a dependency that is on a stable version.
+
+```bash
+./gradlew dependencyUpdates
+./gradlew versionCatalogUpdate --interactive
+```
+
+`dependencyUpdates` lists the dependencies, plugins and Gradle version that have a newer release, and writes the list
+to `build/dependencyUpdates/report.txt`. `versionCatalogUpdate --interactive` writes the catalog entries it would
+change to `gradle/libs.versions.updates.toml`, including the build logic plugins that the first report leaves out.
+Delete the lines you do not want, then run `./gradlew versionCatalogApplyUpdates` to write the rest into
+`gradle/libs.versions.toml`. Neither task checks ktlint, whose version Spotless reads from the catalog. To update the
+wrapper, run `./gradlew wrapper --gradle-version <version>` twice.
+
 ## Credit and licence
 
 The debloat tools, the themes and the Java launcher are the work of the upstream project and its contributors. TV Home
