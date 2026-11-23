@@ -9,7 +9,9 @@ import android.content.pm.ActivityInfo
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.os.Environment
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.ComposeUiTestConfig
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -63,7 +65,7 @@ class SettingsActivityTestContent :
     RobolectricTestSuiteContent({
         testFixture {
             object : JUnit4RulesContext() {
-                val compose = rule(createEmptyComposeRule())
+                val compose = rule(createEmptyComposeRule(ComposeUiTestConfig(inputMode = InputMode.Keyboard)))
 
                 val app: Application = RuntimeEnvironment.getApplication()
                 val graph get() = (app as TvHomeApplication).graph

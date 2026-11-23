@@ -9,6 +9,7 @@ import org.gradle.kotlin.dsl.getByType
 
 internal const val JVM_TOOLCHAIN = 21
 internal const val COMPILE_SDK = 37
+internal const val COMPILE_SDK_MINOR = 1
 internal const val TARGET_SDK = 36
 internal const val MIN_SDK = 26
 

@@ -8,7 +8,9 @@ import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.ComposeUiTestConfig
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -67,7 +69,7 @@ class LauncherSettingsEntryTestContent :
                         }
                     }
 
-                val compose = createEmptyComposeRule()
+                val compose = createEmptyComposeRule(ComposeUiTestConfig(inputMode = InputMode.Keyboard))
 
                 val rules: RuleChain =
                     rule(

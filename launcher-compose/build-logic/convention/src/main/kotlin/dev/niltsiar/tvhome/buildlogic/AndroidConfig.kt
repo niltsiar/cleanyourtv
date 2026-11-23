@@ -16,7 +16,7 @@ internal fun Project.configureKotlin(explicitApi: Boolean) {
 
 internal fun Project.configureAndroid() {
     extensions.configure<CommonExtension> {
-        compileSdk { version = release(COMPILE_SDK) }
+        compileSdk { version = release(COMPILE_SDK) { minorApiLevel = COMPILE_SDK_MINOR } }
         defaultConfig.minSdk = MIN_SDK
     }
     extensions.findByType(ApplicationExtension::class.java)?.defaultConfig?.targetSdk = TARGET_SDK

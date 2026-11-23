@@ -5,7 +5,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.ComposeUiTestConfig
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -60,7 +62,7 @@ class LibraryFlowTestContent :
     RobolectricTestSuiteContent({
         testFixture {
             object : JUnit4RulesContext() {
-                val compose = rule(createAndroidComposeRule<ComponentActivity>())
+                val compose = rule(createAndroidComposeRule<ComponentActivity>(ComposeUiTestConfig(inputMode = InputMode.Keyboard)))
 
                 val apps = (1..9).map { AppEntry(key = "pkg.$it/.Main", packageName = "pkg.$it", label = "App $it") }
 

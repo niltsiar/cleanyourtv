@@ -7,8 +7,10 @@ import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.ComposeUiTestConfig
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
@@ -69,7 +71,7 @@ class MainActivityConfigTestContent :
                         }
                     }
 
-                val compose = createAndroidComposeRule<MainActivity>()
+                val compose = createAndroidComposeRule<MainActivity>(ComposeUiTestConfig(inputMode = InputMode.Keyboard))
 
                 val rules: RuleChain =
                     rule(
