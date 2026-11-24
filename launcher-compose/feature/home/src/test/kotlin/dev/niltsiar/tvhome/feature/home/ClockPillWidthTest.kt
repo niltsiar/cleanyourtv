@@ -11,6 +11,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import io.kotest.matchers.shouldBe
@@ -70,7 +71,7 @@ private class ClockPillWidthTestFixture : JUnit4RulesContext() {
     fun start(hour24: Boolean) {
         state = homeUiState(homeApps(), LocalDateTime.of(2026, 11, 5, 12, 0), null, Locale.ENGLISH, HeaderStyle(hour24 = hour24))
         compose.setContent {
-            TvTheme { ClockPill(rememberGlassState(), { state }, dateBelowClock = false) }
+            TvTheme(look = Look.Glass) { ClockPill(rememberGlassState(), { state }, dateBelowClock = false) }
         }
     }
 }

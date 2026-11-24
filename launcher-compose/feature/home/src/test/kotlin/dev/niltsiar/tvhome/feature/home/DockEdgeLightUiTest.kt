@@ -21,6 +21,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.DockEdgeLight
 import dev.niltsiar.tvhome.core.designsystem.DockSurface
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
@@ -94,7 +95,7 @@ private class DockEdgeLightUiTestFixture : JUnit4RulesContext() {
 
     fun showDock(visible: Boolean = true) {
         compose.setContent {
-            TvTheme {
+            TvTheme(look = Look.Glass) {
                 val scope = rememberCoroutineScope()
                 val edge = remember { DockEdgeLight(scope) }
                 LaunchedEffect(edge) {

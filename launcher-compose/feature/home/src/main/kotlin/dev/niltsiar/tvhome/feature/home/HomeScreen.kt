@@ -131,6 +131,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.DockEdgeLight
 import dev.niltsiar.tvhome.core.designsystem.DockSurface
@@ -2688,7 +2689,7 @@ private fun HomePreview(
     inputsOpen: Boolean = false,
     columns: Int = 6,
 ) {
-    TvTheme {
+    TvTheme(look = Look.Glass) {
         val apps =
             PreviewNames.take(appCount).mapIndexed { i, name ->
                 val id = "example.${name.lowercase()}"

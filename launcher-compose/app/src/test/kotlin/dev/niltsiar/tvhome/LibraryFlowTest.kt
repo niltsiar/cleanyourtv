@@ -22,6 +22,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
@@ -68,7 +69,7 @@ class LibraryFlowTestContent :
 
                 fun showHomeAndLibrary(config: TvConfig) {
                     compose.setContent {
-                        TvTheme {
+                        TvTheme(look = Look.Glass) {
                             val glass = rememberGlassState()
                             val scope = rememberCoroutineScope()
                             val home =

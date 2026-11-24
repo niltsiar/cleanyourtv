@@ -40,6 +40,7 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.FocusStyle
 import dev.niltsiar.tvhome.core.designsystem.GlassMenu
 import dev.niltsiar.tvhome.core.designsystem.Motion
@@ -75,10 +76,11 @@ public object QuickPanel {
     }
 }
 
-/** The look of the panel's window: the theme's motion and glass_style. */
+/** The look of the panel's window: the theme's motion, glass_style and look. */
 internal data class PanelLook(
     val motion: Motion,
     val focusStyle: FocusStyle,
+    val look: Look,
 )
 
 /**
@@ -256,7 +258,7 @@ internal class QuickPanelControl(
     @Composable
     private fun Content() {
         val step by SleepTimer.current.collectAsState()
-        TvTheme(motion = look.motion, focusStyle = look.focusStyle) {
+        TvTheme(look = look.look, motion = look.motion, focusStyle = look.focusStyle) {
             QuickPanelContent(rows, confirming, focus, step.step, muted, ::pick, ::close)
         }
     }

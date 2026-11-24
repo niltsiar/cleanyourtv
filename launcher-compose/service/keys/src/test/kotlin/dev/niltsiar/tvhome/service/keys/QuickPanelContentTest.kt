@@ -18,6 +18,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import io.kotest.matchers.shouldBe
@@ -52,7 +53,7 @@ class QuickPanelContentTestContent :
                     sleepStep: Int = 0,
                 ) {
                     compose.setContent {
-                        TvTheme(motion = Motion(animations = false)) {
+                        TvTheme(look = Look.Glass, motion = Motion(animations = false)) {
                             QuickPanelContent(rows, confirming, focus, sleepStep, muted.value, { picked += it }, { backs += 1 })
                         }
                     }

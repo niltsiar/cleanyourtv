@@ -20,6 +20,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import io.kotest.assertions.withClue
 import io.kotest.matchers.floats.plusOrMinus
 import io.kotest.matchers.shouldBe
@@ -49,7 +50,7 @@ class OverlayHostTestContent :
             test("the scrim follows an open lambda that reads a plain value and changes on recomposition") {
                 var picked by mutableStateOf(false)
                 compose.setContent {
-                    TvTheme {
+                    TvTheme(look = Look.Glass) {
                         val shown = picked
                         Box(Modifier.size(100.dp).background(Color.White).testTag("ground")) {
                             OverlayHost(open = { shown }) {}

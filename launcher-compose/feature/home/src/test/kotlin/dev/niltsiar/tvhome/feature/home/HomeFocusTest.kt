@@ -21,6 +21,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import org.junit.rules.ExternalResource
@@ -101,7 +102,7 @@ private class HomeFocusTestFixture : JUnit4RulesContext() {
         }
         val state = homeUiState(homeApps(), Evening, null, Locale.ENGLISH, inputs = InputsMenu(available = true))
         compose.setContent {
-            TvTheme {
+            TvTheme(look = Look.Glass) {
                 HomeScreen(state = { state }, layout = SixColumns.homeLayout(), onFocus = {}, onClick = {}, homePresses = { homePresses })
             }
         }

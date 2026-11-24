@@ -96,8 +96,9 @@ internal fun SettingsHost(
     val config = graph.configRepository.config.collectAsStateWithLifecycle()
     val motion by config.derived(TvConfig::motion)
     val focusStyle by config.derived(TvConfig::focusStyle)
+    val look by config.derived(TvConfig::look)
     val state = viewModel.uiState.collectAsStateWithLifecycle()
-    TvTheme(motion = motion, focusStyle = focusStyle) {
+    TvTheme(look = look, motion = motion, focusStyle = focusStyle) {
         SettingsScreen(
             state = { state.value },
             actions = viewModel.actions,

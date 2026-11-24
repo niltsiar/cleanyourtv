@@ -10,6 +10,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.golden.assertMatchesGolden
@@ -41,7 +42,10 @@ class ClockGoldenTestContent :
                     val face = clockFace(LocalDateTime.of(2026, 11, 4, 21, 41), hour24 = false, "EEEE  d MMMM", Locale.ENGLISH)
                     compose.mainClock.autoAdvance = false
                     compose.setContent {
-                        TvTheme(motion = TvConfig().motion()) { ClockScene(face, glow = glow, picture = null, random = Random(2)) }
+                        TvTheme(
+                            look = Look.Glass,
+                            motion = TvConfig().motion(),
+                        ) { ClockScene(face, glow = glow, picture = null, random = Random(2)) }
                     }
                     compose.mainClock.advanceTimeBy(2_000)
                     compose.waitForIdle()

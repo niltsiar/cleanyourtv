@@ -25,6 +25,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.FocusSurface
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
@@ -103,7 +104,7 @@ class FocusSurfaceMotionTestContent :
             test("a focused ring has a 2 dp stroke of black 055 outside its hairline on a bright backdrop and none at rest") {
                 compose.setContent {
                     view = LocalView.current
-                    TvTheme {
+                    TvTheme(look = Look.Glass) {
                         Box(Modifier.size(140.dp).background(Color.White).testTag("frame"), contentAlignment = Alignment.Center) {
                             Box(Modifier.align(Alignment.TopStart).size(1.dp).focusable())
                             FocusSurface(
@@ -148,7 +149,7 @@ private class FocusSurfaceMotionTestFixture : JUnit4RulesContext() {
     fun showTile(motion: Motion) {
         compose.setContent {
             view = LocalView.current
-            TvTheme(motion = motion) {
+            TvTheme(look = Look.Glass, motion = motion) {
                 Box(Modifier.size(140.dp).background(Color.Black).testTag("frame"), contentAlignment = Alignment.Center) {
                     Box(Modifier.align(Alignment.TopStart).size(1.dp).focusable())
                     FocusSurface(onClick = {}, glow = false, modifier = Modifier.size(100.dp).focusRequester(requester).testTag("tile")) {

@@ -36,6 +36,7 @@ internal fun ClockHost(graph: AppGraph) {
     val clockWallpaper by config.derived(TvConfig::clockWallpaper)
     val clockGlow by config.derived(TvConfig::clockGlow)
     val motion by config.derived(TvConfig::motion)
+    val look by config.derived(TvConfig::look)
     val hour24 = remember(clockFormat) { clockFormat.is24Hour { DateFormat.is24HourFormat(context) } }
     val face = remember(time, hour24, datePattern, locale) { time?.let { clockFace(it, hour24, datePattern, locale) } }
     // Home's current picture, read again each minute so a collection's rotation goes on while the clock is up. It decodes
@@ -43,7 +44,7 @@ internal fun ClockHost(graph: AppGraph) {
     val picture by produceState<ImageBitmap?>(initialValue = null, time, clockWallpaper) {
         value = if (clockWallpaper) graph.screensaverWallpaper.current() else null
     }
-    TvTheme(motion = motion) {
+    TvTheme(look = look, motion = motion) {
         ClockScene(face = face, glow = clockGlow, picture = picture)
     }
 }

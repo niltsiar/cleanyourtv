@@ -16,6 +16,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.focusStyle
@@ -90,7 +91,7 @@ private class SettingsGoldenFixture : JUnit4RulesContext() {
                 .requestFocusFromTouch()
         }
         compose.setContent {
-            TvTheme(motion = config.motion(), focusStyle = config.focusStyle(), darkTheme = true) {
+            TvTheme(look = Look.Glass, motion = config.motion(), focusStyle = config.focusStyle(), darkTheme = true) {
                 // The settings activities have a black window.
                 Box(Modifier.fillMaxSize().background(Color.Black))
                 SettingsScreen(

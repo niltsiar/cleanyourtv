@@ -30,6 +30,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
@@ -541,7 +542,7 @@ private class DockGlassUiTestFixture : JUnit4RulesContext() {
     ) {
         val sources = sources(apps = flowOf(AppList(shown, docked)), wallpaper = wallpaper)
         compose.setContent {
-            TvTheme(darkTheme = darkTheme) {
+            TvTheme(look = Look.Glass, darkTheme = darkTheme) {
                 glass = rememberGlassState()
                 val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()

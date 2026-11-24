@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
@@ -58,7 +59,7 @@ private fun LibraryEmptyPreview() {
 /** The library in Home's overlay host, over a stand-in for Home: a bright picture. */
 @Composable
 private fun LibraryPreviewFrame(state: LibraryUiState) {
-    TvTheme {
+    TvTheme(look = Look.Glass) {
         val layout = LibraryLayout(animated = false)
         Box(Modifier.fillMaxSize()) {
             Box(

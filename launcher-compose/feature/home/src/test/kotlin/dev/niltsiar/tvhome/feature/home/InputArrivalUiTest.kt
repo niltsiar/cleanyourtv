@@ -23,6 +23,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.InputArrival
@@ -154,7 +155,7 @@ private class InputArrivalUiTestFixture : JUnit4RulesContext() {
     fun showHome(motion: Motion = Motion()) {
         val sources = sources(inputs = inputs)
         compose.setContent {
-            TvTheme(motion = motion) {
+            TvTheme(look = Look.Glass, motion = motion) {
                 val viewModel = rememberHomeViewModel(sources, config, effects)
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(

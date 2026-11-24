@@ -9,6 +9,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import io.kotest.matchers.floats.plusOrMinus
@@ -38,7 +39,7 @@ class ColonBreathTestContent :
                 ): Float {
                     lateinit var breath: State<Float>
                     compose.mainClock.autoAdvance = false
-                    compose.setContent { TvTheme(motion = motion) { breath = rememberColonBreath() } }
+                    compose.setContent { TvTheme(look = Look.Glass, motion = motion) { breath = rememberColonBreath() } }
                     compose.mainClock.advanceTimeBy(millis)
                     return breath.value
                 }

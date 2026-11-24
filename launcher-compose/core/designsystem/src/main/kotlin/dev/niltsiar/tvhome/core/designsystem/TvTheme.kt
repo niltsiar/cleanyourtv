@@ -5,6 +5,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -16,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import dev.niltsiar.tvhome.core.config.Look
 
 @Immutable
 public class TvColors(
@@ -313,7 +319,7 @@ private fun typographyFor(colors: TvColors): TvTypography {
 private val LocalTvColors = staticCompositionLocalOf { DarkColors }
 
 @Suppress("CompositionLocalAllowlist")
-private val LocalTvTypography = staticCompositionLocalOf { typographyFor(DarkColors) }
+private val LocalTvTypography = staticCompositionLocalOf { DarkTypography }
 
 @Suppress("CompositionLocalAllowlist")
 private val LocalMotion = staticCompositionLocalOf { Motion() }
@@ -324,7 +330,29 @@ private val LocalTvSurfaces = staticCompositionLocalOf { DarkSurfaces }
 @Suppress("CompositionLocalAllowlist")
 private val LocalFocusStyle = staticCompositionLocalOf { FocusStyle.Glass }
 
+@Suppress("CompositionLocalAllowlist")
+private val LocalLookState = staticCompositionLocalOf { LookState(Look.Glass) { DefaultSeed } }
+
+private val DarkTypography by lazy { typographyFor(DarkColors) }
 private val OnLightTypography by lazy { typographyFor(OnLightColors) }
+
+/** The seed of a [TvTheme] whose caller gives none. */
+private val DefaultSeed = DarkColors.accent
+
+/**
+ * The window's [look] and the house [seed] its colours grow from. One object per [TvTheme], so a change of either
+ * invalidates only what reads it: read them in the draw phase and a change redraws without recomposing.
+ */
+@Stable
+public class LookState internal constructor(
+    look: Look,
+    seed: () -> Color,
+) {
+    public var look: Look by mutableStateOf(look)
+        internal set
+    internal var seedSource: () -> Color by mutableStateOf(seed)
+    public val seed: Color get() = seedSource()
+}
 
 public object TvTheme {
     public val colors: TvColors
@@ -351,35 +379,52 @@ public object TvTheme {
         @Composable
         @ReadOnlyComposable
         get() = LocalFocusStyle.current
+
+    public val lookState: LookState
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalLookState.current
 }
 
 /**
  * The TV theme. Text over the wallpaper is always light; the [TvTheme.surfaces] are light or dark with [darkTheme].
- * [motion] says how anything moves, [focusStyle] how a focused tile is lit.
+ * [look] is the design and [seed] gives the house colour of [Look.Expressive]; both reach [TvTheme.lookState]. [seed] is
+ * read where the colour is drawn, so a seed held in a state changes the drawing without recomposing the caller. [motion]
+ * says how anything moves, [focusStyle] how a focused tile is lit.
  */
 @Composable
 public fun TvTheme(
+    look: Look,
+    seed: () -> Color = { DefaultSeed },
     motion: Motion = Motion(),
     focusStyle: FocusStyle = FocusStyle.Glass,
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
+    val lookState = remember { LookState(look, seed) }
+    lookState.look = look
+    lookState.seedSource = seed
     CompositionLocalProvider(
         LocalTvColors provides DarkColors,
-        LocalTvTypography provides typographyFor(DarkColors),
+        LocalTvTypography provides DarkTypography,
         LocalMotion provides motion,
         LocalFocusStyle provides focusStyle,
         LocalTvSurfaces provides if (darkTheme) DarkSurfaces else LightSurfaces,
+        LocalLookState provides lookState,
         content = content,
     )
 }
 
-/** [content] on a surface drawn in [TvTheme.surfaces]: on a light one (night mode off) its text turns dark. */
+/**
+ * [content] on a surface drawn in [TvTheme.surfaces]: on a light one (night mode off) its text turns dark. Both cases
+ * provide the same locals, so a change of the surface keeps the composition's structure and its focus.
+ */
 @Composable
 internal fun SurfaceContent(content: @Composable () -> Unit) {
-    if (LocalTvSurfaces.current.dark) {
-        content()
-    } else {
-        CompositionLocalProvider(LocalTvColors provides OnLightColors, LocalTvTypography provides OnLightTypography, content = content)
-    }
+    val dark = LocalTvSurfaces.current.dark
+    CompositionLocalProvider(
+        LocalTvColors provides if (dark) DarkColors else OnLightColors,
+        LocalTvTypography provides if (dark) DarkTypography else OnLightTypography,
+        content = content,
+    )
 }

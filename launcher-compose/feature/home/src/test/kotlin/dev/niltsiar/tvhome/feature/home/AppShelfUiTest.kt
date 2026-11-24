@@ -32,6 +32,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
@@ -575,7 +576,7 @@ private class AppShelfUiTestFixture : JUnit4RulesContext() {
                 nowPlaying = { pkg -> if (pkg == "pkg.1") session else flowOf(null) },
             )
         compose.setContent {
-            TvTheme(motion = motion) {
+            TvTheme(look = Look.Glass, motion = motion) {
                 val viewModel = rememberHomeViewModel(sources, config, effects).also { viewModel = it }
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(

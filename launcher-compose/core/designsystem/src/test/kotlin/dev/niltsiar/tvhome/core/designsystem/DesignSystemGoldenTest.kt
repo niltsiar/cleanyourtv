@@ -40,6 +40,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.golden.assertMatchesGolden
 import androidx.compose.ui.graphics.Canvas as ImageCanvas
 
@@ -209,7 +210,7 @@ private class DesignSystemGoldenFixture : JUnit4RulesContext() {
         }
         val focus = FocusRequester()
         compose.setContent {
-            TvTheme(focusStyle = style, darkTheme = dark) {
+            TvTheme(look = Look.Glass, focusStyle = style, darkTheme = dark) {
                 Box(Modifier.size(size.dp, (size * 9 / 16).dp).background(Ground).testTag("scene"), contentAlignment = Alignment.Center) {
                     content(Modifier.focusRequester(focus))
                 }

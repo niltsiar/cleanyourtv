@@ -23,6 +23,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.Wallpaper
 import io.kotest.assertions.withClue
@@ -78,7 +79,7 @@ private class WallpaperCaptionTestFixture : JUnit4RulesContext() {
     fun show(wallpaper: Wallpaper) {
         val state = homeUiState(homeApps(), Evening, null, Locale.ENGLISH, wallpaper = wallpaper)
         compose.setContent {
-            TvTheme {
+            TvTheme(look = Look.Glass) {
                 HomeScreen(state = { state }, layout = SixColumns.homeLayout(), onFocus = {}, onClick = {})
             }
         }
@@ -88,7 +89,7 @@ private class WallpaperCaptionTestFixture : JUnit4RulesContext() {
     /** The caption alone on white, where its white text vanishes and only its shadow shows. */
     fun showOnWhite(caption: String) {
         compose.setContent {
-            TvTheme {
+            TvTheme(look = Look.Glass) {
                 Box(Modifier.fillMaxSize().background(Color.White)) {
                     WallpaperCaption(
                         caption = { caption },

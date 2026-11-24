@@ -41,6 +41,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.EdgeFade
 import dev.niltsiar.tvhome.core.designsystem.Motion
@@ -422,7 +423,7 @@ private class SettingsEdgesUiFixture : JUnit4RulesContext() {
         listHeight: (DpRect) -> Dp = { it.height },
     ) {
         compose.setContent {
-            TvTheme(motion = Motion(animations = false)) {
+            TvTheme(look = Look.Glass, motion = Motion(animations = false)) {
                 Box(Modifier.fillMaxWidth().height(viewport.value)) {
                     SettingsScreen(
                         state = {

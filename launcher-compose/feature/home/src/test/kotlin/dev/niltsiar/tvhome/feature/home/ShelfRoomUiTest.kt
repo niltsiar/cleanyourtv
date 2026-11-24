@@ -18,6 +18,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
@@ -164,7 +165,7 @@ private class ShelfRoomUiTestFixture : JUnit4RulesContext() {
             key(current, appCount) {
                 val entries = (1..appCount).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") }
                 val sources = sources(apps = flowOf(AppList(entries)), inputs = flowOf(FourPorts))
-                TvTheme(motion = Motion(current.animations, current.reducedMotion, current.focusOvershoot)) {
+                TvTheme(look = Look.Glass, motion = Motion(current.animations, current.reducedMotion, current.focusOvershoot)) {
                     val viewModel = rememberHomeViewModel(sources, current, mutableListOf())
                     val state = viewModel.uiState.collectAsState()
                     HomeScreen(

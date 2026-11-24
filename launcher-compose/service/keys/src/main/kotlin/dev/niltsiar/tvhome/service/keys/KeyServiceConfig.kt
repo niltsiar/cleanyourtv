@@ -52,5 +52,5 @@ internal fun TvConfig.forKeyService(pick: String?): KeyServiceConfig =
         sleepTimer = sleepTimer,
         quickPanel = quickPanel,
         restartPress = restartPress,
-        panelLook = PanelLook(motion(), focusStyle()),
+        panelLook = PanelLook(motion(), focusStyle(), look),
     )

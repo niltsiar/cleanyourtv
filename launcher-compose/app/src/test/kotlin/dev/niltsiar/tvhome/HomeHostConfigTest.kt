@@ -21,6 +21,7 @@ import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.Choices
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.model.AppEntry
@@ -104,7 +105,7 @@ class HomeHostConfigTestContent :
                 fun showHome(home: LifecycleOwner? = null) {
                     compose.setContent {
                         CompositionLocalProvider(LocalLifecycleOwner provides (home ?: LocalLifecycleOwner.current)) {
-                            TvTheme {
+                            TvTheme(look = Look.Glass) {
                                 val scope = rememberCoroutineScope()
                                 viewModel =
                                     remember {

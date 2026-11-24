@@ -33,6 +33,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
@@ -199,7 +200,7 @@ private class HomeBandLookUiTestFixture : JUnit4RulesContext() {
                 .toEpochMilli()
         val sources = sources(apps = flowOf(AppList(apps)), lastOpened = flowOf(mapOf("pkg.1" to opened)), libraryCount = flowOf(23))
         compose.setContent {
-            TvTheme {
+            TvTheme(look = Look.Glass) {
                 val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(

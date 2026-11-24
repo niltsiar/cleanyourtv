@@ -27,6 +27,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.FocusStyle
 import dev.niltsiar.tvhome.core.designsystem.FocusSurface
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
@@ -118,7 +119,7 @@ private class FocusStyleUiTestFixture : JUnit4RulesContext() {
         lateinit var view: View
         compose.setContent {
             view = LocalView.current
-            TvTheme(focusStyle = this.style) {
+            TvTheme(look = Look.Glass, focusStyle = this.style) {
                 Box(Modifier.size(180.dp).background(frame).testTag("frame"), contentAlignment = Alignment.Center) {
                     Box(Modifier.align(Alignment.TopStart).size(1.dp).focusable())
                     FocusSurface(

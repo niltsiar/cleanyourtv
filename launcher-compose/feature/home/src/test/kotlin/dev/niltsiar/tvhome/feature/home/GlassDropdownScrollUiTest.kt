@@ -33,6 +33,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.GlassDropdown
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import io.kotest.assertions.withClue
@@ -123,7 +124,7 @@ private class GlassDropdownScrollUiTestFixture : JUnit4RulesContext() {
 
     fun show() {
         compose.setContent {
-            TvTheme {
+            TvTheme(look = Look.Glass) {
                 val anchor = remember { mutableStateOf(Rect(100f, 100f, 400f, 160f)) }
                 val first = remember { FocusRequester() }
                 GlassDropdown(

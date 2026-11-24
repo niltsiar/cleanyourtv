@@ -21,6 +21,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import io.kotest.assertions.withClue
 import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
@@ -96,7 +97,7 @@ class SettingsRecompositionTestContent :
                             .requestFocusFromTouch()
                     }
                     compose.setContent {
-                        TvTheme {
+                        TvTheme(look = Look.Glass) {
                             val state = settings.viewModel.uiState.collectAsState()
                             SettingsScreen({ state.value }, settings.viewModel.actions, onChooseDefaultHome = {}, onOpenTvSettings = {})
                         }

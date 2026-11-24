@@ -21,6 +21,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
@@ -98,7 +99,7 @@ private class TopBarMotionUiTestFixture : JUnit4RulesContext() {
         val network = NetworkState(NetworkLink.Wifi, ssid = "Home", validated = true)
         val state = homeUiState(homeApps(config = config), Evening, null, Locale.ENGLISH, network = network, inputs = FourPorts)
         compose.setContent {
-            TvTheme {
+            TvTheme(look = Look.Glass) {
                 HomeScreen(
                     state = { state },
                     layout = config.homeLayout(),

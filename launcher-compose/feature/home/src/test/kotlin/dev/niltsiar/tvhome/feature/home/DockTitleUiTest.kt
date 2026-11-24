@@ -31,6 +31,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppList
@@ -137,7 +138,7 @@ private class DockTitleUiTestFixture : JUnit4RulesContext() {
         val sources = sources(apps = flowOf(AppList(NineApps)), wallpaper = flowOf(Wallpaper(picture = white, thumbnail = white)))
         compose.setContent {
             CompositionLocalProvider(LocalBakeDispatcher provides Dispatchers.Unconfined) {
-                TvTheme(darkTheme = true) {
+                TvTheme(look = Look.Glass, darkTheme = true) {
                     val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                     val state = viewModel.uiState.collectAsState()
                     HomeScreen(

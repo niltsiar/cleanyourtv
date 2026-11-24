@@ -25,6 +25,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
@@ -286,7 +287,7 @@ private class DockPaddingUiTestFixture : JUnit4RulesContext() {
         shown = config
         this.motion = motion
         compose.setContent {
-            TvTheme(motion = this.motion) {
+            TvTheme(look = Look.Glass, motion = this.motion) {
                 key(shown) {
                     val viewModel = rememberHomeViewModel(sources, shown, mutableListOf())
                     val state = viewModel.uiState.collectAsState()

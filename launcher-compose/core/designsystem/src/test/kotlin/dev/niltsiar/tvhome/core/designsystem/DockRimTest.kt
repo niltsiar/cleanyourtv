@@ -18,6 +18,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import io.kotest.assertions.withClue
 import io.kotest.matchers.floats.shouldBeLessThanOrEqual
 import kotlin.math.abs
@@ -42,7 +43,7 @@ class DockRimTestContent :
         } asContextForEach {
             test("the dock panels side rim changes by no more than 0.03 between samples 10 px apart down its straight part") {
                 compose.setContent {
-                    TvTheme {
+                    TvTheme(look = Look.Glass) {
                         Box(Modifier.background(Color(0xFF404040))) {
                             DockSurface(
                                 rememberGlassState(),

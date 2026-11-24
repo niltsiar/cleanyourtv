@@ -12,6 +12,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 
@@ -69,7 +70,7 @@ private class HomeFocusMemoryUiTestFixture : JUnit4RulesContext() {
                 .requestFocusFromTouch()
         }
         compose.setContent {
-            TvTheme {
+            TvTheme(look = Look.Glass) {
                 val viewModel = rememberHomeViewModel(sources(focusMemory = memory), config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(

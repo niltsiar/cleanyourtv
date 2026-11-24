@@ -23,6 +23,7 @@ import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.GlassStyle
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.focusStyle
@@ -216,7 +217,7 @@ private class HomeGoldenFixture : JUnit4RulesContext() {
         }
         compose.setContent {
             CompositionLocalProvider(LocalBakeDispatcher provides Dispatchers.Unconfined) {
-                TvTheme(motion = config.motion(), focusStyle = config.focusStyle(), darkTheme = dark) {
+                TvTheme(look = Look.Glass, motion = config.motion(), focusStyle = config.focusStyle(), darkTheme = dark) {
                     val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                     val state = viewModel.uiState.collectAsState()
                     HomeScreen(

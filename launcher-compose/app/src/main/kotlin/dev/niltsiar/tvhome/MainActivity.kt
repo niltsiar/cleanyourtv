@@ -132,8 +132,9 @@ class MainActivity : ComponentActivity() {
             val current = config.collectAsStateWithLifecycle()
             val motion by current.derived(TvConfig::motion)
             val focusStyle by current.derived(TvConfig::focusStyle)
+            val look by current.derived(TvConfig::look)
             val appLibrary by current.derived(TvConfig::appLibrary)
-            TvTheme(motion = motion, focusStyle = focusStyle) {
+            TvTheme(look = look, motion = motion, focusStyle = focusStyle) {
                 val glass = rememberGlassState()
                 val libraryOpen = if (appLibrary) library.uiState.collectAsStateWithLifecycle() else null
                 HomeHost(

@@ -24,6 +24,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
@@ -96,7 +97,7 @@ private class LibraryGoldenFixture : JUnit4RulesContext() {
         }
         lateinit var viewModel: MoleculeLibraryViewModel
         compose.setContent {
-            TvTheme(motion = config.motion(), focusStyle = config.focusStyle(), darkTheme = true) {
+            TvTheme(look = Look.Glass, motion = config.motion(), focusStyle = config.focusStyle(), darkTheme = true) {
                 val scope = rememberCoroutineScope()
                 viewModel =
                     remember {

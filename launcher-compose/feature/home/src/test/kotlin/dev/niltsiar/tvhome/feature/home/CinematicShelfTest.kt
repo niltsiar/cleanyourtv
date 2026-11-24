@@ -17,6 +17,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import io.kotest.matchers.shouldBe
 import org.junit.rules.ExternalResource
@@ -91,7 +92,7 @@ private class CinematicShelfTestFixture : JUnit4RulesContext() {
                 .requestFocusFromTouch()
         }
         compose.setContent {
-            TvTheme {
+            TvTheme(look = Look.Glass) {
                 HomeScreen(
                     state = { homeUiState(homeApps(), Evening, focusedKey, Locale.ENGLISH, cinematic = true) },
                     layout = SixColumns.homeLayout(),

@@ -11,6 +11,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import io.kotest.assertions.withClue
@@ -92,7 +93,7 @@ private class HeroScrimFadeTestFixture : JUnit4RulesContext() {
 
     fun show(motion: Motion = Motion()) {
         compose.setContent {
-            TvTheme(motion = motion) {
+            TvTheme(look = Look.Glass, motion = motion) {
                 fade = rememberHeroScrimFade(source = { source.value }, wanted = { source.value != HeroSource.Quiet })
             }
         }

@@ -15,7 +15,7 @@ import dev.niltsiar.tvhome.core.designsystem.TvTheme
 private fun SettingsPreview() {
     val config =
         TvConfig(columns = 6, dockOpacity = 70, clockFormat = ClockFormat.Hour24, alwaysShowNames = true, homeIdleClockMinutes = 10)
-    TvTheme(motion = Motion(animations = false)) {
+    TvTheme(look = config.look, motion = Motion(animations = false)) {
         Box(Modifier.fillMaxSize()) {
             SettingsScreen(
                 state = { SettingsUiState(settingsSections(config), followsTheme = false) },

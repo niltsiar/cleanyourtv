@@ -23,6 +23,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.FocusStyle
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
@@ -92,7 +93,7 @@ private class HaloClipUiTestFixture : JUnit4RulesContext() {
     fun showHome(config: TvConfig) {
         val sources = sources(apps = flowOf(AppList(apps, 0)))
         compose.setContent {
-            TvTheme(focusStyle = style) {
+            TvTheme(look = Look.Glass, focusStyle = style) {
                 val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(
