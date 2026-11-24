@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
@@ -28,7 +27,6 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 
 private const val FILL_MS = 120
-private val PillShadow = Color.Black.copy(alpha = 0.30f)
 
 /** The colours of a [FocusPill]'s text and icons, which follow its focus. Read them in a draw lambda or as a text colour. */
 @Stable
@@ -44,7 +42,7 @@ public class FocusInk internal constructor(
 /**
  * A D-pad target for rows and buttons: while focused it fills with [TvSurfaces.pillFill] over [background], and the
  * [FocusInk] its content gets turns from the theme's text colours to the pill's. It grows to [focusedScale] and casts a
- * shadow of [shadowElevation] while idle too, about [transformOrigin]. As with [FocusSurface], the animation starts in the focus callback and is
+ * shadow of [shadowElevation] in [TvElementColors.pillShadow] while idle too, about [transformOrigin]. As with [FocusSurface], the animation starts in the focus callback and is
  * read in the layer and draw lambdas only, so a focus change neither recomposes nor relays out.
  */
 @Composable
@@ -63,6 +61,7 @@ public fun FocusPill(
     val motion = TvTheme.motion
     val surfaces = TvTheme.surfaces
     val colors = TvTheme.colors
+    val shadow = TvTheme.elementColors.pillShadow
     val focus = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val grownScale = motion.focusScale(focusedScale)
@@ -85,8 +84,8 @@ public fun FocusPill(
                     if (shadowElevation > 0.dp) {
                         this.shadowElevation = shadowElevation.toPx()
                         this.shape = shape
-                        ambientShadowColor = PillShadow
-                        spotShadowColor = PillShadow
+                        ambientShadowColor = shadow
+                        spotShadowColor = shadow
                     }
                 }.clip(shape)
                 .onFocusChanged {

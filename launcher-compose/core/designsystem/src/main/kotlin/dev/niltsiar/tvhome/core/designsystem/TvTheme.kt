@@ -106,6 +106,12 @@ private val DarkSurfaces =
         warnInk = Color(0xFFFF8A80),
     )
 
+private val DarkElementColors =
+    glassElementColors(ink = DarkColors.onSurface, tileInk = DarkColors.onSurface, menuTitleInk = Color.White)
+
+private val OnLightElementColors =
+    glassElementColors(ink = OnLightColors.onSurface, tileInk = DarkColors.onSurface, menuTitleInk = OnLightColors.onSurface)
+
 private val LightSurfaces =
     TvSurfaces(
         dark = false,
@@ -143,7 +149,10 @@ private fun googleSansFlex(
         ),
     )
 
-private fun typographyFor(colors: TvColors): TvTypography {
+private fun typographyFor(
+    colors: TvColors,
+    elements: TvElementColors,
+): TvTypography {
     val clockSize = 32.sp
     val clockCompactSize = 28.sp
     val dateSize = 18.sp
@@ -203,7 +212,7 @@ private fun typographyFor(colors: TvColors): TvTypography {
             ),
         greeting =
             TextStyle(
-                color = colors.onSurface.copy(alpha = 0.95f),
+                color = elements.greeting,
                 fontSize = greetingSize,
                 fontWeight = FontWeight.Medium,
                 fontFamily = googleSansFlex(FontWeight.Medium, greetingSize, width = 100f, roundness = 0f),
@@ -255,15 +264,14 @@ private fun typographyFor(colors: TvColors): TvTypography {
             ),
         tileLabel =
             TextStyle(
-                // The tile fill is dark in every set, so its label takes the dark set's ink.
-                color = DarkColors.onSurface,
+                color = elements.tileLabel,
                 fontSize = tileLabelSize,
                 fontWeight = FontWeight.Medium,
                 fontFamily = googleSansFlex(FontWeight.Medium, tileLabelSize, width = 100f, roundness = 0f),
             ),
         tileCaption =
             TextStyle(
-                color = Color.White,
+                color = elements.tileCaption,
                 fontSize = tileCaptionSize,
                 fontWeight = FontWeight.SemiBold,
                 fontFamily = googleSansFlex(FontWeight.SemiBold, tileCaptionSize, width = 100f, roundness = 0f),
@@ -284,14 +292,14 @@ private fun typographyFor(colors: TvColors): TvTypography {
             ),
         caption =
             TextStyle(
-                color = colors.onSurface.copy(alpha = 0.85f),
+                color = elements.caption,
                 fontSize = captionSize,
                 fontWeight = FontWeight.Normal,
                 fontFamily = googleSansFlex(FontWeight.Normal, captionSize, width = 100f, roundness = 0f),
             ),
         screensaverClock =
             TextStyle(
-                color = Color.White.copy(alpha = 0.92f),
+                color = elements.screensaverClock,
                 fontSize = screensaverClockSize,
                 fontWeight = FontWeight.ExtraLight,
                 letterSpacing = (-0.03).em,
@@ -300,14 +308,14 @@ private fun typographyFor(colors: TvColors): TvTypography {
             ),
         screensaverAmPm =
             TextStyle(
-                color = Color.White.copy(alpha = 0.6f),
+                color = elements.screensaverAmPm,
                 fontSize = screensaverAmPmSize,
                 fontWeight = FontWeight.Medium,
                 fontFamily = googleSansFlex(FontWeight.Medium, screensaverAmPmSize, width = 100f, roundness = 100f),
             ),
         screensaverDate =
             TextStyle(
-                color = Color.White.copy(alpha = 0.55f),
+                color = elements.screensaverDate,
                 fontSize = screensaverDateSize,
                 fontWeight = FontWeight.Medium,
                 fontFamily = googleSansFlex(FontWeight.Medium, screensaverDateSize, width = 100f, roundness = 100f),
@@ -325,6 +333,9 @@ private val LocalTvTypography = staticCompositionLocalOf { DarkTypography }
 private val LocalMotion = staticCompositionLocalOf { Motion() }
 
 @Suppress("CompositionLocalAllowlist")
+private val LocalTvElementColors = staticCompositionLocalOf { DarkElementColors }
+
+@Suppress("CompositionLocalAllowlist")
 private val LocalTvSurfaces = staticCompositionLocalOf { DarkSurfaces }
 
 @Suppress("CompositionLocalAllowlist")
@@ -333,8 +344,8 @@ private val LocalFocusStyle = staticCompositionLocalOf { FocusStyle.Glass }
 @Suppress("CompositionLocalAllowlist")
 private val LocalLookState = staticCompositionLocalOf { LookState(Look.Glass) { DefaultSeed } }
 
-private val DarkTypography by lazy { typographyFor(DarkColors) }
-private val OnLightTypography by lazy { typographyFor(OnLightColors) }
+private val DarkTypography by lazy { typographyFor(DarkColors, DarkElementColors) }
+private val OnLightTypography by lazy { typographyFor(OnLightColors, OnLightElementColors) }
 
 /** The seed of a [TvTheme] whose caller gives none. */
 private val DefaultSeed = DarkColors.accent
@@ -375,6 +386,11 @@ public object TvTheme {
         @ReadOnlyComposable
         get() = LocalTvSurfaces.current
 
+    public val elementColors: TvElementColors
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalTvElementColors.current
+
     public val focusStyle: FocusStyle
         @Composable
         @ReadOnlyComposable
@@ -407,6 +423,7 @@ public fun TvTheme(
     CompositionLocalProvider(
         LocalTvColors provides DarkColors,
         LocalTvTypography provides DarkTypography,
+        LocalTvElementColors provides DarkElementColors,
         LocalMotion provides motion,
         LocalFocusStyle provides focusStyle,
         LocalTvSurfaces provides if (darkTheme) DarkSurfaces else LightSurfaces,
@@ -425,6 +442,7 @@ internal fun SurfaceContent(content: @Composable () -> Unit) {
     CompositionLocalProvider(
         LocalTvColors provides if (dark) DarkColors else OnLightColors,
         LocalTvTypography provides if (dark) DarkTypography else OnLightTypography,
+        LocalTvElementColors provides if (dark) DarkElementColors else OnLightElementColors,
         content = content,
     )
 }

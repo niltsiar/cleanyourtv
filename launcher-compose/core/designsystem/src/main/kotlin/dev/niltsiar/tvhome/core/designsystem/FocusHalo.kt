@@ -8,7 +8,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
@@ -31,8 +30,6 @@ import kotlin.math.pow
 private val HaloWidth = 16.dp
 private val HaloClearance = 1.dp
 private const val HALO_STEPS = 8
-private const val HALO_UNDER_ALPHA = 0.5f
-private const val HALO_SIDE_ALPHA = 0.25f
 
 /** Each band's share of the halo's alpha, taken from (1 - t)^1.5 at the band's middle, so the outermost band is all but gone. */
 private val HaloFade = FloatArray(HALO_STEPS) { ((HALO_STEPS - it - 0.5f) / HALO_STEPS).pow(1.5f) }
@@ -66,9 +63,10 @@ private class HaloClipNode :
 }
 
 /**
- * The halo glow of a focused [FocusSurface] in [ring]'s colour, white without one, drawn grown as the surface is: [scale]
- * when [focus] is 1, less while a [press] [dips] it, about [pivot]'s height or the middle. It runs up to [HaloWidth] past the
- * ring's keyline, at 0.5 under the surface and 0.25 at its sides and top, in [HALO_STEPS] bands that fade out. On a side where a [clipsHalo]
+ * The halo glow of a focused [FocusSurface] in [ring]'s colour, [TvElementColors.ring] of [colours] without one, drawn grown
+ * as the surface is: [scale] when [focus] is 1, less while a [press] [dips] it, about [pivot]'s height or the middle. It runs up to
+ * [HaloWidth] past the ring's keyline, at [TvElementColors.haloUnderAlpha] under the surface and [TvElementColors.haloSideAlpha] at
+ * its sides and top, in [HALO_STEPS] bands that fade out. On a side where a [clipsHalo]
  * container leaves less room, the glow on that side is narrowed to end before the container's edge, so the clip never cuts it.
  */
 internal data class FocusHaloElement(
@@ -77,6 +75,7 @@ internal data class FocusHaloElement(
     val pivot: ((Float) -> Float)?,
     val shape: Shape,
     val ring: ColorProducer?,
+    val colours: TvElementColors,
     val press: Animatable<Float, AnimationVector1D>? = null,
     val dips: Boolean = false,
 ) : ModifierNodeElement<FocusHaloNode>() {
@@ -151,10 +150,10 @@ internal class FocusHaloNode(
             bottom = (pivot.y + (clip.bottom - pivot.y) / grown - keyline.bottom - clearance).coerceIn(0f, most)
         }
         if (left + top + right + bottom == 0f) return
-        val colour = spec.ring?.invoke() ?: Color.White
+        val colour = spec.ring?.invoke() ?: spec.colours.ring
         val light =
             Brush.verticalGradient(
-                listOf(colour.copy(alpha = HALO_SIDE_ALPHA), colour.copy(alpha = HALO_UNDER_ALPHA)),
+                listOf(colour.copy(alpha = spec.colours.haloSideAlpha), colour.copy(alpha = spec.colours.haloUnderAlpha)),
                 startY = size.height,
                 endY = size.height + reach,
             )

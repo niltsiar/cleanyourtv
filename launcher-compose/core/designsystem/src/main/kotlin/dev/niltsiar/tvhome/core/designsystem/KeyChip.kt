@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,13 +20,14 @@ import androidx.compose.ui.unit.dp
 
 public val KeyChipHeight: Dp = 32.dp
 
-/** The backing, rim and key fill of a chip over a wallpaper. */
-public val KeyChipOverWallpaper: KeyChipLook =
-    KeyChipLook(
-        backing = Color(0xFF07080C).copy(alpha = 0.55f),
-        rim = Color.White.copy(alpha = 0.20f),
-        keyFill = Color.White.copy(alpha = 0.16f),
-    )
+/** The backing, rim and key fill of a chip over a wallpaper, from [TvTheme.elementColors]. */
+public val KeyChipOverWallpaper: KeyChipLook
+    @Composable
+    @ReadOnlyComposable
+    get() =
+        TvTheme.elementColors.let {
+            KeyChipLook(backing = it.keyChipBacking, rim = it.keyChipRim, keyFill = it.keyChipKeyFill)
+        }
 
 /**
  * What a [KeyChip] draws: the [backing], [rim] and [keyFill] colours, and the [action] text colour when it is not the

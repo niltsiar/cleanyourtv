@@ -59,28 +59,23 @@ public class GlassState internal constructor() {
 @Composable
 public fun rememberGlassState(): GlassState = remember { GlassState() }
 
-private val Rim = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.32f), Color.White.copy(alpha = 0.08f)))
-private val ChromeSheen = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.10f), Color.White.copy(alpha = 0.03f)))
-private val OverlaySheen = Brush.verticalGradient(0f to Color.White.copy(alpha = 0.10f), 0.4f to Color.Transparent)
-private val OverlayShadow = Color.Black.copy(alpha = 0.50f)
 private val OverlayElevation = 24.dp
 
 private val GlassPanelShape = RoundedCornerShape(20.dp)
 internal val OverlayCorner = 28.dp
 private val OverlayShape = RoundedCornerShape(OverlayCorner)
 
-/** The shadow under a chrome surface: none, or a pill's. */
+/** The shadow under a chrome surface: none, or a pill's in [TvElementColors.chromeShadow]. */
 public enum class ChromeShadow(
     internal val elevation: Dp,
-    internal val alpha: Float,
 ) {
-    None(0.dp, 0f),
-    Pill(8.dp, 0.30f),
+    None(0.dp),
+    Pill(8.dp),
 }
 
 /**
  * A chrome panel (the clock pill, the top-bar buttons, the library pill): the [GlassState.frost] under a tint, a
- * sheen and, with [rim], a rim. It casts [shadow].
+ * sheen and, with [rim], a rim, in [TvTheme.elementColors]. It casts [shadow].
  */
 @Composable
 public fun GlassSurface(
@@ -91,7 +86,10 @@ public fun GlassSurface(
     rim: Boolean = true,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    val shadowColor = Color.Black.copy(alpha = shadow.alpha)
+    val colours = TvTheme.elementColors
+    val rimBrush = remember(colours) { chromeRim(colours) }
+    val sheen = remember(colours) { Brush.verticalGradient(listOf(colours.chromeSheenTop, colours.chromeSheenBottom)) }
+    val shadowColor = colours.chromeShadow
     val shadowed = if (shadow == ChromeShadow.None) modifier else modifier.shadow(shadow.elevation, shape, false, shadowColor, shadowColor)
     Box(
         modifier =
@@ -99,8 +97,8 @@ public fun GlassSurface(
                 .clip(shape)
                 .glassFrost(glass)
                 .background(TvTheme.surfaces.chromeTint)
-                .background(ChromeSheen)
-                .then(if (rim) Modifier.border(1.dp, Rim, shape) else Modifier),
+                .background(sheen)
+                .then(if (rim) Modifier.border(1.dp, rimBrush, shape) else Modifier),
     ) {
         SurfaceContent { content() }
     }
@@ -116,18 +114,23 @@ public fun OverlaySurface(
     shape: Shape = OverlayShape,
     content: @Composable BoxScope.() -> Unit,
 ) {
+    val colours = TvTheme.elementColors
+    val rimBrush = remember(colours) { chromeRim(colours) }
+    val sheen = remember(colours) { Brush.verticalGradient(0f to colours.overlaySheen, 0.4f to Color.Transparent) }
     Box(
         modifier =
             modifier
-                .shadow(OverlayElevation, shape, false, OverlayShadow, OverlayShadow)
+                .shadow(OverlayElevation, shape, false, colours.overlayShadow, colours.overlayShadow)
                 .clip(shape)
                 .background(TvTheme.surfaces.overlay)
-                .background(OverlaySheen)
-                .border(1.dp, Rim, shape),
+                .background(sheen)
+                .border(1.dp, rimBrush, shape),
     ) {
         SurfaceContent { content() }
     }
 }
+
+private fun chromeRim(colours: TvElementColors): Brush = Brush.verticalGradient(listOf(colours.chromeRimTop, colours.chromeRimBottom))
 
 /**
  * Draws the state's frost as it lies behind this node on screen, or with [dock] its [GlassState.dockFrost] when it has

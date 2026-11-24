@@ -36,7 +36,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shape
@@ -65,10 +64,7 @@ public val MenuRowSpacing: Dp = 8.dp
 
 /** The height of a [MenuDivider]. */
 public val MenuDividerHeight: Dp = 5.dp
-private const val DIVIDER_ALPHA = 0.12f
-private const val WARN_DIVIDER_ALPHA = 0.18f
 private val RowHeight = 46.dp
-private const val TITLE_ALPHA = 0.65f
 private val TitleTop = 6.dp
 private val TitleRuleGap = 8.dp
 
@@ -93,8 +89,8 @@ public class BesideAnchor(
  * carries the test tag [rowTag]; the panel's own tag is `menu`, [padding] inside its edge, and the rows' corners are
  * concentric with the panel's. It rises and fades in with a spring and takes focus on the row at [focusRow], the first
  * by default, and never goes above [topLimit]; focus cannot leave it. A [title] is a header row over the rows, tagged `menu:title`. A row for which [dividerBefore] is true, and
- * that is not the first, has a [MenuDivider] above it. A row for which [warn] is true draws its text in coral (dark red on the light surface)
- * until it has focus, and the line above it is white 0.18. [above], [anchorGap], [columnGap] and [edgeMargin] are
+ * that is not the first, has a [MenuDivider] above it. A row for which [warn] is true draws its text in [TvSurfaces.warnInk]
+ * until it has focus, and the line above it is at [TvElementColors.menuWarnDividerAlpha]. [above], [anchorGap], [columnGap] and [edgeMargin] are
  * [GlassDropdown]'s.
  */
 @Composable
@@ -122,6 +118,7 @@ public fun <T> GlassMenu(
 ) {
     val opening = remember { FocusRequester() }
     val rowShape = remember(padding) { menuRowShape(padding) }
+    val colours = TvTheme.elementColors
     GlassDropdown(
         anchor,
         alignEnd,
@@ -138,7 +135,9 @@ public fun <T> GlassMenu(
         if (title != null) MenuTitle(title)
         rows.forEachIndexed { index, row ->
             val warned = warn(row)
-            if (index > 0 && dividerBefore(row)) MenuDivider(alpha = if (warned) WARN_DIVIDER_ALPHA else DIVIDER_ALPHA)
+            if (index > 0 && dividerBefore(row)) {
+                MenuDivider(alpha = if (warned) colours.menuWarnDividerAlpha else colours.menuDividerAlpha)
+            }
             val focus = if (index == focusRow) Modifier.focusRequester(opening) else Modifier
             MenuItem(label(row), rowTag(row), { onPick(row) }, rowHeight, rowShape, focus, warned, value(row))
         }
@@ -378,11 +377,11 @@ internal fun besideAnchor(
 /** The corner of a row of a panel padded by [padding], concentric with the panel's. */
 public fun menuRowShape(padding: Dp = PanelPadding): Shape = RoundedCornerShape(OverlayCorner - padding)
 
-/** A faint line between two groups of rows, [MenuDividerHeight] tall. */
+/** A faint line between two groups of rows, [MenuDividerHeight] tall, in the text colour at [alpha]. */
 @Composable
 public fun MenuDivider(
     modifier: Modifier = Modifier,
-    alpha: Float = DIVIDER_ALPHA,
+    alpha: Float = TvTheme.elementColors.menuDividerAlpha,
 ) {
     Box(
         modifier
@@ -398,10 +397,10 @@ public fun MenuDivider(
 private fun MenuTitle(text: String) {
     val typography = TvTheme.typography
     val ink = TvTheme.colors.onSurface
-    val titleInk = if (TvTheme.surfaces.dark) Color.White else ink
+    val colours = TvTheme.elementColors
     val style =
-        remember(typography, titleInk) {
-            typography.chipKey.copy(fontSize = typography.pillLabel.fontSize, color = titleInk.copy(alpha = TITLE_ALPHA))
+        remember(typography, colours) {
+            typography.chipKey.copy(fontSize = typography.pillLabel.fontSize, color = colours.menuTitle)
         }
     Column(verticalArrangement = Arrangement.spacedBy(TitleRuleGap)) {
         BasicText(
@@ -417,7 +416,7 @@ private fun MenuTitle(text: String) {
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp)
                 .height(1.dp)
-                .background(ink.copy(alpha = DIVIDER_ALPHA)),
+                .background(ink.copy(alpha = colours.menuDividerAlpha)),
         )
     }
 }

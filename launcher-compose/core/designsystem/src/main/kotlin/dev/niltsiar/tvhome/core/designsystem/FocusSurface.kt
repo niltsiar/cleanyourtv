@@ -54,16 +54,9 @@ private val RingGap = 3.dp
 /** From a surface's edge to its ring's outer edge: the gap and the ring, which a wider ring shares out differently. */
 internal val RingBand = RingGap + RingWidth
 private val HairlineWidth = 1.dp
-private val Hairline = Color(0x73000000)
 private val OuterStrokeWidth = 2.dp
-private val OuterStroke = Color.Black.copy(alpha = 0.55f)
 private val InnerStrokeClear = 1.dp
-private val InnerStroke = Color.White.copy(alpha = 0.90f)
 private val GlowElevation = 16.dp
-private val Gloss = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f), Color.Transparent))
-private const val PLATE_TOP_ALPHA = 0.22f
-private const val PLATE_BOTTOM_ALPHA = 0.06f
-private const val PLATE_STROKE_ALPHA = 0.3f
 
 /** How much of its size a pressed surface gives up at the bottom of its dip. */
 private const val PRESS_DIP = 0.04f
@@ -71,8 +64,7 @@ private const val PRESS_DIP = 0.04f
 /** How long a press takes to dip, and as long again to come back, in milliseconds. */
 private const val PRESS_DIP_MS = 80
 
-/** How far a pressed ring's colour moves toward white, and how much wider it grows into the gap inside it. */
-private const val PRESS_LIGHT = 0.5f
+/** How much wider a pressed ring grows into the gap inside it. */
 private val PressRingGrowth = 1.dp
 
 /**
@@ -97,14 +89,14 @@ public enum class FocusStyle(
 public val FocusRingReach: Dp = RingGap + RingWidth + HairlineWidth + OuterStrokeWidth
 
 /**
- * A D-pad target, for tiles and cards: scales up and gets a lit top, a white ring with a dark hairline outside it and a
- * glow while focused, and a 2 dp black stroke at 0.55 outside the hairline, so the ring holds on a bright wallpaper; how it
+ * A D-pad target, for tiles and cards: scales up and gets a lit top, a ring with a dark hairline outside it and a
+ * glow while focused, and a 2 dp stroke outside the hairline, so the ring holds on a bright wallpaper; how it
  * moves is the theme's [Motion]. Only the content is clipped to [shape]; the ring floats outside it and its corners are
  * concentric to the shape's, so a parent must leave the grown surface plus 9dp times [focusedScale] free around it or it
  * clips the ring. [onFocused] fires on gaining focus. [interactionSource] receives
  * the press and focus events, for content that reacts to them. [accent] colours the glow; unspecified takes the
  * theme's. [TvTheme.focusStyle] says which of the lit top, plate and glow it gets, and how wide the ring is. [ring]
- * colours the ring, and a halo glow, instead of white. [ringBlends] ([ringBlendsWith]) puts a white stroke at 0.90 across
+ * colours the ring, and a halo glow, instead of the theme's. [ringBlends] ([ringBlendsWith]) puts a light stroke across
  * the gap but its inner 1 dp, between the dark gap and the ring. [plate], when specified, is the colour of a plate behind the surface, out to the ring's inner edge with corners concentric to the shape's: it fades in and grows as focus arrives, and a
  * translucent surface shows it. [glow] turns the glow off, a halo glow too: the elevation shadow also
  * shows through a translucent surface, as a dark patch. The animation starts in the focus callback and is read in the layer and draw
@@ -113,7 +105,7 @@ public val FocusRingReach: Dp = RingGap + RingWidth + HairlineWidth + OuterStrok
  * [growthPivot], given the surface's height in pixels, says how far under its top the growth is anchored, in the middle
  * of its width; without it the surface grows about its centre. [focus] is its focus progress, for a parent that orders
  * its children by it ([popsOver]). [press] is the progress of a press ([pressDip]), 0 at rest: the surface draws up to 4% under
- * its size, with [Motion.animated] only, and its ring moves toward white and grows wider into the gap inside it, its outer edge
+ * its size, with [Motion.animated] only, and its ring moves toward [TvElementColors.ringPressed] and grows wider into the gap inside it, its outer edge
  * where it was. While OK is held on a surface whose [modifier] has [holdOk], an arc in the ring's colour fills the gap and
  * the ring clockwise from the top centre, whole as the menu opens ([HoldArcElement]), with [Motion.animations] only.
  */
@@ -140,20 +132,22 @@ public fun FocusSurface(
     val scope = rememberCoroutineScope()
     val grownScale = motion.focusScale(focusedScale)
     val style = TvTheme.focusStyle
+    val colours = TvTheme.elementColors
     val glowing = glow && style.glowStrength > 0f
     val halo = glow && style.halo
     val glowColor = accent.takeOrElse { TvTheme.colors.accent }.let { it.copy(alpha = it.alpha * style.glowStrength) }
     val plateColor = if (style.slab) plate else Color.Unspecified
     val plateFill =
-        remember(plateColor) {
+        remember(plateColor, colours) {
             if (plateColor.isUnspecified) {
                 null
             } else {
                 Brush.verticalGradient(
-                    listOf(plateColor.copy(alpha = PLATE_TOP_ALPHA), plateColor.copy(alpha = PLATE_BOTTOM_ALPHA)),
+                    listOf(plateColor.copy(alpha = colours.plateTopAlpha), plateColor.copy(alpha = colours.plateBottomAlpha)),
                 )
             }
         }
+    val gloss = remember(colours) { Brush.verticalGradient(listOf(colours.tileGloss, Color.Transparent)) }
     Box(
         modifier =
             modifier
@@ -162,9 +156,10 @@ public fun FocusSurface(
                     this.shape = ScaledShape(shape, (1f + (grownScale - 1f) * focus.value) * dipOf(press, dips), growthPivot)
                     ambientShadowColor = glowColor
                     spotShadowColor = glowColor
-                }.then(if (halo) FocusHaloElement(focus, grownScale, growthPivot, shape, ring, press, dips) else Modifier)
-                .then(if (motion.animations) HoldArcElement(focus, grownScale, growthPivot, shape, ring, press, dips) else Modifier)
-                .drawWithContent {
+                }.then(if (halo) FocusHaloElement(focus, grownScale, growthPivot, shape, ring, colours, press, dips) else Modifier)
+                .then(
+                    if (motion.animations) HoldArcElement(focus, grownScale, growthPivot, shape, ring, colours, press, dips) else Modifier,
+                ).drawWithContent {
                     scale(
                         (1f + (grownScale - 1f) * focus.value) * dipOf(press, dips),
                         Offset(
@@ -180,19 +175,24 @@ public fun FocusSurface(
                         val gap = RingBand.toPx() - width
                         val pressed = press?.value ?: 0f
                         val lit = width + PressRingGrowth.toPx() * pressed
-                        val base = ring?.invoke() ?: Color.White
-                        val ringColour = if (pressed > 0f) lerp(base, Color.White, PRESS_LIGHT * pressed) else base
+                        val base = ring?.invoke() ?: colours.ring
+                        val ringColour = if (pressed > 0f) lerp(base, colours.ringPressed, colours.ringPressedMix * pressed) else base
                         if (outline != null && plateFill != null) {
                             val behind = outline.grownBy(gap)
                             drawOutline(behind, plateFill, alpha = progress)
-                            drawOutline(behind, plateColor, alpha = progress * PLATE_STROKE_ALPHA, style = Stroke(HairlineWidth.toPx()))
+                            drawOutline(behind, plateColor, alpha = progress * colours.plateEdgeAlpha, style = Stroke(HairlineWidth.toPx()))
                         }
                         this@drawWithContent.drawContent()
                         if (outline != null) {
-                            if (style.slab) drawOutline(outline, Gloss, alpha = progress)
+                            if (style.slab) drawOutline(outline, gloss, alpha = progress)
                             if (ringBlends) {
                                 val inner = gap - InnerStrokeClear.toPx()
-                                drawOutline(outline.grownBy(gap - inner / 2f), InnerStroke, alpha = ringAlpha, style = Stroke(inner))
+                                drawOutline(
+                                    outline.grownBy(gap - inner / 2f),
+                                    colours.ringBlendStroke,
+                                    alpha = ringAlpha,
+                                    style = Stroke(inner),
+                                )
                             }
                             drawOutline(
                                 outline.grownBy(gap + width - lit / 2f),
@@ -201,11 +201,16 @@ public fun FocusSurface(
                                 style = Stroke(lit),
                             )
                             val hairline = HairlineWidth.toPx()
-                            drawOutline(outline.grownBy(gap + width + hairline / 2f), Hairline, alpha = ringAlpha, style = Stroke(hairline))
+                            drawOutline(
+                                outline.grownBy(gap + width + hairline / 2f),
+                                colours.ringKeyline,
+                                alpha = ringAlpha,
+                                style = Stroke(hairline),
+                            )
                             val stroke = OuterStrokeWidth.toPx()
                             drawOutline(
                                 outline.grownBy(gap + width + hairline + stroke / 2f),
-                                OuterStroke,
+                                colours.ringOuterStroke,
                                 alpha = ringAlpha,
                                 style = Stroke(stroke),
                             )

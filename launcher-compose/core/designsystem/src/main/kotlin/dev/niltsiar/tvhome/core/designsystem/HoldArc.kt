@@ -6,7 +6,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
@@ -22,7 +21,8 @@ import androidx.compose.ui.node.invalidateDraw
 import androidx.compose.ui.platform.InspectorInfo
 
 /**
- * The hold cue of a [FocusSurface]: while OK is held on it, an arc in [ring]'s colour, white without one, covers the gap
+ * The hold cue of a [FocusSurface]: while OK is held on it, an arc in [ring]'s colour, [TvElementColors.ring] of [colours]
+ * without one, covers the gap
  * and the ring ([RingBand]) from the top centre clockwise, as far round as the hold is to the menu. It reads the progress
  * from the [holdOk] earlier in the chain and is drawn grown as the ring is: [scale] when [focus] is 1, less while a
  * [press] [dips] it, about [pivot]'s height or the middle.
@@ -33,6 +33,7 @@ internal data class HoldArcElement(
     val pivot: ((Float) -> Float)?,
     val shape: Shape,
     val ring: ColorProducer?,
+    val colours: TvElementColors,
     val press: Animatable<Float, AnimationVector1D>?,
     val dips: Boolean,
 ) : ModifierNodeElement<HoldArcNode>() {
@@ -78,7 +79,7 @@ internal class HoldArcNode(
         measure.setPath(outline, false)
         arc.rewind()
         measure.getSegment(0f, measure.length * held, arc, true)
-        drawPath(arc, spec.ring?.invoke() ?: Color.White, style = Stroke(band))
+        drawPath(arc, spec.ring?.invoke() ?: spec.colours.ring, style = Stroke(band))
     }
 }
 

@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,27 +41,21 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-private val DockRim = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.40f), Color.White.copy(alpha = 0.08f)))
 private val DockRimWidth = 1.5.dp
-private val TopLine = Color.White.copy(alpha = 0.30f)
 private val TopLineWidth = 1.dp
-private val DockSheen = Brush.verticalGradient(0f to Color.White.copy(alpha = 0.16f), 0.35f to Color.Transparent)
-private val BottomEdge = Brush.verticalGradient(0.5f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.25f))
 private val BottomEdgeWidth = 1.dp
-private val OuterHairline = Color.Black.copy(alpha = 0.30f)
 private val OuterHairlineWidth = 1.dp
-private val DockShadow = Color.Black.copy(alpha = 0.22f)
 private val DockElevation = 20.dp
 private val DockShadowDrop = 6.dp
 
 /**
- * The dock's panel: the frost under a [tint] (read in the draw phase), a sheen over its top, a 1.5 dp rim that is white 0.40
- * at the top and fades to 0.08 at the bottom, a 1 dp black edge that grows from nothing at mid-height to 0.25 at the bottom (so
- * the sides darken without a step), and a shadow that falls 6 dp lower than the panel. With an [edgeLight] the focused tile
- * lights the rim and the floor. With [outerHairline] a 1 dp black 0.30 line runs round the outside of the panel, so a light
- * panel keeps its edge on a bright picture. [gloss] (read in the draw phase, 0 to 1) scales the sheen and the rim: at less
- * than 1 a white 0.30 line, [TopLineWidth] thick, takes over the rim's top edge as it fades. [shade] (read in the draw phase,
- * 0 to 1) is the alpha of a black layer over the whole panel, content included. The panel clips its content to [shape]
+ * The dock's panel: the frost under a [tint] (read in the draw phase), a sheen over its top, a 1.5 dp rim from
+ * [TvElementColors.dockRimTop] at the top to [TvElementColors.dockRimBottom] at the bottom, a 1 dp edge that grows from nothing
+ * at mid-height to [TvElementColors.dockBottomEdge] at the bottom (so the sides darken without a step), and a shadow that falls
+ * 6 dp lower than the panel. With an [edgeLight] the focused tile lights the rim and the floor. With [outerHairline] a 1 dp
+ * line runs round the outside of the panel, so a light panel keeps its edge on a bright picture. [gloss] (read in the draw
+ * phase, 0 to 1) scales the sheen and the rim: at less than 1 the top line, [TopLineWidth] thick, takes over the rim's top edge
+ * as it fades. [shade] (read in the draw phase, 0 to 1) is the alpha of the shade layer over the whole panel, content included. The panel clips its content to [shape]
  * and marks itself [clipsHalo], so a focused tile's halo inside it ends before that edge.
  */
 @Composable
@@ -75,59 +70,69 @@ public fun DockSurface(
     shade: () -> Float = { 0f },
     content: @Composable BoxScope.() -> Unit,
 ) {
+    val colours = TvTheme.elementColors
+    val rimBrush = remember(colours) { Brush.verticalGradient(listOf(colours.dockRimTop, colours.dockRimBottom)) }
+    val sheen = remember(colours) { Brush.verticalGradient(0f to colours.dockSheen, 0.35f to Color.Transparent) }
+    val bottomEdge = remember(colours) { Brush.verticalGradient(0.5f to Color.Transparent, 1f to colours.dockBottomEdge) }
     Box(
         modifier =
             modifier
-                .then(DockShadowElement(shape))
-                .then(if (outerHairline) Modifier.drawBehind { drawOuterHairline(shape) } else Modifier)
+                .then(DockShadowElement(shape, colours.dockShadow))
+                .then(if (outerHairline) Modifier.drawBehind { drawOuterHairline(shape, colours.dockOuterHairline) } else Modifier)
                 .clipsHalo()
                 .clip(shape)
                 .glassFrost(glass, dock = true)
                 .drawBehind {
                     drawRect(tint())
-                    drawRect(DockSheen, alpha = gloss())
-                    edgeLight?.run { drawFloor() }
+                    drawRect(sheen, alpha = gloss())
+                    edgeLight?.run { drawFloor(colours.dockGlintAlpha) }
                 }.drawWithContent {
                     drawContent()
                     val outline = shape.createOutline(size, layoutDirection, this)
                     val glossy = gloss()
                     val rim = DockRimWidth.toPx()
-                    drawOutline(outline.grownBy(-rim / 2f), DockRim, alpha = glossy, style = Stroke(rim))
+                    drawOutline(outline.grownBy(-rim / 2f), rimBrush, alpha = glossy, style = Stroke(rim))
                     if (glossy < 1f) {
                         val line = TopLineWidth.toPx()
                         val edge = outline.grownBy(-line / 2f)
-                        clipRect(bottom = line) { drawOutline(edge, TopLine, alpha = 1f - glossy, style = Stroke(line)) }
+                        clipRect(bottom = line) { drawOutline(edge, colours.dockTopLine, alpha = 1f - glossy, style = Stroke(line)) }
                     }
                     val bottom = BottomEdgeWidth.toPx()
-                    drawOutline(outline.grownBy(-bottom / 2f), BottomEdge, style = Stroke(bottom))
-                    edgeLight?.run { drawRim() }
+                    drawOutline(outline.grownBy(-bottom / 2f), bottomEdge, style = Stroke(bottom))
+                    edgeLight?.run { drawRim(colours.dockLightAlpha) }
                     val shaded = shade()
-                    if (shaded > 0f) drawOutline(outline, Color.Black, alpha = shaded)
+                    if (shaded > 0f) drawOutline(outline, colours.dockShade, alpha = shaded)
                 }.then(if (edgeLight != null) Modifier.onGloballyPositioned { edgeLight.panelLeft = it.positionInRoot().x } else Modifier),
     ) {
         SurfaceContent { content() }
     }
 }
 
-private fun DrawScope.drawOuterHairline(shape: RoundedCornerShape) {
+private fun DrawScope.drawOuterHairline(
+    shape: RoundedCornerShape,
+    colour: Color,
+) {
     val width = OuterHairlineWidth.toPx()
-    drawOutline(shape.createOutline(size, layoutDirection, this).grownBy(width / 2f), OuterHairline, style = Stroke(width))
+    drawOutline(shape.createOutline(size, layoutDirection, this).grownBy(width / 2f), colour, style = Stroke(width))
 }
 
-/** Draws the dock's shadow: a layer of the panel's shape that casts it from [DockShadowDrop] lower than the panel. */
+/** Draws the dock's shadow in [colour]: a layer of the panel's shape that casts it from [DockShadowDrop] lower than the panel. */
 private data class DockShadowElement(
     val shape: RoundedCornerShape,
+    val colour: Color,
 ) : ModifierNodeElement<DockShadowNode>() {
-    override fun create() = DockShadowNode(shape)
+    override fun create() = DockShadowNode(shape, colour)
 
     override fun update(node: DockShadowNode) {
         node.shape = shape
+        node.colour = colour
         node.invalidateDraw()
     }
 }
 
 private class DockShadowNode(
     var shape: RoundedCornerShape,
+    var colour: Color,
 ) : Modifier.Node(),
     DrawModifierNode {
     private lateinit var layer: GraphicsLayer
@@ -145,8 +150,8 @@ private class DockShadowNode(
         if (layer.size != panel) layer.record(panel) {}
         layer.translationY = DockShadowDrop.toPx()
         layer.shadowElevation = DockElevation.toPx()
-        layer.ambientShadowColor = DockShadow
-        layer.spotShadowColor = DockShadow
+        layer.ambientShadowColor = colour
+        layer.spotShadowColor = colour
         layer.setRoundRectOutline(Offset.Zero, size, shape.topStart.toPx(size, this))
         drawLayer(layer)
         drawContent()
@@ -155,10 +160,8 @@ private class DockShadowNode(
 
 private val LightWidth = 120.dp
 private val LightHeight = 1.5.dp
-private const val LIGHT_ALPHA = 0.85f
 private val GlintWidth = 200.dp
 private val GlintHeight = 20.dp
-private const val GLINT_ALPHA = 0.20f
 private const val SEEN = 0.01f
 private const val FADE_MS = 160
 private const val FOLLOW_DAMPING = 1f
@@ -211,7 +214,8 @@ public class DockEdgeLight(
         shown.animateTo(if (visible) 1f else 0f, tween(FADE_MS))
     }
 
-    internal fun DrawScope.drawRim() {
+    /** The light on the rim, at [alpha] of the tile's colour at its middle. */
+    internal fun DrawScope.drawRim(alpha: Float) {
         val seen = shown.value
         if (seen < SEEN) return
         val x = centre() - panelLeft
@@ -220,7 +224,7 @@ public class DockEdgeLight(
         val brush =
             Brush.horizontalGradient(
                 0f to Color.Transparent,
-                0.5f to light.copy(alpha = light.alpha * LIGHT_ALPHA * seen),
+                0.5f to light.copy(alpha = light.alpha * alpha * seen),
                 1f to Color.Transparent,
                 startX = x - half,
                 endX = x + half,
@@ -228,7 +232,8 @@ public class DockEdgeLight(
         drawRect(brush, topLeft = Offset(x - half, 0f), size = Size(half * 2f, LightHeight.toPx()))
     }
 
-    internal fun DrawScope.drawFloor() {
+    /** The glint on the floor, at [alpha] of the tile's colour at its middle. */
+    internal fun DrawScope.drawFloor(alpha: Float) {
         val seen = shown.value
         if (seen < SEEN) return
         val radius = GlintWidth.toPx() / 2f
@@ -237,7 +242,7 @@ public class DockEdgeLight(
         val light = colour()
         val brush =
             Brush.radialGradient(
-                listOf(light.copy(alpha = light.alpha * GLINT_ALPHA * seen), Color.Transparent),
+                listOf(light.copy(alpha = light.alpha * alpha * seen), Color.Transparent),
                 center = middle,
                 radius = radius,
             )

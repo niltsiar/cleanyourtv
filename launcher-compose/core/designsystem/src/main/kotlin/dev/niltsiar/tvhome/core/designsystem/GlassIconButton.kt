@@ -60,12 +60,9 @@ private val LabelPadding = 16.dp
 private const val FOCUSED_SCALE = 1.08f
 private const val BRIGHT_BAR_FROM_LIGHTNESS = 70f
 private const val BRIGHT_BAR_FULL_LIGHTNESS = 90f
-private const val BRIGHT_BAR_FILL = 0.75f
 private val GrownMargin = 1.dp
-private const val ACTIVE_FILL = 0.60f
 private const val ACTIVE_MS = 120
 private val PulseStroke = 2.dp
-private const val PULSE_PEAK = 0.9f
 
 /** How long an offered button's rim takes to light and fade, in milliseconds. */
 internal const val OFFER_PULSE_MS = 600
@@ -78,12 +75,12 @@ internal const val OFFER_PULSE_MS = 600
  * as wide as both, or as the incoming width limit allows. With a [focusLabel] instead it grows from a circle into such
  * a pill while focused, and lays out on the width it draws at, its focus growth included, plus [GrownMargin] a side.
  * A button with a [label] has no rim. Over a wallpaper brighter than L* 70 under the top bar
- * ([GlassState.topBarLightness]) its tint thickens, up to a total alpha of 0.75 from L* 90. While [active] (a panel it
- * opened is open) it looks as it does focused, with a white fill of 0.60 and a dark glyph, so the panel reads as hanging
- * from it. It grows about [transformOrigin].
+ * ([GlassState.topBarLightness]) its tint thickens, up to a total alpha of [TvElementColors.brightBarFill] from L* 90. While
+ * [active] (a panel it opened is open) it looks as it does focused, with the pill fill at [TvElementColors.buttonActiveFill]
+ * and the pill's glyph colour, so the panel reads as hanging from it. It grows about [transformOrigin].
  *
  * With a [focusLabel], a nonzero [offerToken] grows the button into its pill without focus and lights its rim once
- * ([OFFER_PULSE_MS]); a new token pulses again, 0 takes the offer back. With animations off or reduced motion the pill
+ * ([OFFER_PULSE_MS]) in [TvElementColors.offerPulse]; a new token pulses again, 0 takes the offer back. With animations off or reduced motion the pill
  * appears and goes without motion and the rim stays dark.
  */
 @Composable
@@ -109,6 +106,7 @@ public fun GlassIconButton(
     val growSpec = motion.springSpec<Float>(dampingRatio = 0.8f, stiffness = Spring.StiffnessMedium)
     val offered by rememberUpdatedState(offerToken != 0)
     val surfaces = TvTheme.surfaces
+    val colours = TvTheme.elementColors
     val held = remember { Animatable(0f) }
     LaunchedEffect(active, motion) { held.animateTo(if (active) 1f else 0f, motion.tweenSpec(ACTIVE_MS)) }
     val follow =
@@ -157,17 +155,19 @@ public fun GlassIconButton(
                     val tint = TvTheme.surfaces.chromeTint
                     Spacer(
                         Modifier.matchParentSize().drawBehind {
-                            val extra = brightBarTint(glass.topBarLightness, tint.alpha)
+                            val extra = brightBarTint(glass.topBarLightness, tint.alpha, colours.brightBarFill)
                             if (extra > 0f) drawRect(tint.copy(alpha = extra))
                         },
                     )
                 }
                 Spacer(
                     Modifier.matchParentSize().drawBehind {
-                        if (held.value > 0f) drawRect(surfaces.pillFill, alpha = ACTIVE_FILL * held.value)
+                        if (held.value > 0f) drawRect(surfaces.pillFill, alpha = colours.buttonActiveFill * held.value)
                     },
                 )
-                if (offerToken != 0) Spacer(Modifier.matchParentSize().drawBehind { drawPulse(pulse.value) })
+                if (offerToken != 0) {
+                    Spacer(Modifier.matchParentSize().drawBehind { drawPulse(pulse.value, colours.offerPulse, colours.offerPulsePeak) })
+                }
             },
         ) { focusInk ->
             val ink =
@@ -220,27 +220,32 @@ public fun GlassIconButton(
     }
 }
 
-/** The rim of an offered button at [progress] 0 to 1 of its pulse: a white edge that rises to [PULSE_PEAK] and falls back. */
-private fun DrawScope.drawPulse(progress: Float) {
+/** The rim of an offered button at [progress] 0 to 1 of its pulse: an edge in [colour] that rises to [peak] alpha and falls back. */
+private fun DrawScope.drawPulse(
+    progress: Float,
+    colour: Color,
+    peak: Float,
+) {
     if (progress <= 0f || progress >= 1f) return
     val edge = PulseStroke.toPx()
     drawRoundRect(
-        Color.White,
+        colour,
         topLeft = Offset(edge / 2f, edge / 2f),
         size = Size(size.width - edge, size.height - edge),
         cornerRadius = CornerRadius((size.height - edge) / 2f),
-        alpha = PULSE_PEAK * sin(PI.toFloat() * progress),
+        alpha = peak * sin(PI.toFloat() * progress),
         style = Stroke(edge),
     )
 }
 
-/** The alpha of a second layer of a tint of [base] alpha that brings the pair to [BRIGHT_BAR_FILL] at L* 90, and to nothing at L* 70. */
+/** The alpha of a second layer of a tint of [base] alpha that brings the pair to [fill] at L* 90, and to nothing at L* 70. */
 private fun brightBarTint(
     lightness: Float,
     base: Float,
+    fill: Float,
 ): Float {
     val t = ((lightness - BRIGHT_BAR_FROM_LIGHTNESS) / (BRIGHT_BAR_FULL_LIGHTNESS - BRIGHT_BAR_FROM_LIGHTNESS)).coerceIn(0f, 1f)
-    return t * (BRIGHT_BAR_FILL - base) / (1f - base)
+    return t * (fill - base) / (1f - base)
 }
 
 /**
