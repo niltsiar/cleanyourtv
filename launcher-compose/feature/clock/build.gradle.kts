@@ -9,6 +9,9 @@ android {
     testOptions {
         unitTests.isReturnDefaultValues = true
         unitTests.isIncludeAndroidResources = true
+        // TestBalloon does not read @GraphicsMode and TestConfig.robolectric has no graphics mode; the golden tests need the
+        // native canvas.
+        unitTests.all { it.systemProperty("robolectric.graphicsMode", "NATIVE") }
     }
 }
 
@@ -18,6 +21,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.kotlinx.coroutines.android)
 
+    testImplementation(testFixtures(project(":core:designsystem")))
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.compose.ui.test.junit4)
