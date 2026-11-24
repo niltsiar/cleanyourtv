@@ -28,4 +28,5 @@ dependencies {
     // The Compose compiler plugin runs on these sources too and needs the runtime.
     testFixturesImplementation(libs.androidx.compose.runtime)
     testFixturesImplementation(libs.androidx.compose.ui.graphics)
+    testFixturesImplementation(libs.androidx.compose.ui.test.junit4)
 }
