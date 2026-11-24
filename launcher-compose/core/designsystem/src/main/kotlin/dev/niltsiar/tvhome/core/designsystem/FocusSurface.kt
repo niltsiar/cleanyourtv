@@ -102,7 +102,7 @@ public val FocusRingReach: Dp = RingGap + RingWidth + HairlineWidth + OuterStrok
  * the press and focus events, for content that reacts to them. [accent] colours the glow; unspecified takes the
  * theme's. [TvTheme.focusStyle] says which of the lit top, plate and glow it gets, and how wide the ring is. [ring]
  * colours the ring, and a halo glow, instead of white. [ringBlends] ([ringBlendsWith]) puts a white stroke at 0.90 across
- * the gap but its inner 1 dp, between the dark gap and the ring. [plate], when specified, is the colour of a plate behind the surface, out to the ring's inner edge with corners concentric to the shape's: it fades and grows with the ring, as one cue, and a
+ * the gap but its inner 1 dp, between the dark gap and the ring. [plate], when specified, is the colour of a plate behind the surface, out to the ring's inner edge with corners concentric to the shape's: it fades in and grows as focus arrives, and a
  * translucent surface shows it. [glow] turns the glow off, a halo glow too: the elevation shadow also
  * shows through a translucent surface, as a dark patch. The animation starts in the focus callback and is read in the layer and draw
  * lambdas, so a focus change neither recomposes nor relays out. [focusedScale] is the size it grows to. The growth is
@@ -168,7 +168,9 @@ public fun FocusSurface(
                         ),
                     ) {
                         val progress = focus.value.coerceIn(0f, 1f)
-                        val outline = if (progress > 0f) shape.createOutline(size, layoutDirection, this) else null
+                        // The ring shows whole from the first frame of focus; it fades only on the way out.
+                        val ringAlpha = if (focus.targetValue > 0f) 1f else progress
+                        val outline = if (ringAlpha > 0f) shape.createOutline(size, layoutDirection, this) else null
                         val width = style.ringWidth.toPx()
                         val gap = (RingGap + RingWidth).toPx() - width
                         val pressed = press?.value ?: 0f
@@ -185,21 +187,21 @@ public fun FocusSurface(
                             if (style.slab) drawOutline(outline, Gloss, alpha = progress)
                             if (ringBlends) {
                                 val inner = gap - InnerStrokeClear.toPx()
-                                drawOutline(outline.grownBy(gap - inner / 2f), InnerStroke, alpha = progress, style = Stroke(inner))
+                                drawOutline(outline.grownBy(gap - inner / 2f), InnerStroke, alpha = ringAlpha, style = Stroke(inner))
                             }
                             drawOutline(
                                 outline.grownBy(gap + width - lit / 2f),
                                 ringColour,
-                                alpha = progress,
+                                alpha = ringAlpha,
                                 style = Stroke(lit),
                             )
                             val hairline = HairlineWidth.toPx()
-                            drawOutline(outline.grownBy(gap + width + hairline / 2f), Hairline, alpha = progress, style = Stroke(hairline))
+                            drawOutline(outline.grownBy(gap + width + hairline / 2f), Hairline, alpha = ringAlpha, style = Stroke(hairline))
                             val stroke = OuterStrokeWidth.toPx()
                             drawOutline(
                                 outline.grownBy(gap + width + hairline + stroke / 2f),
                                 OuterStroke,
-                                alpha = progress,
+                                alpha = ringAlpha,
                                 style = Stroke(stroke),
                             )
                         }
