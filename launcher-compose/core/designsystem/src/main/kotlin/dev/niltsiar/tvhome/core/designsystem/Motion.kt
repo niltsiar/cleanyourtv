@@ -2,6 +2,7 @@ package dev.niltsiar.tvhome.core.designsystem
 
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.keyframes
@@ -17,7 +18,7 @@ import androidx.compose.ui.unit.IntOffset
  * [REDUCED_MS], with no overshoot, and endless loops stand still ([animated] is false). Focus moves in [FOCUS_MS].
  * With [focusOvershoot] and [animated], gaining focus pops instead: the focus progress eases to 1.8 in 120 ms and back
  * to 1 by 320 ms, so the item grows 1.8 times its growth before it settles. Losing focus is the [FOCUS_MS] tween in every
- * case, with no undershoot.
+ * case, with no undershoot. Each design-system animation takes its spec from one of the factories here.
  */
 @Immutable
 public data class Motion(
@@ -83,7 +84,43 @@ public data class Motion(
             else -> tween(durationMillis)
         }
 
+    /** How a [FocusPill] fills as it gains focus and empties as it loses it. */
+    public fun pillFillSpec(): FiniteAnimationSpec<Float> = tweenSpec(PILL_FILL_MS)
+
+    /** Each half of a [pressDip], down and back up. With animations off the dip jumps instead and takes no spec. */
+    public fun pressDipSpec(): FiniteAnimationSpec<Float> = tween(PRESS_DIP_MS)
+
+    /** How a [GlassMenu] or a [GlassDropdown] rises, grows and fades in. */
+    public fun menuEnterSpec(): FiniteAnimationSpec<Float> = springSpec(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)
+
+    /** How a [GlassIconButton] with a focus label grows into its pill as it gains focus, and back. */
+    public fun buttonGrowSpec(): FiniteAnimationSpec<Float> = springSpec(dampingRatio = 0.8f, stiffness = Spring.StiffnessMedium)
+
+    /** How an offered [GlassIconButton] grows into its pill and back: [buttonGrowSpec] when [animated], else a jump. */
+    public fun offerGrowSpec(): FiniteAnimationSpec<Float> = if (animated) buttonGrowSpec() else snap()
+
+    /** How a [GlassIconButton]'s icon follows its focus, over [ICON_MS]. */
+    public fun buttonIconSpec(): FiniteAnimationSpec<Float> = tweenSpec(ICON_MS)
+
+    /** How a [GlassIconButton] takes on the look of an open panel, and drops it. */
+    public fun buttonActiveSpec(): FiniteAnimationSpec<Float> = tweenSpec(BUTTON_ACTIVE_MS)
+
+    /** One pulse of an offered [GlassIconButton]'s rim, which runs only when [animated]. */
+    public fun offerPulseSpec(): FiniteAnimationSpec<Float> = tween(OFFER_PULSE_MS, easing = LinearEasing)
+
+    /** How an [OverlayHost]'s scrim fades in as an overlay opens ([shown]), and out as it closes. */
+    public fun scrimSpec(shown: Boolean): FiniteAnimationSpec<Float> = tweenSpec(if (shown) SCRIM_IN_MS else SCRIM_OUT_MS)
+
     public companion object {
+        /** How the dock's edge light catches up with a newly focused tile ([DockEdgeLight]), whatever the motion keys. */
+        public fun dockLightFollowSpec(): FiniteAnimationSpec<Float> = spring(DOCK_LIGHT_DAMPING, DOCK_LIGHT_STIFFNESS)
+
+        /** How the dock's edge light fades in and out ([DockEdgeLight.show]), whatever the motion keys. */
+        public fun dockLightFadeSpec(): FiniteAnimationSpec<Float> = tween(DOCK_LIGHT_FADE_MS)
+
+        /** One pass of a [MarqueeLine], [durationMillis] long at its steady speed, whatever the motion keys. */
+        public fun marqueeSpec(durationMillis: Int): FiniteAnimationSpec<Float> = tween(durationMillis, easing = LinearEasing)
+
         /** The longest any reduced-motion animation runs, in milliseconds. */
         public const val REDUCED_MS: Int = 90
 
@@ -99,5 +136,19 @@ public data class Motion(
         /** When the pop of [focusSpec] peaks, and when it settles, in milliseconds. */
         private const val OVERSHOOT_PEAK_MS = 120
         private const val OVERSHOOT_MS = 320
+
+        private const val PILL_FILL_MS = 120
+
+        /** How long each half of a press dip takes, in milliseconds. */
+        internal const val PRESS_DIP_MS: Int = 80
+        private const val BUTTON_ACTIVE_MS = 120
+
+        /** How long an offered button's rim takes to light and fade, in milliseconds. */
+        internal const val OFFER_PULSE_MS: Int = 600
+        private const val SCRIM_IN_MS = 160
+        private const val SCRIM_OUT_MS = 120
+        private const val DOCK_LIGHT_DAMPING = 1f
+        private const val DOCK_LIGHT_STIFFNESS = 500f
+        private const val DOCK_LIGHT_FADE_MS = 160
     }
 }

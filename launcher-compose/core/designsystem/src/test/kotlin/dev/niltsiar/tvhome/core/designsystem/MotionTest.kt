@@ -1,6 +1,8 @@
 package dev.niltsiar.tvhome.core.designsystem
 
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.SnapSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.SpringSpec
@@ -10,6 +12,7 @@ import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.ui.unit.IntOffset
 import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
@@ -122,5 +125,84 @@ val MotionTest by testSuite {
         Motion().animated.shouldBeTrue()
         Motion(reducedMotion = true).animated.shouldBeFalse()
         Motion(animations = false).animated.shouldBeFalse()
+    }
+
+    /** A spec as the values that make it, so that a failure names them. */
+    fun FiniteAnimationSpec<*>.values(): String =
+        when (this) {
+            is TweenSpec<*> -> {
+                val easing =
+                    when (easing) {
+                        FastOutSlowInEasing -> "fast out slow in"
+                        LinearEasing -> "linear"
+                        else -> "$easing"
+                    }
+                "tween of $durationMillis ms after $delay ms, $easing"
+            }
+
+            is SpringSpec<*> -> {
+                "spring of damping $dampingRatio, stiffness $stiffness, visibility threshold $visibilityThreshold"
+            }
+
+            is SnapSpec<*> -> {
+                "snap after $delay ms"
+            }
+
+            else -> {
+                "$this"
+            }
+        }
+
+    fun tween(ms: Int) = "tween of $ms ms after 0 ms, fast out slow in"
+
+    fun linear(ms: Int) = "tween of $ms ms after 0 ms, linear"
+
+    fun spring(
+        damping: Float,
+        stiffness: Float,
+    ) = "spring of damping $damping, stiffness $stiffness, visibility threshold null"
+
+    val snap = "snap after 0 ms"
+    val motions =
+        listOf(
+            "Glass" to Motion(),
+            "reduced motion" to Motion(reducedMotion = true),
+            "animations off" to Motion(animations = false),
+        )
+
+    /** A spec factory, and the spec it gives today with each of [motions] in turn. */
+    class Factory(
+        val name: String,
+        val spec: (Motion) -> FiniteAnimationSpec<*>,
+        val today: List<String>,
+    )
+
+    val factories =
+        listOf(
+            Factory("focus in", { it.focusSpec(focused = true, from = 0f) }, listOf(tween(160), tween(90), snap)),
+            Factory("focus out", { it.focusSpec(focused = false, from = 1f) }, listOf(tween(160), tween(90), snap)),
+            Factory("pill fill", { it.pillFillSpec() }, listOf(tween(120), tween(90), snap)),
+            Factory("press dip", { it.pressDipSpec() }, List(3) { tween(80) }),
+            Factory("menu enter", { it.menuEnterSpec() }, listOf(spring(0.75f, 1500f), tween(90), snap)),
+            Factory("button grow", { it.buttonGrowSpec() }, listOf(spring(0.8f, 1500f), tween(90), snap)),
+            Factory("offer grow", { it.offerGrowSpec() }, listOf(spring(0.8f, 1500f), snap, snap)),
+            Factory("button icon", { it.buttonIconSpec() }, listOf(tween(750), tween(90), snap)),
+            Factory("button active", { it.buttonActiveSpec() }, listOf(tween(120), tween(90), snap)),
+            Factory("offer pulse", { it.offerPulseSpec() }, List(3) { linear(600) }),
+            Factory("scrim in", { it.scrimSpec(shown = true) }, listOf(tween(160), tween(90), snap)),
+            Factory("scrim out", { it.scrimSpec(shown = false) }, listOf(tween(120), tween(90), snap)),
+            Factory("dock light follow", { Motion.dockLightFollowSpec() }, List(3) { spring(1f, 500f) }),
+            Factory("dock light fade", { Motion.dockLightFadeSpec() }, List(3) { tween(160) }),
+            Factory("marquee pass", { Motion.marqueeSpec(1_000) }, List(3) { linear(1_000) }),
+        )
+
+    for (factory in factories) {
+        test("the ${factory.name} spec is today's, with reduced motion and with animations off too") {
+            assertSoftly {
+                motions.zip(factory.today).forEach { (motion, today) ->
+                    withClue(motion.first) { factory.spec(motion.second).values() shouldBe today }
+                }
+            }
+        }
     }
 }

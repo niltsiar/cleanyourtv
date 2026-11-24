@@ -25,8 +25,6 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 
-private const val FILL_MS = 120
-
 /** The colours of a [FocusPill]'s text and icons, which follow its focus. Read them in a draw lambda or as a text colour. */
 @Stable
 public class FocusInk internal constructor(
@@ -90,7 +88,7 @@ public fun FocusPill(
                 .onFocusChanged {
                     val target = if (it.isFocused) 1f else 0f
                     if (focus.targetValue != target) {
-                        scope.launch(start = CoroutineStart.UNDISPATCHED) { focus.animateTo(target, motion.tweenSpec(FILL_MS)) }
+                        scope.launch(start = CoroutineStart.UNDISPATCHED) { focus.animateTo(target, motion.pillFillSpec()) }
                     }
                     if (it.isFocused) onFocused()
                 }.clickable(interactionSource = interactionSource, indication = null, role = Role.Button, onClick = onClick),

@@ -1,8 +1,6 @@
 package dev.niltsiar.tvhome.core.designsystem
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -163,9 +161,6 @@ private val LightHeight = 1.5.dp
 private val GlintWidth = 200.dp
 private val GlintHeight = 20.dp
 private const val SEEN = 0.01f
-private const val FADE_MS = 160
-private const val FOLLOW_DAMPING = 1f
-private const val FOLLOW_STIFFNESS = 500f
 
 /**
  * The light the focused dock tile casts on its panel: a [LightWidth] highlight on the top rim and a [GlintWidth] glint on
@@ -197,7 +192,7 @@ public class DockEdgeLight(
                 lag.snapTo(0f)
             } else {
                 lag.snapTo(drawn - centreX)
-                lag.animateTo(0f, spring(FOLLOW_DAMPING, FOLLOW_STIFFNESS))
+                lag.animateTo(0f, Motion.dockLightFollowSpec())
             }
         }
     }
@@ -211,7 +206,7 @@ public class DockEdgeLight(
 
     /** Fades the light in or out. */
     public suspend fun show(visible: Boolean) {
-        shown.animateTo(if (visible) 1f else 0f, tween(FADE_MS))
+        shown.animateTo(if (visible) 1f else 0f, Motion.dockLightFadeSpec())
     }
 
     /** The light on the rim, at [alpha] of the tile's colour at its middle. */

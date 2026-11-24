@@ -2,7 +2,6 @@ package dev.niltsiar.tvhome.core.designsystem
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -59,9 +58,6 @@ private val GlowElevation = 16.dp
 
 /** How much of its size a pressed surface gives up at the bottom of its dip. */
 private const val PRESS_DIP = 0.04f
-
-/** How long a press takes to dip, and as long again to come back, in milliseconds. */
-private const val PRESS_DIP_MS = 80
 
 /** How much wider a pressed ring grows into the gap inside it. */
 private val PressRingGrowth = 1.dp
@@ -236,16 +232,16 @@ internal fun dipOf(
 ): Float = if (dips && press != null) 1f - PRESS_DIP * press.value else 1f
 
 /**
- * Runs one press of a [FocusSurface] that takes this as its `press`: down over [PRESS_DIP_MS] and back over as long, or
- * with animations off to full at once and back after twice that time.
+ * Runs one press of a [FocusSurface] that takes this as its `press`: down and back, each with [Motion.pressDipSpec], or
+ * with animations off to full at once and back after [Motion.PRESS_DIP_MS] twice.
  */
 public suspend fun Animatable<Float, AnimationVector1D>.pressDip(motion: Motion) {
     if (motion.animations) {
-        animateTo(1f, tween(PRESS_DIP_MS))
-        animateTo(0f, tween(PRESS_DIP_MS))
+        animateTo(1f, motion.pressDipSpec())
+        animateTo(0f, motion.pressDipSpec())
     } else {
         snapTo(1f)
-        delay(2L * PRESS_DIP_MS)
+        delay(2L * Motion.PRESS_DIP_MS)
         snapTo(0f)
     }
 }

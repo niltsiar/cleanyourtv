@@ -1,10 +1,6 @@
 package dev.niltsiar.tvhome.core.designsystem
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.snap
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -60,15 +56,11 @@ private const val FOCUSED_SCALE = 1.08f
 private const val BRIGHT_BAR_FROM_LIGHTNESS = 70f
 private const val BRIGHT_BAR_FULL_LIGHTNESS = 90f
 private val GrownMargin = 1.dp
-private const val ACTIVE_MS = 120
 private val PulseStroke = 2.dp
-
-/** How long an offered button's rim takes to light and fade, in milliseconds. */
-internal const val OFFER_PULSE_MS = 600
 
 /**
  * A round glass button, a chrome surface that fills as a [FocusPill] while focused. [icon] fills a 22dp box; it gets
- * the focus progress, from 0 (idle) to 1 (focused) in [Motion.ICON_MS] from the frame the fill starts, and the colour
+ * the focus progress, from 0 (idle) to 1 (focused) with [Motion.buttonIconSpec] from the frame the fill starts, and the colour
  * to draw in. Read both in graphicsLayer or draw lambdas, never in composition. An icon with a motion of its own
  * watches [interactionSource] instead. With a [label] the button is a pill: the label follows the icon and the pill is
  * as wide as both, or as the incoming width limit allows. With a [focusLabel] instead it grows from a circle into such
@@ -79,7 +71,7 @@ internal const val OFFER_PULSE_MS = 600
  * and the pill's glyph colour, so the panel reads as hanging from it. It grows about [transformOrigin].
  *
  * With a [focusLabel], a nonzero [offerToken] grows the button into its pill without focus and lights its rim once
- * ([OFFER_PULSE_MS]) in [TvElementColors.offerPulse]; a new token pulses again, 0 takes the offer back. With animations off or reduced motion the pill
+ * ([Motion.offerPulseSpec]) in [TvElementColors.offerPulse]; a new token pulses again, 0 takes the offer back. With animations off or reduced motion the pill
  * appears and goes without motion and the rim stays dark.
  */
 @Composable
@@ -102,29 +94,29 @@ public fun GlassIconButton(
     val pulse = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val grownScale = motion.focusScale(FOCUSED_SCALE)
-    val growSpec = motion.springSpec<Float>(dampingRatio = 0.8f, stiffness = Spring.StiffnessMedium)
+    val growSpec = motion.buttonGrowSpec()
     val offered by rememberUpdatedState(offerToken != 0)
     val surfaces = TvTheme.surfaces
     val colours = TvTheme.elementColors
     val shape = TvTheme.shapes.chromeButton
     val held = remember { Animatable(0f) }
-    LaunchedEffect(active, motion) { held.animateTo(if (active) 1f else 0f, motion.tweenSpec(ACTIVE_MS)) }
+    LaunchedEffect(active, motion) { held.animateTo(if (active) 1f else 0f, motion.buttonActiveSpec()) }
     val follow =
         modifier.onFocusChanged {
             val target = if (it.isFocused) 1f else 0f
             if (progress.targetValue != target) {
                 // Undispatched, as the fill's, so all three start on one frame.
-                scope.launch(start = CoroutineStart.UNDISPATCHED) { progress.animateTo(target, motion.tweenSpec(Motion.ICON_MS)) }
+                scope.launch(start = CoroutineStart.UNDISPATCHED) { progress.animateTo(target, motion.buttonIconSpec()) }
                 scope.launch(start = CoroutineStart.UNDISPATCHED) { grow.animateTo(if (offered) 1f else target, growSpec) }
             }
         }
     LaunchedEffect(offerToken, motion) {
-        val spec = if (motion.animated) growSpec else snap()
+        val spec = motion.offerGrowSpec()
         if (offerToken != 0) {
             grow.animateTo(1f, spec)
             if (motion.animated) {
                 pulse.snapTo(0f)
-                pulse.animateTo(1f, tween(OFFER_PULSE_MS, easing = LinearEasing))
+                pulse.animateTo(1f, motion.offerPulseSpec())
             }
         } else {
             pulse.snapTo(0f)

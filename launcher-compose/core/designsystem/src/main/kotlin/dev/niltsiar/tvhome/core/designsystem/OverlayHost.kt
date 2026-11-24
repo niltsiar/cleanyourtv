@@ -29,8 +29,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import kotlinx.coroutines.flow.collectLatest
 
-private const val SCRIM_IN_MS = 160
-private const val SCRIM_OUT_MS = 120
 private val SpotRingWidth = 2.dp
 private const val SPOT_RING_ALPHA = 0.7f
 
@@ -58,7 +56,7 @@ public fun OverlayHost(
     val currentOpen by rememberUpdatedState(open)
     LaunchedEffect(motion) {
         snapshotFlow { currentOpen() }.collectLatest { shown ->
-            scrim.animateTo(if (shown) 1f else 0f, motion.tweenSpec(if (shown) SCRIM_IN_MS else SCRIM_OUT_MS))
+            scrim.animateTo(if (shown) 1f else 0f, motion.scrimSpec(shown))
         }
     }
     Box(

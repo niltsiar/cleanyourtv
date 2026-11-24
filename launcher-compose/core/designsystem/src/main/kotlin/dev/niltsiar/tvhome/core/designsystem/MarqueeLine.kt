@@ -1,8 +1,6 @@
 package dev.niltsiar.tvhome.core.designsystem
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -71,7 +69,7 @@ public fun MarqueeLine(
             repeat(MARQUEE_PASSES) {
                 delay(MARQUEE_DELAY_MS)
                 val distance = line.size.width + boxWidth * MARQUEE_GAP
-                offset.animateTo(distance, tween((distance / speed).toInt(), easing = LinearEasing))
+                offset.animateTo(distance, Motion.marqueeSpec((distance / speed).toInt()))
                 offset.snapTo(0f)
             }
         }
