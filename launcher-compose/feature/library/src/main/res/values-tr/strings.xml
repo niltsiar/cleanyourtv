@@ -7,7 +7,7 @@
   <string name="library_remove_shortcut">Ana ekrandan kaldır</string>
   <string name="library_open">Aç</string>
   <string name="library_app_info">Uygulama bilgileri</string>
-  <string name="library_recent">Yeni · Ana ekrana ekle</string>
+  <string name="library_recent">Yeni</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d uygulama</item>
     <item quantity="other">%1$d uygulama</item>

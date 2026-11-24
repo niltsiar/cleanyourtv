@@ -7,7 +7,7 @@
   <string name="library_remove_shortcut">Remover da tela inicial</string>
   <string name="library_open">Abrir</string>
   <string name="library_app_info">Informações do app</string>
-  <string name="library_recent">Novo · Adicionar à tela inicial</string>
+  <string name="library_recent">Novo</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d app</item>
     <item quantity="many">%1$d apps</item>

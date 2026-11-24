@@ -7,7 +7,7 @@
   <string name="library_remove_shortcut">Odebrat z domovské obrazovky</string>
   <string name="library_open">Otevřít</string>
   <string name="library_app_info">Informace o aplikaci</string>
-  <string name="library_recent">Nová · Přidat na domovskou obrazovku</string>
+  <string name="library_recent">Nová</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d aplikace</item>
     <item quantity="few">%1$d aplikace</item>

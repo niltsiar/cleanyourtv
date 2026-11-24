@@ -7,7 +7,7 @@
   <string name="library_remove_shortcut">হোম থেকে সরান</string>
   <string name="library_open">খুলুন</string>
   <string name="library_app_info">অ্যাপের তথ্য</string>
-  <string name="library_recent">নতুন · হোমে যোগ করুন</string>
+  <string name="library_recent">নতুন</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$dটি অ্যাপ</item>
     <item quantity="other">%1$dটি অ্যাপ</item>

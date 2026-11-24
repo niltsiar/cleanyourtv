@@ -7,7 +7,7 @@
   <string name="library_remove_shortcut">홈에서 삭제</string>
   <string name="library_open">열기</string>
   <string name="library_app_info">앱 정보</string>
-  <string name="library_recent">새 앱 · 홈에 추가</string>
+  <string name="library_recent">새 앱</string>
   <plurals name="library_app_count">
     <item quantity="other">앱 %1$d개</item>
   </plurals>

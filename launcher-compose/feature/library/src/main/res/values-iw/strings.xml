@@ -7,7 +7,7 @@
   <string name="library_remove_shortcut">הסרה ממסך הבית</string>
   <string name="library_open">פתיחה</string>
   <string name="library_app_info">פרטי האפליקציה</string>
-  <string name="library_recent">חדשה · הוספה למסך הבית</string>
+  <string name="library_recent">חדשה</string>
   <plurals name="library_app_count">
     <item quantity="one">אפליקציה אחת</item>
     <item quantity="two">שתי אפליקציות</item>

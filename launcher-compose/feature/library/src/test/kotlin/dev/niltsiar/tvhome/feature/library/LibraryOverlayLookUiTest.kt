@@ -276,16 +276,16 @@ class LibraryOverlayLookUiTestContent :
             test("the status line sits at the bottom of every card on one baseline") {
                 val long = "Long enough a name to wrap onto two lines"
                 // Aaa takes the focus, and its growth with it; the cards measured here are idle.
-                showLibrary(listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp(long)))
+                showLibrary(listOf("Aaa", "Beta", long).map { libraryApp(it, installedAt = NOW - DAY) })
 
                 compose.onNodeWithTag("card:${key("Aaa")}").assertIsFocused()
                 val bottom = card("Beta").bottom - 6.dp
-                assertNear(bottom, statusText("Add to Home", "Beta").bottom)
-                assertNear(bottom, statusText("Add to Home", long).bottom)
+                assertNear(bottom, statusText("New", "Beta").bottom)
+                assertNear(bottom, statusText("New", long).bottom)
             }
 
             test("a two line name ends at least 4 dp above the status line and a focused one at least 2 dp") {
-                showLibrary(longNames.map { libraryApp(it) })
+                showLibrary(longNames.map { libraryApp(it, installedAt = NOW - DAY) })
 
                 assertNameClearsStatus()
             }
@@ -304,12 +304,21 @@ class LibraryOverlayLookUiTestContent :
                 }
             }
 
-            test("a card keeps its outer size of 109 dp tall and a sixth of the grid wide") {
-                showLibrary(listOf(libraryApp("Aaa"), libraryApp("Bbb $describedName")), art = LibraryArt(red, Color.Red), config = chooser)
+            for ((mode, selection) in listOf("in the chooser" to true, "in browse mode" to false)) {
+                test("$mode a card keeps its outer size of 109 dp tall and a sixth of the grid wide") {
+                    val names = listOf("Aaa", "Bbb $describedName", "Ccc")
+                    showLibrary(
+                        listOf(libraryApp(names[0]), libraryApp(names[1], onHome = true), libraryApp(names[2], installedAt = NOW - DAY)),
+                        art = LibraryArt(red, Color.Red),
+                        config = TvConfig(appLibrary = true, appLibrarySelection = selection),
+                    )
 
-                for (name in listOf("Aaa", "Bbb $describedName")) {
-                    card(name).height.value shouldBe (109f plusOrMinus 0.5f)
-                    card(name).width.value shouldBe (108.3f plusOrMinus 0.5f)
+                    for (name in names) {
+                        withClue(name) {
+                            card(name).height.value shouldBe (109f plusOrMinus 0.5f)
+                            card(name).width.value shouldBe (108.3f plusOrMinus 0.5f)
+                        }
+                    }
                 }
             }
 
@@ -386,14 +395,21 @@ class LibraryOverlayLookUiTestContent :
                 compose.textsOnCard("Gamma")[1] shouldStartWith "3 days ago, "
             }
 
-            test("on the light surface an idle card is a shade darker than the panel") {
+            test("an idle card draws no fill and no rim over the panel") {
                 showLibrary(nineApps)
 
                 val idle = card("App 3")
                 val middle = (idle.top + idle.bottom) / 2
-                val panel = redAt(idle.right + 8.dp, middle)
-                val inside = redAt(idle.left + 4.dp, middle)
-                withClue("card $inside, panel $panel") { inside shouldBeLessThanOrEqualTo (panel - 4) }
+                val panel = rgbAt(idle.right + 8.dp, middle)
+                for ((what, inside) in listOf("fill" to rgbAt(idle.left + 4.dp, middle), "rim" to rgbAt(idle.left + 0.5.dp, middle))) {
+                    withClue("$what $inside, panel $panel") {
+                        inside
+                            .zip(panel)
+                            .all { (card, ground) ->
+                                abs(card - ground) <= 1
+                            }.shouldBeTrue()
+                    }
+                }
             }
 
             test("in the chooser the count says how many apps are on home and follows a change") {
@@ -445,7 +461,13 @@ class LibraryOverlayLookUiTestContent :
             }
 
             test("a one line name is centred between the art and the status line") {
-                showLibrary(listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp(longNames[0])))
+                showLibrary(
+                    listOf(
+                        libraryApp("Aaa", installedAt = NOW - DAY),
+                        libraryApp("Beta", installedAt = NOW - DAY),
+                        libraryApp(longNames[0]),
+                    ),
+                )
 
                 val above = nameTop("Beta") - art("Beta").bottom
                 val below = statusTop("Beta") - nameBottom("Beta")
@@ -622,14 +644,14 @@ class LibraryOverlayLookUiNightTestContent :
                 withClue("never opened is $ratio of the opened line") { ratio shouldBeIn (0.38f..0.52f) }
             }
 
-            test("an idle card is opaque so a bright home does not show through it") {
+            test("an idle card shows the opaque panel so a bright home does not show through it") {
                 showLibrary(nineApps)
                 home = Color.White
                 compose.waitForIdle()
 
                 val idle = card("App 3")
                 val inside = rgbAt(idle.left + 4.dp, (idle.top + idle.bottom) / 2)
-                val expected = listOf(0x1C, 0x20, 0x30)
+                val expected = listOf(25, 28, 38)
                 withClue("card $inside") { inside.zip(expected).all { (actual, wanted) -> abs(actual - wanted) <= 2 }.shouldBeTrue() }
             }
 
@@ -641,30 +663,38 @@ class LibraryOverlayLookUiNightTestContent :
                 withClue("red $red, green $green") { (green - red) shouldBeLessThan 20 }
             }
 
-            test("in browse mode an app on home has no mark and an empty status slot") {
+            test("in browse mode an app on home has the chooser s check centred in its status slot and an app off home has none") {
                 showLibrary(listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp("Gamma", onHome = true)))
 
-                compose.onAllNodes(hasContentDescription("On Home"), useUnmergedTree = true).assertCountEquals(0)
-                val gamma = card("Gamma")
-                val (peak, ground) =
-                    lineBrightness(
-                        DpRect(gamma.left + 6.dp, gamma.bottom - 20.dp, gamma.right - 6.dp, gamma.bottom - 6.dp),
-                    )
-                withClue("the status slot of an app on Home draws up to $peak over $ground") { (peak - ground) shouldBeLessThanOrEqualTo 3 }
+                val card = card("Gamma")
+                val slot = DpRect(card.left + 6.dp, card.bottom - 20.dp, card.right - 6.dp, card.bottom - 6.dp)
+                val check = compose.onNodeWithTag("card:check:${key("Gamma")}", useUnmergedTree = true)
+                check.assertContentDescriptionEquals("On Home")
+                val box = check.getBoundsInRoot()
+                box.width.value shouldBe (18f plusOrMinus 0.5f)
+                ((box.left.value + box.right.value) / 2f) shouldBe ((card.left.value + card.right.value) / 2f plusOrMinus 1f)
+                ((box.top.value + box.bottom.value) / 2f) shouldBe ((slot.top.value + slot.bottom.value) / 2f plusOrMinus 1f)
+                compose.onAllNodes(hasContentDescription("On Home"), useUnmergedTree = true).assertCountEquals(1)
+                compose.onNodeWithTag("card:ring:${key("Beta")}", useUnmergedTree = true).assertDoesNotExist()
             }
 
-            test("an app off home has a 12 dp plus 4 dp before its add to home line at the lines alpha") {
-                showLibrary(listOf(libraryApp("Aaa"), libraryApp("Beta")))
+            test("a recent install off home says New alone and an app off home that is not new says nothing") {
+                showLibrary(
+                    listOf(
+                        libraryApp("Aaa"),
+                        libraryApp("Beta", installedAt = NOW - DAY),
+                        libraryApp(
+                            "Gamma",
+                            onHome = true,
+                            installedAt =
+                                NOW - DAY,
+                        ),
+                    ),
+                )
 
-                val text = statusText("Add to Home", "Beta")
-                val plusArea = DpRect(text.left - 30.dp, text.top, text.left - 0.5.dp, text.bottom)
-                val plus = lightSpan(plusArea)!!
-                (plus.endInclusive - plus.start) shouldBe (12f plusOrMinus 1f)
-                (text.left.value - plus.endInclusive) shouldBe (4f plusOrMinus 1f)
-                val (plusPeak, ground) = lineBrightness(DpRect(text.left - 17.dp, text.top, text.left - 4.dp, text.bottom))
-                val (textPeak, _) = lineBrightness(text)
-                val ratio = (plusPeak - ground).toFloat() / (textPeak - ground)
-                withClue("the plus peaks at $plusPeak, the line at $textPeak, over $ground") { ratio shouldBeIn (0.7f..1.3f) }
+                compose.textsOnCard("Aaa") shouldBe listOf("Aaa")
+                compose.textsOnCard("Beta") shouldBe listOf("Beta", "New")
+                compose.textsOnCard("Gamma") shouldBe listOf("Gamma")
             }
 
             test("in the chooser an app on home has an 18 dp check centred in its status slot and none off home") {
@@ -716,7 +746,7 @@ class LibraryOverlayLookUiNightTestContent :
                 showChooser()
 
                 val ring = compose.onNodeWithTag("card:ring:${key("Ccc")}", useUnmergedTree = true).getBoundsInRoot()
-                val idleFill = redAt(card("Ccc").left + 4.dp, (card("Ccc").top + card("Ccc").bottom) / 2)
+                val idleFill = redAt(ring.left - 4.dp, (ring.top + ring.bottom) / 2)
                 ring.width.value shouldBe (18f plusOrMinus 0.5f)
                 ring.height.value shouldBe (18f plusOrMinus 0.5f)
                 withClue("the stroke") {
@@ -884,7 +914,7 @@ class LibraryOverlayLookUiNightTestContent :
             }
 
             test("the status line of the focused card stays on the line of its neighbours") {
-                showLibrary(nineApps)
+                showLibrary((1..9).map { libraryApp("App $it", installedAt = NOW - DAY) })
                 focusedCard("App 1")
 
                 statusMiddle("App 1", 6.dp, 6.dp) shouldBe (statusMiddle("App 2", 6.dp, 6.dp) plusOrMinus 1f)
@@ -1350,17 +1380,6 @@ private class LibraryOverlayLookUiFixture : JUnit4RulesContext() {
         return listOf(pixel.red, pixel.green, pixel.blue).map { Math.round(it * 255) }
     }
 
-    /** The first and last column, in dp, where [area] holds a pixel lighter than its top left one by [TEXT_OVER_GROUND]; null for none. */
-    fun lightSpan(area: DpRect): ClosedFloatingPointRange<Float>? {
-        val density = compose.activity.resources.displayMetrics.density
-        val pixels = compose.onRoot().captureToImage().toPixelMap()
-        val xs = (area.left.value * density).toInt() until (area.right.value * density).toInt()
-        val ys = (area.top.value * density).toInt() until (area.bottom.value * density).toInt()
-        val ground = pixels[xs.first, ys.first].red
-        val lit = xs.filter { x -> ys.any { y -> (pixels[x, y].red - ground) * 255 > TEXT_OVER_GROUND } }
-        return if (lit.isEmpty()) null else (lit.first() / density)..((lit.last() + 1) / density)
-    }
-
     val red =
         ImageBitmap(16, 9).also { image ->
             Canvas(image).drawRect(Rect(0f, 0f, 16f, 9f), Paint().apply { color = Color.Red })
@@ -1527,7 +1546,7 @@ private class LibraryOverlayLookUiFixture : JUnit4RulesContext() {
     /** The layout bounds of the status line of the card of [name]. */
     fun status(name: String): DpRect =
         compose
-            .onNode(hasText("Add to Home") and hasAnyAncestor(hasTestTag("card:${key(name)}")), useUnmergedTree = true)
+            .onNode(hasText("New") and hasAnyAncestor(hasTestTag("card:${key(name)}")), useUnmergedTree = true)
             .getBoundsInRoot()
 
     /** The middle row, in pixels, of what is drawn like text in the card of [name] from [above] to [below] its status line. */

@@ -61,7 +61,9 @@ class LibraryPressFeedbackUiTestContent :
                 val rest = artWidth()
 
                 val widths = afterOk().map { it / rest }
-                val deepest = widths.indexOf(widths.min())
+                // Whole pixels turn the bottom of the dip into a run of equal widths; the deepest frame is its middle.
+                val lows = widths.indices.filter { widths[it] == widths.min() }
+                val deepest = (lows.first() + lows.last()) / 2
                 // The art is about 165 px wide, and its anti-aliased edges cost up to 2 px against the red threshold.
                 val edge = 2f / rest
 

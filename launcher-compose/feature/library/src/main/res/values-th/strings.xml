@@ -7,7 +7,7 @@
   <string name="library_remove_shortcut">นำออกจากหน้าหลัก</string>
   <string name="library_open">เปิด</string>
   <string name="library_app_info">ข้อมูลแอป</string>
-  <string name="library_recent">ใหม่ · เพิ่มในหน้าหลัก</string>
+  <string name="library_recent">ใหม่</string>
   <plurals name="library_app_count">
     <item quantity="other">%1$d แอป</item>
   </plurals>

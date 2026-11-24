@@ -7,7 +7,7 @@
   <string name="library_remove_shortcut">從主畫面移除</string>
   <string name="library_open">開啟</string>
   <string name="library_app_info">應用程式資訊</string>
-  <string name="library_recent">新安裝 · 新增至主畫面</string>
+  <string name="library_recent">新安裝</string>
   <plurals name="library_app_count">
     <item quantity="other">%1$d 個應用程式</item>
   </plurals>

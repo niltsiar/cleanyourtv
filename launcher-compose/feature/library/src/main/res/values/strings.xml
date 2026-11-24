@@ -7,7 +7,7 @@
   <string name="library_remove_shortcut">Remove from Home</string>
   <string name="library_open">Open</string>
   <string name="library_app_info">App info</string>
-  <string name="library_recent">New · Add to Home</string>
+  <string name="library_recent">New</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d app</item>
     <item quantity="other">%1$d apps</item>

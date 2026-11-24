@@ -7,7 +7,7 @@
   <string name="library_remove_shortcut">Прибрати з головного екрана</string>
   <string name="library_open">Відкрити</string>
   <string name="library_app_info">Про застосунок</string>
-  <string name="library_recent">Новий · Додати на головний екран</string>
+  <string name="library_recent">Новий</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d застосунок</item>
     <item quantity="few">%1$d застосунки</item>

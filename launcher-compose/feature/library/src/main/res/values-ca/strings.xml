@@ -7,7 +7,7 @@
   <string name="library_remove_shortcut">Elimina de l’inici</string>
   <string name="library_open">Obre</string>
   <string name="library_app_info">Informació de l’aplicació</string>
-  <string name="library_recent">Nova · Afegeix a l’inici</string>
+  <string name="library_recent">Nova</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d aplicació</item>
     <item quantity="many">%1$d d\'aplicacions</item>

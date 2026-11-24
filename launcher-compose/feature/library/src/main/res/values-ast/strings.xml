@@ -7,7 +7,7 @@
   <string name="library_remove_shortcut">Quitar d\'Aniciu</string>
   <string name="library_open">Abrir</string>
   <string name="library_app_info">Información de l\'aplicación</string>
-  <string name="library_recent">Nueva · Amestar a Aniciu</string>
+  <string name="library_recent">Nueva</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d aplicación</item>
     <item quantity="other">%1$d aplicaciones</item>

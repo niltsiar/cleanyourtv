@@ -7,7 +7,7 @@
   <string name="library_remove_shortcut">Verwijderen van Home</string>
   <string name="library_open">Openen</string>
   <string name="library_app_info">App-info</string>
-  <string name="library_recent">Nieuw · Toevoegen aan Home</string>
+  <string name="library_recent">Nieuw</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d app</item>
     <item quantity="other">%1$d apps</item>

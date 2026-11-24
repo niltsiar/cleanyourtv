@@ -7,7 +7,7 @@
   <string name="library_remove_shortcut">Ta bort från startskärmen</string>
   <string name="library_open">Öppna</string>
   <string name="library_app_info">Appinfo</string>
-  <string name="library_recent">Ny · Lägg till på startskärmen</string>
+  <string name="library_recent">Ny</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d app</item>
     <item quantity="other">%1$d appar</item>

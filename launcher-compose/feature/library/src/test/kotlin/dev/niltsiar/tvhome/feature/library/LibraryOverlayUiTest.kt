@@ -310,8 +310,8 @@ class LibraryOverlayUiTestContent :
             test("the status line names only what the card does not already say") {
                 showLibrary()
 
-                compose.textsOnCard("Alpha") shouldBe listOf("Alpha", "Add to Home")
-                compose.textsOnCard("Delta") shouldBe listOf("Delta", "New · Add to Home")
+                compose.textsOnCard("Alpha") shouldBe listOf("Alpha")
+                compose.textsOnCard("Delta") shouldBe listOf("Delta", "New")
                 compose.textsOnCard("Gamma") shouldBe listOf("Gamma")
             }
 
@@ -343,7 +343,7 @@ class LibraryOverlayUiTestContent :
                 compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Add to Home", "Hold OK", "Options")
                 compose.onNodeWithTag("library:status").assertTextEquals("No usage data yet")
                 compose.onNodeWithTag("card:opened:${key("Alpha")}", useUnmergedTree = true).assertDoesNotExist()
-                compose.textsOnCard("Alpha") shouldBe listOf("Alpha", "Add to Home")
+                compose.textsOnCard("Alpha") shouldBe listOf("Alpha")
             }
 
             test("with an open time the library does not say there is no usage data") {

@@ -7,7 +7,7 @@
   <string name="library_remove_shortcut">Bosh ekrandan olib tashlash</string>
   <string name="library_open">Ochish</string>
   <string name="library_app_info">Ilova haqida</string>
-  <string name="library_recent">Yangi · Bosh ekranga qoʻshish</string>
+  <string name="library_recent">Yangi</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d ta ilova</item>
     <item quantity="other">%1$d ta ilova</item>

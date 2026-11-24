@@ -7,7 +7,7 @@
   <string name="library_remove_shortcut">Ukloni sa početnog ekrana</string>
   <string name="library_open">Otvori</string>
   <string name="library_app_info">Informacije o aplikaciji</string>
-  <string name="library_recent">Novo · Dodaj na početni ekran</string>
+  <string name="library_recent">Novo</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d aplikacija</item>
     <item quantity="few">%1$d aplikacije</item>

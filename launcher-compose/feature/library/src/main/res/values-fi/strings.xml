@@ -7,7 +7,7 @@
   <string name="library_remove_shortcut">Poista kotinäkymästä</string>
   <string name="library_open">Avaa</string>
   <string name="library_app_info">Sovelluksen tiedot</string>
-  <string name="library_recent">Uusi · Lisää kotinäkymään</string>
+  <string name="library_recent">Uusi</string>
   <plurals name="library_app_count">
     <item quantity="one">%1$d sovellus</item>
     <item quantity="other">%1$d sovellusta</item>

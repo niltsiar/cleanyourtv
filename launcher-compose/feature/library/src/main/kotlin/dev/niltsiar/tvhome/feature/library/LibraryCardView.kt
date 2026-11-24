@@ -1,6 +1,5 @@
 package dev.niltsiar.tvhome.feature.library
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.LinearEasing
@@ -9,7 +8,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -39,14 +37,15 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -83,7 +82,8 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 internal val CardHeight = 109.dp
-private val CardShape = RoundedCornerShape(16.dp)
+private val CardRadius = 16.dp
+private val CardShape = RoundedCornerShape(CardRadius)
 private val ArtShape = RoundedCornerShape(8.dp)
 private const val ART_ASPECT = 16f / 9f
 private val CardSide = 6.dp
@@ -97,13 +97,10 @@ internal const val NAME_LINES = 2
 private val EnterRise = 28.dp
 private const val POP_SCALE = 0.12f
 internal const val FOCUSED_SCALE = 1.08f
-private val OnHomeTint = Color(0x1475BBA4)
 private const val RIM_ALPHA = 0.09f
 private val RecentGreen = Color(0xFF70D9A0)
 private val StatusHeight = 14.dp
-private val PlusSize = 12.dp
-private val PlusStroke = 1.5.dp
-private val PlusGap = 4.dp
+private val MarkGap = 4.dp
 private val CheckSize = 18.dp
 private val MarkOverhang = (CheckSize - StatusHeight) / 2
 private val NameToMark = 6.dp
@@ -124,12 +121,11 @@ private const val OFF_HOME_MS = 150
 
 /**
  * One card of the grid: the app's art on a small tile and its name of up to [NAME_LINES] lines, in the room above the status
- * slot, which says in one line what is not the usual state. An app on Home has no mark; in the chooser
+ * slot, which says in one line what is not the usual state. An app on Home has a check there; in the chooser
  * ([LibraryLayout.selection]) an app that is not on Home has its art at 0.45 and its name at 0.60, or 0.75 and whole while its
- * card has focus, so OK on a focused card shows, and the status slot holds a check for an app on Home and a ring for one that
- * is not. An idle card is opaque, so nothing of Home shows
- * through it; a focused one lets the plate [FocusSurface] draws behind it show, unless the focus style has no slab: then the
- * card keeps its fill. It rises in once per opening, with the delay [CardEntrance] gives it, and when its
+ * card has focus, so OK on a focused card shows, and the status slot holds a ring for it. An idle card draws no fill and no
+ * rim, so its art and name sit on the panel. A focused one takes a rim and lets the plate [FocusSurface] draws behind it
+ * show, unless the focus style has no slab: then the card takes its fill. It rises in once per opening, with the delay [CardEntrance] gives it, and when its
  * Home shortcut changes pops a little, or in the chooser pulses its mark. Both run in the layer lambda. The status slot keeps
  * its place while the card grows, so it stays level with the cards beside it. [widthPx] is the narrowest the card can be. When
  * no card of the grid has a status line, [statusFree] is true and the art and name take the whole card, centred. With
@@ -186,7 +182,6 @@ internal fun LibraryCardView(
     val ink = TvTheme.colors.onSurface
     val fill = TvTheme.surfaces.card
     val slab = TvTheme.focusStyle.slab
-    val tint = animateColorAsState(if (card.onHome) OnHomeTint else Color.Transparent, tween(CARD_TINT_MS), label = "cardTint")
     val motion = TvTheme.motion
     val density = LocalDensity.current
     val focus = remember { Animatable(0f) }
@@ -249,10 +244,20 @@ internal fun LibraryCardView(
                 Modifier
                     .fillMaxSize()
                     .drawBehind {
-                        drawRect(fill, alpha = if (slab) (1f - focus.value).coerceIn(0f, 1f) else 1f)
-                        drawRect(tint.value)
-                    }.border(1.dp, ink.copy(alpha = RIM_ALPHA), CardShape)
-                    .semantics { contentDescription = card.app.label },
+                        val shown = focusProgress()
+                        if (shown > 0f) {
+                            if (!slab) drawRect(fill, alpha = shown)
+                            val rim = 1.dp.toPx()
+                            drawRoundRect(
+                                ink,
+                                topLeft = Offset(rim / 2f, rim / 2f),
+                                size = Size(size.width - rim, size.height - rim),
+                                cornerRadius = CornerRadius(CardRadius.toPx() - rim / 2f),
+                                alpha = RIM_ALPHA * shown,
+                                style = Stroke(rim),
+                            )
+                        }
+                    }.semantics { contentDescription = card.app.label },
             ) {
                 ArtAndName(
                     statusFree,
@@ -280,8 +285,6 @@ internal fun LibraryCardView(
         }
     }
 }
-
-private const val CARD_TINT_MS = 300
 
 /**
  * The art, then the name, in the room above the status slot. The name's box ends [NameToMark] above the top of the check or
@@ -350,19 +353,6 @@ private fun Art(
             )
         }
     }
-}
-
-/** A plus of [side], round caps included, in the middle of the scope. */
-private fun DrawScope.drawPlus(
-    color: Color,
-    side: Float,
-) {
-    val stroke = PlusStroke.toPx()
-    val left = (size.width - side + stroke) / 2f
-    val top = (size.height - side + stroke) / 2f
-    val reach = side - stroke
-    drawLine(color, Offset(left, top + reach / 2f), Offset(left + reach, top + reach / 2f), stroke, StrokeCap.Round)
-    drawLine(color, Offset(left + reach / 2f, top), Offset(left + reach / 2f, top + reach), stroke, StrokeCap.Round)
 }
 
 /** The first character, whole: a letter outside the Basic Multilingual Plane is two chars. */
@@ -441,13 +431,14 @@ internal fun shownName(
 }
 
 /** Whether the card has a mark or a line in its status slot. */
-internal fun LibraryCard.hasStatusLine(layout: LibraryLayout): Boolean = layout.selection || opened != null || !(onHome || layout.okOpens)
+internal fun LibraryCard.hasStatusLine(layout: LibraryLayout): Boolean =
+    layout.selection || opened != null || onHome || (recent && !layout.okOpens)
 
 /**
- * The status slot, one baseline for every card: the line that says what the name does not. That line is, in the least used
- * order when the app was last opened, else the recent-install text, else "Add to Home" for an app that is not on Home, else
- * nothing; in the chooser an app on Home has a check there instead, and an app that is not on Home a ring: the hint row
- * says what OK does. A "+" goes before the recent-install text and "Add to Home". [checkScale] is the scale of the check or ring.
+ * The status slot, one baseline for every card: what the name does not say. An app on Home has a check there, and in the
+ * least used order the line of when the app was last opened follows it. Otherwise that line, or "New" for a recent install,
+ * or in the chooser a ring for an app that is not on Home: the hint row says what OK does. [checkScale] is the scale of the
+ * check or ring.
  */
 @Composable
 private fun Status(
@@ -460,12 +451,7 @@ private fun Status(
     val typography = TvTheme.typography
     val style = remember(typography) { typography.date.copy(fontSize = 11.sp, lineHeight = 13.sp, textAlign = TextAlign.Center) }
     val opened = card.opened
-    val text =
-        when {
-            opened != null || card.onHome || layout.okOpens -> null
-            card.recent -> stringResource(R.string.library_recent)
-            else -> stringResource(R.string.library_add_home)
-        }
+    val text = if (opened == null && !card.onHome && !layout.okOpens && card.recent) stringResource(R.string.library_recent) else null
     val never = opened != null && opened.at == null
     val shown = if (never) style.copy(color = style.color.copy(alpha = style.color.alpha * NEVER_OPENED_ALPHA)) else style
     Row(
@@ -474,21 +460,22 @@ private fun Status(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val line = Modifier.weight(1f, fill = false)
+        if (card.onHome) {
+            OnHomeCheck(card.app.key, focus, checkScale)
+            if (opened != null) Spacer(Modifier.width(MarkGap))
+        }
         if (opened != null) {
             Opened(card.app.key, opened, shown, line)
-        } else if (layout.selection) {
-            if (card.onHome) OnHomeCheck(card.app.key, focus, checkScale) else OffHomeRing(card.app.key, checkScale)
+        } else if (layout.selection && !card.onHome) {
+            OffHomeRing(card.app.key, checkScale)
         } else if (text != null) {
-            val color = style.color
-            Box(Modifier.size(PlusSize).drawBehind { drawPlus(color, size.width) })
-            Spacer(Modifier.width(PlusGap))
             BasicText(text, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = line)
         }
     }
 }
 
 /**
- * A white disc with a dark check, [CheckSize] across and centred in the slot, which it may overhang a little above and below:
+ * A white disc with a dark check, [CheckSize] across, which may overhang the slot a little above and below:
  * a little less white at rest than on the focused card ([focus] is 1). It draws at [scale].
  */
 @Composable

@@ -7,7 +7,7 @@
   <string name="library_remove_shortcut">Bỏ khỏi màn hình chính</string>
   <string name="library_open">Mở</string>
   <string name="library_app_info">Thông tin ứng dụng</string>
-  <string name="library_recent">Mới · Thêm vào màn hình chính</string>
+  <string name="library_recent">Mới</string>
   <plurals name="library_app_count">
     <item quantity="other">%1$d ứng dụng</item>
   </plurals>
