@@ -741,7 +741,7 @@ class LibraryOverlayLookUiNightTestContent :
             }
 
             test(
-                "in the chooser an app off home shows an 18 dp ring of 2 dp white 070 filled with white 010 where an app on home has its check",
+                "in the chooser an app off home shows an 18 dp ring of 2 dp white 040 filled with white 010 where an app on home has its check",
             ) {
                 showChooser()
 
@@ -751,11 +751,11 @@ class LibraryOverlayLookUiNightTestContent :
                 ring.height.value shouldBe (18f plusOrMinus 0.5f)
                 withClue("the stroke") {
                     redInMark("card:ring", "Ccc", 1f / 18f, 0.5f).toFloat() shouldBe
-                        (idleFill + 0.70f * (255 - idleFill) plusOrMinus 6f)
+                        (idleFill + 0.40f * (255 - idleFill) plusOrMinus 6f)
                 }
                 withClue("the stroke is 2 dp") {
                     redInMark("card:ring", "Ccc", 1.8f / 18f, 0.5f).toFloat() shouldBe
-                        (idleFill + 0.70f * (255 - idleFill) plusOrMinus 8f)
+                        (idleFill + 0.40f * (255 - idleFill) plusOrMinus 8f)
                 }
                 withClue("the inside") {
                     redInMark("card:ring", "Ccc", 0.5f, 0.5f).toFloat() shouldBe
@@ -764,12 +764,30 @@ class LibraryOverlayLookUiNightTestContent :
                 compose.onNodeWithTag("card:ring:${key("Bbb")}", useUnmergedTree = true).assertDoesNotExist()
             }
 
-            test("in the chooser the ring of an app off home is clearly lighter than the check disc of an app on home") {
+            test("in the chooser the ring of an app off home is at least 80 darker than the check disc of an app on home") {
                 showChooser()
 
                 val ring = redInMark("card:ring", "Ccc", 1f / 18f, 0.5f)
                 val disc = redInMark("card:check", "Bbb", 0.5f, 0.1f)
-                withClue("the ring stroke is $ring against a disc of $disc") { (ring + 20) shouldBeLessThanOrEqualTo disc }
+                withClue("the ring stroke is $ring against a disc of $disc") { (ring + 80) shouldBeLessThanOrEqualTo disc }
+            }
+
+            test("in the chooser the ring of the focused card off home stands at least 60 over the card around it") {
+                showChooser()
+                press(Key.DirectionRight, times = 2)
+                compose.onNodeWithTag("card:${key("Ccc")}").assertIsFocused()
+
+                // The focused card grows about its centre, so the mark is read over its whole box, grown by 3 dp.
+                val mark = compose.onNodeWithTag("card:ring:${key("Ccc")}", useUnmergedTree = true).getBoundsInRoot()
+                val density = compose.activity.resources.displayMetrics.density
+                val pixels = compose.onRoot().captureToImage().toPixelMap()
+                val reds =
+                    ((mark.left.value - 3f) * density).toInt().until(((mark.right.value + 3f) * density).toInt()).flatMap { x ->
+                        ((mark.top.value - 3f) * density).toInt().until(((mark.bottom.value + 3f) * density).toInt()).map { y ->
+                            Math.round(pixels[x, y].red * 255)
+                        }
+                    }
+                withClue("the ring at ${reds.max()} over ${reds.min()}") { (reds.max() - reds.min()) shouldBeGreaterThanOrEqualTo 60 }
             }
 
             test("in the chooser no white lies on the art of an app on home and none hangs past the card") {
