@@ -336,6 +336,9 @@ private val LocalMotion = staticCompositionLocalOf { Motion() }
 private val LocalTvElementColors = staticCompositionLocalOf { DarkElementColors }
 
 @Suppress("CompositionLocalAllowlist")
+private val LocalTvShapes = staticCompositionLocalOf { GlassShapes }
+
+@Suppress("CompositionLocalAllowlist")
 private val LocalTvSurfaces = staticCompositionLocalOf { DarkSurfaces }
 
 @Suppress("CompositionLocalAllowlist")
@@ -391,6 +394,11 @@ public object TvTheme {
         @ReadOnlyComposable
         get() = LocalTvElementColors.current
 
+    public val shapes: TvShapes
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalTvShapes.current
+
     public val focusStyle: FocusStyle
         @Composable
         @ReadOnlyComposable
@@ -424,6 +432,7 @@ public fun TvTheme(
         LocalTvColors provides DarkColors,
         LocalTvTypography provides DarkTypography,
         LocalTvElementColors provides DarkElementColors,
+        LocalTvShapes provides GlassShapes,
         LocalMotion provides motion,
         LocalFocusStyle provides focusStyle,
         LocalTvSurfaces provides if (darkTheme) DarkSurfaces else LightSurfaces,

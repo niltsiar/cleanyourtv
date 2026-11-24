@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -117,7 +116,8 @@ public fun <T> GlassMenu(
     value: (T) -> String? = { null },
 ) {
     val opening = remember { FocusRequester() }
-    val rowShape = remember(padding) { menuRowShape(padding) }
+    val shapes = TvTheme.shapes
+    val rowShape = remember(padding, shapes) { shapes.menuRow(padding) }
     val colours = TvTheme.elementColors
     GlassDropdown(
         anchor,
@@ -374,8 +374,8 @@ internal fun besideAnchor(
     return IntOffset(x, y)
 }
 
-/** The corner of a row of a panel padded by [padding], concentric with the panel's. */
-public fun menuRowShape(padding: Dp = PanelPadding): Shape = RoundedCornerShape(OverlayCorner - padding)
+/** The corner of a row of a Glass panel padded by [padding], concentric with the panel's ([TvShapes.menuRow] of the theme's shapes). */
+public fun menuRowShape(padding: Dp = PanelPadding): Shape = GlassShapes.menuRow(padding)
 
 /** A faint line between two groups of rows, [MenuDividerHeight] tall, in the text colour at [alpha]. */
 @Composable

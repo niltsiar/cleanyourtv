@@ -61,10 +61,6 @@ public fun rememberGlassState(): GlassState = remember { GlassState() }
 
 private val OverlayElevation = 24.dp
 
-private val GlassPanelShape = RoundedCornerShape(20.dp)
-internal val OverlayCorner = 28.dp
-private val OverlayShape = RoundedCornerShape(OverlayCorner)
-
 /** The shadow under a chrome surface: none, or a pill's in [TvElementColors.chromeShadow]. */
 public enum class ChromeShadow(
     internal val elevation: Dp,
@@ -81,7 +77,7 @@ public enum class ChromeShadow(
 public fun GlassSurface(
     glass: GlassState,
     modifier: Modifier = Modifier,
-    shape: RoundedCornerShape = GlassPanelShape,
+    shape: RoundedCornerShape = TvTheme.shapes.chromePanel,
     shadow: ChromeShadow = ChromeShadow.None,
     rim: Boolean = true,
     content: @Composable BoxScope.() -> Unit,
@@ -111,7 +107,7 @@ public fun GlassSurface(
 @Composable
 public fun OverlaySurface(
     modifier: Modifier = Modifier,
-    shape: Shape = OverlayShape,
+    shape: Shape = TvTheme.shapes.overlay,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val colours = TvTheme.elementColors

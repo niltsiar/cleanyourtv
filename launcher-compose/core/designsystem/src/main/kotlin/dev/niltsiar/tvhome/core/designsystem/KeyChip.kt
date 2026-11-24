@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
@@ -75,6 +74,7 @@ public fun KeyChip(
     look: KeyChipLook = KeyChipOverWallpaper,
 ) {
     val typography = TvTheme.typography
+    val shapes = TvTheme.shapes
     val actionStyle =
         remember(
             typography,
@@ -85,8 +85,8 @@ public fun KeyChip(
             Modifier
                 .background(
                     look.backing,
-                    CircleShape,
-                ).border(1.dp, look.rim, CircleShape)
+                    shapes.chip,
+                ).border(1.dp, look.rim, shapes.chip)
                 .padding(horizontal = 12.dp)
         } else {
             Modifier
@@ -101,7 +101,7 @@ public fun KeyChip(
                 key,
                 style = typography.chipKey,
                 maxLines = 1,
-                modifier = Modifier.background(look.keyFill, CircleShape).padding(horizontal = 8.dp, vertical = 2.dp),
+                modifier = Modifier.background(look.keyFill, shapes.chipKey).padding(horizontal = 8.dp, vertical = 2.dp),
             )
         }
         BasicText(action, style = actionStyle, maxLines = 1)

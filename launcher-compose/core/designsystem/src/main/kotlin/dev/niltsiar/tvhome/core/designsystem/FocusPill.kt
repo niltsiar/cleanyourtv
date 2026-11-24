@@ -6,7 +6,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
@@ -49,7 +48,7 @@ public class FocusInk internal constructor(
 public fun FocusPill(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    shape: Shape = CircleShape,
+    shape: Shape = TvTheme.shapes.pill,
     onFocused: () -> Unit = {},
     interactionSource: MutableInteractionSource? = null,
     focusedScale: Float = 1f,

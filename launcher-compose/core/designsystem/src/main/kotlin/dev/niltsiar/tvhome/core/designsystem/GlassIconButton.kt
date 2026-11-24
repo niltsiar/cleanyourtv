@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -107,6 +106,7 @@ public fun GlassIconButton(
     val offered by rememberUpdatedState(offerToken != 0)
     val surfaces = TvTheme.surfaces
     val colours = TvTheme.elementColors
+    val shape = TvTheme.shapes.chromeButton
     val held = remember { Animatable(0f) }
     LaunchedEffect(active, motion) { held.animateTo(if (active) 1f else 0f, motion.tweenSpec(ACTIVE_MS)) }
     val follow =
@@ -142,6 +142,7 @@ public fun GlassIconButton(
             onClick = onClick,
             modifier = size,
             interactionSource = interactionSource,
+            shape = shape,
             focusedScale = FOCUSED_SCALE,
             shadowElevation = ChromeShadow.Pill.elevation,
             transformOrigin = transformOrigin,
@@ -149,7 +150,7 @@ public fun GlassIconButton(
                 GlassSurface(
                     glass = glass,
                     modifier = Modifier.matchParentSize(),
-                    shape = CircleShape,
+                    shape = shape,
                     rim = label == null,
                 ) {
                     val tint = TvTheme.surfaces.chromeTint

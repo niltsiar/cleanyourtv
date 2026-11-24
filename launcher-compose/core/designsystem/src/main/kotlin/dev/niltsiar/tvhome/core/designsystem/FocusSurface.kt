@@ -7,7 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
@@ -113,7 +112,7 @@ public val FocusRingReach: Dp = RingGap + RingWidth + HairlineWidth + OuterStrok
 public fun FocusSurface(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(16.dp),
+    shape: Shape = TvTheme.shapes.tile,
     onFocused: () -> Unit = {},
     interactionSource: MutableInteractionSource? = null,
     glow: Boolean = true,
