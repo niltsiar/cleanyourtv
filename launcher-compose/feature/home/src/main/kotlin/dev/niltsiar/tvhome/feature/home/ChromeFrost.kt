@@ -51,7 +51,7 @@ private val TopBarButtonsBand =
         bottom = (TopBarTop + TopBarHeight).value / DESIGN_HEIGHT_DP,
     )
 
-/** Where the wallpaper's chrome measurements run: off the main thread, unless a test runs them in line. */
+/** Where the wallpaper's chrome measurements and the cinematic scrim run: off the main thread, unless a test runs them in line. */
 internal val LocalBakeDispatcher = staticCompositionLocalOf<CoroutineDispatcher> { Dispatchers.Default }
 
 private class Baked(

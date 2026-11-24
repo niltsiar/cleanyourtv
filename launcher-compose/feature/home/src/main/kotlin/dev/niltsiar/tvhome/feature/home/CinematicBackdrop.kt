@@ -28,7 +28,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -79,9 +79,9 @@ internal class CinematicBackdrop(
     private var glowBrushColor = Color.Unspecified
     private var glowBrushSize = Size.Zero
 
-    /** Builds the scrim picture; the first frames draw without it. */
-    suspend fun prepareScrim() {
-        if (layout.scrimAlpha > 0f && scrim == null) scrim = withContext(Dispatchers.Default) { buildScrim(direction) }
+    /** Builds the scrim picture on [dispatcher]; the first frames draw without it. */
+    suspend fun prepareScrim(dispatcher: CoroutineDispatcher) {
+        if (layout.scrimAlpha > 0f && scrim == null) scrim = withContext(dispatcher) { buildScrim(direction) }
     }
 
     fun draw(scope: DrawScope) =
@@ -253,7 +253,8 @@ internal fun rememberCinematicBackdrop(
     val backdrop = remember(layout, direction) { CinematicBackdrop(layout, direction) { currentReordering() } }
     val currentShelf by rememberUpdatedState(shelf)
     val currentHeroArt by rememberUpdatedState(heroArt)
-    LaunchedEffect(backdrop) { backdrop.prepareScrim() }
+    val bakeDispatcher = LocalBakeDispatcher.current
+    LaunchedEffect(backdrop, bakeDispatcher) { backdrop.prepareScrim(bakeDispatcher) }
     LaunchedEffect(backdrop) {
         snapshotFlow { currentShelf()?.let { ShelfFocus(it.key, it.accent) } }
             .distinctUntilChanged()

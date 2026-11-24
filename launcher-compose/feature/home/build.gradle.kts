@@ -24,6 +24,7 @@ dependencies {
     implementation(libs.molecule.runtime)
     implementation(libs.kotlinx.coroutines.android)
 
+    testImplementation(testFixtures(project(":core:designsystem")))
     testImplementation(libs.junit)
     testImplementation(libs.turbine)
     testImplementation(libs.kotlinx.coroutines.test)
