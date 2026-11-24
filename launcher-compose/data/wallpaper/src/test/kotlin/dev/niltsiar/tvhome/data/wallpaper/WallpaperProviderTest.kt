@@ -7,6 +7,7 @@ import de.infix.testBalloon.framework.core.JUnit4RulesContext
 import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Choices
 import dev.niltsiar.tvhome.core.config.Place
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.config.WallpaperMood
@@ -46,6 +47,7 @@ class WallpaperProviderTestContent :
                 val decoded = mutableListOf<String>()
                 val pictures = HashMap<String, ImageBitmap>()
                 val unreadable = mutableSetOf<String>()
+                val hues = mapOf("a.jpg" to 30f, "b.jpg" to 200f)
                 val noon = LocalDateTime.of(2026, 11, 4, 12, 0)
 
                 val rotating = TvConfig(wallpaperRotationMinutes = 5, wallpaperOrder = WallpaperOrder.Sequential)
@@ -80,7 +82,13 @@ class WallpaperProviderTestContent :
                     preferences = preferences,
                     decode = { file ->
                         decoded += file.name
-                        if (file.name in unreadable) null else DecodedPicture(pictures.getOrPut(file.name) { ImageBitmap(1, 1) }, null)
+                        if (file.name in
+                            unreadable
+                        ) {
+                            null
+                        } else {
+                            DecodedPicture(pictures.getOrPut(file.name) { ImageBitmap(1, 1) }, null, hues[file.name])
+                        }
                     },
                     zone = { ZoneOffset.UTC },
                 )
@@ -118,6 +126,28 @@ class WallpaperProviderTestContent :
                 }
                 add("0.jpg")
                 provider(rotating).shows("0.jpg", noon.plusMinutes(6))
+            }
+
+            test("the hue is the shown picture's and stays through a release") {
+                val provider = provider(rotating)
+                provider.advance(noon)
+                provider.hue.value shouldBe 30f
+                provider.advance(noon.plusMinutes(5))
+                provider.hue.value shouldBe 200f
+
+                provider.releasePicture()
+                provider.hue.value shouldBe 200f
+            }
+
+            test("a choice of no picture leaves no hue") {
+                val choice = MutableStateFlow<String?>(null)
+                val provider = provider(rotating, choice)
+                provider.advance(noon)
+                provider.hue.value shouldBe 30f
+
+                choice.value = Choices.WALLPAPER_NONE
+                provider.advance(noon.plusMinutes(1))
+                provider.hue.value.shouldBeNull()
             }
 
             test("an unreadable picture is skipped") {

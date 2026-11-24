@@ -1,10 +1,10 @@
-package dev.niltsiar.tvhome.feature.home
+package dev.niltsiar.tvhome.core.model
 
 import de.infix.testBalloon.framework.core.testSuite
 import io.kotest.matchers.shouldBe
 import java.util.Locale
 
-val GreetingTest by testSuite {
+val DayPartTest by testSuite {
     /** The part of the day at each hour, as a letter per hour from 0 to 23: n night, m morning, f forenoon, a afternoon, e evening. */
     fun day(locale: Locale): String =
         (0..23).joinToString("") {

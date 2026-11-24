@@ -3,6 +3,7 @@ package dev.niltsiar.tvhome.feature.home
 import de.infix.testBalloon.framework.core.testSuite
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
+import dev.niltsiar.tvhome.core.model.DayPart
 import dev.niltsiar.tvhome.core.model.InputConnection
 import dev.niltsiar.tvhome.core.model.InputTarget
 import io.kotest.matchers.nulls.shouldNotBeNull

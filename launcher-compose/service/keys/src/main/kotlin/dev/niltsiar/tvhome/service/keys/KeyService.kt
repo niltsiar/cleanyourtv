@@ -23,6 +23,7 @@ import android.widget.Toast
 import dev.niltsiar.tvhome.core.config.ConfigRepositoryOwner
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppOpened
+import dev.niltsiar.tvhome.core.model.HouseSeedOwner
 import dev.niltsiar.tvhome.core.model.LauncherIntents
 import dev.niltsiar.tvhome.core.model.startActivitySafely
 import dev.niltsiar.tvhome.data.system.SystemSettings
@@ -200,7 +201,16 @@ public class KeyService : AccessibilityService() {
         applySleepTimer(config.sleepTimer && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
         if (config.quickPanel && config.keyFilter) {
             quickPanel =
-                QuickPanelControl(this, timer, config.panelLook, sleepTimer != null, config.restartPress, ::openHome, ::runPanelRow)
+                QuickPanelControl(
+                    this,
+                    timer,
+                    config.panelLook,
+                    (application as HouseSeedOwner).houseSeed,
+                    sleepTimer != null,
+                    config.restartPress,
+                    ::openHome,
+                    ::runPanelRow,
+                )
         }
     }
 

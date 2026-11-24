@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -45,6 +46,7 @@ import dev.niltsiar.tvhome.core.designsystem.FocusStyle
 import dev.niltsiar.tvhome.core.designsystem.GlassMenu
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import kotlinx.coroutines.flow.StateFlow
 
 private const val TAG = "TvHome.Panel"
 private val EdgeX = 48.dp
@@ -96,6 +98,7 @@ internal class QuickPanelControl(
     private val context: Context,
     private val timer: Timer,
     private val look: PanelLook,
+    private val seed: StateFlow<Color>,
     sleepTimer: Boolean,
     private val restartAsks: Boolean,
     private val goHome: () -> Unit,
@@ -258,7 +261,8 @@ internal class QuickPanelControl(
     @Composable
     private fun Content() {
         val step by SleepTimer.current.collectAsState()
-        TvTheme(look = look.look, motion = look.motion, focusStyle = look.focusStyle) {
+        val seed = seed.collectAsState()
+        TvTheme(look = look.look, seed = { seed.value }, motion = look.motion, focusStyle = look.focusStyle) {
             QuickPanelContent(rows, confirming, focus, step.step, muted, ::pick, ::close)
         }
     }

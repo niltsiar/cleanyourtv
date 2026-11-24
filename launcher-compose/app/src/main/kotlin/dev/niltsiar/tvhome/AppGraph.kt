@@ -2,6 +2,7 @@ package dev.niltsiar.tvhome
 
 import android.app.Application
 import android.text.format.DateFormat
+import androidx.compose.ui.graphics.Color
 import dev.niltsiar.tvhome.core.config.ConfigRepository
 import dev.niltsiar.tvhome.core.config.ThemeDirectory
 import dev.niltsiar.tvhome.data.apps.AppLauncher
@@ -24,6 +25,8 @@ import dev.niltsiar.tvhome.data.system.displayOn
 import dev.niltsiar.tvhome.data.wallpaper.ScreensaverWallpaper
 import dev.niltsiar.tvhome.data.wallpaper.WallpaperPictures
 import dev.niltsiar.tvhome.data.wallpaper.WallpaperProvider
+import dev.niltsiar.tvhome.data.wallpaper.houseSeed
+import dev.niltsiar.tvhome.data.wallpaper.houseSeeds
 import dev.niltsiar.tvhome.feature.home.FocusMemory
 import dev.niltsiar.tvhome.feature.home.HomeSources
 import dev.niltsiar.tvhome.feature.home.ShelfCardMaxSize
@@ -41,9 +44,14 @@ import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import java.io.File
+import java.time.LocalDateTime
+import java.time.ZoneId
 import kotlin.math.roundToInt
 
 @DependencyGraph(AppScope::class)
@@ -65,6 +73,9 @@ interface AppGraph {
     val settingsSources: SettingsSources
     val shelfPosters: ShelfPosters
     val homeShape: HomeShape
+
+    /** The colour every window's Expressive scheme grows from; the last one stays while no window shows. */
+    val houseSeed: StateFlow<Color>
 
     @Provides
     @SingleIn(AppScope::class)
@@ -204,6 +215,19 @@ interface AppGraph {
         application: Application,
         repository: ConfigRepository,
     ): WallpaperProvider = WallpaperProvider(application, repository.config, repository.wallpaperChoice, ThemeDirectory(application))
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideHouseSeed(
+        repository: ConfigRepository,
+        minuteClock: MinuteClock,
+        wallpaperProvider: WallpaperProvider,
+    ): StateFlow<Color> =
+        houseSeeds(repository.config, minuteClock.now, wallpaperProvider.hue).stateIn(
+            CoroutineScope(SupervisorJob() + Dispatchers.Default),
+            SharingStarted.WhileSubscribed(),
+            houseSeed(repository.config.value, wallpaperProvider.hue.value, LocalDateTime.now(), ZoneId.systemDefault()),
+        )
 
     @Provides
     @SingleIn(AppScope::class)

@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
@@ -93,6 +94,14 @@ public class WallpaperProvider internal constructor(
     @Volatile
     private var displayed = ""
 
+    private val shownHue = MutableStateFlow<Float?>(null)
+
+    /**
+     * The dominant hue of the picture the last advance showed, null with no picture or no hue in it. [releasePicture] keeps it:
+     * the picture is still the wallpaper.
+     */
+    public val hue: StateFlow<Float?> = shownHue.asStateFlow()
+
     /** Home is on screen: the picture follows the clock. Main thread. */
     public fun onStart() {
         started.value = true
@@ -133,12 +142,12 @@ public class WallpaperProvider internal constructor(
         val current = config.value
         val pictures = pictures()
         selectPicture(pictures, now, zone, current)
-        val minute = Sky.minuteOfDay(now.hour, now.minute)
         val shown = picture
+        shownHue.value = shown?.hue
         return Wallpaper(
             picture = shown?.picture,
             caption = if (shown == null) null else pictures.captions[displayed],
-            sky = if (current.skyIntensity > 0) sky(current, now, minute, zone) else null,
+            sky = if (current.skyIntensity > 0) sky(current, now, zone) else null,
             thumbnail = shown?.thumbnail,
         )
     }
@@ -193,16 +202,6 @@ public class WallpaperProvider internal constructor(
         if (current.wallpaperMoods.isEmpty()) return files
         val sun = WallpaperMoods.sun(now.toLocalDate(), current.place, zone)
         return WallpaperMoods.select(files, current.wallpaperMoods, WallpaperMoods.timeOfDay(now.hour * 60 + now.minute, sun))
-    }
-
-    private fun sky(
-        current: TvConfig,
-        now: LocalDateTime,
-        minute: Int,
-        zone: ZoneId,
-    ): SkyPalette {
-        val sun = current.place?.let { Sun.riseAndSet(now.toLocalDate(), it.latitude, it.longitude, zone) }
-        return if (sun == null) Sky.at(minute) else Sky.at(minute, sun.sunrise, sun.sunset)
     }
 
     /** The listing for the choice stored now. The theme's files are read once; a changed choice lists them again. */
@@ -263,6 +262,17 @@ public class WallpaperProvider internal constructor(
             val file = WallpaperRotation.find(playable, shown) ?: playable.firstOrNull()
             file?.let { WallpaperPicture(it.name, single = it == WallpaperRotation.usable(single)) }
         }
+}
+
+/** The sky at [now], at the theme's place when it has one. */
+internal fun sky(
+    config: TvConfig,
+    now: LocalDateTime,
+    zone: ZoneId,
+): SkyPalette {
+    val minute = Sky.minuteOfDay(now.hour, now.minute)
+    val sun = config.place?.let { Sun.riseAndSet(now.toLocalDate(), it.latitude, it.longitude, zone) }
+    return if (sun == null) Sky.at(minute) else Sky.at(minute, sun.sunrise, sun.sunset)
 }
 
 /** Names and sizes, which notice a changed collection without hashing it. */

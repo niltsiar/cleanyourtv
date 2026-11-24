@@ -2,19 +2,25 @@ package dev.niltsiar.tvhome
 
 import android.app.Application
 import android.content.Intent
+import androidx.compose.ui.graphics.Color
 import dev.niltsiar.tvhome.core.config.ConfigRepository
 import dev.niltsiar.tvhome.core.config.ConfigRepositoryOwner
 import dev.niltsiar.tvhome.core.model.AppOpened
+import dev.niltsiar.tvhome.core.model.HouseSeedOwner
 import dev.zacsweers.metro.createGraphFactory
+import kotlinx.coroutines.flow.StateFlow
 
 class TvHomeApplication :
     Application(),
     ConfigRepositoryOwner,
+    HouseSeedOwner,
     AppOpened {
     lateinit var graph: AppGraph
         private set
 
     override val configRepository: ConfigRepository get() = graph.configRepository
+
+    override val houseSeed: StateFlow<Color> get() = graph.houseSeed
 
     override fun opened(intent: Intent) = graph.appLauncher.opened(intent)
 

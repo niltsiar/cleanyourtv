@@ -2,10 +2,12 @@ package dev.niltsiar.tvhome.service.keys
 
 import android.app.Application
 import android.content.Intent
+import androidx.compose.ui.graphics.Color
 import dev.niltsiar.tvhome.core.config.ConfigRepository
 import dev.niltsiar.tvhome.core.config.ConfigRepositoryOwner
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppOpened
+import dev.niltsiar.tvhome.core.model.HouseSeedOwner
 import dev.niltsiar.tvhome.data.apps.AppLauncher
 import dev.niltsiar.tvhome.data.apps.LastOpened
 import dev.niltsiar.tvhome.data.apps.LaunchLog
@@ -22,8 +24,11 @@ import java.io.File
 class ConfigApplication :
     Application(),
     ConfigRepositoryOwner,
+    HouseSeedOwner,
     AppOpened {
     override val configRepository: ConfigRepository by lazy { ConfigRepository(this, CoroutineScope(SupervisorJob() + Dispatchers.IO)) }
+
+    override val houseSeed = MutableStateFlow(Color(0xFF8B93E8))
 
     val recordConfig = MutableStateFlow(TvConfig())
     val lastOpened by lazy { LastOpened(this, recordConfig, Dispatchers.Unconfined) }

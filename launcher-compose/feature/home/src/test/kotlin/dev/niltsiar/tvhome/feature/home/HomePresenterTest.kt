@@ -10,6 +10,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import dev.niltsiar.tvhome.core.config.ClockFormat
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.AppEntry
+import dev.niltsiar.tvhome.core.model.DayPart
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
 import dev.niltsiar.tvhome.core.model.OpenedAt
