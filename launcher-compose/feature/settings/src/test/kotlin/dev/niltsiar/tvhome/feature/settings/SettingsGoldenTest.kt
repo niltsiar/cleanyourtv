@@ -56,9 +56,9 @@ class SettingsGoldenTestContent :
                 golden("picker-open")
             }
 
-            test("a notice") {
+            test("a failed save") {
                 show()
-                compose.runOnUiThread { notice.show(R.string.settings_save_failed) }
+                compose.runOnUiThread { notice.showWarning(R.string.settings_save_failed) }
                 compose.waitForIdle()
                 compose.mainClock.advanceTimeBy(1_000)
                 compose.waitForIdle()

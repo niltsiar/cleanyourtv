@@ -66,7 +66,7 @@ internal fun SettingsHost(
         viewModel.effects.collect { effect ->
             when (effect) {
                 SettingsEffect.SaveFailed -> {
-                    notice.show(SettingsR.string.settings_save_failed)
+                    notice.showWarning(SettingsR.string.settings_save_failed)
                 }
 
                 SettingsEffect.WallpaperApplied -> {

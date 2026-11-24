@@ -61,6 +61,7 @@ public class TvTypography(
  * [card] the idle cards on the library's panel;
  * [chromeTint] goes over the frost of the clock pill, the top-bar buttons, the dock and the library pill. A focused row
  * or button fills with [pillFill] and draws its text and icons in [pillContent], its other text in [pillSecondary].
+ * [warnInk] draws a warning: a menu row that removes something, a setting that could not be saved.
  */
 @Immutable
 public class TvSurfaces internal constructor(
@@ -71,6 +72,7 @@ public class TvSurfaces internal constructor(
     public val pillFill: Color,
     public val pillContent: Color,
     public val pillSecondary: Color,
+    public val warnInk: Color,
 )
 
 private val DarkColors =
@@ -101,6 +103,7 @@ private val DarkSurfaces =
         pillFill = Color(0xFFF2F4F8),
         pillContent = Color(0xFF0B0D12),
         pillSecondary = Color(0xFF4A5263),
+        warnInk = Color(0xFFFF8A80),
     )
 
 private val LightSurfaces =
@@ -112,6 +115,7 @@ private val LightSurfaces =
         pillFill = Color(0xFF11141B),
         pillContent = Color(0xFFF4F6FA),
         pillSecondary = Color(0xFFB8BFCC),
+        warnInk = Color(0xFFC62828),
     )
 
 /**

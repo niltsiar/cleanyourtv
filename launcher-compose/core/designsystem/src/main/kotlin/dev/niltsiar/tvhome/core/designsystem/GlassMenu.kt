@@ -67,8 +67,6 @@ public val MenuRowSpacing: Dp = 8.dp
 public val MenuDividerHeight: Dp = 5.dp
 private const val DIVIDER_ALPHA = 0.12f
 private const val WARN_DIVIDER_ALPHA = 0.18f
-private val WarnInkOnDark = Color(0xFFFF8A80)
-private val WarnInkOnLight = Color(0xFFC62828)
 private val RowHeight = 46.dp
 private const val TITLE_ALPHA = 0.65f
 private val TitleTop = 6.dp
@@ -436,7 +434,6 @@ private fun MenuItem(
     value: String? = null,
 ) {
     val surfaces = TvTheme.surfaces
-    val warnInk = if (surfaces.dark) WarnInkOnDark else WarnInkOnLight
     FocusPill(onClick = onClick, modifier = modifier.fillMaxWidth().height(height).testTag(tag), shape = shape) { ink ->
         Row(
             modifier = Modifier.align(Alignment.CenterStart).fillMaxWidth().padding(horizontal = 16.dp),
@@ -446,7 +443,7 @@ private fun MenuItem(
                 text = stringResource(label),
                 style = TvTheme.typography.pillLabel,
                 maxLines = 1,
-                color = if (warn) ColorProducer { lerp(warnInk, surfaces.pillContent, ink.progress()) } else ink.content,
+                color = if (warn) ColorProducer { lerp(surfaces.warnInk, surfaces.pillContent, ink.progress()) } else ink.content,
                 modifier = Modifier.weight(1f),
             )
             if (value != null) BasicText(value, style = TvTheme.typography.pillLabel, maxLines = 1, color = ink.content)

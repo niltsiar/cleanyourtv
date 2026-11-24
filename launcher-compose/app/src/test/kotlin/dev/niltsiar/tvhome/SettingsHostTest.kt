@@ -10,6 +10,7 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
@@ -17,12 +18,16 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.pressKey
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import app.cash.molecule.RecompositionMode
 import de.infix.testBalloon.framework.core.JUnit4RulesContext
 import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.disable
 import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
@@ -41,6 +46,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowEnvironment
 import org.robolectric.shadows.ShadowToast
 import java.io.File
+import java.nio.file.Files
 import kotlin.coroutines.EmptyCoroutineContext
 import dev.niltsiar.tvhome.feature.settings.R as SettingsR
 
@@ -70,6 +76,16 @@ val SettingsHostTest by testSuite {
 
 class SettingsHostTestContent :
     RobolectricTestSuiteContent({
+        // A folder that cannot be written still takes writes from root; there the refused-save test cannot run.
+        val refusedWrite =
+            Files.createTempDirectory("refused").toFile().run {
+                setWritable(false)
+                val writes = canWrite()
+                setWritable(true)
+                delete()
+                if (writes) TestConfig.disable() else TestConfig
+            }
+
         testFixture {
             object : JUnit4RulesContext() {
                 val compose = rule(createAndroidComposeRule<ComponentActivity>())
@@ -163,7 +179,7 @@ class SettingsHostTestContent :
                 ShadowToast.shownToastCount() shouldBe 0
             }
 
-            test("tv settings that do not open are told in the page and not by a toast") {
+            test("tv settings that do not open are told in the page for about 2 s and not by a toast") {
                 show()
 
                 compose.onNodeWithTag("settings:tv_settings").performSemanticsAction(SemanticsActions.OnClick)
@@ -171,6 +187,34 @@ class SettingsHostTestContent :
 
                 noticeSays("Not available on this TV")
                 ShadowToast.shownToastCount() shouldBe 0
+                compose.mainClock.advanceTimeBy(2_500)
+                withClue("gone after 2.5 s") { exists("settings:notice").shouldBeFalse() }
+            }
+
+            test("a setting the store refuses is told in the page until a key, which only closes it", testConfig = refusedWrite) {
+                // Out of touch mode, so the page takes key focus and the key reaches it.
+                compose.runOnUiThread {
+                    compose.activity.window.decorView
+                        .requestFocusFromTouch()
+                }
+                show()
+                val folder = File(compose.activity.filesDir, "datastore")
+                compose.onNodeWithTag("option:Columns:0").performSemanticsAction(SemanticsActions.OnClick)
+                compose.waitUntil(30_000) { folder.list().orEmpty().isNotEmpty() }
+                folder.setWritable(false)
+                try {
+                    compose.onNodeWithTag("option:Columns:1").performSemanticsAction(SemanticsActions.OnClick)
+                    compose.waitUntil(30_000) { exists("settings:notice") }
+
+                    noticeSays("Could not save the setting")
+                    compose.mainClock.advanceTimeBy(10_000)
+                    withClue("still showing after 10 s") { exists("settings:notice").shouldBeTrue() }
+                    compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+                    compose.waitForIdle()
+                    exists("settings:notice").shouldBeFalse()
+                } finally {
+                    folder.setWritable(true)
+                }
             }
 
             test("the apps and channels picker without read tv listings asks for it and tells nothing in the page") {

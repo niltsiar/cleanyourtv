@@ -227,7 +227,8 @@ private fun focusStops(keys: List<String>): Map<String, FocusStop> {
 
 /**
  * A short message in the page's title band, in place of a system toast: [show] puts one there for 2 s, in place of any still
- * showing. [showHeld] puts one under the title instead, whole, until a key or Back.
+ * showing. [showHeld] puts one under the title instead, whole, until a key or Back, and [showWarning] does the same in the
+ * warning ink.
  */
 @Stable
 public class PageNotice {
@@ -253,6 +254,13 @@ public class PageNotice {
         shown = Shown(text, args.toList(), held = true)
     }
 
+    /** Shows [text] as [showHeld] does, in the warning ink: something the person asked for did not happen. */
+    public fun showWarning(
+        @StringRes text: Int,
+    ) {
+        shown = Shown(text, emptyList(), held = true, warning = true)
+    }
+
     /** Takes away the notice [showHeld] put there, when it shows [text]. */
     public fun clearHeld(
         @StringRes text: Int,
@@ -269,6 +277,7 @@ public class PageNotice {
         @StringRes val text: Int,
         val args: List<Any>,
         val held: Boolean = false,
+        val warning: Boolean = false,
     )
 }
 
@@ -620,12 +629,15 @@ private fun NoticePill(
     }
 }
 
-/** The [shown] message that stays until a key, under the title as wide as the list and wrapped, which fades in. */
+/**
+ * The [shown] message that stays until a key, under the title as wide as the list and wrapped, which fades in. A warning
+ * takes the warning ink.
+ */
 @Composable
 private fun HeldNotice(shown: PageNotice.Shown) {
     val motion = TvTheme.motion
     val typography = TvTheme.typography
-    val ink = TvTheme.colors.onSurface
+    val ink = if (shown.warning) TvTheme.surfaces.warnInk else TvTheme.colors.onSurface
     val style = remember(typography, ink) { typography.pillLabel.copy(fontSize = 16.sp, color = ink) }
     val alpha = remember(shown) { Animatable(0f) }
     LaunchedEffect(shown) { alpha.animateTo(1f, motion.tweenSpec(NOTICE_FADE_MS)) }
