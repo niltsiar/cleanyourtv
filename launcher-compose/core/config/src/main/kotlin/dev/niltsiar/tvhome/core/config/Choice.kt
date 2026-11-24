@@ -75,6 +75,20 @@ public object Choices {
         }
     public val Animations: Choice<Boolean> = boolChoice("animations") { copy(animations = it) }
 
+    public val Look: Choice<Look> =
+        stringPreferencesKey("look").let { key ->
+            Choice(key, { prefs, value -> prefs[key] = value.jsonValue }) { config, prefs ->
+                dev.niltsiar.tvhome.core.config.Look.entries
+                    .firstOrNull {
+                        it.jsonValue ==
+                            prefs.stored(
+                                key,
+                            )
+                    }?.let { config.copy(look = it) }
+                    ?: config
+            }
+        }
+
     /**
      * A file name of the theme's wallpapers folder, its single wallpaper.jpg, or [WALLPAPER_NONE].
      * [ConfigRepository.wallpaperChoice] reads it; no [TvConfig] field carries it.
@@ -134,6 +148,7 @@ public object Choices {
             DockOpacity,
             TimeFormat,
             Animations,
+            Look,
             WallpaperChoice,
             OpenOnStart,
             AlwaysShowNames,

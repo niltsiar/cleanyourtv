@@ -119,6 +119,8 @@ public fun parseTvConfig(json: String): ParsedConfig {
             backgroundColor = o.color("background_color", d.backgroundColor),
             headerScrim = o.enum("header_scrim", d.headerScrim, HeaderScrim.entries) { it.jsonValue },
             glassStyle = o.enum("glass_style", d.glassStyle, GlassStyle.entries, ignoreCase = true) { it.jsonValue },
+            look = o.enum("look", d.look, Look.entries, ignoreCase = true) { it.jsonValue },
+            expressiveSeed = o.rgb("expressive_seed"),
             wallpaper = o.bool("wallpaper", d.wallpaper),
             wallpaperRotationMinutes = o.int("wallpaper_rotation_minutes", d.wallpaperRotationMinutes, 0..1440),
             wallpaperDim = o.int("wallpaper_dim", d.wallpaperDim, 0..90),
@@ -334,6 +336,18 @@ private class Overlay(
                 ?.takeIf { it.isString }
                 ?.content
                 ?.trim()
+                ?.let(::parseColor)
+                ?.or(OPAQUE_BLACK)
+        }
+
+    /** "#RRGGBB" as opaque ARGB; null when absent, and a present value of another form is rejected. */
+    fun rgb(key: String): Int? =
+        value(key, null) { element ->
+            (element as? JsonPrimitive)
+                ?.takeIf { it.isString }
+                ?.content
+                ?.trim()
+                ?.takeIf { it.length == 7 && it.startsWith("#") }
                 ?.let(::parseColor)
                 ?.or(OPAQUE_BLACK)
         }

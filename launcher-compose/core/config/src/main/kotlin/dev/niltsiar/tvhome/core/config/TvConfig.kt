@@ -47,6 +47,14 @@ public enum class GlassStyle(
     Halo("halo"),
 }
 
+/** look: the launcher's design. [Glass] is the default; [Expressive] is the Material 3 Expressive one. */
+public enum class Look(
+    internal val jsonValue: String,
+) {
+    Glass("glass"),
+    Expressive("expressive"),
+}
+
 /** The time-of-day groups of wallpaper_moods. */
 public enum class WallpaperMood(
     internal val jsonValue: String,
@@ -130,6 +138,9 @@ public data class TvConfig(
     val backgroundColor: Int = OPAQUE_BLACK,
     val headerScrim: HeaderScrim = HeaderScrim.Auto,
     val glassStyle: GlassStyle = GlassStyle.Glass,
+    val look: Look = Look.Glass,
+    /** Opaque ARGB, the colour the [Look.Expressive] scheme grows from; null lets the wallpaper, the sky or the time of day pick it. */
+    val expressiveSeed: Int? = null,
     /** Whether the theme may show a wallpaper at all. */
     val wallpaper: Boolean = true,
     /** 0 to 1440; 0 shows one picture. */

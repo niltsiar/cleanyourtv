@@ -402,6 +402,33 @@ val TvConfigParserTest by testSuite {
         }
     }
 
+    test("look is glass unless a theme says expressive in any case and any other value keeps glass") {
+        parseTvConfig("""{}""").config.look shouldBe Look.Glass
+        parseTvConfig("""{"look": "glass"}""").config.look shouldBe Look.Glass
+
+        val expressive = parseTvConfig("""{"look": " Expressive "}""")
+        expressive.config.look shouldBe Look.Expressive
+        expressive.rejectedKeys + expressive.unknownKeys + expressive.unsupportedKeys shouldBe emptyList<String>()
+
+        for (bad in listOf("\"material\"", "\"\"", "true", "1")) {
+            val parsed = parseTvConfig("""{"look": $bad}""")
+            withClue(bad) { parsed.config.look shouldBe Look.Glass }
+            withClue(bad) { parsed.rejectedKeys shouldBe listOf("look") }
+        }
+    }
+
+    test("the expressive seed is an opaque rgb colour and any other form is null and rejected") {
+        parseTvConfig("""{}""").config.expressiveSeed shouldBe null
+        parseTvConfig("""{"expressive_seed": "#1A2b3C"}""").config.expressiveSeed shouldBe 0xFF1A2B3C.toInt()
+        parseTvConfig("""{"expressive_seed": " #000000 "}""").config.expressiveSeed shouldBe 0xFF000000.toInt()
+
+        for (bad in listOf("\"#80112233\"", "\"#12345\"", "\"#GGGGGG\"", "\"112233\"", "\"magenta\"", "\"\"", "16711680", "null")) {
+            val parsed = parseTvConfig("""{"expressive_seed": $bad}""")
+            withClue(bad) { parsed.config.expressiveSeed shouldBe null }
+            withClue(bad) { parsed.rejectedKeys shouldBe listOf("expressive_seed") }
+        }
+    }
+
     test("locale takes a language tag with its script region and extension subtags") {
         for (tag in listOf("vi", "pt-BR", "sr-Latn", "ar-EG-u-nu-latn", "fil")) {
             val parsed = parseTvConfig("""{"locale": "$tag"}""")
@@ -640,6 +667,8 @@ val TvConfigParserTest by testSuite {
             "background_color" to (""""#112233"""" to defaults.copy(backgroundColor = 0xFF112233.toInt())),
             "header_scrim" to (""""off"""" to defaults.copy(headerScrim = HeaderScrim.Off)),
             "glass_style" to (""""rim"""" to defaults.copy(glassStyle = GlassStyle.Rim)),
+            "look" to (""""expressive"""" to defaults.copy(look = Look.Expressive)),
+            "expressive_seed" to (""""#336699"""" to defaults.copy(expressiveSeed = 0xFF336699.toInt())),
             "wallpaper" to ("false" to defaults.copy(wallpaper = false)),
             "wallpaper_rotation_minutes" to ("30" to defaults.copy(wallpaperRotationMinutes = 30)),
             "wallpaper_dim" to ("40" to defaults.copy(wallpaperDim = 40)),
