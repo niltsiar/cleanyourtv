@@ -254,6 +254,32 @@ types before you convert it.
 A bare `shouldBeTrue()` fails with only `false should equal true`. Keep the old assert message as a `withClue`, or use
 a matcher that names the values, such as `shouldContain` or `shouldBeLessThan`.
 
+## Golden tests
+
+A golden test compares a screen or component with a stored PNG. `assertMatchesGolden(suite, scene)`, in the test fixtures
+of `core/designsystem`, takes a `captureToImage()` result and compares it with
+`src/test/resources/golden/<suite>/<scene>.png` of the module under test. A module reaches it with
+`testImplementation(testFixtures(project(":core:designsystem")))`. `DesignSystemGoldenTest`, `HomeGoldenTest`,
+`LibraryGoldenTest`, `SettingsGoldenTest` and `ClockGoldenTest` are the suites.
+
+- The test passes when no channel of any pixel differs from the golden by more than 1 (of 255).
+- Tests only verify by default: a missing golden fails, with the record command in its message.
+- `./gradlew :feature:home:testDebugUnitTest -Pgolden.record` writes each golden that is missing or differs, and the test
+  passes. Add `--tests` to record one suite. Check every new or changed image before you commit it.
+- On a mismatch the test writes `<scene>-actual.png` and `<scene>-diff.png` to `build/golden-failures/<suite>/` of the
+  module, and reports how many pixels differ and the largest channel difference. The diff image shows differing pixels
+  in red over a dark copy of the golden.
+
+A golden scene must render the same on every run: set `mainClock.autoAdvance = false` before `setContent` and advance the
+clock by a fixed time before the capture, so endless animations stop at a known frame; give the screen a fixed time
+(Home's `clock` and `timeMillis` sources), and fixed bitmaps built in the test (`bands` in the same test fixtures), never
+pictures loaded off the main thread.
+Home bakes its frost and the cinematic scrim on `LocalBakeDispatcher`; a golden test provides `Dispatchers.Unconfined`.
+
+Robolectric's native graphics draw the goldens, so an update of Robolectric or of its Skia build can change pixels. Such
+an update re-records the goldens, and a reviewer checks the changed images one by one. The goldens were recorded on macOS;
+whether Linux renders them the same is not verified, as no CI job runs these tests.
+
 ## Running and filtering
 
 `./gradlew :app:testDebugUnitTest` runs the module's suites. `--tests` selects suites and tests
