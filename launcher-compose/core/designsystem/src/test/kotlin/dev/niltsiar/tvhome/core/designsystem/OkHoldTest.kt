@@ -4,9 +4,10 @@ import android.view.KeyEvent
 import de.infix.testBalloon.framework.core.testSuite
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.shouldBe
 
 val OkHoldTest by testSuite {
-    testFixture { OkHold(holdMs = 550) } asParameterForEach {
+    testFixture { OkHold(holdMs = 550) { 0L } } asParameterForEach {
         test("the first down opens nothing") { hold ->
             hold.down(repeatCount = 0, downTime = 1_000, eventTime = 1_000).shouldBeFalse()
         }
@@ -61,6 +62,77 @@ val OkHoldTest by testSuite {
         }
     }
 
+    testFixture { HeldTiles() } asContextForEach {
+        test("the progress runs from the down to whole at the hold time for the tile that took the press only") {
+            press(tile)
+
+            hold.progress(tile) shouldBe 0f
+            clock += 275
+            hold.progress(tile) shouldBe 0.5f
+            hold.progress(other) shouldBe 0f
+            clock += 500
+            hold.progress(tile) shouldBe 1f
+        }
+
+        test("the up of the press ends the progress") {
+            press(tile)
+            clock += 275
+
+            hold.up()
+
+            hold.progress(tile) shouldBe 0f
+        }
+
+        test("a cancel ends the progress") {
+            press(tile)
+            clock += 275
+
+            hold.cancel()
+
+            hold.progress(tile) shouldBe 0f
+        }
+
+        test("the menu opening on the timer ends the progress") {
+            press(tile)
+            clock += 550
+
+            hold.timeUp().shouldBeTrue()
+
+            hold.progress(tile) shouldBe 0f
+        }
+
+        test("the menu opening on a repeat ends the progress") {
+            press(tile)
+            clock += 550
+
+            hold.down(1, downTime = 1_000, eventTime = 1_550, owner = tile).shouldBeTrue()
+
+            hold.progress(tile) shouldBe 0f
+        }
+
+        test("a tile that leaves the screen ends only its own press") {
+            press(tile)
+            clock += 275
+
+            hold.detach(other)
+            hold.progress(tile) shouldBe 0.5f
+            hold.detach(tile)
+            hold.progress(tile) shouldBe 0f
+        }
+
+        test("a new press on another tile takes the progress from the start") {
+            press(tile)
+            clock += 275
+            hold.up()
+
+            press(other)
+            clock += 110
+
+            hold.progress(other) shouldBe 0.2f
+            hold.progress(tile) shouldBe 0f
+        }
+    }
+
     test("menu opens on a normal release and on xiaomis injected one") {
         val cancelled = KeyEvent.FLAG_CANCELED
         menuReleased(isUp = true, flags = 0).shouldBeTrue()
@@ -72,4 +144,14 @@ val OkHoldTest by testSuite {
         menuReleased(isUp = true, flags = cancelled or KeyEvent.FLAG_CANCELED_LONG_PRESS or KeyEvent.FLAG_FROM_SYSTEM).shouldBeFalse()
         menuReleased(isUp = true, flags = XIAOMI_SHORT_MENU_FLAGS and 0x4000.inv()).shouldBeFalse()
     }
+}
+
+/** One [OkHold] on a clock the test moves, and two tiles that can take a press. */
+private class HeldTiles {
+    var clock = 1_000L
+    val hold = OkHold(holdMs = 550) { clock }
+    val tile = Any()
+    val other = Any()
+
+    fun press(on: Any) = hold.down(0, downTime = clock, eventTime = clock, owner = on)
 }

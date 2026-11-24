@@ -28,11 +28,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.unit.dp
 import de.infix.testBalloon.framework.core.JUnit4RulesContext
 import de.infix.testBalloon.framework.core.TestConfig
@@ -69,6 +72,14 @@ class DesignSystemGoldenTestContent :
                     show(style) { Tile(it) }
                     golden("focus-surface-${style.name.lowercase()}-rest")
                 }
+            }
+
+            test("a focused surface half way through a held ok") {
+                val hold = OkHold { compose.mainClock.currentTime }
+                show(focused = true) { focus -> Tile(focus.holdOk(hold, {})) }
+                compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
+                compose.mainClock.advanceTimeBy(HOLD_OK_MS / 2)
+                golden("focus-surface-glass-held")
             }
 
             test("a focused pill") {

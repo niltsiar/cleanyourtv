@@ -50,6 +50,9 @@ public const val TILE_FOCUSED_SCALE: Float = 1.08f
 private val RingWidth = 3.dp
 private val HeavyRingWidth = 4.dp
 private val RingGap = 3.dp
+
+/** From a surface's edge to its ring's outer edge: the gap and the ring, which a wider ring shares out differently. */
+internal val RingBand = RingGap + RingWidth
 private val HairlineWidth = 1.dp
 private val Hairline = Color(0x73000000)
 private val OuterStrokeWidth = 2.dp
@@ -111,7 +114,8 @@ public val FocusRingReach: Dp = RingGap + RingWidth + HairlineWidth + OuterStrok
  * of its width; without it the surface grows about its centre. [focus] is its focus progress, for a parent that orders
  * its children by it ([popsOver]). [press] is the progress of a press ([pressDip]), 0 at rest: the surface draws up to 4% under
  * its size, with [Motion.animated] only, and its ring moves toward white and grows wider into the gap inside it, its outer edge
- * where it was.
+ * where it was. While OK is held on a surface whose [modifier] has [holdOk], an arc in the ring's colour fills the gap and
+ * the ring clockwise from the top centre, whole as the menu opens ([HoldArcElement]), with [Motion.animations] only.
  */
 @Composable
 public fun FocusSurface(
@@ -159,6 +163,7 @@ public fun FocusSurface(
                     ambientShadowColor = glowColor
                     spotShadowColor = glowColor
                 }.then(if (halo) FocusHaloElement(focus, grownScale, growthPivot, shape, ring, press, dips) else Modifier)
+                .then(if (motion.animations) HoldArcElement(focus, grownScale, growthPivot, shape, ring, press, dips) else Modifier)
                 .drawWithContent {
                     scale(
                         (1f + (grownScale - 1f) * focus.value) * dipOf(press, dips),
@@ -172,7 +177,7 @@ public fun FocusSurface(
                         val ringAlpha = if (focus.targetValue > 0f) 1f else progress
                         val outline = if (ringAlpha > 0f) shape.createOutline(size, layoutDirection, this) else null
                         val width = style.ringWidth.toPx()
-                        val gap = (RingGap + RingWidth).toPx() - width
+                        val gap = RingBand.toPx() - width
                         val pressed = press?.value ?: 0f
                         val lit = width + PressRingGrowth.toPx() * pressed
                         val base = ring?.invoke() ?: Color.White
