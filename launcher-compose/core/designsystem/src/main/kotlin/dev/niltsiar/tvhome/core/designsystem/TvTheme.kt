@@ -32,6 +32,10 @@ public class TvColors(
     public val accent: Color,
 )
 
+/**
+ * The type roles, each a style of the bundled Google Sans Flex variable font in its own colour. [menuRow] is the label and
+ * value of a menu row, [menuTitle] the title over a menu's rows.
+ */
 @Immutable
 public class TvTypography(
     public val clock: TextStyle,
@@ -54,6 +58,8 @@ public class TvTypography(
     public val screensaverClock: TextStyle,
     public val screensaverAmPm: TextStyle,
     public val screensaverDate: TextStyle,
+    public val menuRow: TextStyle,
+    public val menuTitle: TextStyle,
 )
 
 /**
@@ -172,6 +178,20 @@ private fun typographyFor(
     val screensaverClockSize = 160.sp
     val screensaverAmPmSize = 26.sp
     val screensaverDateSize = 20.sp
+    val pillLabel =
+        TextStyle(
+            color = colors.onSurface,
+            fontSize = pillLabelSize,
+            fontWeight = FontWeight.Medium,
+            fontFamily = googleSansFlex(FontWeight.Medium, pillLabelSize, width = 100f, roundness = 0f),
+        )
+    val chipKey =
+        TextStyle(
+            color = colors.onSurface,
+            fontSize = chipSize,
+            fontWeight = FontWeight.SemiBold,
+            fontFamily = googleSansFlex(FontWeight.SemiBold, chipSize, width = 100f, roundness = 0f),
+        )
     return TvTypography(
         clock =
             TextStyle(
@@ -217,13 +237,7 @@ private fun typographyFor(
                 fontWeight = FontWeight.Medium,
                 fontFamily = googleSansFlex(FontWeight.Medium, greetingSize, width = 100f, roundness = 0f),
             ),
-        pillLabel =
-            TextStyle(
-                color = colors.onSurface,
-                fontSize = pillLabelSize,
-                fontWeight = FontWeight.Medium,
-                fontFamily = googleSansFlex(FontWeight.Medium, pillLabelSize, width = 100f, roundness = 0f),
-            ),
+        pillLabel = pillLabel,
         shelfTitle =
             TextStyle(
                 color = colors.onSurface,
@@ -276,13 +290,7 @@ private fun typographyFor(
                 fontWeight = FontWeight.SemiBold,
                 fontFamily = googleSansFlex(FontWeight.SemiBold, tileCaptionSize, width = 100f, roundness = 0f),
             ),
-        chipKey =
-            TextStyle(
-                color = colors.onSurface,
-                fontSize = chipSize,
-                fontWeight = FontWeight.SemiBold,
-                fontFamily = googleSansFlex(FontWeight.SemiBold, chipSize, width = 100f, roundness = 0f),
-            ),
+        chipKey = chipKey,
         chipLabel =
             TextStyle(
                 color = colors.onSurface,
@@ -320,6 +328,8 @@ private fun typographyFor(
                 fontWeight = FontWeight.Medium,
                 fontFamily = googleSansFlex(FontWeight.Medium, screensaverDateSize, width = 100f, roundness = 100f),
             ),
+        menuRow = pillLabel,
+        menuTitle = chipKey.copy(fontSize = pillLabelSize, color = elements.menuTitle),
     )
 }
 

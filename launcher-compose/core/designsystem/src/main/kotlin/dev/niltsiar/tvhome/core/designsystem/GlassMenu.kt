@@ -395,17 +395,12 @@ public fun MenuDivider(
 
 @Composable
 private fun MenuTitle(text: String) {
-    val typography = TvTheme.typography
     val ink = TvTheme.colors.onSurface
     val colours = TvTheme.elementColors
-    val style =
-        remember(typography, colours) {
-            typography.chipKey.copy(fontSize = typography.pillLabel.fontSize, color = colours.menuTitle)
-        }
     Column(verticalArrangement = Arrangement.spacedBy(TitleRuleGap)) {
         BasicText(
             text,
-            style = style,
+            style = TvTheme.typography.menuTitle,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.testTag("menu:title").fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = TitleTop),
@@ -440,12 +435,12 @@ private fun MenuItem(
         ) {
             BasicText(
                 text = stringResource(label),
-                style = TvTheme.typography.pillLabel,
+                style = TvTheme.typography.menuRow,
                 maxLines = 1,
                 color = if (warn) ColorProducer { lerp(surfaces.warnInk, surfaces.pillContent, ink.progress()) } else ink.content,
                 modifier = Modifier.weight(1f),
             )
-            if (value != null) BasicText(value, style = TvTheme.typography.pillLabel, maxLines = 1, color = ink.content)
+            if (value != null) BasicText(value, style = TvTheme.typography.menuRow, maxLines = 1, color = ink.content)
         }
     }
 }
