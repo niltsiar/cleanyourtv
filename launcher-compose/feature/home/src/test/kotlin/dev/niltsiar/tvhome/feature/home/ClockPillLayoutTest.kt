@@ -73,7 +73,8 @@ class ClockPillLayoutTestContent :
                 date.right shouldBeInRange (ink.width - 48 - 4 until ink.width - 48)
                 greeting.right shouldBeInRange (ink.width - 48 - 8 until ink.width - 48)
                 greeting.left - clock.right shouldBeGreaterThanOrEqual 40
-                abs(greeting.bottom - clock.bottom) shouldBeInRange 0..1
+                // The greeting's first letter, as its other letters may hang below the baseline.
+                abs(ink.box(ink.lines[0], columns = greeting.left until greeting.left + 12).bottom - clock.bottom) shouldBeInRange 0..1
             }
 
             test("with the date below the clock and no greeting the pill fits the wider of clock and date") {
@@ -167,7 +168,7 @@ class ClockPillLayoutTestContent :
                 ink.lines shouldHaveSize 1
                 val parts = ink.parts(ink.lines[0])
                 parts shouldHaveSize 3
-                parts.zip(listOf(InkBox(58, 32, 82, 77), InkBox(108, 31, 278, 78), InkBox(338, 24, 783, 92))).forEach { (found, pinned) ->
+                parts.zip(listOf(InkBox(58, 32, 82, 77), InkBox(108, 31, 278, 78), InkBox(338, 21, 783, 96))).forEach { (found, pinned) ->
                     listOf(found.left - pinned.left, found.top - pinned.top, found.right - pinned.right, found.bottom - pinned.bottom)
                         .forEach { abs(it) shouldBeInRange 0..1 }
                 }

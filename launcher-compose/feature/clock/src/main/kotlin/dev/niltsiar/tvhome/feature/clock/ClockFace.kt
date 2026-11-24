@@ -17,7 +17,7 @@ public data class ClockFace(
     val date: String,
 )
 
-/** [time] as `HH:mm` or `h:mm a`, and the date in [datePattern] (a java.time pattern) in capitals. */
+/** [time] as `HH:mm` or `h:mm a`, and the date in [datePattern] (a java.time pattern). */
 public fun clockFace(
     time: LocalDateTime,
     hour24: Boolean,
@@ -29,6 +29,6 @@ public fun clockFace(
         hours = format(if (hour24) "HH" else "h"),
         minutes = format("mm"),
         amPm = if (hour24) "" else format("a").uppercase(locale),
-        date = format(datePattern).uppercase(locale),
+        date = format(datePattern),
     )
 }

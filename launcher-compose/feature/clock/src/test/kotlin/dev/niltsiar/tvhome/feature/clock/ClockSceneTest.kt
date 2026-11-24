@@ -39,14 +39,14 @@ class ClockSceneTestContent :
             object : JUnit4RulesContext() {
                 val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
-                val face = ClockFace(hours = "9", minutes = "41", amPm = "PM", date = "WEDNESDAY  4 NOVEMBER")
+                val face = ClockFace(hours = "9", minutes = "41", amPm = "PM", date = "Wednesday  4 November")
             }
         } asContextForEach {
             test("the scene shows the time the am pm marker and the date") {
                 compose.mainClock.autoAdvance = false
                 compose.setContent { ClockScene(face, glow = true, picture = null, random = Random(2)) }
 
-                for (text in listOf("9", ":", "41", "PM", "WEDNESDAY  4 NOVEMBER")) compose.onNodeWithText(text).assertExists()
+                for (text in listOf("9", ":", "41", "PM", "Wednesday  4 November")) compose.onNodeWithText(text).assertExists()
             }
 
             test("the 24 hour clock shows no marker and no time shows nothing") {

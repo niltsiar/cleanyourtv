@@ -12,10 +12,10 @@
   <string name="offline">Luring</string>
   <string name="vpn">VPN</string>
   <string name="vpn_off">VPN mati</string>
-  <string name="good_morning">Selamat Pagi</string>
-  <string name="good_afternoon">Selamat Siang</string>
-  <string name="good_evening">Selamat Sore</string>
-  <string name="good_night">Selamat Malam</string>
+  <string name="good_morning">Selamat pagi</string>
+  <string name="good_afternoon">Selamat siang</string>
+  <string name="good_evening">Selamat sore</string>
+  <string name="good_night">Selamat malam</string>
   <string name="greeting_with_name">%1$s, %2$s</string>
   <string name="last_opened">Terakhir dibuka %1$s</string>
   <string name="app_info">Info aplikasi</string>

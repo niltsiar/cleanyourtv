@@ -10,17 +10,17 @@ val ClockFaceTest by testSuite {
     val datePattern = "EEEE  d MMMM"
 
     test("the 24 hour clock pads the hour and has no marker") {
-        clockFace(evening, hour24 = true, datePattern, Locale.US) shouldBe ClockFace("21", "05", "", "WEDNESDAY  4 NOVEMBER")
+        clockFace(evening, hour24 = true, datePattern, Locale.US) shouldBe ClockFace("21", "05", "", "Wednesday  4 November")
         clockFace(evening.withHour(9), hour24 = true, datePattern, Locale.US).hours shouldBe "09"
     }
 
     test("the 12 hour clock drops the pad and names am or pm") {
-        clockFace(evening, hour24 = false, datePattern, Locale.US) shouldBe ClockFace("9", "05", "PM", "WEDNESDAY  4 NOVEMBER")
+        clockFace(evening, hour24 = false, datePattern, Locale.US) shouldBe ClockFace("9", "05", "PM", "Wednesday  4 November")
         clockFace(evening.withHour(0), hour24 = false, datePattern, Locale.US).amPm shouldBe "AM"
         clockFace(evening.withHour(0), hour24 = false, datePattern, Locale.US).hours shouldBe "12"
     }
 
-    test("the date follows the locale") {
-        clockFace(evening, hour24 = true, datePattern, Locale.forLanguageTag("es-ES")).date shouldBe "MIÉRCOLES  4 NOVIEMBRE"
+    test("the date follows the locale, in the case the locale writes it") {
+        clockFace(evening, hour24 = true, datePattern, Locale.forLanguageTag("es-ES")).date shouldBe "miércoles  4 noviembre"
     }
 }

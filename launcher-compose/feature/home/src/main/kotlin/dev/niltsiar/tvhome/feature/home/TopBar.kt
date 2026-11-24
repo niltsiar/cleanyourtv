@@ -62,7 +62,6 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -555,7 +554,7 @@ private fun GreetingText(state: () -> HomeUiState) {
     val part = stringResource(shown.part.label())
     val text = if (shown.name == null) part else stringResource(R.string.greeting_with_name, part, shown.name)
     BasicText(
-        text.uppercase(LocalLocale.current.platformLocale),
+        text,
         style = TvTheme.typography.greeting,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,

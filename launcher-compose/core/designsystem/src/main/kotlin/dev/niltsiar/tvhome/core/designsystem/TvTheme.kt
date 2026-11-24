@@ -149,7 +149,7 @@ private fun typographyFor(colors: TvColors): TvTypography {
     val dateSize = 18.sp
     val dateCompactSize = 16.sp
     val amPmSize = 14.sp
-    val greetingSize = 13.sp
+    val greetingSize = 16.sp
     val pillLabelSize = 16.sp
     val shelfTitleSize = 40.sp
     val heroTitleSize = 48.sp
@@ -199,16 +199,14 @@ private fun typographyFor(colors: TvColors): TvTypography {
                 color = colors.onSurfaceMuted,
                 fontSize = amPmSize,
                 fontWeight = FontWeight.Medium,
-                letterSpacing = 0.08.em,
                 fontFamily = googleSansFlex(FontWeight.Medium, amPmSize, width = 100f, roundness = 0f),
             ),
         greeting =
             TextStyle(
                 color = colors.onSurface.copy(alpha = 0.95f),
                 fontSize = greetingSize,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 0.18.em,
-                fontFamily = googleSansFlex(FontWeight.SemiBold, greetingSize, width = 100f, roundness = 0f),
+                fontWeight = FontWeight.Medium,
+                fontFamily = googleSansFlex(FontWeight.Medium, greetingSize, width = 100f, roundness = 0f),
             ),
         pillLabel =
             TextStyle(
@@ -305,7 +303,6 @@ private fun typographyFor(colors: TvColors): TvTypography {
                 color = Color.White.copy(alpha = 0.6f),
                 fontSize = screensaverAmPmSize,
                 fontWeight = FontWeight.Medium,
-                letterSpacing = 0.1.em,
                 fontFamily = googleSansFlex(FontWeight.Medium, screensaverAmPmSize, width = 100f, roundness = 100f),
             ),
         screensaverDate =
@@ -313,7 +310,6 @@ private fun typographyFor(colors: TvColors): TvTypography {
                 color = Color.White.copy(alpha = 0.55f),
                 fontSize = screensaverDateSize,
                 fontWeight = FontWeight.Medium,
-                letterSpacing = 0.16.em,
                 fontFamily = googleSansFlex(FontWeight.Medium, screensaverDateSize, width = 100f, roundness = 100f),
             ),
     )
