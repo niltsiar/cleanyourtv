@@ -59,7 +59,7 @@ class TopBarHeaderUiTestContent :
 
                 compose.onNodeWithContentDescription("Inputs").assertIsFocused()
                 textOf("shelf:title") shouldBe "Inputs"
-                textOf("shelf:title-meta") shouldBe "HDMI 2 · Connected"
+                textOf("shelf:title-meta") shouldBe "Connected: HDMI 2"
             }
 
             test("on the inputs button the band counts the connected ports when there are several") {

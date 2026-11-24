@@ -4,6 +4,7 @@
   <string name="live_tv">Live-TV</string>
   <string name="more_inputs">Fler ingångar</string>
   <string name="input_connected">Ansluten</string>
+  <string name="inputs_one_connected">Ansluten: %1$s</string>
   <string name="input_not_connected">Ingen enhet</string>
   <string name="wifi">Wi-Fi</string>
   <string name="settings">Inställningar</string>
@@ -36,7 +37,7 @@
   <string name="reorder">Ändra ordning på appar</string>
   <string name="power_menu">Starta om TV:n</string>
   <string name="dock_edit_hint">Välj platsen i favoritraden som du vill ändra och tryck på OK. Tryck på Tillbaka för att avsluta.</string>
-  <string name="dock_edit_slot">Plats %1$d av %2$d · nu %3$s</string>
+  <string name="dock_edit_slot">Plats %1$d av %2$d, nu %3$s</string>
   <string name="dock_edit_put_here">lägg här</string>
   <string name="dock_edit_other_place">annan plats</string>
   <string name="dock_edit_pick_place">Välj en plats i favoritraden för appen och tryck på OK. Tryck på Tillbaka för att avbryta.</string>

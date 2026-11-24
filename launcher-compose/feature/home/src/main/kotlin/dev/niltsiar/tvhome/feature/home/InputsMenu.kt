@@ -1,12 +1,6 @@
 package dev.niltsiar.tvhome.feature.home
 
 import androidx.annotation.DrawableRes
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -72,7 +66,6 @@ private val RowShape = menuRowShape()
 private const val ICON_ALPHA = 0.9f
 private const val NO_DEVICE_ALPHA = 0.65f
 private val CapsuleHeight = 24.dp
-private val DotSize = 6.dp
 internal val ConnectedGreen: Color = Color(0xFF34C759)
 
 /** The "Connected" capsule of an idle row, on the dark surface and on the light one. */
@@ -85,16 +78,12 @@ private val CapsuleTextOnLight = Color(0xFF1B7A35)
 
 /** On the focused row, whose fill is white or black, the capsule is a solid green pill with white text. */
 private val CapsuleSolid = Color(0xFF146C2E)
-private const val PULSE_MS = 1800
-private const val HALO_ALPHA = 0.4f
-private const val HALO_GROWTH = 1.8f
 
 /**
  * The TV's input list hanging under the Inputs button at [anchor], its right edge on the top bar's: as wide as the button,
  * or 150 dp, and wider for a long name up to 360 dp. It ends at or above [bottomLimit], between two rows, and scrolls when
- * its rows are taller. Each
- * [InputRow.Port] row shows a green capsule while its port is connected, its dot ringed
- * by a pulse unless [animated] is off. "More inputs" shows the rows [rows] folds. The Live TV row comes last.
+ * its rows are taller. Each [InputRow.Port] row shows a green capsule while its port is connected. "More inputs" shows the
+ * rows [rows] folds. The Live TV row comes last.
  * Focus opens on the first connected port, as the TV does not say which input is active, else on the first row.
  * Rows are tagged `input:<n>` by position, the list `menu`.
  * With a [hold], a held OK or MENU on an HDMI or AV row calls [onHold] with the row and its bounds in the root. While
@@ -105,7 +94,6 @@ internal fun InputsMenu(
     rows: () -> List<InputRow>,
     anchor: State<Rect>,
     bottomLimit: Dp,
-    animated: Boolean,
     onPick: (InputTarget) -> Unit,
     modifier: Modifier = Modifier,
     hold: OkHold? = null,
@@ -133,7 +121,6 @@ internal fun InputsMenu(
             runCatching { afterMore.requestFocus() }
         }
     }
-    val pulse = rememberPulse(animated)
     val density = LocalDensity.current
     val buttonWidth = with(density) { anchor.value.width.toDp() }
     val clusterRight = LocalWindowInfo.current.containerSize.width - with(density) { ScreenMargin.toPx() }
@@ -179,11 +166,11 @@ internal fun InputsMenu(
                         } else {
                             focus
                         }
-                    InputItem(row.icon.drawable(), row.label, row.connection, pulse, "input:$index", { onPick(row.target) }, rowFocus)
+                    InputItem(row.icon.drawable(), row.label, row.connection, "input:$index", { onPick(row.target) }, rowFocus)
                 }
 
                 InputRow.Panel -> {
-                    InputItem(R.drawable.ic_input_hdmi, stringResource(R.string.inputs), InputConnection.Unknown, pulse, "input:$index", {
+                    InputItem(R.drawable.ic_input_hdmi, stringResource(R.string.inputs), InputConnection.Unknown, "input:$index", {
                         onPick(InputTarget.SourcePanel)
                     }, focus)
                 }
@@ -195,7 +182,6 @@ internal fun InputsMenu(
                             R.string.live_tv,
                         ),
                         InputConnection.Unknown,
-                        pulse,
                         "input:$index",
                         {
                             onPick(InputTarget.LiveTv)
@@ -211,7 +197,6 @@ internal fun InputsMenu(
                             R.string.more_inputs,
                         ),
                         InputConnection.Unknown,
-                        pulse,
                         "input:more",
                         {
                             expanded =
@@ -252,24 +237,11 @@ internal fun InputIcon.drawable(): Int =
         InputIcon.LiveTv -> R.drawable.ic_input_livetv
     }
 
-/** 0 to 1 over and over, shared by every dot of the list. Read it in a draw lambda; a read in composition would recompose each frame. */
-@Composable
-private fun rememberPulse(animated: Boolean): State<Float> {
-    if (!animated) return remember { mutableStateOf(0f) }
-    return rememberInfiniteTransition(label = "inputPulse").animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(PULSE_MS, easing = LinearEasing), RepeatMode.Restart),
-        label = "pulse",
-    )
-}
-
 @Composable
 private fun InputItem(
     @DrawableRes icon: Int,
     label: String,
     connection: InputConnection,
-    pulse: State<Float>,
     tag: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -289,7 +261,7 @@ private fun InputItem(
             Spacer(Modifier.weight(1f).widthIn(min = 12.dp))
             when (connection) {
                 InputConnection.Connected -> {
-                    ConnectedCapsule(ink, pulse)
+                    ConnectedCapsule(ink)
                 }
 
                 InputConnection.Disconnected -> {
@@ -314,10 +286,7 @@ private fun InputItem(
  * pill with white text as the row's [ink] fills.
  */
 @Composable
-private fun ConnectedCapsule(
-    ink: FocusInk,
-    pulse: State<Float>,
-) {
+private fun ConnectedCapsule(ink: FocusInk) {
     val dark = TvTheme.surfaces.dark
     val typography = TvTheme.typography
     val style = remember(typography) { typography.chipKey.copy(fontSize = 12.sp) }
@@ -341,8 +310,6 @@ private fun ConnectedCapsule(
                 }.padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        PulsingDot(pulse)
-        Spacer(Modifier.width(6.dp))
         BasicText(
             stringResource(R.string.input_connected),
             style = style,
@@ -350,17 +317,4 @@ private fun ConnectedCapsule(
             color = { lerp(lerp(CapsuleTextOnDark, CapsuleTextOnLight, idleLight), Color.White, ink.progress()) },
         )
     }
-}
-
-/** A green dot with a ring that grows and fades once per [pulse] cycle; both are drawn, so a frame of the pulse recomposes nothing. */
-@Composable
-private fun PulsingDot(pulse: State<Float>) {
-    Spacer(
-        Modifier.size(DotSize).drawBehind {
-            val radius = size.minDimension / 2f
-            val p = pulse.value
-            drawCircle(ConnectedGreen.copy(alpha = HALO_ALPHA * (1f - p)), radius = radius * (1f + HALO_GROWTH * p))
-            drawCircle(ConnectedGreen, radius = radius)
-        },
-    )
 }

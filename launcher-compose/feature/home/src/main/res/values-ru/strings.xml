@@ -4,6 +4,7 @@
   <string name="live_tv">Телеканалы</string>
   <string name="more_inputs">Другие источники</string>
   <string name="input_connected">Подключено</string>
+  <string name="inputs_one_connected">Подключено: %1$s</string>
   <string name="input_not_connected">Нет устройства</string>
   <string name="wifi">Wi-Fi</string>
   <string name="settings">Настройки</string>
@@ -35,7 +36,7 @@
   <string name="reorder">Изменить порядок приложений</string>
   <string name="power_menu">Перезагрузить ТВ</string>
   <string name="dock_edit_hint">Выберите место в доке и нажмите ОК. Назад — готово.</string>
-  <string name="dock_edit_slot">Место %1$d из %2$d · сейчас %3$s</string>
+  <string name="dock_edit_slot">Место %1$d из %2$d, сейчас %3$s</string>
   <string name="dock_edit_put_here">поставить сюда</string>
   <string name="dock_edit_other_place">другое место</string>
   <string name="dock_edit_pick_place">Выберите место в доке для этого приложения и нажмите ОК. Назад — отмена.</string>

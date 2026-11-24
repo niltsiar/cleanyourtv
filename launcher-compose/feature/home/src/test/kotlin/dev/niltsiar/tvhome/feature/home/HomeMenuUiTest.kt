@@ -231,7 +231,7 @@ class HomeMenuUiTestContent :
 
                 press(Key.DirectionCenter)
 
-                compose.onNodeWithTag("reorder:slot").assertTextEquals("Place 3 of 6 \u00B7 now App 3")
+                compose.onNodeWithTag("reorder:slot").assertTextEquals("Place 3 of 6, now App 3")
                 for ((chip, texts) in listOf(
                     "reorder:chip:put" to listOf("OK", "put here"),
                     "reorder:chip:other" to listOf("Back", "other place"),

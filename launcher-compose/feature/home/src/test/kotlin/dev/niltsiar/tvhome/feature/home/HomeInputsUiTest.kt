@@ -5,8 +5,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -43,6 +46,7 @@ import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlin.math.abs
 
 /** The Inputs button on the real presenter: keys go in at the screen, the list comes out of the state. */
 val HomeInputsUiTest by testSuite {
@@ -130,6 +134,19 @@ class HomeInputsUiTestContent :
                 compose.onAllNodesWithText("No device").fetchSemanticsNodes().size shouldBe 1
                 repeat(4) { press(Key.DirectionDown) }
                 compose.onNodeWithTag("input:5").assertIsFocused()
+            }
+
+            test("a connected capsule holds only its word: no pixel of the list is the solid green of a status dot") {
+                showHome()
+                openList()
+
+                val pixels = compose.onNodeWithTag("menu").captureToImage().toPixelMap()
+                val dot =
+                    (0 until pixels.width).sumOf { x ->
+                        (0 until pixels.height).count { y -> pixels[x, y].isNear(ConnectedGreen) }
+                    }
+                compose.onAllNodesWithText("Connected").fetchSemanticsNodes().size shouldBe 2
+                withClue("pixels of solid status green") { dot shouldBe 0 }
             }
 
             test("a port in standby shows neither connected nor no device") {
@@ -405,3 +422,7 @@ private class HomeInputsUiTestFixture : JUnit4RulesContext() {
     /** The rows of [longList] by position; the divider at 8 has no tag. */
     fun rowTags() = ((0..7) + 9).map { "input:$it" }
 }
+
+/** Whether each channel of this colour is within 12 of [other]'s, on a 0 to 255 scale. */
+private fun Color.isNear(other: Color): Boolean =
+    listOf(red - other.red, green - other.green, blue - other.blue).all { abs(it) * 255 <= 12 }

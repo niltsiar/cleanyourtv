@@ -4,6 +4,7 @@
   <string name="live_tv">Telewizja</string>
   <string name="more_inputs">Więcej wejść</string>
   <string name="input_connected">Podłączone</string>
+  <string name="inputs_one_connected">Podłączone: %1$s</string>
   <string name="input_not_connected">Brak urządzenia</string>
   <string name="wifi">Wi-Fi</string>
   <string name="settings">Ustawienia</string>
@@ -34,7 +35,7 @@
   <string name="reorder">Zmień kolejność aplikacji</string>
   <string name="power_menu">Zrestartuj TV</string>
   <string name="dock_edit_hint">Wybierz miejsce w docku do zmiany i naciśnij OK. Wstecz, aby zakończyć.</string>
-  <string name="dock_edit_slot">Miejsce %1$d z %2$d · teraz %3$s</string>
+  <string name="dock_edit_slot">Miejsce %1$d z %2$d, teraz %3$s</string>
   <string name="dock_edit_put_here">umieść tutaj</string>
   <string name="dock_edit_other_place">inne miejsce</string>
   <string name="dock_edit_pick_place">Wybierz miejsce w docku dla tej aplikacji i naciśnij OK. Wstecz, aby anulować.</string>

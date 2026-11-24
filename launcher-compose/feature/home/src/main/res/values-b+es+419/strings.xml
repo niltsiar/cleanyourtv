@@ -4,6 +4,7 @@
   <string name="live_tv">TV en vivo</string>
   <string name="more_inputs">Más entradas</string>
   <string name="input_connected">Conectado</string>
+  <string name="inputs_one_connected">Conectado: %1$s</string>
   <string name="input_not_connected">Sin dispositivo conectado</string>
   <string name="wifi">Wi-Fi</string>
   <string name="settings">Configuración</string>
@@ -36,7 +37,7 @@
   <string name="reorder">Reordenar aplicaciones</string>
   <string name="power_menu">Reiniciar TV</string>
   <string name="dock_edit_hint">Elige el espacio de la barra de favoritos que quieres cambiar y presiona OK. Presiona Atrás para terminar.</string>
-  <string name="dock_edit_slot">Espacio %1$d de %2$d · ahora %3$s</string>
+  <string name="dock_edit_slot">Espacio %1$d de %2$d, ahora %3$s</string>
   <string name="dock_edit_put_here">colocar aquí</string>
   <string name="dock_edit_other_place">otro espacio</string>
   <string name="dock_edit_pick_place">Elige el espacio de la barra de favoritos para esta aplicación y presiona OK. Presiona Atrás para cancelar.</string>

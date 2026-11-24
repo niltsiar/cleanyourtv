@@ -4,6 +4,7 @@
   <string name="live_tv">Live tv</string>
   <string name="more_inputs">Meer ingangen</string>
   <string name="input_connected">Verbonden</string>
+  <string name="inputs_one_connected">Verbonden: %1$s</string>
   <string name="input_not_connected">Geen apparaat</string>
   <string name="wifi">Wifi</string>
   <string name="settings">Instellingen</string>
@@ -35,7 +36,7 @@
   <string name="reorder">Apps ordenen</string>
   <string name="power_menu">Tv herstarten</string>
   <string name="dock_edit_hint">Kies de plek in het dock die je wilt wijzigen en druk op OK. Terug om te stoppen.</string>
-  <string name="dock_edit_slot">Plek %1$d van %2$d · nu %3$s</string>
+  <string name="dock_edit_slot">Plek %1$d van %2$d, nu %3$s</string>
   <string name="dock_edit_put_here">hier zetten</string>
   <string name="dock_edit_other_place">andere plek</string>
   <string name="dock_edit_pick_place">Kies de plek in het dock voor deze app en druk op OK. Terug om te annuleren.</string>

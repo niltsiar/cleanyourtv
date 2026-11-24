@@ -4,6 +4,7 @@
   <string name="live_tv">Live TV</string>
   <string name="more_inputs">More inputs</string>
   <string name="input_connected">Connected</string>
+  <string name="inputs_one_connected">Connected: %1$s</string>
   <string name="input_not_connected">No device</string>
   <string name="wifi">Wi-Fi</string>
   <string name="settings">Settings</string>
@@ -36,7 +37,7 @@
   <string name="reorder">Reorder apps</string>
   <string name="power_menu">Restart TV</string>
   <string name="dock_edit_hint">Choose the dock place to change and press OK. Back to finish.</string>
-  <string name="dock_edit_slot">Place %1$d of %2$d · now %3$s</string>
+  <string name="dock_edit_slot">Place %1$d of %2$d, now %3$s</string>
   <string name="dock_edit_put_here">put here</string>
   <string name="dock_edit_other_place">other place</string>
   <string name="dock_edit_pick_place">Choose the dock place for this app and press OK. Back to cancel.</string>

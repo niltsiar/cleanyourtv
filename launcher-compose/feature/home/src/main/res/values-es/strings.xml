@@ -4,6 +4,7 @@
   <string name="live_tv">TV en directo</string>
   <string name="more_inputs">Más entradas</string>
   <string name="input_connected">Conectado</string>
+  <string name="inputs_one_connected">Conectado: %1$s</string>
   <string name="input_not_connected">Sin dispositivo</string>
   <string name="wifi">Wi-Fi</string>
   <string name="settings">Ajustes</string>
@@ -35,7 +36,7 @@
   <string name="reorder">Reordenar apps</string>
   <string name="power_menu">Reiniciar TV</string>
   <string name="dock_edit_hint">Elige el hueco del dock que quieres cambiar y pulsa OK. Atrás para terminar.</string>
-  <string name="dock_edit_slot">Hueco %1$d de %2$d · ahora %3$s</string>
+  <string name="dock_edit_slot">Hueco %1$d de %2$d, ahora %3$s</string>
   <string name="dock_edit_put_here">poner aquí</string>
   <string name="dock_edit_other_place">otro hueco</string>
   <string name="dock_edit_pick_place">Elige el hueco del dock para esta app y pulsa OK. Atrás para cancelar.</string>

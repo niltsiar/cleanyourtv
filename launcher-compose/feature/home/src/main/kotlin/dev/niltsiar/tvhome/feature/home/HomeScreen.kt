@@ -747,7 +747,6 @@ public fun HomeScreen(
                     rows = { state().inputs.rows },
                     anchor = input.inputsBounds,
                     bottomLimit = windowHeight * dim.band.top - InputsTrayClearance,
-                    animated = topBar.animated,
                     onPick = input.actions.onInputPick,
                     hold = if (layout.inputPins) input.hold else null,
                     onHold = { row, bounds ->
@@ -1944,7 +1943,7 @@ private fun barLine(
             val meta =
                 when (inputs) {
                     InputsSummary.None -> stringResource(R.string.inputs_none)
-                    is InputsSummary.One -> "${inputs.label} \u00B7 ${stringResource(R.string.input_connected)}"
+                    is InputsSummary.One -> stringResource(R.string.inputs_one_connected, inputs.label)
                     is InputsSummary.Many -> pluralStringResource(R.plurals.inputs_connected, inputs.count, inputs.count)
                 }
             HeroLine(stringResource(R.string.inputs), meta, quick = true)

@@ -4,6 +4,7 @@
   <string name="live_tv">Televize</string>
   <string name="more_inputs">Další vstupy</string>
   <string name="input_connected">Připojeno</string>
+  <string name="inputs_one_connected">Připojeno: %1$s</string>
   <string name="input_not_connected">Žádné zařízení</string>
   <string name="wifi">Wi-Fi</string>
   <string name="settings">Nastavení</string>
@@ -35,7 +36,7 @@
   <string name="reorder">Seřadit aplikace</string>
   <string name="power_menu">Restartovat TV</string>
   <string name="dock_edit_hint">Vyberte místo v doku, které chcete změnit, a stiskněte OK. Tlačítkem Zpět skončíte.</string>
-  <string name="dock_edit_slot">Místo %1$d z %2$d · nyní %3$s</string>
+  <string name="dock_edit_slot">Místo %1$d z %2$d, nyní %3$s</string>
   <string name="dock_edit_put_here">dát sem</string>
   <string name="dock_edit_other_place">jiné místo</string>
   <string name="dock_edit_pick_place">Vyberte místo v doku pro tuto aplikaci a stiskněte OK. Tlačítkem Zpět zrušíte.</string>

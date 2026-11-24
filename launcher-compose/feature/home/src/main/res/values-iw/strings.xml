@@ -4,6 +4,7 @@
   <string name="live_tv">שידור חי</string>
   <string name="more_inputs">עוד כניסות</string>
   <string name="input_connected">מחובר</string>
+  <string name="inputs_one_connected">מחובר: %1$s</string>
   <string name="input_not_connected">אין מכשיר</string>
   <string name="wifi">Wi-Fi</string>
   <string name="settings">הגדרות</string>
@@ -36,7 +37,7 @@
   <string name="reorder">סידור אפליקציות</string>
   <string name="power_menu">הפעלת הטלוויזיה מחדש</string>
   <string name="dock_edit_hint">בחרו מקום בשורת המועדפים ולחצו אישור. חזרה לסיום.</string>
-  <string name="dock_edit_slot">מקום %1$d מתוך %2$d · כרגע %3$s</string>
+  <string name="dock_edit_slot">מקום %1$d מתוך %2$d, כרגע %3$s</string>
   <string name="dock_edit_put_here">הצבה כאן</string>
   <string name="dock_edit_other_place">מקום אחר</string>
   <string name="dock_edit_pick_place">בחרו מקום בשורת המועדפים לאפליקציה הזו ולחצו אישור. חזרה לביטול.</string>

@@ -94,6 +94,7 @@ private const val SHELF_FADE_MS = 200
 private const val TEXT_CARD_ART_ALPHA = 0.3f
 private const val MINUTE_MS = 60_000.0
 private const val SHELF_LINE_SEPARATOR = " · "
+private const val SHELF_DETAIL_SEPARATOR = ", "
 
 /**
  * Where the shelf cards go in a layout: cards [cardHeight] high, [clear] of room over and under them for a focused card's ring,
@@ -361,15 +362,15 @@ private fun ShelfCard(
 }
 
 /**
- * What the line under the title says for a focused shelf card: the item's title, then its season and episode when the app
- * gives them, then the minutes left when it gives a position and a duration. A now-playing card gives the title, the artist
- * when the session names one, and Paused while it is paused.
+ * What the line under the title says for a focused shelf card: the item's title, then after a middle dot its season and
+ * episode when the app gives them and the minutes left when it gives a position and a duration, split by a comma. A
+ * now-playing card gives the title, then the artist when the session names one and Paused while it is paused.
  */
 @Composable
 internal fun shelfLine(item: ShelfItem): String {
     item.playing?.let { playing ->
         val paused = if (playing.paused) stringResource(R.string.shelf_paused) else null
-        return listOfNotNull(playing.title, playing.artist, paused).joinToString(SHELF_LINE_SEPARATOR)
+        return titleAndDetails(playing.title, listOfNotNull(playing.artist, paused))
     }
     val season = item.seasonNumber
     val episode = item.episodeNumber
@@ -380,8 +381,14 @@ internal fun shelfLine(item: ShelfItem): String {
             else -> null
         }
     val left = minutesLeft(item)?.let { pluralStringResource(R.plurals.shelf_minutes_left, it, it) }
-    return listOfNotNull(item.title, number, left).joinToString(SHELF_LINE_SEPARATOR)
+    return titleAndDetails(item.title, listOfNotNull(number, left))
 }
+
+/** [title], then its [details] after a middle dot, split by commas. */
+private fun titleAndDetails(
+    title: String,
+    details: List<String>,
+): String = if (details.isEmpty()) title else title + SHELF_LINE_SEPARATOR + details.joinToString(SHELF_DETAIL_SEPARATOR)
 
 /** The whole minutes left of [item], rounded up; null without a position and a duration, or with none left. */
 internal fun minutesLeft(item: ShelfItem): Int? {

@@ -4,6 +4,7 @@
   <string name="live_tv">Direkte-TV</string>
   <string name="more_inputs">Flere innganger</string>
   <string name="input_connected">Tilkoblet</string>
+  <string name="inputs_one_connected">Tilkoblet: %1$s</string>
   <string name="input_not_connected">Ingen enhet</string>
   <string name="wifi">Wi-Fi</string>
   <string name="settings">Innstillinger</string>
@@ -35,7 +36,7 @@
   <string name="reorder">Endre apprekkefølge</string>
   <string name="power_menu">Start TV-en på nytt</string>
   <string name="dock_edit_hint">Velg plassen du vil endre i favorittraden, og trykk OK. Trykk Tilbake for å avslutte.</string>
-  <string name="dock_edit_slot">Plass %1$d av %2$d · nå %3$s</string>
+  <string name="dock_edit_slot">Plass %1$d av %2$d, nå %3$s</string>
   <string name="dock_edit_put_here">sett her</string>
   <string name="dock_edit_other_place">annen plass</string>
   <string name="dock_edit_pick_place">Velg en plass i favorittraden for denne appen, og trykk OK. Trykk Tilbake for å avbryte.</string>

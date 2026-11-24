@@ -4,6 +4,7 @@
   <string name="live_tv">TV ao vivo</string>
   <string name="more_inputs">Mais entradas</string>
   <string name="input_connected">Conectado</string>
+  <string name="inputs_one_connected">Conectado: %1$s</string>
   <string name="input_not_connected">Sem dispositivo</string>
   <string name="wifi">Wi-Fi</string>
   <string name="settings">Configurações</string>
@@ -35,7 +36,7 @@
   <string name="reorder">Reordenar apps</string>
   <string name="power_menu">Reiniciar TV</string>
   <string name="dock_edit_hint">Escolha o lugar do dock que quer mudar e pressione OK. Voltar para terminar.</string>
-  <string name="dock_edit_slot">Lugar %1$d de %2$d · agora %3$s</string>
+  <string name="dock_edit_slot">Lugar %1$d de %2$d, agora %3$s</string>
   <string name="dock_edit_put_here">colocar aqui</string>
   <string name="dock_edit_other_place">outro lugar</string>
   <string name="dock_edit_pick_place">Escolha o lugar do dock para este app e pressione OK. Voltar para cancelar.</string>

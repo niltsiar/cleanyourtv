@@ -277,7 +277,7 @@ class AppShelfUiTestContent :
 
                 session.value = NowPlayingItem("pkg.1", "Stricken", "Disturbed", paused = true, art = null)
                 compose.waitForIdle()
-                textOf("shelf:meta") shouldBe "Stricken · Disturbed · Paused"
+                textOf("shelf:meta") shouldBe "Stricken · Disturbed, Paused"
             }
 
             test("the now playing card with focus hands focus to its dock tile when the session stops, and the items stay") {
@@ -333,7 +333,7 @@ class AppShelfUiTestContent :
                 press(Key.DirectionUp)
 
                 textOf("shelf:name") shouldBe "App 1"
-                textOf("shelf:meta") shouldBe "Severance · S2 E4 · 32 min left"
+                textOf("shelf:meta") shouldBe "Severance · S2 E4, 32 min left"
                 press(Key.DirectionRight)
                 textOf("shelf:meta") shouldBe "Andor"
             }
@@ -345,7 +345,7 @@ class AppShelfUiTestContent :
                 press(Key.DirectionUp)
 
                 textOf("shelf:title") shouldBe "App 1"
-                textOf("shelf:title-meta") shouldBe "Severance · S2 E4 · 32 min left"
+                textOf("shelf:title-meta") shouldBe "Severance · S2 E4, 32 min left"
             }
 
             test("while focus stays on the dock tile the line under the title does not change as the cards show") {

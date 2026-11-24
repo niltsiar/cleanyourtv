@@ -4,6 +4,7 @@
   <string name="live_tv">Live-TV</string>
   <string name="more_inputs">Flere indgange</string>
   <string name="input_connected">Tilsluttet</string>
+  <string name="inputs_one_connected">Tilsluttet: %1$s</string>
   <string name="input_not_connected">Ingen enhed</string>
   <string name="wifi">Wi-Fi</string>
   <string name="settings">Indstillinger</string>

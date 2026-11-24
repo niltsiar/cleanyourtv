@@ -4,6 +4,7 @@
   <string name="live_tv">Телеканали</string>
   <string name="more_inputs">Інші джерела</string>
   <string name="input_connected">Під’єднано</string>
+  <string name="inputs_one_connected">Під’єднано: %1$s</string>
   <string name="input_not_connected">Немає пристрою</string>
   <string name="wifi">Wi-Fi</string>
   <string name="settings">Налаштування</string>
@@ -35,7 +36,7 @@
   <string name="reorder">Упорядкувати застосунки</string>
   <string name="power_menu">Перезапустити ТВ</string>
   <string name="dock_edit_hint">Виберіть місце в доку, яке треба змінити, і натисніть OK. «Назад» — завершити.</string>
-  <string name="dock_edit_slot">Місце %1$d з %2$d · зараз %3$s</string>
+  <string name="dock_edit_slot">Місце %1$d з %2$d, зараз %3$s</string>
   <string name="dock_edit_put_here">поставити сюди</string>
   <string name="dock_edit_other_place">інше місце</string>
   <string name="dock_edit_pick_place">Виберіть місце в доку для цього застосунку та натисніть OK. «Назад» — скасувати.</string>

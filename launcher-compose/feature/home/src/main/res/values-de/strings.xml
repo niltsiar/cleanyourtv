@@ -4,6 +4,7 @@
   <string name="live_tv">Live TV</string>
   <string name="more_inputs">Weitere Quellen</string>
   <string name="input_connected">Verbunden</string>
+  <string name="inputs_one_connected">Verbunden: %1$s</string>
   <string name="input_not_connected">Kein Gerät</string>
   <string name="wifi">WLAN</string>
   <string name="settings">Einstellungen</string>
@@ -32,7 +33,7 @@
   <string name="reorder">Apps anordnen</string>
   <string name="power_menu">TV neu starten</string>
   <string name="dock_edit_hint">Wähle den Dock-Platz, den du ändern willst, und drücke OK. Zurück zum Beenden.</string>
-  <string name="dock_edit_slot">Platz %1$d von %2$d · jetzt %3$s</string>
+  <string name="dock_edit_slot">Platz %1$d von %2$d, jetzt %3$s</string>
   <string name="dock_edit_put_here">hier ablegen</string>
   <string name="dock_edit_other_place">anderer Platz</string>
   <string name="dock_edit_pick_place">Wähle den Dock-Platz für diese App und drücke OK. Zurück zum Abbrechen.</string>

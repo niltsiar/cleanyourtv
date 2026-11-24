@@ -4,6 +4,7 @@
   <string name="live_tv">TV en direutu</string>
   <string name="more_inputs">Más entraes</string>
   <string name="input_connected">Coneutáu</string>
+  <string name="inputs_one_connected">Coneutáu: %1$s</string>
   <string name="input_not_connected">Ensin dispositivu</string>
   <string name="settings">Axustes</string>
   <string name="library_entry">Biblioteca d\'aplicaciones</string>
@@ -33,7 +34,7 @@
   <string name="reorder">Reordenar aplicaciones</string>
   <string name="power_menu">Reaniciar TV</string>
   <string name="dock_edit_hint">Escueyi\'l sitiu del dock que quies camudar y calca OK. Atrás pa finar.</string>
-  <string name="dock_edit_slot">Sitiu %1$d de %2$d · agora %3$s</string>
+  <string name="dock_edit_slot">Sitiu %1$d de %2$d, agora %3$s</string>
   <string name="dock_edit_put_here">poner equí</string>
   <string name="dock_edit_other_place">otru sitiu</string>
   <string name="dock_edit_pick_place">Escueyi\'l sitiu del dock pa esta aplicación y calca OK. Atrás pa encaboxar.</string>

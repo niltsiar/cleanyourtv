@@ -4,6 +4,7 @@
   <string name="live_tv">ทีวีสด</string>
   <string name="more_inputs">แหล่งสัญญาณเพิ่มเติม</string>
   <string name="input_connected">เชื่อมต่อแล้ว</string>
+  <string name="inputs_one_connected">เชื่อมต่อแล้ว: %1$s</string>
   <string name="input_not_connected">ไม่มีอุปกรณ์</string>
   <string name="wifi">Wi-Fi</string>
   <string name="settings">ตั้งค่า</string>
@@ -32,7 +33,7 @@
   <string name="reorder">จัดเรียงแอป</string>
   <string name="power_menu">รีสตาร์ททีวี</string>
   <string name="dock_edit_hint">เลือกตำแหน่งในแถบแอปที่ต้องการเปลี่ยน แล้วกด OK กดย้อนกลับเพื่อเสร็จสิ้น</string>
-  <string name="dock_edit_slot">ตำแหน่ง %1$d จาก %2$d · ตอนนี้คือ %3$s</string>
+  <string name="dock_edit_slot">ตำแหน่ง %1$d จาก %2$d, ตอนนี้คือ %3$s</string>
   <string name="dock_edit_put_here">วางที่นี่</string>
   <string name="dock_edit_other_place">ตำแหน่งอื่น</string>
   <string name="dock_edit_pick_place">เลือกตำแหน่งในแถบแอปสำหรับแอปนี้ แล้วกด OK กดย้อนกลับเพื่อยกเลิก</string>

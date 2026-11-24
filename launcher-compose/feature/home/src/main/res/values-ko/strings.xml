@@ -4,6 +4,7 @@
   <string name="live_tv">실시간 TV</string>
   <string name="more_inputs">입력 더보기</string>
   <string name="input_connected">연결됨</string>
+  <string name="inputs_one_connected">연결됨: %1$s</string>
   <string name="input_not_connected">기기 없음</string>
   <string name="wifi">Wi-Fi</string>
   <string name="settings">설정</string>
@@ -35,7 +36,7 @@
   <string name="reorder">앱 순서 바꾸기</string>
   <string name="power_menu">TV 다시 시작</string>
   <string name="dock_edit_hint">바꿀 독 위치를 고르고 OK를 누르세요. 뒤로 가기(←) 버튼을 누르면 종료됩니다.</string>
-  <string name="dock_edit_slot">%2$d개 중 %1$d번 위치 · 현재 %3$s</string>
+  <string name="dock_edit_slot">%2$d개 중 %1$d번 위치, 현재 %3$s</string>
   <string name="dock_edit_put_here">여기에 넣기</string>
   <string name="dock_edit_other_place">다른 위치</string>
   <string name="dock_edit_pick_place">이 앱을 넣을 독 위치를 고르고 OK를 누르세요. 뒤로 가기(←) 버튼을 누르면 취소됩니다.</string>

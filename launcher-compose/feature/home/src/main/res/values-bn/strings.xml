@@ -4,6 +4,7 @@
   <string name="live_tv">লাইভ টিভি</string>
   <string name="more_inputs">আরও ইনপুট</string>
   <string name="input_connected">কানেক্টেড</string>
+  <string name="inputs_one_connected">কানেক্টেড: %1$s</string>
   <string name="input_not_connected">কোনো ডিভাইস নেই</string>
   <string name="wifi">ওয়াই-ফাই</string>
   <string name="settings">সেটিংস</string>
@@ -34,7 +35,7 @@
   <string name="reorder">অ্যাপ সাজান</string>
   <string name="power_menu">টিভি রিস্টার্ট করুন</string>
   <string name="dock_edit_hint">ডকের যে জায়গাটি বদলাতে চান সেটি বেছে OK চাপুন। শেষ হলে Back চাপুন।</string>
-  <string name="dock_edit_slot">জায়গা %1$d / %2$d · এখন %3$s</string>
+  <string name="dock_edit_slot">জায়গা %1$d / %2$d, এখন %3$s</string>
   <string name="dock_edit_put_here">এখানে রাখুন</string>
   <string name="dock_edit_other_place">অন্য জায়গা</string>
   <string name="dock_edit_pick_place">এই অ্যাপের জন্য ডকের একটি জায়গা বেছে OK চাপুন। বাতিল করতে Back চাপুন।</string>

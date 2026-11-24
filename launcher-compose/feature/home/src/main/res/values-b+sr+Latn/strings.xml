@@ -4,6 +4,7 @@
   <string name="live_tv">TV programi</string>
   <string name="more_inputs">Još ulaza</string>
   <string name="input_connected">Povezano</string>
+  <string name="inputs_one_connected">Povezano: %1$s</string>
   <string name="input_not_connected">Nema uređaja</string>
   <string name="wifi">Wi-Fi</string>
   <string name="settings">Podešavanja</string>
@@ -34,7 +35,7 @@
   <string name="reorder">Promeni redosled aplikacija</string>
   <string name="power_menu">Ponovo pokreni TV</string>
   <string name="dock_edit_hint">Izaberite mesto u doku i pritisnite OK. Nazad za kraj.</string>
-  <string name="dock_edit_slot">Mesto %1$d od %2$d · sada %3$s</string>
+  <string name="dock_edit_slot">Mesto %1$d od %2$d, sada %3$s</string>
   <string name="dock_edit_put_here">stavi ovde</string>
   <string name="dock_edit_other_place">drugo mesto</string>
   <string name="dock_edit_pick_place">Izaberite mesto u doku za ovu aplikaciju i pritisnite OK. Nazad za otkazivanje.</string>

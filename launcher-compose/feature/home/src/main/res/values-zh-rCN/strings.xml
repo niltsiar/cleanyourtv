@@ -4,6 +4,7 @@
   <string name="live_tv">电视直播</string>
   <string name="more_inputs">更多输入源</string>
   <string name="input_connected">已连接</string>
+  <string name="inputs_one_connected">已连接：%1$s</string>
   <string name="input_not_connected">未连接</string>
   <string name="wifi">无线网络</string>
   <string name="settings">设置</string>
@@ -35,7 +36,7 @@
   <string name="reorder">调整应用顺序</string>
   <string name="power_menu">重新启动电视</string>
   <string name="dock_edit_hint">选择要更改的程序坞位置，然后按确定。按返回完成。</string>
-  <string name="dock_edit_slot">第 %1$d 个位置（共 %2$d 个）· 当前是 %3$s</string>
+  <string name="dock_edit_slot">第 %1$d 个位置（共 %2$d 个），当前是 %3$s</string>
   <string name="dock_edit_put_here">放在这里</string>
   <string name="dock_edit_other_place">其他位置</string>
   <string name="dock_edit_pick_place">选择这个应用要放的程序坞位置，然后按确定。按返回取消。</string>

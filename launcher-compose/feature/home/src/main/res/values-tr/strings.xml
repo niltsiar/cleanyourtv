@@ -4,6 +4,7 @@
   <string name="live_tv">Canlı TV</string>
   <string name="more_inputs">Diğer girişler</string>
   <string name="input_connected">Bağlı</string>
+  <string name="inputs_one_connected">Bağlı: %1$s</string>
   <string name="input_not_connected">Cihaz Yok</string>
   <string name="wifi">Wi-Fi</string>
   <string name="settings">Ayarlar</string>
@@ -34,7 +35,7 @@
   <string name="reorder">Uygulamaları sırala</string>
   <string name="power_menu">TV’yi yeniden başlat</string>
   <string name="dock_edit_hint">Değiştirilecek dock yerini seçip Tamam\'a basın. Bitirmek için Geri.</string>
-  <string name="dock_edit_slot">Yer %1$d / %2$d · şu an %3$s</string>
+  <string name="dock_edit_slot">Yer %1$d / %2$d, şu an %3$s</string>
   <string name="dock_edit_put_here">buraya koy</string>
   <string name="dock_edit_other_place">başka yer</string>
   <string name="dock_edit_pick_place">Bu uygulama için bir dock yeri seçip Tamam\'a basın. İptal için Geri.</string>

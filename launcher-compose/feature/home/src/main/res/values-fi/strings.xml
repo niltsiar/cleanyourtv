@@ -4,6 +4,7 @@
   <string name="live_tv">TV-kanavat</string>
   <string name="more_inputs">Lisää lähteitä</string>
   <string name="input_connected">Yhdistetty</string>
+  <string name="inputs_one_connected">Yhdistetty: %1$s</string>
   <string name="input_not_connected">Ei laitetta</string>
   <string name="wifi">Wi-Fi</string>
   <string name="settings">Asetukset</string>
@@ -35,7 +36,7 @@
   <string name="reorder">Järjestä sovellukset</string>
   <string name="power_menu">Käynnistä TV uudelleen</string>
   <string name="dock_edit_hint">Valitse muutettava telakan paikka ja paina OK. Takaisin lopettaa.</string>
-  <string name="dock_edit_slot">Paikka %1$d/%2$d · nyt %3$s</string>
+  <string name="dock_edit_slot">Paikka %1$d/%2$d, nyt %3$s</string>
   <string name="dock_edit_put_here">laita tähän</string>
   <string name="dock_edit_other_place">toinen paikka</string>
   <string name="dock_edit_pick_place">Valitse telakan paikka tälle sovellukselle ja paina OK. Takaisin peruuttaa.</string>
