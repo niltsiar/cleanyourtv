@@ -15,6 +15,7 @@ import kotlin.math.cbrt
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
+import kotlin.math.sqrt
 
 val HousePaletteTest by testSuite {
     test("every text role reads at 4.5:1 and the focus band at 3:1 against its neighbours, for every seed, dark and light") {
@@ -31,6 +32,25 @@ val HousePaletteTest by testSuite {
                 }
             }
         failures.shouldBeEmpty()
+    }
+
+    test("the error role stays apart from the primary for every seed, dark and light") {
+        val failures =
+            seeds().flatMap { (name, seed) ->
+                listOf(true, false).mapNotNull { dark ->
+                    val scheme = houseScheme(seed, dark)
+                    deltaE(scheme.error, scheme.primary).takeIf { it < MIN_ERROR_DISTANCE }?.let {
+                        "$name ${if (dark) "dark" else "light"}: error ${scheme.error} primary ${scheme.primary}, delta E $it"
+                    }
+                }
+            }
+        failures.shouldBeEmpty()
+    }
+
+    test("a seed far from red keeps a red error role") {
+        val error = houseScheme(Color(0xFF3050D0), dark = true).error
+
+        withClue("error $error") { (error.red > error.green && error.red > error.blue) shouldBe true }
     }
 
     test("each role sits at its tone in CIE L*") {
@@ -64,6 +84,13 @@ val HousePaletteTest by testSuite {
 }
 
 private val Ember = Color(0xFFFF6A3D)
+
+/**
+ * The least CIE76 distance between the error and the primary roles. At the same tone two roles differ only in hue and
+ * chroma; at 20 a warning row's text and the focused pill beside it read as two colours from the sofa, where the Ember
+ * seed's 3 made a warning look like the selected pill.
+ */
+private const val MIN_ERROR_DISTANCE = 20.0
 
 /** The seeds: hue by chroma by tone, in HSL, then the named ones the house seed chain gives. */
 private fun seeds(): List<Pair<String, Color>> {
@@ -155,6 +182,34 @@ private fun wcagLuminance(colour: Color): Double {
         return if (c <= 0.04045) c / 12.92 else ((c + 0.055) / 1.055).pow(2.4)
     }
     return 0.2126 * channel(16) + 0.7152 * channel(8) + 0.0722 * channel(0)
+}
+
+/** CIE76 distance between [a] and [b] in CIELAB (D65), from their 8-bit sRGB channels. */
+private fun deltaE(
+    a: Color,
+    b: Color,
+): Double {
+    val la = cieLab(a)
+    val lb = cieLab(b)
+    return sqrt((la[0] - lb[0]).pow(2) + (la[1] - lb[1]).pow(2) + (la[2] - lb[2]).pow(2))
+}
+
+private fun cieLab(colour: Color): DoubleArray {
+    val argb = colour.toArgb()
+
+    fun channel(shift: Int): Double {
+        val c = ((argb shr shift) and 0xFF) / 255.0
+        return if (c <= 0.04045) c / 12.92 else ((c + 0.055) / 1.055).pow(2.4)
+    }
+    val r = channel(16)
+    val g = channel(8)
+    val b = channel(0)
+
+    fun f(t: Double): Double = if (t > 216.0 / 24389.0) cbrt(t) else (24389.0 / 27.0 * t + 16.0) / 116.0
+    val x = f((0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047)
+    val y = f(0.2126 * r + 0.7152 * g + 0.0722 * b)
+    val z = f((0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883)
+    return doubleArrayOf(116.0 * y - 16.0, 500.0 * (x - y), 200.0 * (y - z))
 }
 
 /** CIE L* of [colour]. */

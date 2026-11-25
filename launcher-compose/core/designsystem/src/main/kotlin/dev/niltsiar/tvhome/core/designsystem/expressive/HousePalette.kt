@@ -5,6 +5,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cbrt
 import kotlin.math.cos
@@ -29,7 +30,7 @@ internal fun houseScheme(
     val tertiary = Palette(hue + TERTIARY_TURN, TERTIARY_CHROMA)
     val neutral = Palette(hue, NEUTRAL_CHROMA)
     val variant = Palette(hue, NEUTRAL_VARIANT_CHROMA)
-    val error = Palette(ERROR_HUE, ERROR_CHROMA)
+    val error = Palette(errorHue(hue), ERROR_CHROMA)
     return if (dark) {
         darkColorScheme(
             primary = primary(80),
@@ -125,6 +126,22 @@ private const val TERTIARY_TURN = (PI / 3).toFloat()
 
 /** The hue of the error roles, a red, in radians. */
 private const val ERROR_HUE = 0.5f
+
+/** The least turn between the error hue and the seed's: closer, a warning reads as the primary. */
+private const val ERROR_HUE_GAP = (PI / 3).toFloat()
+
+/**
+ * The error hue for a seed of [hue]: red, or for a seed within [ERROR_HUE_GAP] of red, that far from the seed on red's
+ * side of it, toward crimson from an orange seed and toward orange from a pink one.
+ */
+private fun errorHue(hue: Float): Float {
+    val off = atan2(sin(hue - ERROR_HUE), cos(hue - ERROR_HUE))
+    return when {
+        abs(off) >= ERROR_HUE_GAP -> ERROR_HUE
+        off >= 0f -> hue - ERROR_HUE_GAP
+        else -> hue + ERROR_HUE_GAP
+    }
+}
 
 private const val SEARCH_STEPS = 24
 
