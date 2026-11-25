@@ -74,422 +74,496 @@ val AppShelfUiTest by testSuite {
 class AppShelfUiTestContent :
     RobolectricTestSuiteContent({
         testFixture { AppShelfUiTestFixture() } asContextForEach {
-            test("up from a dock tile with a shelf goes to the first card, and left and right move along the cards and stop at the ends") {
-                showHome(Cinematic.copy(appShelfSources = listOf("pkg.4")))
-                repeat(3) { press(Key.DirectionRight) }
-                hold()
-
-                press(Key.DirectionUp)
-                compose.onNodeWithTag("shelf:card:0").assertIsFocused()
-                press(Key.DirectionRight)
-                press(Key.DirectionRight)
-                compose.onNodeWithTag("shelf:card:2").assertIsFocused()
-                press(Key.DirectionRight)
-                compose.onNodeWithTag("shelf:card:2").assertIsFocused()
-                repeat(3) { press(Key.DirectionLeft) }
-                compose.onNodeWithTag("shelf:card:0").assertIsFocused()
-            }
-
-            test("with 20 cards right 19 times reaches the last card and one more right stays on it") {
-                twentyItems()
-                showHome()
-                hold()
-                press(Key.DirectionUp)
-
-                repeat(19) { press(Key.DirectionRight) }
-                compose.onNodeWithTag("shelf:card:19").assertIsFocused()
-                press(Key.DirectionRight)
-
-                compose.onNodeWithTag("shelf:card:19").assertIsFocused()
-            }
-
-            test("with 20 cards only the cards near the screen ask for their posters until the row scrolls to the others") {
-                twentyItems()
-                showHome()
-                hold()
-
-                withClue("asked $posterAsks") { posterAsks.size shouldBeIn 1..10 }
-                (items.last().posterUri in posterAsks).shouldBeFalse()
-                press(Key.DirectionUp)
-                repeat(19) { press(Key.DirectionRight) }
-
-                (items.last().posterUri in posterAsks).shouldBeTrue()
-            }
-
-            test("down from a card returns focus to its dock tile") {
-                showHome()
-                hold()
-                press(Key.DirectionUp)
-                press(Key.DirectionRight)
-
-                press(Key.DirectionDown)
-
-                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-            }
-
-            test("back from a card returns focus to its dock tile") {
-                showHome()
-                hold()
-                press(Key.DirectionUp)
-                press(Key.DirectionRight)
-
-                compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
-                compose.waitForIdle()
-
-                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-            }
-
-            test("down from the last card scrolls the row back to its first card as it moves along the cards") {
-                items += (1..7).map { items[1].copy(title = "Show $it") }
-                showHome()
-                hold()
-                press(Key.DirectionUp)
-                val start = firstCardLeft()
-                repeat(9) { press(Key.DirectionRight) }
-                compose.onNodeWithTag("shelf:card:9").assertIsFocused()
-                withClue("scrolled to the last card") { firstCardLeft() shouldBeLessThan start }
-
-                compose.mainClock.autoAdvance = false
-                press(Key.DirectionDown, settle = false)
-                step(16)
-                withClue("one frame after down") { firstCardLeft() shouldBeLessThan start }
-                compose.mainClock.autoAdvance = true
-                compose.waitForIdle()
-
-                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-                firstCardLeft() shouldBe start
-            }
-
-            test("with reduced_motion back from the last card puts the row at its first card at once") {
-                items += (1..7).map { items[1].copy(title = "Show $it") }
-                showHome(motion = Motion(reducedMotion = true))
-                hold()
-                press(Key.DirectionUp)
-                val start = firstCardLeft()
-                repeat(9) { press(Key.DirectionRight) }
-                withClue("scrolled to the last card") { firstCardLeft() shouldBeLessThan start }
-
-                compose.mainClock.autoAdvance = false
-                compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
-                step(16)
-
-                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-                firstCardLeft() shouldBe start
-            }
-
-            test("up from a card goes to the top bar, as up from the dock does") {
-                showHome()
-                hold()
-                press(Key.DirectionUp)
-                compose.onNodeWithTag("shelf:card:0").assertIsFocused()
-
-                press(Key.DirectionUp)
-
-                compose.onNodeWithContentDescription("Inputs").assertIsFocused()
-            }
-
-            test("with input_arrival, up from a card goes to the inputs button while it offers a device") {
-                items += listOf("Silo", "Pluribus").map { items[1].copy(title = it) }
-                showHome(Cinematic.copy(inputArrival = true))
-                hold()
-                press(Key.DirectionUp)
-                repeat(4) { press(Key.DirectionRight) }
-                compose.onNodeWithTag("shelf:card:4").assertIsFocused()
-
-                inputs.value = FourPorts.copy(arrival = Console)
-                compose.mainClock.advanceTimeBy(2_100)
-                press(Key.DirectionUp)
-
-                compose.onNode(hasContentDescription("Inputs", substring = true)).assertIsFocused()
-            }
-
-            test("up from the next dock tile while the cards fade out does not land on a card") {
-                showHome()
-                hold()
-
-                compose.mainClock.autoAdvance = false
-                press(Key.DirectionRight, settle = false)
-                step(16)
-                press(Key.DirectionUp, settle = false)
-                step(16)
-                compose.onNodeWithTag("shelf:card:0").assertExists()
-
-                compose.onNodeWithTag("tile:pkg.2").assertIsNotFocused()
-                compose
-                    .onAllNodes((hasTestTag("shelf:card:0") or hasTestTag("shelf:card:1") or hasTestTag("shelf:card:2")) and isFocused())
-                    .assertCountEquals(0)
-            }
-
-            test("ok on a card opens its item with the app of its dock tile") {
-                showHome()
-                hold()
-                press(Key.DirectionUp)
-                press(Key.DirectionRight)
-
-                press(Key.DirectionCenter)
-
-                effects shouldBe listOf(HomeEffect.OpenShelfItem(apps[0], items[1]))
-            }
-
-            test("a card with focus whose shelf a new read finds empty hands focus to its dock tile") {
-                showHome()
-                hold()
-                press(Key.DirectionUp)
-                press(Key.DirectionRight)
-                compose.onNodeWithTag("shelf:card:1").assertIsFocused()
-
-                items.clear()
-                compose.runOnUiThread { viewModel.onStarted() }
-                compose.waitForIdle()
-
-                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-                compose.onNodeWithTag("shelf:card:0").assertDoesNotExist()
-            }
-
-            test("a card with focus that a new read leaves out hands focus to its dock tile, and the shorter shelf shows") {
-                showHome()
-                hold()
-                press(Key.DirectionUp)
-                press(Key.DirectionRight)
-                press(Key.DirectionRight)
-                compose.onNodeWithTag("shelf:card:2").assertIsFocused()
-
-                items.subList(1, items.size).clear()
-                compose.runOnUiThread { viewModel.onStarted() }
-                compose.waitForIdle()
-
-                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-                compose.onNodeWithTag("shelf:card:0").assertExists()
-                compose.onNodeWithTag("shelf:card:1").assertDoesNotExist()
-            }
-
-            test("the now playing card's line gives the title, the artist when there is one, and paused, and keeps focus across tracks") {
-                session.value = NowPlayingItem("pkg.1", "The Sound of Silence", "Disturbed", paused = false, art = null)
-                showHome(Cinematic.copy(nowPlaying = true))
-                hold()
-                press(Key.DirectionUp)
-                textOf("shelf:meta") shouldBe "The Sound of Silence · Disturbed"
-
-                session.value = NowPlayingItem("pkg.1", "Down with the Sickness", null, paused = true, art = null)
-                compose.waitForIdle()
-                compose.onNodeWithTag("shelf:card:0").assertIsFocused()
-                textOf("shelf:meta") shouldBe "Down with the Sickness · Paused"
-
-                session.value = NowPlayingItem("pkg.1", "Stricken", "Disturbed", paused = true, art = null)
-                compose.waitForIdle()
-                textOf("shelf:meta") shouldBe "Stricken · Disturbed, Paused"
-            }
-
-            test("the now playing card with focus hands focus to its dock tile when the session stops, and the items stay") {
-                session.value = NowPlayingItem("pkg.1", "The Sound of Silence", "Disturbed", paused = false, art = null)
-                showHome(Cinematic.copy(nowPlaying = true))
-                hold()
-                press(Key.DirectionUp)
-                compose.onNodeWithTag("shelf:card:0").assertIsFocused()
-
-                session.value = null
-                compose.waitForIdle()
-
-                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-                compose.onNodeWithContentDescription("Severance").assertExists()
-                compose.onNodeWithTag("shelf:card:3").assertDoesNotExist()
-            }
-
-            test("ok on the now playing card opens it with the app of its dock tile") {
-                val playing = NowPlayingItem("pkg.1", "The Sound of Silence", "Disturbed", paused = false, art = null)
-                session.value = playing
-                showHome(Cinematic.copy(nowPlaying = true))
-                hold()
-                press(Key.DirectionUp)
-
-                press(Key.DirectionCenter)
-
-                effects shouldBe listOf(HomeEffect.OpenShelfItem(apps[0], nowPlayingCard(playing)))
-            }
-
-            test("with press_feedback ok on a card dips it to 96 percent of its focused size and back") {
-                showHome(Cinematic.copy(pressFeedback = true))
-                hold()
-                press(Key.DirectionUp)
-                val rest = redWidth()
-
-                compose.mainClock.autoAdvance = false
-                compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
-                compose.onRoot().performKeyInput { keyUp(Key.DirectionCenter) }
-                val widths =
-                    List(16) {
-                        compose.mainClock.advanceTimeBy(16)
-                        redWidth() / rest
-                    }
-
-                withClue("widths $widths") { widths.min() shouldBeIn 0.955f..0.967f }
-                withClue("back at rest: $widths") { widths.last() shouldBeIn 0.997f..1.003f }
-            }
-
-            test("with the cinematic shelf a focused card's line gives its title, season and episode and the minutes left") {
-                showHome()
-                hold()
-
-                press(Key.DirectionUp)
-
-                textOf("shelf:name") shouldBe "App 1"
-                textOf("shelf:meta") shouldBe "Severance · S2 E4, 32 min left"
-                press(Key.DirectionRight)
-                textOf("shelf:meta") shouldBe "Andor"
-            }
-
-            test("without the cinematic shelf a focused card's line gives its title, season and episode and the minutes left") {
-                showHome(Plain)
-                hold()
-
-                press(Key.DirectionUp)
-
-                textOf("shelf:title") shouldBe "App 1"
-                textOf("shelf:title-meta") shouldBe "Severance · S2 E4, 32 min left"
-            }
-
-            test("while focus stays on the dock tile the line under the title does not change as the cards show") {
-                showHome()
-                val before = textOf("shelf:meta")
-
-                hold()
-
-                compose.onNodeWithTag("shelf:card:0").assertExists()
-                textOf("shelf:meta") shouldBe before
-            }
-
-            test("with app_shelf off a held dock tile shows no cards and up goes to the top bar") {
-                showHome(Cinematic.copy(appShelf = false))
-                hold()
-
-                compose.onNodeWithTag("shelf:card:0").assertDoesNotExist()
-                press(Key.DirectionUp)
-                compose.onNodeWithContentDescription("Inputs").assertIsFocused()
-                reads.shouldBeEmpty()
-            }
-
-            test("a dock tile whose app has no ticked sources shows no cards and up goes to the top bar") {
-                showHome(Cinematic.copy(appShelfSources = listOf("pkg.2")))
-                hold()
-
-                compose.onNodeWithTag("shelf:card:0").assertDoesNotExist()
-                press(Key.DirectionUp)
-                compose.onNodeWithContentDescription("Inputs").assertIsFocused()
-            }
-
-            test("the dock and the title's place in the grid layout do not move as the cards show and go") {
-                showHome()
-                val dock = compose.onNodeWithTag("tile:pkg.1").getBoundsInRoot()
-                val second = compose.onNodeWithTag("tile:pkg.2").getBoundsInRoot()
-
-                hold()
-                compose.onNodeWithTag("tile:pkg.1").getBoundsInRoot() shouldBe dock
-                press(Key.DirectionUp)
-                compose.onNodeWithTag("tile:pkg.1").getBoundsInRoot() shouldBe dock
-                press(Key.DirectionDown)
-                press(Key.DirectionRight)
-                hold()
-
-                compose.onNodeWithTag("shelf:card:0").assertDoesNotExist()
-                compose.onNodeWithTag("tile:pkg.2").getBoundsInRoot() shouldBe second
-            }
-
-            test("the cards stand between the meta line and the dock, clear of both") {
-                showHome()
-                hold()
-
-                val meta = compose.onNodeWithTag("shelf:meta").getBoundsInRoot()
-                val card = compose.onNodeWithTag("shelf:card:0").getBoundsInRoot()
-                val dock = compose.onNodeWithTag("dock").getBoundsInRoot()
-
-                // A focused card grows 4% on each side and its ring reaches 9.72 dp past that.
-                val ring = (card.bottom - card.top).value * 0.04f + 9.72f
-                withClue("meta $meta, card $card") { (card.top - meta.bottom).value shouldBeIn ring..40f }
-                withClue("card $card, dock $dock") { (dock.top - card.bottom).value shouldBeIn ring..40f }
-                (card.bottom - card.top).value shouldBeIn ShelfCardMinHeight.value..ShelfCardHeight.value
-            }
-
-            test("the cards fade in over 200 ms and out as fast") {
-                showHome()
-                appear()
-
-                step(100)
-                withClue("half way in") { redness() shouldBeIn 0.2f..0.9f }
-                step(150)
-                withClue("in") { redness() shouldBeIn 0.97f..1f }
-                press(Key.DirectionRight, settle = false)
-                step(16)
-                withClue("going out") { redness() shouldBeIn 0.1f..0.9f }
-            }
-
-            test("with reduced_motion the cards show and go at once") {
-                showHome(motion = Motion(reducedMotion = true))
-                appear()
-
-                step(16)
-                redness() shouldBeIn 0.97f..1f
-                press(Key.DirectionRight, settle = false)
-                step(16)
-                compose.onNodeWithTag("shelf:card:0").assertDoesNotExist()
-            }
-
-            test("a card whose poster does not decode, such as an https one, shows the app's art under the item's title") {
-                showHome()
-                hold()
-
-                textOf("shelf:card-title", unmerged = true) shouldBe "Andor"
-            }
-
-            test("a square poster shows whole on its card, between bars of its fill") {
-                val square = ImageBitmap(9, 9).also { Canvas(it).drawRect(Rect(0f, 0f, 9f, 9f), Paint().apply { color = Color.Red }) }
-                posters["content://pkg.1/poster/severance"] = ShelfPoster(square, fill = Color.Blue)
-                showHome()
-                hold()
-
-                val image = compose.onRoot().captureToImage().toPixelMap()
-                val bounds = compose.onNodeWithTag("shelf:card:0").getBoundsInRoot()
-                val row = ((bounds.top.value + bounds.bottom.value) / 2f * DENSITY).roundToInt()
-                val middle = image[((bounds.left.value + bounds.right.value) / 2f * DENSITY).roundToInt(), row]
-                // The card is 16:9, so a square poster leaves a bar of 7/32 of its width on each side.
-                val bar = image[((bounds.left.value + (bounds.right.value - bounds.left.value) / 10f) * DENSITY).roundToInt(), row]
-                withClue("middle $middle") { (middle.red - middle.blue) shouldBeIn 0.8f..1f }
-                withClue("bar $bar") { (bar.blue - bar.red) shouldBeIn 0.8f..1f }
-            }
-
-            test("after a poster change a card without a picture asks for its poster again and a card with one does not") {
-                showHome()
-                hold()
-                val asked = posterAsks.toList()
-
-                posterChanges.value += 1
-                compose.waitForIdle()
-
-                asked.sorted() shouldBe
-                    listOf("content://pkg.1/poster/severance", "content://pkg.1/poster/silo", "https://example.com/andor.jpg")
-                posterAsks shouldBe asked + "https://example.com/andor.jpg"
-            }
-
-            test("the cards watch for poster changes only while they show") {
-                showHome()
-                posterChanges.subscriptionCount.value shouldBe 0
-                hold()
-                posterChanges.subscriptionCount.value shouldBe 1
-
-                press(Key.DirectionRight)
-                hold()
-
-                compose.onNodeWithTag("shelf:card:0").assertDoesNotExist()
-                posterChanges.subscriptionCount.value shouldBe 0
-            }
-
-            test("with rows_below_dock 2 the layout has no room for the cards: nothing is read and up goes to the top bar") {
-                showHome(Cinematic.copy(rowsBelowDock = 2))
-                hold()
-
-                compose.onNodeWithTag("shelf:card:0").assertDoesNotExist()
-                reads.shouldBeEmpty()
-                press(Key.DirectionUp)
-                compose.onNodeWithContentDescription("Inputs").assertIsFocused()
+            for (theme in Look.entries) {
+                val named = if (theme == Look.Expressive) ", in Expressive" else ""
+
+                test(
+                    "up from a dock tile with a shelf goes to the first card, and left and right move along the cards and stop at the ends$named",
+                ) {
+                    testLook = theme
+
+                    showHome(Cinematic.copy(appShelfSources = listOf("pkg.4")))
+                    repeat(3) { press(Key.DirectionRight) }
+                    hold()
+
+                    press(Key.DirectionUp)
+                    compose.onNodeWithTag("shelf:card:0").assertIsFocused()
+                    press(Key.DirectionRight)
+                    press(Key.DirectionRight)
+                    compose.onNodeWithTag("shelf:card:2").assertIsFocused()
+                    press(Key.DirectionRight)
+                    compose.onNodeWithTag("shelf:card:2").assertIsFocused()
+                    repeat(3) { press(Key.DirectionLeft) }
+                    compose.onNodeWithTag("shelf:card:0").assertIsFocused()
+                }
+
+                test("with 20 cards right 19 times reaches the last card and one more right stays on it$named") {
+                    testLook = theme
+
+                    twentyItems()
+                    showHome()
+                    hold()
+                    press(Key.DirectionUp)
+
+                    repeat(19) { press(Key.DirectionRight) }
+                    compose.onNodeWithTag("shelf:card:19").assertIsFocused()
+                    press(Key.DirectionRight)
+
+                    compose.onNodeWithTag("shelf:card:19").assertIsFocused()
+                }
+
+                test("with 20 cards only the cards near the screen ask for their posters until the row scrolls to the others$named") {
+                    testLook = theme
+
+                    twentyItems()
+                    showHome()
+                    hold()
+
+                    withClue("asked $posterAsks") { posterAsks.size shouldBeIn 1..10 }
+                    (items.last().posterUri in posterAsks).shouldBeFalse()
+                    press(Key.DirectionUp)
+                    repeat(19) { press(Key.DirectionRight) }
+
+                    (items.last().posterUri in posterAsks).shouldBeTrue()
+                }
+
+                test("down from a card returns focus to its dock tile$named") {
+                    testLook = theme
+
+                    showHome()
+                    hold()
+                    press(Key.DirectionUp)
+                    press(Key.DirectionRight)
+
+                    press(Key.DirectionDown)
+
+                    compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                }
+
+                test("back from a card returns focus to its dock tile$named") {
+                    testLook = theme
+
+                    showHome()
+                    hold()
+                    press(Key.DirectionUp)
+                    press(Key.DirectionRight)
+
+                    compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+                    compose.waitForIdle()
+
+                    compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                }
+
+                test("down from the last card scrolls the row back to its first card as it moves along the cards$named") {
+                    testLook = theme
+
+                    items += (1..7).map { items[1].copy(title = "Show $it") }
+                    showHome()
+                    hold()
+                    press(Key.DirectionUp)
+                    val start = firstCardLeft()
+                    repeat(9) { press(Key.DirectionRight) }
+                    compose.onNodeWithTag("shelf:card:9").assertIsFocused()
+                    withClue("scrolled to the last card") { firstCardLeft() shouldBeLessThan start }
+
+                    compose.mainClock.autoAdvance = false
+                    press(Key.DirectionDown, settle = false)
+                    step(16)
+                    withClue("one frame after down") { firstCardLeft() shouldBeLessThan start }
+                    compose.mainClock.autoAdvance = true
+                    compose.waitForIdle()
+
+                    compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                    firstCardLeft() shouldBe start
+                }
+
+                test("with reduced_motion back from the last card puts the row at its first card at once$named") {
+                    testLook = theme
+
+                    items += (1..7).map { items[1].copy(title = "Show $it") }
+                    showHome(motion = Motion(reducedMotion = true))
+                    hold()
+                    press(Key.DirectionUp)
+                    val start = firstCardLeft()
+                    repeat(9) { press(Key.DirectionRight) }
+                    withClue("scrolled to the last card") { firstCardLeft() shouldBeLessThan start }
+
+                    compose.mainClock.autoAdvance = false
+                    compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+                    step(16)
+
+                    compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                    firstCardLeft() shouldBe start
+                }
+
+                test("up from a card goes to the top bar, as up from the dock does$named") {
+                    testLook = theme
+
+                    showHome()
+                    hold()
+                    press(Key.DirectionUp)
+                    compose.onNodeWithTag("shelf:card:0").assertIsFocused()
+
+                    press(Key.DirectionUp)
+
+                    compose.onNodeWithContentDescription("Inputs").assertIsFocused()
+                }
+
+                test("with input_arrival, up from a card goes to the inputs button while it offers a device$named") {
+                    testLook = theme
+
+                    items += listOf("Silo", "Pluribus").map { items[1].copy(title = it) }
+                    showHome(Cinematic.copy(inputArrival = true))
+                    hold()
+                    press(Key.DirectionUp)
+                    repeat(4) { press(Key.DirectionRight) }
+                    compose.onNodeWithTag("shelf:card:4").assertIsFocused()
+
+                    inputs.value = FourPorts.copy(arrival = Console)
+                    compose.mainClock.advanceTimeBy(2_100)
+                    press(Key.DirectionUp)
+
+                    compose.onNode(hasContentDescription("Inputs", substring = true)).assertIsFocused()
+                }
+
+                test("up from the next dock tile while the cards fade out does not land on a card$named") {
+                    testLook = theme
+
+                    showHome()
+                    hold()
+
+                    compose.mainClock.autoAdvance = false
+                    press(Key.DirectionRight, settle = false)
+                    step(16)
+                    press(Key.DirectionUp, settle = false)
+                    step(16)
+                    compose.onNodeWithTag("shelf:card:0").assertExists()
+
+                    compose.onNodeWithTag("tile:pkg.2").assertIsNotFocused()
+                    compose
+                        .onAllNodes(
+                            (hasTestTag("shelf:card:0") or hasTestTag("shelf:card:1") or hasTestTag("shelf:card:2")) and
+                                isFocused(),
+                        ).assertCountEquals(0)
+                }
+
+                test("ok on a card opens its item with the app of its dock tile$named") {
+                    testLook = theme
+
+                    showHome()
+                    hold()
+                    press(Key.DirectionUp)
+                    press(Key.DirectionRight)
+
+                    press(Key.DirectionCenter)
+
+                    effects shouldBe listOf(HomeEffect.OpenShelfItem(apps[0], items[1]))
+                }
+
+                test("a card with focus whose shelf a new read finds empty hands focus to its dock tile$named") {
+                    testLook = theme
+
+                    showHome()
+                    hold()
+                    press(Key.DirectionUp)
+                    press(Key.DirectionRight)
+                    compose.onNodeWithTag("shelf:card:1").assertIsFocused()
+
+                    items.clear()
+                    compose.runOnUiThread { viewModel.onStarted() }
+                    compose.waitForIdle()
+
+                    compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                    compose.onNodeWithTag("shelf:card:0").assertDoesNotExist()
+                }
+
+                test("a card with focus that a new read leaves out hands focus to its dock tile, and the shorter shelf shows$named") {
+                    testLook = theme
+
+                    showHome()
+                    hold()
+                    press(Key.DirectionUp)
+                    press(Key.DirectionRight)
+                    press(Key.DirectionRight)
+                    compose.onNodeWithTag("shelf:card:2").assertIsFocused()
+
+                    items.subList(1, items.size).clear()
+                    compose.runOnUiThread { viewModel.onStarted() }
+                    compose.waitForIdle()
+
+                    compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                    compose.onNodeWithTag("shelf:card:0").assertExists()
+                    compose.onNodeWithTag("shelf:card:1").assertDoesNotExist()
+                }
+
+                test(
+                    "the now playing card's line gives the title, the artist when there is one, and paused, and keeps focus across tracks$named",
+                ) {
+                    testLook = theme
+
+                    session.value = NowPlayingItem("pkg.1", "The Sound of Silence", "Disturbed", paused = false, art = null)
+                    showHome(Cinematic.copy(nowPlaying = true))
+                    hold()
+                    press(Key.DirectionUp)
+                    textOf("shelf:meta") shouldBe "The Sound of Silence · Disturbed"
+
+                    session.value = NowPlayingItem("pkg.1", "Down with the Sickness", null, paused = true, art = null)
+                    compose.waitForIdle()
+                    compose.onNodeWithTag("shelf:card:0").assertIsFocused()
+                    textOf("shelf:meta") shouldBe "Down with the Sickness · Paused"
+
+                    session.value = NowPlayingItem("pkg.1", "Stricken", "Disturbed", paused = true, art = null)
+                    compose.waitForIdle()
+                    textOf("shelf:meta") shouldBe "Stricken · Disturbed, Paused"
+                }
+
+                test("the now playing card with focus hands focus to its dock tile when the session stops, and the items stay$named") {
+                    testLook = theme
+
+                    session.value = NowPlayingItem("pkg.1", "The Sound of Silence", "Disturbed", paused = false, art = null)
+                    showHome(Cinematic.copy(nowPlaying = true))
+                    hold()
+                    press(Key.DirectionUp)
+                    compose.onNodeWithTag("shelf:card:0").assertIsFocused()
+
+                    session.value = null
+                    compose.waitForIdle()
+
+                    compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                    compose.onNodeWithContentDescription("Severance").assertExists()
+                    compose.onNodeWithTag("shelf:card:3").assertDoesNotExist()
+                }
+
+                test("ok on the now playing card opens it with the app of its dock tile$named") {
+                    testLook = theme
+
+                    val playing = NowPlayingItem("pkg.1", "The Sound of Silence", "Disturbed", paused = false, art = null)
+                    session.value = playing
+                    showHome(Cinematic.copy(nowPlaying = true))
+                    hold()
+                    press(Key.DirectionUp)
+
+                    press(Key.DirectionCenter)
+
+                    effects shouldBe listOf(HomeEffect.OpenShelfItem(apps[0], nowPlayingCard(playing)))
+                }
+
+                test("with press_feedback ok on a card dips it to 96 percent of its focused size and back$named") {
+                    testLook = theme
+
+                    showHome(Cinematic.copy(pressFeedback = true))
+                    hold()
+                    press(Key.DirectionUp)
+                    val rest = redWidth()
+
+                    compose.mainClock.autoAdvance = false
+                    compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
+                    compose.onRoot().performKeyInput { keyUp(Key.DirectionCenter) }
+                    val widths =
+                        List(16) {
+                            compose.mainClock.advanceTimeBy(16)
+                            redWidth() / rest
+                        }
+
+                    // Expressive's dip runs on a spring, which takes longer than Glass's 80 ms tween each way.
+                    if (theme == Look.Expressive) compose.mainClock.advanceTimeBy(1_000)
+                    withClue("widths $widths") { widths.min() shouldBeIn 0.955f..0.967f }
+                    withClue("back at rest: $widths") { (redWidth() / rest) shouldBeIn 0.997f..1.003f }
+                }
+
+                test("with the cinematic shelf a focused card's line gives its title, season and episode and the minutes left$named") {
+                    testLook = theme
+
+                    showHome()
+                    hold()
+
+                    press(Key.DirectionUp)
+
+                    textOf("shelf:name") shouldBe "App 1"
+                    textOf("shelf:meta") shouldBe "Severance · S2 E4, 32 min left"
+                    press(Key.DirectionRight)
+                    textOf("shelf:meta") shouldBe "Andor"
+                }
+
+                test("without the cinematic shelf a focused card's line gives its title, season and episode and the minutes left$named") {
+                    testLook = theme
+
+                    showHome(Plain)
+                    hold()
+
+                    press(Key.DirectionUp)
+
+                    textOf("shelf:title") shouldBe "App 1"
+                    textOf("shelf:title-meta") shouldBe "Severance · S2 E4, 32 min left"
+                }
+
+                test("while focus stays on the dock tile the line under the title does not change as the cards show$named") {
+                    testLook = theme
+
+                    showHome()
+                    val before = textOf("shelf:meta")
+
+                    hold()
+
+                    compose.onNodeWithTag("shelf:card:0").assertExists()
+                    textOf("shelf:meta") shouldBe before
+                }
+
+                test("with app_shelf off a held dock tile shows no cards and up goes to the top bar$named") {
+                    testLook = theme
+
+                    showHome(Cinematic.copy(appShelf = false))
+                    hold()
+
+                    compose.onNodeWithTag("shelf:card:0").assertDoesNotExist()
+                    press(Key.DirectionUp)
+                    compose.onNodeWithContentDescription("Inputs").assertIsFocused()
+                    reads.shouldBeEmpty()
+                }
+
+                test("a dock tile whose app has no ticked sources shows no cards and up goes to the top bar$named") {
+                    testLook = theme
+
+                    showHome(Cinematic.copy(appShelfSources = listOf("pkg.2")))
+                    hold()
+
+                    compose.onNodeWithTag("shelf:card:0").assertDoesNotExist()
+                    press(Key.DirectionUp)
+                    compose.onNodeWithContentDescription("Inputs").assertIsFocused()
+                }
+
+                test("the dock and the title's place in the grid layout do not move as the cards show and go$named") {
+                    testLook = theme
+
+                    showHome()
+                    val dock = compose.onNodeWithTag("tile:pkg.1").getBoundsInRoot()
+                    val second = compose.onNodeWithTag("tile:pkg.2").getBoundsInRoot()
+
+                    hold()
+                    compose.onNodeWithTag("tile:pkg.1").getBoundsInRoot() shouldBe dock
+                    press(Key.DirectionUp)
+                    compose.onNodeWithTag("tile:pkg.1").getBoundsInRoot() shouldBe dock
+                    press(Key.DirectionDown)
+                    press(Key.DirectionRight)
+                    hold()
+
+                    compose.onNodeWithTag("shelf:card:0").assertDoesNotExist()
+                    compose.onNodeWithTag("tile:pkg.2").getBoundsInRoot() shouldBe second
+                }
+
+                test("the cards stand between the meta line and the dock, clear of both$named") {
+                    testLook = theme
+
+                    showHome()
+                    hold()
+
+                    val meta = compose.onNodeWithTag("shelf:meta").getBoundsInRoot()
+                    val card = compose.onNodeWithTag("shelf:card:0").getBoundsInRoot()
+                    val dock = compose.onNodeWithTag("dock").getBoundsInRoot()
+
+                    // A focused card grows 4% on each side and its ring reaches 9.72 dp past that.
+                    val ring = (card.bottom - card.top).value * 0.04f + 9.72f
+                    withClue("meta $meta, card $card") { (card.top - meta.bottom).value shouldBeIn ring..40f }
+                    withClue("card $card, dock $dock") { (dock.top - card.bottom).value shouldBeIn ring..40f }
+                    (card.bottom - card.top).value shouldBeIn ShelfCardMinHeight.value..ShelfCardHeight.value
+                }
+
+                test("the cards fade in over 200 ms and out as fast$named") {
+                    testLook = theme
+
+                    showHome()
+                    appear()
+
+                    step(100)
+                    withClue("half way in") { redness() shouldBeIn 0.2f..0.9f }
+                    step(150)
+                    withClue("in") { redness() shouldBeIn 0.97f..1f }
+                    press(Key.DirectionRight, settle = false)
+                    step(16)
+                    withClue("going out") { redness() shouldBeIn 0.1f..0.9f }
+                }
+
+                test("with reduced_motion the cards show and go at once$named") {
+                    testLook = theme
+
+                    showHome(motion = Motion(reducedMotion = true))
+                    appear()
+
+                    step(16)
+                    redness() shouldBeIn 0.97f..1f
+                    press(Key.DirectionRight, settle = false)
+                    step(16)
+                    compose.onNodeWithTag("shelf:card:0").assertDoesNotExist()
+                }
+
+                test("a card whose poster does not decode, such as an https one, shows the app's art under the item's title$named") {
+                    testLook = theme
+
+                    showHome()
+                    hold()
+
+                    textOf("shelf:card-title", unmerged = true) shouldBe "Andor"
+                }
+
+                test("a square poster shows whole on its card, between bars of its fill$named") {
+                    testLook = theme
+
+                    val square = ImageBitmap(9, 9).also { Canvas(it).drawRect(Rect(0f, 0f, 9f, 9f), Paint().apply { color = Color.Red }) }
+                    posters["content://pkg.1/poster/severance"] = ShelfPoster(square, fill = Color.Blue)
+                    showHome()
+                    hold()
+
+                    val image = compose.onRoot().captureToImage().toPixelMap()
+                    val bounds = compose.onNodeWithTag("shelf:card:0").getBoundsInRoot()
+                    val row = ((bounds.top.value + bounds.bottom.value) / 2f * DENSITY).roundToInt()
+                    val middle = image[((bounds.left.value + bounds.right.value) / 2f * DENSITY).roundToInt(), row]
+                    // The card is 16:9, so a square poster leaves a bar of 7/32 of its width on each side.
+                    val bar = image[((bounds.left.value + (bounds.right.value - bounds.left.value) / 10f) * DENSITY).roundToInt(), row]
+                    withClue("middle $middle") { (middle.red - middle.blue) shouldBeIn 0.8f..1f }
+                    withClue("bar $bar") { (bar.blue - bar.red) shouldBeIn 0.8f..1f }
+                }
+
+                test("after a poster change a card without a picture asks for its poster again and a card with one does not$named") {
+                    testLook = theme
+
+                    showHome()
+                    hold()
+                    val asked = posterAsks.toList()
+
+                    posterChanges.value += 1
+                    compose.waitForIdle()
+
+                    asked.sorted() shouldBe
+                        listOf("content://pkg.1/poster/severance", "content://pkg.1/poster/silo", "https://example.com/andor.jpg")
+                    posterAsks shouldBe asked + "https://example.com/andor.jpg"
+                }
+
+                test("the cards watch for poster changes only while they show$named") {
+                    testLook = theme
+
+                    showHome()
+                    posterChanges.subscriptionCount.value shouldBe 0
+                    hold()
+                    posterChanges.subscriptionCount.value shouldBe 1
+
+                    press(Key.DirectionRight)
+                    hold()
+
+                    compose.onNodeWithTag("shelf:card:0").assertDoesNotExist()
+                    posterChanges.subscriptionCount.value shouldBe 0
+                }
+
+                test("with rows_below_dock 2 the layout has no room for the cards: nothing is read and up goes to the top bar$named") {
+                    testLook = theme
+
+                    showHome(Cinematic.copy(rowsBelowDock = 2))
+                    hold()
+
+                    compose.onNodeWithTag("shelf:card:0").assertDoesNotExist()
+                    reads.shouldBeEmpty()
+                    press(Key.DirectionUp)
+                    compose.onNodeWithContentDescription("Inputs").assertIsFocused()
+                }
             }
         }
     })
@@ -498,6 +572,9 @@ private val Cinematic = SixColumns.copy(cinematicHome = true, appShelf = true, a
 private val Plain = SixColumns.copy(appShelf = true, appShelfSources = listOf("pkg.1"))
 
 private class AppShelfUiTestFixture : JUnit4RulesContext() {
+    /** The look the test runs in. */
+    var testLook = Look.Glass
+
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
     val effects = mutableListOf<HomeEffect>()
@@ -576,7 +653,7 @@ private class AppShelfUiTestFixture : JUnit4RulesContext() {
                 nowPlaying = { pkg -> if (pkg == "pkg.1") session else flowOf(null) },
             )
         compose.setContent {
-            TvTheme(look = Look.Glass, motion = motion) {
+            TvTheme(look = testLook, motion = motion) {
                 val viewModel = rememberHomeViewModel(sources, config, effects).also { viewModel = it }
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(

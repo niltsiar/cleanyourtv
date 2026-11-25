@@ -42,74 +42,92 @@ val HomeUsualAppFocusUiTest by testSuite {
 class HomeUsualAppFocusUiTestContent :
     RobolectricTestSuiteContent({
         testFixture { HomeUsualAppFocusUiTestFixture() } asContextForEach {
-            test("an arrival from an app focuses the usual tile and scrolls it into view") {
-                showHome(UsualAppFocus)
+            for (theme in Look.entries) {
+                val named = if (theme == Look.Expressive) ", in Expressive" else ""
 
-                arriveFromApp()
+                test("an arrival from an app focuses the usual tile and scrolls it into view$named") {
+                    testLook = theme
 
-                compose.onNodeWithTag("tile:pkg.18").assertIsFocused().assertIsDisplayed()
-            }
+                    showHome(UsualAppFocus)
 
-            test("the Home key while on Home focuses the first tile even with a usual app") {
-                showHome(UsualAppFocus)
-                press(Key.DirectionRight)
-                press(Key.DirectionRight)
-                compose.onNodeWithTag("tile:pkg.3").assertIsFocused()
+                    arriveFromApp()
 
-                homePresses++
-                settle()
+                    compose.onNodeWithTag("tile:pkg.18").assertIsFocused().assertIsDisplayed()
+                }
 
-                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-            }
+                test("the Home key while on Home focuses the first tile even with a usual app$named") {
+                    testLook = theme
 
-            test("Back from an app keeps the remembered tile") {
-                showHome(UsualAppFocus)
-                press(Key.DirectionRight)
-                press(Key.DirectionRight)
+                    showHome(UsualAppFocus)
+                    press(Key.DirectionRight)
+                    press(Key.DirectionRight)
+                    compose.onNodeWithTag("tile:pkg.3").assertIsFocused()
 
-                leaveForApp()
-                viewModel.onStarted()
-                settle()
+                    homePresses++
+                    settle()
 
-                compose.onNodeWithTag("tile:pkg.3").assertIsFocused()
-            }
+                    compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                }
 
-            test("a key pressed before the usual app is found keeps focus where it is") {
-                showHome(UsualAppFocus)
-                answer = CompletableDeferred()
-                arriveFromApp()
-                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                test("Back from an app keeps the remembered tile$named") {
+                    testLook = theme
 
-                press(Key.DirectionRight)
-                answer.complete(Unit)
-                settle()
+                    showHome(UsualAppFocus)
+                    press(Key.DirectionRight)
+                    press(Key.DirectionRight)
 
-                compose.onNodeWithTag("tile:pkg.2").assertIsFocused()
-            }
+                    leaveForApp()
+                    viewModel.onStarted()
+                    settle()
 
-            test("a usual app found only in the library leaves the first tile focused") {
-                usual = "pkg.library"
-                showHome(UsualAppFocus.copy(appLibrary = true))
+                    compose.onNodeWithTag("tile:pkg.3").assertIsFocused()
+                }
 
-                arriveFromApp()
+                test("a key pressed before the usual app is found keeps focus where it is$named") {
+                    testLook = theme
 
-                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-            }
+                    showHome(UsualAppFocus)
+                    answer = CompletableDeferred()
+                    arriveFromApp()
+                    compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
 
-            test("with habit_hint off an arrival focuses the first tile") {
-                showHome(UsualAppFocus.copy(habitHint = false))
+                    press(Key.DirectionRight)
+                    answer.complete(Unit)
+                    settle()
 
-                arriveFromApp()
+                    compose.onNodeWithTag("tile:pkg.2").assertIsFocused()
+                }
 
-                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-            }
+                test("a usual app found only in the library leaves the first tile focused$named") {
+                    testLook = theme
 
-            test("with focus_habit_app off an arrival focuses the first tile") {
-                showHome(UsualAppFocus.copy(focusHabitApp = false))
+                    usual = "pkg.library"
+                    showHome(UsualAppFocus.copy(appLibrary = true))
 
-                arriveFromApp()
+                    arriveFromApp()
 
-                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                    compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                }
+
+                test("with habit_hint off an arrival focuses the first tile$named") {
+                    testLook = theme
+
+                    showHome(UsualAppFocus.copy(habitHint = false))
+
+                    arriveFromApp()
+
+                    compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                }
+
+                test("with focus_habit_app off an arrival focuses the first tile$named") {
+                    testLook = theme
+
+                    showHome(UsualAppFocus.copy(focusHabitApp = false))
+
+                    arriveFromApp()
+
+                    compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                }
             }
         }
     })
@@ -118,6 +136,9 @@ class HomeUsualAppFocusUiTestContent :
 private val UsualAppFocus = SixColumns.copy(habitHint = true, focusHabitApp = true)
 
 private class HomeUsualAppFocusUiTestFixture : JUnit4RulesContext() {
+    /** The look the test runs in. */
+    var testLook = Look.Glass
+
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
     val apps = (1..18).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") }
@@ -147,7 +168,7 @@ private class HomeUsualAppFocusUiTestFixture : JUnit4RulesContext() {
                 },
             )
         compose.setContent {
-            TvTheme(look = Look.Glass) {
+            TvTheme(look = testLook) {
                 viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(

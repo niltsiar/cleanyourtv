@@ -59,70 +59,89 @@ val DockTitleUiTest by testSuite {
 class DockTitleUiTestContent :
     RobolectricTestSuiteContent({
         testFixture { DockTitleUiTestFixture() } asContextForEach {
-            test("the focused tile is named over the dock by default") {
-                showHome(dockTitle = true)
+            for (theme in Look.entries) {
+                val named = if (theme == Look.Expressive) ", in Expressive" else ""
 
-                titleText() shouldBe "App 1"
-            }
+                test("the focused tile is named over the dock by default$named") {
+                    testLook = theme
 
-            test("the focused tile is not named over the dock when dock title is false") {
-                showHome(dockTitle = false)
-                press(Key.DirectionRight)
-                compose.onNodeWithTag("tile:pkg.2").assertIsFocused()
+                    showHome(dockTitle = true)
 
-                titleText() shouldBe ""
-            }
-
-            test("reorder mode still names the moved app and shows its keys when dock title is false") {
-                showHome(dockTitle = false)
-                press(Key.Menu)
-                press(Key.DirectionDown)
-                press(Key.DirectionCenter)
-
-                titleText() shouldBe "App 1"
-                compose.onNode(hasText("drop") and hasAnyAncestor(hasTestTag("reorder:hint"))).assertExists()
-            }
-
-            test("the library pill still names the library when dock title is false") {
-                showHome(dockTitle = false)
-                press(Key.DirectionDown)
-                press(Key.DirectionDown)
-
-                compose.onNodeWithTag("library:pill").assertIsFocused()
-                titleText() shouldBe "App library"
-            }
-
-            test("dock title false takes the scrim from under a focused tile") {
-                showHome(dockTitle = true)
-                val withTitle = redUnderTitle()
-
-                dockTitleOn.value = false
-                settle()
-
-                withClue("red under the title: ${redUnderTitle()} with dock_title false, $withTitle with it true") {
-                    redUnderTitle() -
-                        withTitle shouldBeGreaterThan
-                        15
+                    titleText() shouldBe "App 1"
                 }
-            }
 
-            test("dock title false keeps the scrim under a top bar control s line") {
-                showHome(dockTitle = false)
-                press(Key.DirectionUp)
-                val bare = redUnderTitle()
+                test("the focused tile is not named over the dock when dock title is false$named") {
+                    testLook = theme
 
-                dockTitleOn.value = true
-                settle()
+                    showHome(dockTitle = false)
+                    press(Key.DirectionRight)
+                    compose.onNodeWithTag("tile:pkg.2").assertIsFocused()
 
-                withClue("red under the title: $bare with dock_title false, ${redUnderTitle()} with it true") {
-                    abs(bare - redUnderTitle()) shouldBeLessThanOrEqualTo
-                        3
+                    titleText() shouldBe ""
+                }
+
+                test("reorder mode still names the moved app and shows its keys when dock title is false$named") {
+                    testLook = theme
+
+                    showHome(dockTitle = false)
+                    press(Key.Menu)
+                    press(Key.DirectionDown)
+                    press(Key.DirectionCenter)
+
+                    titleText() shouldBe "App 1"
+                    compose.onNode(hasText("drop") and hasAnyAncestor(hasTestTag("reorder:hint"))).assertExists()
+                }
+
+                test("the library pill still names the library when dock title is false$named") {
+                    testLook = theme
+
+                    showHome(dockTitle = false)
+                    press(Key.DirectionDown)
+                    press(Key.DirectionDown)
+
+                    compose.onNodeWithTag("library:pill").assertIsFocused()
+                    titleText() shouldBe "App library"
+                }
+
+                test("dock title false takes the scrim from under a focused tile$named") {
+                    testLook = theme
+
+                    showHome(dockTitle = true)
+                    val withTitle = redUnderTitle()
+
+                    dockTitleOn.value = false
+                    settle()
+
+                    withClue("red under the title: ${redUnderTitle()} with dock_title false, $withTitle with it true") {
+                        redUnderTitle() -
+                            withTitle shouldBeGreaterThan
+                            15
+                    }
+                }
+
+                test("dock title false keeps the scrim under a top bar control s line$named") {
+                    testLook = theme
+
+                    showHome(dockTitle = false)
+                    press(Key.DirectionUp)
+                    val bare = redUnderTitle()
+
+                    dockTitleOn.value = true
+                    settle()
+
+                    withClue("red under the title: $bare with dock_title false, ${redUnderTitle()} with it true") {
+                        abs(bare - redUnderTitle()) shouldBeLessThanOrEqualTo
+                            3
+                    }
                 }
             }
         }
     })
 
 private class DockTitleUiTestFixture : JUnit4RulesContext() {
+    /** The look the test runs in. */
+    var testLook = Look.Glass
+
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
     val white: ImageBitmap =
@@ -138,7 +157,7 @@ private class DockTitleUiTestFixture : JUnit4RulesContext() {
         val sources = sources(apps = flowOf(AppList(NineApps)), wallpaper = flowOf(Wallpaper(picture = white, thumbnail = white)))
         compose.setContent {
             CompositionLocalProvider(LocalBakeDispatcher provides Dispatchers.Unconfined) {
-                TvTheme(look = Look.Glass, darkTheme = true) {
+                TvTheme(look = testLook, darkTheme = true) {
                     val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                     val state = viewModel.uiState.collectAsState()
                     HomeScreen(

@@ -56,80 +56,101 @@ val UnusedFadeUiTest by testSuite {
 class UnusedFadeUiTestContent :
     RobolectricTestSuiteContent({
         testFixture { UnusedFadeUiTestFixture() } asContextForEach {
-            test("a faded grid tile draws at 55 percent saturation and 75 percent opacity against a fresh one") {
-                showHome()
-                val screen = screen()
+            for (theme in Look.entries) {
+                val named = if (theme == Look.Expressive) ", in Expressive" else ""
 
-                val fresh = screen.tile("pkg.8")
+                test("a faded grid tile draws at 55 percent saturation and 75 percent opacity against a fresh one$named") {
+                    testLook = theme
 
-                withClue("the art shows in full colour: $fresh") { (fresh.red > 0.8f && fresh.blue < 0.3f).shouldBeTrue() }
-                assertFaded(screen, "pkg.7", fresh)
-            }
+                    showHome()
+                    val screen = screen()
 
-            test("an app never opened in an old record is faded too") {
-                showHome()
-                val screen = screen()
+                    val fresh = screen.tile("pkg.8")
 
-                assertFaded(screen, "pkg.9", screen.tile("pkg.8"))
-            }
+                    withClue("the art shows in full colour: $fresh") { (fresh.red > 0.8f && fresh.blue < 0.3f).shouldBeTrue() }
+                    assertFaded(screen, "pkg.7", fresh)
+                }
 
-            test("a faded tile returns to full colour while it has focus and fades again when focus leaves") {
-                showHome()
-                val before = screen()
-                val fresh = before.tile("pkg.8")
-                val background = before.gap()
-                press(Key.DirectionDown)
-                settle()
-                compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
-                val focusedFaded = screen().tile("pkg.7")
+                test("an app never opened in an old record is faded too$named") {
+                    testLook = theme
 
-                press(Key.DirectionRight)
-                settle()
-                compose.onNodeWithTag("tile:pkg.8").assertIsFocused()
-                val later = screen()
+                    showHome()
+                    val screen = screen()
 
-                assertLooks(later.tile("pkg.8"), focusedFaded, "pkg.7 with focus, like the fresh pkg.8 with focus")
-                assertLooks(faded(fresh, background), later.tile("pkg.7"), "pkg.7 after focus left")
-            }
+                    assertFaded(screen, "pkg.9", screen.tile("pkg.8"))
+                }
 
-            test("the return to full colour is a short fade on top of the focus look the same tile has without a fade") {
-                showHome()
+                test("a faded tile returns to full colour while it has focus and fades again when focus leaves$named") {
+                    testLook = theme
 
-                val (faded, fresh) = shortfalls()
+                    showHome()
+                    val before = screen()
+                    val fresh = before.tile("pkg.8")
+                    val background = before.gap()
+                    press(Key.DirectionDown)
+                    settle()
+                    compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+                    val focusedFaded = screen().tile("pkg.7")
 
-                val extra = faded.zip(fresh).map { (a, b) -> a - b }
-                withClue("still fading 32 ms after the key: $extra") { extra[0] shouldBeGreaterThan 0.02f }
-                withClue("fading less each frame: $extra") { (extra.zipWithNext().all { (a, b) -> b <= a + 0.01f }).shouldBeTrue() }
-                withClue("done by 200 ms: $extra") { extra.last() shouldBeLessThan 0.02f }
-            }
+                    press(Key.DirectionRight)
+                    settle()
+                    compose.onNodeWithTag("tile:pkg.8").assertIsFocused()
+                    val later = screen()
 
-            test("with reduced motion the return to full colour is over in the first frame") {
-                showHome(motion = Motion(reducedMotion = true))
+                    assertLooks(later.tile("pkg.8"), focusedFaded, "pkg.7 with focus, like the fresh pkg.8 with focus")
+                    assertLooks(faded(fresh, background), later.tile("pkg.7"), "pkg.7 after focus left")
+                }
 
-                val (faded, fresh) = shortfalls()
+                test("the return to full colour is a short fade on top of the focus look the same tile has without a fade$named") {
+                    testLook = theme
 
-                val extra = faded.zip(fresh).map { (a, b) -> a - b }
-                withClue("no fade left after two frames: $extra") { (extra.drop(1).all { abs(it) < 0.02f }).shouldBeTrue() }
-            }
+                    showHome()
 
-            test("a dock tile is never faded whatever its app was last opened") {
-                showHome()
-                val screen = screen()
+                    val (faded, fresh) = shortfalls()
 
-                assertLooks(screen.tile("pkg.8"), screen.tile("pkg.2"), "dock tile of an app never opened")
-            }
+                    val extra = faded.zip(fresh).map { (a, b) -> a - b }
+                    withClue("still fading 32 ms after the key: $extra") { extra[0] shouldBeGreaterThan 0.02f }
+                    withClue("fading less each frame: $extra") { (extra.zipWithNext().all { (a, b) -> b <= a + 0.01f }).shouldBeTrue() }
+                    withClue("done by 200 ms: $extra") { extra.last() shouldBeLessThan 0.02f }
+                }
 
-            test("with zero days no tile is faded") {
-                showHome(days = 0)
-                val screen = screen()
+                test("with reduced motion the return to full colour is over in the first frame$named") {
+                    testLook = theme
 
-                assertLooks(screen.tile("pkg.8"), screen.tile("pkg.7"), "pkg.7")
-                assertLooks(screen.tile("pkg.8"), screen.tile("pkg.9"), "pkg.9")
+                    showHome(motion = Motion(reducedMotion = true))
+
+                    val (faded, fresh) = shortfalls()
+
+                    val extra = faded.zip(fresh).map { (a, b) -> a - b }
+                    withClue("no fade left after two frames: $extra") { (extra.drop(1).all { abs(it) < 0.02f }).shouldBeTrue() }
+                }
+
+                test("a dock tile is never faded whatever its app was last opened$named") {
+                    testLook = theme
+
+                    showHome()
+                    val screen = screen()
+
+                    assertLooks(screen.tile("pkg.8"), screen.tile("pkg.2"), "dock tile of an app never opened")
+                }
+
+                test("with zero days no tile is faded$named") {
+                    testLook = theme
+
+                    showHome(days = 0)
+                    val screen = screen()
+
+                    assertLooks(screen.tile("pkg.8"), screen.tile("pkg.7"), "pkg.7")
+                    assertLooks(screen.tile("pkg.8"), screen.tile("pkg.9"), "pkg.9")
+                }
             }
         }
     })
 
 private class UnusedFadeUiTestFixture : JUnit4RulesContext() {
+    /** The look the test runs in. */
+    var testLook = Look.Glass
+
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
     val zone = ZoneId.systemDefault()
@@ -158,7 +179,7 @@ private class UnusedFadeUiTestFixture : JUnit4RulesContext() {
                 timeMillis = { millis(now) },
             )
         compose.setContent {
-            TvTheme(look = Look.Glass, motion = motion) {
+            TvTheme(look = testLook, motion = motion) {
                 val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(

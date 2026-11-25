@@ -39,65 +39,80 @@ val MoveToUiTest by testSuite {
 class MoveToUiTestContent :
     RobolectricTestSuiteContent({
         testFixture { MoveToUiTestFixture() } asContextForEach {
-            test("a dock app moved to the end of the grid keeps focus in its new place, scrolled into view") {
-                showHome()
+            for (theme in Look.entries) {
+                val named = if (theme == Look.Expressive) ", in Expressive" else ""
 
-                openPlaces()
-                compose.onNodeWithTag("menu:DockEnd").assertIsFocused()
-                press(Key.DirectionDown)
-                press(Key.DirectionDown)
-                compose.onNodeWithTag("menu:GridEnd").assertIsFocused()
-                press(Key.DirectionCenter)
+                test("a dock app moved to the end of the grid keeps focus in its new place, scrolled into view$named") {
+                    testLook = theme
 
-                compose.onNodeWithTag("menu").assertDoesNotExist()
-                compose.onNodeWithTag("tile:pkg.1").assertIsFocused().assertIsDisplayed()
-                saved shouldBe listOf(apps.drop(1).map { it.key } + "pkg.1" to -1)
-            }
+                    showHome()
 
-            test("a grid app moved to the start of the dock keeps focus there") {
-                showHome()
-                press(Key.DirectionDown)
-                compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+                    openPlaces()
+                    compose.onNodeWithTag("menu:DockEnd").assertIsFocused()
+                    press(Key.DirectionDown)
+                    press(Key.DirectionDown)
+                    compose.onNodeWithTag("menu:GridEnd").assertIsFocused()
+                    press(Key.DirectionCenter)
 
-                openPlaces()
-                compose.onNodeWithTag("menu:DockStart").assertIsFocused()
-                press(Key.DirectionCenter)
+                    compose.onNodeWithTag("menu").assertDoesNotExist()
+                    compose.onNodeWithTag("tile:pkg.1").assertIsFocused().assertIsDisplayed()
+                    saved shouldBe listOf(apps.drop(1).map { it.key } + "pkg.1" to -1)
+                }
 
-                compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
-                val moved = compose.onNodeWithTag("tile:pkg.7").getBoundsInRoot()
-                val dock = compose.onNodeWithTag("tile:pkg.2").getBoundsInRoot()
-                moved.top shouldBe dock.top
-                (moved.left < dock.left) shouldBe true
-            }
+                test("a grid app moved to the start of the dock keeps focus there$named") {
+                    testLook = theme
 
-            test("back from the places list returns to the tile menu with focus on move to") {
-                showHome()
+                    showHome()
+                    press(Key.DirectionDown)
+                    compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
 
-                openPlaces()
-                back()
+                    openPlaces()
+                    compose.onNodeWithTag("menu:DockStart").assertIsFocused()
+                    press(Key.DirectionCenter)
 
-                compose.onNodeWithTag("menu:DockEnd").assertDoesNotExist()
-                compose.onNodeWithTag("menu:MoveTo").assertIsFocused()
-                back()
-                compose.onNodeWithTag("menu").assertDoesNotExist()
-                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-                saved shouldBe emptyList()
-            }
+                    compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+                    val moved = compose.onNodeWithTag("tile:pkg.7").getBoundsInRoot()
+                    val dock = compose.onNodeWithTag("tile:pkg.2").getBoundsInRoot()
+                    moved.top shouldBe dock.top
+                    (moved.left < dock.left) shouldBe true
+                }
 
-            test("the tile menu opens on its first row again after back from the places list") {
-                showHome()
-                openPlaces()
-                back()
-                back()
+                test("back from the places list returns to the tile menu with focus on move to$named") {
+                    testLook = theme
 
-                press(Key.Menu)
+                    showHome()
 
-                compose.onNodeWithTag("menu:ReplaceInDock").assertIsFocused()
+                    openPlaces()
+                    back()
+
+                    compose.onNodeWithTag("menu:DockEnd").assertDoesNotExist()
+                    compose.onNodeWithTag("menu:MoveTo").assertIsFocused()
+                    back()
+                    compose.onNodeWithTag("menu").assertDoesNotExist()
+                    compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                    saved shouldBe emptyList()
+                }
+
+                test("the tile menu opens on its first row again after back from the places list$named") {
+                    testLook = theme
+
+                    showHome()
+                    openPlaces()
+                    back()
+                    back()
+
+                    press(Key.Menu)
+
+                    compose.onNodeWithTag("menu:ReplaceInDock").assertIsFocused()
+                }
             }
         }
     })
 
 private class MoveToUiTestFixture : JUnit4RulesContext() {
+    /** The look the test runs in. */
+    var testLook = Look.Glass
+
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
     val effects = mutableListOf<HomeEffect>()
@@ -122,7 +137,7 @@ private class MoveToUiTestFixture : JUnit4RulesContext() {
                 .requestFocusFromTouch()
         }
         compose.setContent {
-            TvTheme(look = Look.Glass) {
+            TvTheme(look = testLook) {
                 val viewModel = rememberHomeViewModel(sources, config, effects)
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(

@@ -72,411 +72,551 @@ val DockGlassUiTest by testSuite {
 class DockGlassUiTestContent :
     RobolectricTestSuiteContent({
         testFixture { DockGlassUiTestFixture() } asContextForEach {
-            test("with dock glass a dock tile has a 1 5 px black 018 edge inside it") {
-                showHome(white, cinematic.copy(dockGlass = true), shown = bannerApps)
+            for (theme in Look.entries) {
+                val named = if (theme == Look.Expressive) ", in Expressive" else ""
 
-                val inside = tileEdgeAt(3, inPx = 4)
-                inside shouldBe (245f / 255f plusOrMinus 0.01f)
-                tileEdgeAt(3, inPx = 0) shouldBe (0.82f * inside plusOrMinus 0.015f)
-            }
+                if (theme == Look.Glass) {
+                    test("with dock glass a dock tile has a 1 5 px black 018 edge inside it") {
 
-            test("without dock glass a dock tile has no edge") {
-                showHome(white, cinematic, shown = bannerApps)
+                        showHome(white, cinematic.copy(dockGlass = true), shown = bannerApps)
 
-                tileEdgeAt(3, inPx = 0) shouldBe (tileEdgeAt(3, inPx = 4) plusOrMinus 0.01f)
-            }
-
-            test("the dock panel tints the frost by 016 on a dim wallpaper") {
-                showHome(uniform)
-                val at = gap()
-
-                assertSame(over(dark, 0.16f, frostAt(uniform, at)), screenAt(at))
-            }
-
-            test("a bright wallpaper raises the tint to 022") {
-                showHome(white)
-                val at = gap()
-
-                withClue("L* ${glass.dockLightness}") { glass.dockLightness shouldBeGreaterThanOrEqualTo 75f }
-                assertSame(over(dark, 0.22f, frostAt(white, at)), screenAt(at))
-            }
-
-            test("a wallpaper with no thumbnail goes back to the base tint after a bright one") {
-                val wallpaper = MutableStateFlow(Wallpaper(thumbnail = white))
-                showHome(white, wallpaper = wallpaper)
-                withClue("L* ${glass.dockLightness}") { glass.dockLightness shouldBeGreaterThanOrEqualTo 75f }
-
-                wallpaper.value = Wallpaper()
-                settle()
-
-                DockLook().tint(darkSurfaces = true, lightness = glass.dockLightness).alpha shouldBe (0.16f plusOrMinus 0.005f)
-            }
-
-            test("dock opacity sets the tint to 085 times the percent whatever the wallpaper") {
-                showHome(white, cinematic.copy(dockOpacity = 50))
-                val at = gap()
-
-                assertSame(over(dark, 0.85f * 0.5f, frostAt(white, at)), screenAt(at))
-            }
-
-            test("dock glass draws the light tint in night mode between the dock tiles") {
-                showHome(uniform, cinematic.copy(dockGlass = true))
-                val at = gap()
-
-                assertSame(over(light, 0.20f, frostAt(uniform, at, glass = true)), screenAt(at))
-            }
-
-            test("focus in the top bar darkens a light tray and its tiles over a white picture") {
-                showHome(
-                    white,
-                    cinematic.copy(dockGlass = true),
-                    wallpaper = flowOf(Wallpaper(picture = white, thumbnail = white)),
-                    shown = lightApps,
-                )
-                val tray = trayLuminance()
-                val tile = tileLuminance("tile:pkg.3")
-
-                press(Key.DirectionUp)
-
-                withClue("the tray goes from $tray to ${trayLuminance()}") { trayLuminance() shouldBeLessThanOrEqualTo 0.8f * tray }
-                withClue("a tile goes from $tile to ${tileLuminance("tile:pkg.3")}") {
-                    tileLuminance("tile:pkg.3") shouldBeLessThanOrEqualTo
-                        0.8f * tile
+                        val inside = tileEdgeAt(3, inPx = 4)
+                        inside shouldBe (245f / 255f plusOrMinus 0.01f)
+                        tileEdgeAt(3, inPx = 0) shouldBe (0.82f * inside plusOrMinus 0.015f)
+                    }
                 }
-            }
 
-            test("a light glass tray over a white picture keeps a mean relative luminance under 057") {
-                showHome(white, cinematic.copy(dockGlass = true))
+                test("without dock glass a dock tile has no edge$named") {
+                    testLook = theme
 
-                withClue("luminance ${trayLuminance()}") { trayLuminance() shouldBeLessThanOrEqualTo 0.57f }
-            }
+                    showHome(white, cinematic, shown = bannerApps)
 
-            test("on a dark picture a light glass tray lifts the picture by at most 002 and keeps its rim") {
-                showHome(night, cinematic.copy(dockGlass = true))
-                val at = gap()
-
-                val lift = screenAt(at).luminance() - frostAt(night, at, glass = true).luminance()
-                withClue("the tray lifts the picture by $lift") { lift shouldBeLessThanOrEqualTo 0.023f }
-                val inside = panelEdgeAt(7)
-                (panelEdgeAt(1) - inside) / (1f - inside) shouldBe (0.30f plusOrMinus 0.03f)
-            }
-
-            test("a light glass tray over a dark frost stays under 012 and 2 5 times the frost between the tiles") {
-                showHome(dusk, cinematic.copy(dockGlass = true))
-                val at = gap()
-
-                val frost = frostAt(dusk, at, glass = true).luminance()
-                val tray = screenAt(at).luminance()
-                withClue("the frost is $frost") { frost shouldBeIn 0.06f..0.08f }
-                withClue("the tray is $tray over a frost of $frost") { tray shouldBeLessThanOrEqualTo minOf(2.5f * frost, 0.12f) }
-            }
-
-            test("a light glass tray over a dark frost keeps its top strip under 020") {
-                showHome(twilight, cinematic.copy(dockGlass = true))
-
-                // 5 to 16.5 dp under the panel's top: below the rim, over the sheen.
-                val strip = trayLuminance(fromDp = 5f, toDp = 16.5f)
-                withClue("the strip is $strip") { strip shouldBeLessThanOrEqualTo 0.20f }
-            }
-
-            test("a light glass tray over a dark frost has a 1 dp white 030 line on its top edge") {
-                showHome(dusk, cinematic.copy(dockGlass = true))
-                val inside = panelEdgeAt(7)
-
-                (panelEdgeAt(1) - inside) / (1f - inside) shouldBe (0.30f plusOrMinus 0.03f)
-            }
-
-            test("a light glass tray over a white picture keeps the white 040 rim") {
-                showHome(white, cinematic.copy(dockGlass = true))
-                val inside = panelEdgeAt(7)
-
-                (panelEdgeAt(1) - inside) / (1f - inside) shouldBe (0.40f plusOrMinus 0.03f)
-            }
-
-            test("the dock panel has a 1 5 dp white highlight along its top edge") {
-                showHome(uniform)
-
-                // At 2 pixels to the dp, row 2 lies 1 to 1.5 dp down, in the highlight; row 7 lies 3.5 dp down, below it.
-                val lift = panelEdgeAt(2) - panelEdgeAt(7)
-                withClue("the highlight lifts the red by $lift") { lift shouldBeIn 0.05f..0.20f }
-            }
-
-            test("the dock panel has a 1 dp dark edge along its bottom") {
-                showHome(uniform)
-
-                val drop = panelEdgeAt(6, fromBottom = true) - panelEdgeAt(0, fromBottom = true)
-                withClue("the edge darkens the red by $drop") { drop shouldBeIn 0.05f..0.25f }
-            }
-
-            test("a light glass tray has a 1 dp black 030 hairline round its outside") {
-                showHome(white, cinematic.copy(dockGlass = true), wallpaper = flowOf(Wallpaper(picture = white, thumbnail = white)))
-
-                // Row 1 lies in the hairline, 0.5 dp out; row 8 lies 4 dp out, past it.
-                val dark = redOutsideTop(8) - redOutsideTop(1)
-                withClue("the hairline darkens the red by $dark") { dark shouldBeIn 0.15f..0.35f }
-            }
-
-            test("a dark tray has no hairline round its outside") {
-                showHome(white, wallpaper = flowOf(Wallpaper(picture = white, thumbnail = white)))
-
-                redOutsideTop(1) shouldBe (redOutsideTop(8) plusOrMinus 0.06f)
-            }
-
-            test("dock glass holds a saturated wallpaper to 035 saturation so a sky colour does not pool") {
-                showHome(cyan, cinematic.copy(dockGlass = true))
-
-                withClue("saturation ${saturation(screenAt(gap()))}") { saturation(screenAt(gap())) shouldBeLessThanOrEqualTo 0.36f }
-            }
-
-            test("dock glass draws a black 075 edge 1 dp wide inside each light dock tile") {
-                showHome(uniform, cinematic.copy(dockGlass = true), shown = lightApps)
-
-                assertEdge("tile:pkg.2", level245)
-            }
-
-            test("on the lightest tray the edge of a white tile is at least 008 darker than its art and the tray") {
-                showHome(
-                    white,
-                    cinematic.copy(dockGlass = true),
-                    wallpaper = flowOf(Wallpaper(picture = white, thumbnail = white)),
-                    shown = whiteApps,
-                )
-
-                val (edge, art, tray) = edgeAndNeighbours("tile:pkg.3")
-                withClue("the edge is $edge, its art $art, the tray $tray") { (edge <= art - 0.08f && edge <= tray - 0.08f).shouldBeTrue() }
-            }
-
-            test("a light dock tile over a bright wallpaper gets the edge on the dark tray") {
-                showHome(white, wallpaper = brightWallpaper, shown = lightApps)
-
-                assertEdge("tile:pkg.2", level245)
-            }
-
-            test("the edge of a white dock tile holds 3 to 1 against the dark tray over a bright wallpaper") {
-                showHome(white, wallpaper = brightWallpaper, shown = whiteApps)
-
-                assertEdgeHolds("tile:pkg.6")
-            }
-
-            test("the edge of a white dock tile holds 3 to 1 against the glass tray over a bright wallpaper") {
-                showHome(white, cinematic.copy(dockGlass = true), wallpaper = brightWallpaper, shown = whiteApps)
-
-                assertEdgeHolds("tile:pkg.6")
-            }
-
-            test("the edge of a white dock tile holds 3 to 1 against mid tone glass") {
-                showHome(midTone, cinematic.copy(dockGlass = true), shown = whiteApps)
-
-                assertEdgeHolds("tile:pkg.6")
-            }
-
-            test("the edge of a white grid tile holds 3 to 1 against a bright wallpaper") {
-                showHome(white, wallpaper = brightWallpaper, shown = whiteApps)
-                press(Key.DirectionDown)
-
-                assertEdgeHolds("tile:pkg.9")
-            }
-
-            test("the edge of a white grid tile holds 3 to 1 where the wallpaper is white beside it and dark on average") {
-                val wallpaper = halved(whiteLeft = true)
-                showHome(wallpaper, wallpaper = flowOf(Wallpaper(picture = wallpaper, thumbnail = wallpaper)), shown = whiteApps)
-                press(Key.DirectionDown)
-
-                withClue("the tile lies on the white left half") {
-                    compose
-                        .onNodeWithTag("tile:pkg.9")
-                        .getBoundsInRoot()
-                        .right.value shouldBeLessThan screenCentre()
+                    tileEdgeAt(3, inPx = 0) shouldBe (tileEdgeAt(3, inPx = 4) plusOrMinus 0.01f)
                 }
-                assertEdgeHolds("tile:pkg.9")
-            }
 
-            test("the edge of a white dock tile holds 3 to 1 on the dark tray where the wallpaper is white beside it and dark on average") {
-                val wallpaper = halved(whiteLeft = false)
-                showHome(wallpaper, wallpaper = flowOf(Wallpaper(picture = wallpaper, thumbnail = wallpaper)), shown = whiteApps)
+                if (theme == Look.Glass) {
+                    test("the dock panel tints the frost by 016 on a dim wallpaper") {
 
-                withClue("the tile and the 4 dp beside it lie on the white right half") {
-                    dockTile(6).left.value - 4f shouldBeGreaterThan
-                        screenCentre()
+                        showHome(uniform)
+                        val at = gap()
+
+                        assertSame(over(dark, 0.16f, frostAt(uniform, at)), screenAt(at))
+                    }
                 }
-                assertEdgeHolds("tile:pkg.6")
-            }
 
-            test("the edge of a white dock tile holds 3 to 1 with no tray where the wallpaper is white beside it and dark on average") {
-                val wallpaper = halved(whiteLeft = false)
-                showHome(
-                    wallpaper,
-                    cinematic.copy(dockBand = false),
-                    wallpaper = flowOf(Wallpaper(picture = wallpaper, thumbnail = wallpaper)),
-                    shown = whiteApps,
-                )
+                if (theme == Look.Glass) {
+                    test("a bright wallpaper raises the tint to 022") {
 
-                withClue("the tile and the 4 dp beside it lie on the white right half") {
-                    dockTile(6).left.value - 4f shouldBeGreaterThan
-                        screenCentre()
+                        showHome(white)
+                        val at = gap()
+
+                        withClue("L* ${glass.dockLightness}") { glass.dockLightness shouldBeGreaterThanOrEqualTo 75f }
+                        assertSame(over(dark, 0.22f, frostAt(white, at)), screenAt(at))
+                    }
                 }
-                assertEdgeHolds("tile:pkg.6")
-            }
 
-            test("the light tray of a day mode dock gives a light tile the same edge") {
-                showHome(uniform, darkTheme = false, shown = lightApps)
+                test("a wallpaper with no thumbnail goes back to the base tint after a bright one$named") {
+                    testLook = theme
 
-                assertEdge("tile:pkg.2", level245)
-            }
+                    val wallpaper = MutableStateFlow(Wallpaper(thumbnail = white))
+                    showHome(white, wallpaper = wallpaper)
+                    withClue("L* ${glass.dockLightness}") { glass.dockLightness shouldBeGreaterThanOrEqualTo 75f }
 
-            test("a dark tray gives a light tile the edge whatever the wallpaper") {
-                showHome(uniform, shown = lightApps)
+                    wallpaper.value = Wallpaper()
+                    settle()
 
-                assertEdge("tile:pkg.2", level245)
-            }
+                    DockLook().tint(darkSurfaces = true, lightness = glass.dockLightness).alpha shouldBe (0.16f plusOrMinus 0.005f)
+                }
 
-            test("a dark tile gets the glass edge and not the light tile edge on the light tray") {
-                showHome(uniform, cinematic.copy(dockGlass = true), shown = darkApps)
+                if (theme == Look.Glass) {
+                    test("dock opacity sets the tint to 085 times the percent whatever the wallpaper") {
 
-                val (edge, inside) = edgeOf("tile:pkg.2")
-                inside shouldBe (40f / 255f plusOrMinus 0.01f)
-                withClue("edge $edge") { edge.min() shouldBe (0.82f * 40f / 255f plusOrMinus 0.01f) }
-            }
+                        showHome(white, cinematic.copy(dockOpacity = 50))
+                        val at = gap()
 
-            test("a light grid tile over a bright wallpaper gets the edge") {
-                showHome(white, shown = lightApps)
-                press(Key.DirectionDown)
+                        assertSame(over(dark, 0.85f * 0.5f, frostAt(white, at)), screenAt(at))
+                    }
+                }
 
-                assertEdge("tile:pkg.8", level245)
-            }
+                if (theme == Look.Glass) {
+                    test("dock glass draws the light tint in night mode between the dock tiles") {
 
-            test("a light grid tile over a dim wallpaper gets the edge") {
-                showHome(uniform, shown = lightApps)
-                press(Key.DirectionDown)
+                        showHome(uniform, cinematic.copy(dockGlass = true))
+                        val at = gap()
 
-                assertEdge("tile:pkg.8", level245)
-            }
+                        assertSame(over(light, 0.20f, frostAt(uniform, at, glass = true)), screenAt(at))
+                    }
+                }
 
-            test("a dark grid tile over a bright wallpaper gets no edge") {
-                showHome(white, shown = darkApps)
-                press(Key.DirectionDown)
+                test("focus in the top bar darkens a light tray and its tiles over a white picture$named") {
+                    testLook = theme
 
-                assertNoEdge("tile:pkg.8", 40f / 255f)
-            }
+                    showHome(
+                        white,
+                        cinematic.copy(dockGlass = true),
+                        wallpaper = flowOf(Wallpaper(picture = white, thumbnail = white)),
+                        shown = lightApps,
+                    )
+                    val tray = trayLuminance()
+                    val tile = tileLuminance("tile:pkg.3")
 
-            test("the dock rim is white 040 at the top edge") {
-                showHome(uniform)
-                val inside = panelEdgeAt(7)
+                    press(Key.DirectionUp)
 
-                (panelEdgeAt(1) - inside) / (1f - inside) shouldBe (0.40f plusOrMinus 0.03f)
-            }
+                    withClue("the tray goes from $tray to ${trayLuminance()}") { trayLuminance() shouldBeLessThanOrEqualTo 0.8f * tray }
+                    withClue("a tile goes from $tile to ${tileLuminance("tile:pkg.3")}") {
+                        tileLuminance("tile:pkg.3") shouldBeLessThanOrEqualTo
+                            0.8f * tile
+                    }
+                }
 
-            test("the dock rim fades to white 008 at the bottom edge under the black 025 one") {
-                showHome(uniform)
-                val inside = panelEdgeAt(7, fromBottom = true)
-                val rim = panelEdgeAt(0, fromBottom = true) / 0.75f
+                test("a light glass tray over a white picture keeps a mean relative luminance under 057$named") {
+                    testLook = theme
 
-                (rim - inside) / (1f - inside) shouldBe (0.08f plusOrMinus 0.015f)
-            }
+                    showHome(white, cinematic.copy(dockGlass = true))
 
-            test("a dock with four tiles in a row of six is a panel for four centred with 28 dp at the sides") {
-                showHome(uniform, cinematic.copy(fillDock = false), docked = 4)
-                val panel = compose.onNodeWithTag("dock").getBoundsInRoot()
-                val screen = compose.onRoot().getBoundsInRoot()
-                val first = dockTile(1)
-                val second = dockTile(2)
-                val column = (880f - 5 * 24f) / 6f
+                    withClue("luminance ${trayLuminance()}") { trayLuminance() shouldBeLessThanOrEqualTo 0.57f }
+                }
 
-                panel.width.value shouldBe (4 * column + 3 * 24f + 2 * 28f plusOrMinus 1f)
-                (panel.left.value + panel.right.value) / 2f shouldBe (screen.width.value / 2f plusOrMinus 1f)
-                first.left.value - panel.left.value shouldBe (28f plusOrMinus 1f)
-                second.left.value - first.right.value shouldBe (24f plusOrMinus 1f)
-                first.width.value shouldBe (column plusOrMinus 1f)
-            }
+                if (theme == Look.Glass) {
+                    test("on a dark picture a light glass tray lifts the picture by at most 002 and keeps its rim") {
 
-            test("a dock with a full row keeps the panel one gap wider than the grid on each side") {
-                showHome(uniform)
-                val panel = compose.onNodeWithTag("dock").getBoundsInRoot()
+                        showHome(night, cinematic.copy(dockGlass = true))
+                        val at = gap()
 
-                panel.width.value shouldBe (880f + 2 * 24f plusOrMinus 1f)
-                dockTile(1).left.value - panel.left.value shouldBe (26.8f plusOrMinus 0.6f)
-            }
+                        val lift = screenAt(at).luminance() - frostAt(night, at, glass = true).luminance()
+                        withClue("the tray lifts the picture by $lift") { lift shouldBeLessThanOrEqualTo 0.023f }
+                        val inside = panelEdgeAt(7)
+                        (panelEdgeAt(1) - inside) / (1f - inside) shouldBe (0.30f plusOrMinus 0.03f)
+                    }
+                }
 
-            test("without night mode the tint is the light one") {
-                showHome(uniform, darkTheme = false)
-                val at = gap()
+                test("a light glass tray over a dark frost stays under 012 and 2 5 times the frost between the tiles$named") {
+                    testLook = theme
 
-                assertSame(over(light, 0.20f, frostAt(uniform, at)), screenAt(at))
-            }
+                    showHome(dusk, cinematic.copy(dockGlass = true))
+                    val at = gap()
 
-            test("with dock band off the tiles float on the wallpaper") {
-                showHome(uniform, cinematic.copy(dockBand = false))
+                    val frost = frostAt(dusk, at, glass = true).luminance()
+                    val tray = screenAt(at).luminance()
+                    withClue("the frost is $frost") { frost shouldBeIn 0.06f..0.08f }
+                    withClue("the tray is $tray over a frost of $frost") { tray shouldBeLessThanOrEqualTo minOf(2.5f * frost, 0.12f) }
+                }
 
-                assertSame(Color.Black, screenAt(gap()), tolerance = 14)
-            }
+                test("a light glass tray over a dark frost keeps its top strip under 020$named") {
+                    testLook = theme
 
-            test("the frost stays with the wallpaper under the scrim of a dock tiles menu with the dock where it was") {
-                showHome(gradient)
-                val before = compose.onNodeWithTag("dock").getBoundsInRoot().top
+                    showHome(twilight, cinematic.copy(dockGlass = true))
 
-                holdOk()
+                    // 5 to 16.5 dp under the panel's top: below the rim, over the sheen.
+                    val strip = trayLuminance(fromDp = 5f, toDp = 16.5f)
+                    withClue("the strip is $strip") { strip shouldBeLessThanOrEqualTo 0.20f }
+                }
 
-                val after = compose.onNodeWithTag("dock").getBoundsInRoot().top
-                withClue("the dock moved from $before to $after") { abs((before - after).value) shouldBeLessThan 1f }
-                val at = gap()
-                // The menu's scrim darkens everything but the tile it acts on by 0.5 of #07080C.
-                val scrim = Color(0xFF07080C)
-                val tint = gradientTint()
-                assertSame(over(scrim, 0.5f, over(tint, tint.alpha, frostAt(gradient, at))), screenAt(at), tolerance = 8)
-            }
+                if (theme == Look.Glass) {
+                    test("a light glass tray over a dark frost has a 1 dp white 030 line on its top edge") {
 
-            test("the frost stays with the wallpaper when the dock goes to the grid and back") {
-                showHome(gradient)
-                val at = gap()
-                val tint = gradientTint()
-                assertSame(over(tint, tint.alpha, frostAt(gradient, at)), screenAt(at), tolerance = 8)
+                        showHome(dusk, cinematic.copy(dockGlass = true))
+                        val inside = panelEdgeAt(7)
 
-                compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
-                settle()
-                compose.onRoot().performKeyInput { pressKey(Key.DirectionUp) }
-                settle()
+                        (panelEdgeAt(1) - inside) / (1f - inside) shouldBe (0.30f plusOrMinus 0.03f)
+                    }
+                }
 
-                compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
-                assertSame(over(tint, tint.alpha, frostAt(gradient, at)), screenAt(at), tolerance = 8)
-            }
+                if (theme == Look.Glass) {
+                    test("a light glass tray over a white picture keeps the white 040 rim") {
 
-            test("the first dock tiles ring keeps 12 dp from the dock wall") {
-                showHome(night)
+                        showHome(white, cinematic.copy(dockGlass = true))
+                        val inside = panelEdgeAt(7)
 
-                val gap = ringGapToWall(slot = 1, side = -1)
+                        (panelEdgeAt(1) - inside) / (1f - inside) shouldBe (0.40f plusOrMinus 0.03f)
+                    }
+                }
 
-                withClue("the ring stood $gap dp from the left wall") { gap shouldBeGreaterThanOrEqualTo 12f }
-            }
+                if (theme == Look.Glass) {
+                    test("the dock panel has a 1 5 dp white highlight along its top edge") {
 
-            test("the last dock tiles ring keeps 12 dp from the dock wall") {
-                showHome(night)
-                repeat(5) { press(Key.DirectionRight) }
-                compose.onNodeWithTag("tile:pkg.6").assertIsFocused()
+                        showHome(uniform)
 
-                val gap = ringGapToWall(slot = 6, side = +1)
+                        // At 2 pixels to the dp, row 2 lies 1 to 1.5 dp down, in the highlight; row 7 lies 3.5 dp down, below it.
+                        val lift = panelEdgeAt(2) - panelEdgeAt(7)
+                        withClue("the highlight lifts the red by $lift") { lift shouldBeIn 0.05f..0.20f }
+                    }
+                }
 
-                withClue("the ring stood $gap dp from the right wall") { gap shouldBeGreaterThanOrEqualTo 12f }
-            }
+                if (theme == Look.Glass) {
+                    test("the dock panel has a 1 dp dark edge along its bottom") {
 
-            test("with names the first dock tiles ring keeps 12 dp from the dock wall") {
-                showHome(night, config = cinematic.copy(alwaysShowNames = true))
+                        showHome(uniform)
 
-                val gap = ringGapToWall(slot = 1, side = -1)
+                        val drop = panelEdgeAt(6, fromBottom = true) - panelEdgeAt(0, fromBottom = true)
+                        withClue("the edge darkens the red by $drop") { drop shouldBeIn 0.05f..0.25f }
+                    }
+                }
 
-                withClue("the ring stood $gap dp from the left wall") { gap shouldBeGreaterThanOrEqualTo 12f }
-            }
+                test("a light glass tray has a 1 dp black 030 hairline round its outside$named") {
+                    testLook = theme
 
-            test("a focused end dock tile leaves its neighbour the room a focused middle tile leaves in a four column dock") {
-                assertEndTilesLeaveTheirNeighbourTheRoomAMiddleTileLeaves(columns = 4)
-            }
+                    showHome(white, cinematic.copy(dockGlass = true), wallpaper = flowOf(Wallpaper(picture = white, thumbnail = white)))
 
-            test("a focused end dock tile leaves its neighbour the room a focused middle tile leaves in a six column dock") {
-                assertEndTilesLeaveTheirNeighbourTheRoomAMiddleTileLeaves(columns = 6)
+                    // Row 1 lies in the hairline, 0.5 dp out; row 8 lies 4 dp out, past it.
+                    val dark = redOutsideTop(8) - redOutsideTop(1)
+                    withClue("the hairline darkens the red by $dark") { dark shouldBeIn 0.15f..0.35f }
+                }
+
+                test("a dark tray has no hairline round its outside$named") {
+                    testLook = theme
+
+                    showHome(white, wallpaper = flowOf(Wallpaper(picture = white, thumbnail = white)))
+
+                    redOutsideTop(1) shouldBe (redOutsideTop(8) plusOrMinus 0.06f)
+                }
+
+                test("dock glass holds a saturated wallpaper to 035 saturation so a sky colour does not pool$named") {
+                    testLook = theme
+
+                    showHome(cyan, cinematic.copy(dockGlass = true))
+
+                    withClue("saturation ${saturation(screenAt(gap()))}") { saturation(screenAt(gap())) shouldBeLessThanOrEqualTo 0.36f }
+                }
+
+                if (theme == Look.Glass) {
+                    test("dock glass draws a black 075 edge 1 dp wide inside each light dock tile") {
+
+                        showHome(uniform, cinematic.copy(dockGlass = true), shown = lightApps)
+
+                        assertEdge("tile:pkg.2", level245)
+                    }
+                }
+
+                if (theme == Look.Glass) {
+                    test("on the lightest tray the edge of a white tile is at least 008 darker than its art and the tray") {
+
+                        showHome(
+                            white,
+                            cinematic.copy(dockGlass = true),
+                            wallpaper = flowOf(Wallpaper(picture = white, thumbnail = white)),
+                            shown = whiteApps,
+                        )
+
+                        val (edge, art, tray) = edgeAndNeighbours("tile:pkg.3")
+                        withClue("the edge is $edge, its art $art, the tray $tray") {
+                            (edge <= art - 0.08f && edge <= tray - 0.08f).shouldBeTrue()
+                        }
+                    }
+                }
+
+                if (theme == Look.Glass) {
+                    test("a light dock tile over a bright wallpaper gets the edge on the dark tray") {
+
+                        showHome(white, wallpaper = brightWallpaper, shown = lightApps)
+
+                        assertEdge("tile:pkg.2", level245)
+                    }
+                }
+
+                test("the edge of a white dock tile holds 3 to 1 against the dark tray over a bright wallpaper$named") {
+                    testLook = theme
+
+                    showHome(white, wallpaper = brightWallpaper, shown = whiteApps)
+
+                    assertEdgeHolds("tile:pkg.6")
+                }
+
+                test("the edge of a white dock tile holds 3 to 1 against the glass tray over a bright wallpaper$named") {
+                    testLook = theme
+
+                    showHome(white, cinematic.copy(dockGlass = true), wallpaper = brightWallpaper, shown = whiteApps)
+
+                    assertEdgeHolds("tile:pkg.6")
+                }
+
+                test("the edge of a white dock tile holds 3 to 1 against mid tone glass$named") {
+                    testLook = theme
+
+                    showHome(midTone, cinematic.copy(dockGlass = true), shown = whiteApps)
+
+                    assertEdgeHolds("tile:pkg.6")
+                }
+
+                test("the edge of a white grid tile holds 3 to 1 against a bright wallpaper$named") {
+                    testLook = theme
+
+                    showHome(white, wallpaper = brightWallpaper, shown = whiteApps)
+                    press(Key.DirectionDown)
+
+                    assertEdgeHolds("tile:pkg.9")
+                }
+
+                test("the edge of a white grid tile holds 3 to 1 where the wallpaper is white beside it and dark on average$named") {
+                    testLook = theme
+
+                    val wallpaper = halved(whiteLeft = true)
+                    showHome(wallpaper, wallpaper = flowOf(Wallpaper(picture = wallpaper, thumbnail = wallpaper)), shown = whiteApps)
+                    press(Key.DirectionDown)
+
+                    withClue("the tile lies on the white left half") {
+                        compose
+                            .onNodeWithTag("tile:pkg.9")
+                            .getBoundsInRoot()
+                            .right.value shouldBeLessThan screenCentre()
+                    }
+                    assertEdgeHolds("tile:pkg.9")
+                }
+
+                test(
+                    "the edge of a white dock tile holds 3 to 1 on the dark tray where the wallpaper is white beside it and dark on average$named",
+                ) {
+                    testLook = theme
+
+                    val wallpaper = halved(whiteLeft = false)
+                    showHome(wallpaper, wallpaper = flowOf(Wallpaper(picture = wallpaper, thumbnail = wallpaper)), shown = whiteApps)
+
+                    withClue("the tile and the 4 dp beside it lie on the white right half") {
+                        dockTile(6).left.value - 4f shouldBeGreaterThan
+                            screenCentre()
+                    }
+                    assertEdgeHolds("tile:pkg.6")
+                }
+
+                test(
+                    "the edge of a white dock tile holds 3 to 1 with no tray where the wallpaper is white beside it and dark on average$named",
+                ) {
+                    testLook = theme
+
+                    val wallpaper = halved(whiteLeft = false)
+                    showHome(
+                        wallpaper,
+                        cinematic.copy(dockBand = false),
+                        wallpaper = flowOf(Wallpaper(picture = wallpaper, thumbnail = wallpaper)),
+                        shown = whiteApps,
+                    )
+
+                    withClue("the tile and the 4 dp beside it lie on the white right half") {
+                        dockTile(6).left.value - 4f shouldBeGreaterThan
+                            screenCentre()
+                    }
+                    assertEdgeHolds("tile:pkg.6")
+                }
+
+                if (theme == Look.Glass) {
+                    test("the light tray of a day mode dock gives a light tile the same edge") {
+
+                        showHome(uniform, darkTheme = false, shown = lightApps)
+
+                        assertEdge("tile:pkg.2", level245)
+                    }
+                }
+
+                if (theme == Look.Glass) {
+                    test("a dark tray gives a light tile the edge whatever the wallpaper") {
+
+                        showHome(uniform, shown = lightApps)
+
+                        assertEdge("tile:pkg.2", level245)
+                    }
+                }
+
+                if (theme == Look.Glass) {
+                    test("a dark tile gets the glass edge and not the light tile edge on the light tray") {
+
+                        showHome(uniform, cinematic.copy(dockGlass = true), shown = darkApps)
+
+                        val (edge, inside) = edgeOf("tile:pkg.2")
+                        inside shouldBe (40f / 255f plusOrMinus 0.01f)
+                        withClue("edge $edge") { edge.min() shouldBe (0.82f * 40f / 255f plusOrMinus 0.01f) }
+                    }
+                }
+
+                if (theme == Look.Glass) {
+                    test("a light grid tile over a bright wallpaper gets the edge") {
+
+                        showHome(white, shown = lightApps)
+                        press(Key.DirectionDown)
+
+                        assertEdge("tile:pkg.8", level245)
+                    }
+                }
+
+                if (theme == Look.Glass) {
+                    test("a light grid tile over a dim wallpaper gets the edge") {
+
+                        showHome(uniform, shown = lightApps)
+                        press(Key.DirectionDown)
+
+                        assertEdge("tile:pkg.8", level245)
+                    }
+                }
+
+                test("a dark grid tile over a bright wallpaper gets no edge$named") {
+                    testLook = theme
+
+                    showHome(white, shown = darkApps)
+                    press(Key.DirectionDown)
+
+                    assertNoEdge("tile:pkg.8", 40f / 255f)
+                }
+
+                if (theme == Look.Glass) {
+                    test("the dock rim is white 040 at the top edge") {
+
+                        showHome(uniform)
+                        val inside = panelEdgeAt(7)
+
+                        (panelEdgeAt(1) - inside) / (1f - inside) shouldBe (0.40f plusOrMinus 0.03f)
+                    }
+                }
+
+                if (theme == Look.Glass) {
+                    test("the dock rim fades to white 008 at the bottom edge under the black 025 one") {
+
+                        showHome(uniform)
+                        val inside = panelEdgeAt(7, fromBottom = true)
+                        val rim = panelEdgeAt(0, fromBottom = true) / 0.75f
+
+                        (rim - inside) / (1f - inside) shouldBe (0.08f plusOrMinus 0.015f)
+                    }
+                }
+
+                test("a dock with four tiles in a row of six is a panel for four centred with 28 dp at the sides$named") {
+                    testLook = theme
+
+                    showHome(uniform, cinematic.copy(fillDock = false), docked = 4)
+                    val panel = compose.onNodeWithTag("dock").getBoundsInRoot()
+                    val screen = compose.onRoot().getBoundsInRoot()
+                    val first = dockTile(1)
+                    val second = dockTile(2)
+                    val column = (880f - 5 * 24f) / 6f
+
+                    panel.width.value shouldBe (4 * column + 3 * 24f + 2 * 28f plusOrMinus 1f)
+                    (panel.left.value + panel.right.value) / 2f shouldBe (screen.width.value / 2f plusOrMinus 1f)
+                    first.left.value - panel.left.value shouldBe (28f plusOrMinus 1f)
+                    second.left.value - first.right.value shouldBe (24f plusOrMinus 1f)
+                    first.width.value shouldBe (column plusOrMinus 1f)
+                }
+
+                test("a dock with a full row keeps the panel one gap wider than the grid on each side$named") {
+                    testLook = theme
+
+                    showHome(uniform)
+                    val panel = compose.onNodeWithTag("dock").getBoundsInRoot()
+
+                    panel.width.value shouldBe (880f + 2 * 24f plusOrMinus 1f)
+                    dockTile(1).left.value - panel.left.value shouldBe (26.8f plusOrMinus 0.6f)
+                }
+
+                if (theme == Look.Glass) {
+                    test("without night mode the tint is the light one") {
+
+                        showHome(uniform, darkTheme = false)
+                        val at = gap()
+
+                        assertSame(over(light, 0.20f, frostAt(uniform, at)), screenAt(at))
+                    }
+                }
+
+                test("with dock band off the tiles float on the wallpaper$named") {
+                    testLook = theme
+
+                    showHome(uniform, cinematic.copy(dockBand = false))
+
+                    assertSame(Color.Black, screenAt(gap()), tolerance = 14)
+                }
+
+                if (theme == Look.Glass) {
+                    test("the frost stays with the wallpaper under the scrim of a dock tiles menu with the dock where it was") {
+
+                        showHome(gradient)
+                        val before = compose.onNodeWithTag("dock").getBoundsInRoot().top
+
+                        holdOk()
+
+                        val after = compose.onNodeWithTag("dock").getBoundsInRoot().top
+                        withClue("the dock moved from $before to $after") { abs((before - after).value) shouldBeLessThan 1f }
+                        val at = gap()
+                        // The menu's scrim darkens everything but the tile it acts on by 0.5 of #07080C.
+                        val scrim = Color(0xFF07080C)
+                        val tint = gradientTint()
+                        assertSame(over(scrim, 0.5f, over(tint, tint.alpha, frostAt(gradient, at))), screenAt(at), tolerance = 8)
+                    }
+                }
+
+                if (theme == Look.Glass) {
+                    test("the frost stays with the wallpaper when the dock goes to the grid and back") {
+
+                        showHome(gradient)
+                        val at = gap()
+                        val tint = gradientTint()
+                        assertSame(over(tint, tint.alpha, frostAt(gradient, at)), screenAt(at), tolerance = 8)
+
+                        compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+                        settle()
+                        compose.onRoot().performKeyInput { pressKey(Key.DirectionUp) }
+                        settle()
+
+                        compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
+                        assertSame(over(tint, tint.alpha, frostAt(gradient, at)), screenAt(at), tolerance = 8)
+                    }
+                }
+
+                if (theme == Look.Glass) {
+                    test("the first dock tiles ring keeps 12 dp from the dock wall") {
+
+                        showHome(night)
+
+                        val gap = ringGapToWall(slot = 1, side = -1)
+
+                        withClue("the ring stood $gap dp from the left wall") { gap shouldBeGreaterThanOrEqualTo 12f }
+                    }
+                }
+
+                if (theme == Look.Glass) {
+                    test("the last dock tiles ring keeps 12 dp from the dock wall") {
+
+                        showHome(night)
+                        repeat(5) { press(Key.DirectionRight) }
+                        compose.onNodeWithTag("tile:pkg.6").assertIsFocused()
+
+                        val gap = ringGapToWall(slot = 6, side = +1)
+
+                        withClue("the ring stood $gap dp from the right wall") { gap shouldBeGreaterThanOrEqualTo 12f }
+                    }
+                }
+
+                if (theme == Look.Glass) {
+                    test("with names the first dock tiles ring keeps 12 dp from the dock wall") {
+
+                        showHome(night, config = cinematic.copy(alwaysShowNames = true))
+
+                        val gap = ringGapToWall(slot = 1, side = -1)
+
+                        withClue("the ring stood $gap dp from the left wall") { gap shouldBeGreaterThanOrEqualTo 12f }
+                    }
+                }
+
+                if (theme == Look.Glass) {
+                    test("a focused end dock tile leaves its neighbour the room a focused middle tile leaves in a four column dock") {
+
+                        assertEndTilesLeaveTheirNeighbourTheRoomAMiddleTileLeaves(columns = 4)
+                    }
+                }
+
+                if (theme == Look.Glass) {
+                    test("a focused end dock tile leaves its neighbour the room a focused middle tile leaves in a six column dock") {
+
+                        assertEndTilesLeaveTheirNeighbourTheRoomAMiddleTileLeaves(columns = 6)
+                    }
+                }
             }
         }
     })
 
+/** The relative luminance under which a ground holds more contrast against white than against black. */
+private const val DARK_GROUND = 0.179f
+
 private class DockGlassUiTestFixture : JUnit4RulesContext() {
+    /** The look the test runs in. */
+    var testLook = Look.Glass
+
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
     lateinit var glass: GlassState
@@ -542,7 +682,7 @@ private class DockGlassUiTestFixture : JUnit4RulesContext() {
     ) {
         val sources = sources(apps = flowOf(AppList(shown, docked)), wallpaper = wallpaper)
         compose.setContent {
-            TvTheme(look = Look.Glass, darkTheme = darkTheme) {
+            TvTheme(look = testLook, darkTheme = darkTheme) {
                 glass = rememberGlassState()
                 val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
@@ -794,10 +934,18 @@ private class DockGlassUiTestFixture : JUnit4RulesContext() {
 
     val brightWallpaper get() = flowOf(Wallpaper(picture = white, thumbnail = white))
 
-    /** The 1 dp edge of the white tile [tag] holds 3 to 1 against the surface 4 dp outside it. */
+    /**
+     * The 1 dp edge of the white tile [tag] holds 3 to 1 against the surface 4 dp outside it. Expressive's dark edge is for
+     * light grounds: on a ground under [DARK_GROUND], its opaque dock tray among them, the white art holds instead.
+     */
     fun assertEdgeHolds(tag: String) {
-        val (edge, _, outside) = edgeAndNeighbours(tag)
-        val contrast = (outside + 0.05f) / (edge + 0.05f)
+        val (edge, art, outside) = edgeAndNeighbours(tag)
+        val contrast =
+            if (testLook == Look.Expressive && outside < DARK_GROUND) {
+                (art + 0.05f) / (outside + 0.05f)
+            } else {
+                (outside + 0.05f) / (edge + 0.05f)
+            }
         withClue("the edge is $edge, the surface $outside: $contrast") { contrast shouldBeGreaterThanOrEqualTo 3f }
     }
 

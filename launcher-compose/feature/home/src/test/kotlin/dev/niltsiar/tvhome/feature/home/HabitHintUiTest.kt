@@ -4,6 +4,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PixelMap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
@@ -24,6 +25,7 @@ import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.designsystem.LookColors
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
@@ -55,160 +57,193 @@ val HabitHintUiTest by testSuite {
     )
 }
 
+/** [colour]'s hue in degrees, saturation and value. */
+private fun hsv(colour: Color): FloatArray = FloatArray(3).also { android.graphics.Color.colorToHSV(colour.toArgb(), it) }
+
 class HabitHintUiTestContent :
     RobolectricTestSuiteContent({
         testFixture { HabitHintUiTestFixture() } asContextForEach {
-            test("the mark under an unfocused dock tile is a light bar 40 by 6 px with a dark edge") {
-                showHome(SixColumns.copy(habitHint = true))
-                val screen = screen()
-                val (centre, top) = markAt("tile:pkg.2")
+            for (theme in Look.entries) {
+                val named = if (theme == Look.Expressive) ", in Expressive" else ""
 
-                barShownAt(screen, centre, top).shouldBeTrue()
-                (isFill(screen[centre - 15, top + 3]) && isFill(screen[centre + 15, top + 3])).shouldBeTrue()
-                (isFill(screen[centre - 23, top + 3]) || isFill(screen[centre + 23, top + 3])).shouldBeFalse()
-                withClue("taller than 6 px") { (isFill(screen[centre, top - 1]) || isFill(screen[centre, top + 6])).shouldBeFalse() }
-                val edge = screen[centre, top]
-                withClue("edge ${edge.red}") { edge.red shouldBeIn 0.5f..0.72f }
-                withClue("edge ${screen[centre, top + 5].red}") { screen[centre, top + 5].red shouldBeIn 0.5f..0.72f }
-                screen[centre, top + 2].alpha shouldBe (1f plusOrMinus 0f)
-            }
+                test("the mark under an unfocused dock tile is a light bar 40 by 6 px with a dark edge$named") {
+                    testLook = theme
 
-            test("no other dock tile has the mark and nothing moves") {
-                showHome(SixColumns.copy(habitHint = true))
-                val without = compose.onNodeWithTag("tile:pkg.3").getBoundsInRoot()
-                val screen = screen()
+                    showHome(SixColumns.copy(habitHint = true))
+                    val screen = screen()
+                    val (centre, top) = markAt("tile:pkg.2")
 
-                (dockTiles - "pkg.2").forEach { tile ->
-                    val (centre, top) = markAt("tile:$tile")
-                    withClue("$tile has a mark") { barShownAt(screen, centre, top).shouldBeFalse() }
-                }
-                usual = null
-                viewModel.onStopped()
-                settle()
-                viewModel.onStarted()
-                settle()
-                compose.onNodeWithTag("tile:pkg.3").getBoundsInRoot() shouldBe without
-            }
-
-            test("the mark under an unfocused grid tile is the same bar and no other grid tile has it") {
-                usual = "pkg.8"
-                showHome(SixColumns.copy(habitHint = true))
-                press(Key.DirectionDown)
-                compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
-                val screen = screen()
-
-                val (centre, top) = markAt("tile:pkg.8")
-                barShownAt(screen, centre, top).shouldBeTrue()
-                screen[centre, top].red shouldBeIn 0.5f..0.72f
-                listOf("pkg.9", "pkg.10", "pkg.11", "pkg.12").forEach { tile ->
-                    val (c, t) = markAt("tile:$tile")
-                    withClue("$tile has a mark") { barShownAt(screen, c, t).shouldBeFalse() }
-                }
-            }
-
-            test("with the names on the mark sits under the name line and not under the tile") {
-                showHome(SixColumns.copy(habitHint = true, alwaysShowNames = true))
-                val screen = screen()
-
-                val (centre, top) = markAt("tile:pkg.2", below = TileNameRoom.value.toInt())
-                barShownAt(screen, centre, top).shouldBeTrue()
-                val (_, bare) = markAt("tile:pkg.2")
-                barShownAt(screen, centre, bare).shouldBeFalse()
-                val name = compose.onNodeWithTag("name:pkg.2").getBoundsInRoot()
-                top.toFloat() shouldBeGreaterThan name.bottom.value * DENSITY + 18
-            }
-
-            test("the mark follows the habit to another app over 400 ms and the old mark goes") {
-                showHome(SixColumns.copy(habitHint = true))
-                val (oldCentre, oldTop) = markAt("tile:pkg.2")
-                val (newCentre, newTop) = markAt("tile:pkg.3")
-                usual = "pkg.3"
-                viewModel.onStopped()
-                settle()
-                compose.mainClock.autoAdvance = false
-
-                viewModel.onStarted()
-                compose.mainClock.advanceTimeBy(100)
-                compose.waitForIdle()
-                val fading = mutableListOf<Float>()
-                repeat(10) {
-                    compose.mainClock.advanceTimeBy(50)
-                    fading += screen()[newCentre, newTop + 3].red
+                    barShownAt(screen, centre, top).shouldBeTrue()
+                    (isFill(screen[centre - 15, top + 3]) && isFill(screen[centre + 15, top + 3])).shouldBeTrue()
+                    (isFill(screen[centre - 23, top + 3]) || isFill(screen[centre + 23, top + 3])).shouldBeFalse()
+                    withClue("taller than 6 px") { (isFill(screen[centre, top - 1]) || isFill(screen[centre, top + 6])).shouldBeFalse() }
+                    // The dark edge over the fill, as the Glass mark's 0.5 to 0.72 red over its light grey.
+                    val edged = screen[centre, top + 3].red * (1f - colours.habitMarkEdge().alpha)
+                    withClue("edge ${screen[centre, top].red}") { screen[centre, top].red shouldBe (edged plusOrMinus 0.11f) }
+                    withClue("edge ${screen[centre, top + 5].red}") { screen[centre, top + 5].red shouldBe (edged plusOrMinus 0.11f) }
+                    screen[centre, top + 2].alpha shouldBe (1f plusOrMinus 0f)
                 }
 
-                withClue("not yet shown at 150 ms: $fading") { fading.first() shouldBeLessThan 0.9f }
-                withClue("fading in: $fading") { (fading.zipWithNext().all { (a, b) -> b >= a - 0.001f }).shouldBeTrue() }
-                withClue("full after 400 ms: $fading") { isFill(screen()[newCentre, newTop + 3]).shouldBeTrue() }
-                barShownAt(screen(), oldCentre, oldTop).shouldBeFalse()
-            }
+                test("no other dock tile has the mark and nothing moves$named") {
+                    testLook = theme
 
-            test("with reduced motion the mark is there at once and does not fade") {
-                showHome(SixColumns.copy(habitHint = true), motion = Motion(reducedMotion = true))
-                usual = "pkg.3"
-                viewModel.onStopped()
-                settle()
-                val (centre, top) = markAt("tile:pkg.3")
-                compose.mainClock.autoAdvance = false
+                    showHome(SixColumns.copy(habitHint = true))
+                    val without = compose.onNodeWithTag("tile:pkg.3").getBoundsInRoot()
+                    val screen = screen()
 
-                viewModel.onStarted()
-                compose.mainClock.advanceTimeBy(100)
-                compose.waitForIdle()
-                compose.mainClock.advanceTimeBy(34)
-
-                barShownAt(screen(), centre, top).shouldBeTrue()
-            }
-
-            test("with the key off no tile has the mark") {
-                showHome(SixColumns)
-                val screen = screen()
-
-                dockTiles.forEach { tile ->
-                    val (centre, top) = markAt("tile:$tile")
-                    withClue("$tile has a mark") { barShownAt(screen, centre, top).shouldBeFalse() }
+                    (dockTiles - "pkg.2").forEach { tile ->
+                        val (centre, top) = markAt("tile:$tile")
+                        withClue("$tile has a mark") { barShownAt(screen, centre, top).shouldBeFalse() }
+                    }
+                    usual = null
+                    viewModel.onStopped()
+                    settle()
+                    viewModel.onStarted()
+                    settle()
+                    compose.onNodeWithTag("tile:pkg.3").getBoundsInRoot() shouldBe without
                 }
-            }
 
-            test("the line under the title adds the usual phrase only while the usual app has focus") {
-                showHome(
-                    SixColumns.copy(habitHint = true, cinematicHome = true),
-                    lastOpened =
-                        mapOf(
-                            "pkg.2" to yesterday,
-                            "pkg.3" to yesterday,
-                        ),
-                )
+                test("the mark under an unfocused grid tile is the same bar and no other grid tile has it$named") {
+                    testLook = theme
 
-                compose.onNodeWithTag("shelf:meta").assertTextEquals("Never opened")
-                press(Key.DirectionRight)
-                compose.onNodeWithTag("tile:pkg.2").assertIsFocused()
-                compose.onNodeWithTag("shelf:meta").assertTextContains("Last opened", substring = true)
-                compose.onNodeWithTag("shelf:meta").assertTextContains(" · You usually open it now", substring = true)
+                    usual = "pkg.8"
+                    showHome(SixColumns.copy(habitHint = true))
+                    press(Key.DirectionDown)
+                    compose.onNodeWithTag("tile:pkg.7").assertIsFocused()
+                    val screen = screen()
 
-                press(Key.DirectionRight)
-                compose.onNodeWithTag("tile:pkg.3").assertIsFocused()
-                textOf("shelf:meta").contains("You usually open it now").shouldBeFalse()
-                textOf("shelf:meta").startsWith("Last opened").shouldBeTrue()
-            }
+                    val (centre, top) = markAt("tile:pkg.8")
+                    barShownAt(screen, centre, top).shouldBeTrue()
+                    screen[centre, top].red shouldBe (screen[centre, top + 3].red * (1f - colours.habitMarkEdge().alpha) plusOrMinus 0.11f)
+                    listOf("pkg.9", "pkg.10", "pkg.11", "pkg.12").forEach { tile ->
+                        val (c, t) = markAt("tile:$tile")
+                        withClue("$tile has a mark") { barShownAt(screen, c, t).shouldBeFalse() }
+                    }
+                }
 
-            test("the band over the grid adds the usual phrase too and alone for an app never opened") {
-                showHome(SixColumns.copy(habitHint = true), lastOpened = mapOf("pkg.2" to yesterday))
-                press(Key.DirectionRight)
-                compose.onNodeWithTag("tile:pkg.2").assertIsFocused()
-                withClue(textOf("shelf:title-meta")) { textOf("shelf:title-meta").endsWith(" · You usually open it now").shouldBeTrue() }
+                test("with the names on the mark sits under the name line and not under the tile$named") {
+                    testLook = theme
 
-                usual = "pkg.3"
-                viewModel.onStopped()
-                settle()
-                viewModel.onStarted()
-                settle()
-                press(Key.DirectionRight)
-                compose.onNodeWithTag("tile:pkg.3").assertIsFocused()
-                compose.onNodeWithTag("shelf:title-meta").assertTextEquals("You usually open it now")
+                    showHome(SixColumns.copy(habitHint = true, alwaysShowNames = true))
+                    val screen = screen()
+
+                    val (centre, top) = markAt("tile:pkg.2", below = TileNameRoom.value.toInt())
+                    barShownAt(screen, centre, top).shouldBeTrue()
+                    val (_, bare) = markAt("tile:pkg.2")
+                    barShownAt(screen, centre, bare).shouldBeFalse()
+                    val name = compose.onNodeWithTag("name:pkg.2").getBoundsInRoot()
+                    top.toFloat() shouldBeGreaterThan name.bottom.value * DENSITY + 18
+                }
+
+                test("the mark follows the habit to another app over 400 ms and the old mark goes$named") {
+                    testLook = theme
+
+                    showHome(SixColumns.copy(habitHint = true))
+                    val (oldCentre, oldTop) = markAt("tile:pkg.2")
+                    val (newCentre, newTop) = markAt("tile:pkg.3")
+                    usual = "pkg.3"
+                    viewModel.onStopped()
+                    settle()
+                    compose.mainClock.autoAdvance = false
+
+                    viewModel.onStarted()
+                    compose.mainClock.advanceTimeBy(100)
+                    compose.waitForIdle()
+                    val fading = mutableListOf<Float>()
+                    repeat(10) {
+                        compose.mainClock.advanceTimeBy(50)
+                        fading += screen()[newCentre, newTop + 3].red
+                    }
+
+                    val shown = screen()[newCentre, newTop + 3]
+                    withClue("full after 400 ms: $fading") { isFill(shown).shouldBeTrue() }
+                    val apart = fading.map { abs(it - shown.red) }
+                    withClue("not yet shown at 150 ms: $fading") { apart.first() shouldBeGreaterThan 0.05f }
+                    withClue("fading in: $fading") { (apart.zipWithNext().all { (a, b) -> b <= a + 0.001f }).shouldBeTrue() }
+                    barShownAt(screen(), oldCentre, oldTop).shouldBeFalse()
+                }
+
+                test("with reduced motion the mark is there at once and does not fade$named") {
+                    testLook = theme
+
+                    showHome(SixColumns.copy(habitHint = true), motion = Motion(reducedMotion = true))
+                    usual = "pkg.3"
+                    viewModel.onStopped()
+                    settle()
+                    val (centre, top) = markAt("tile:pkg.3")
+                    compose.mainClock.autoAdvance = false
+
+                    viewModel.onStarted()
+                    compose.mainClock.advanceTimeBy(100)
+                    compose.waitForIdle()
+                    compose.mainClock.advanceTimeBy(34)
+
+                    barShownAt(screen(), centre, top).shouldBeTrue()
+                }
+
+                test("with the key off no tile has the mark$named") {
+                    testLook = theme
+
+                    showHome(SixColumns)
+                    val screen = screen()
+
+                    dockTiles.forEach { tile ->
+                        val (centre, top) = markAt("tile:$tile")
+                        withClue("$tile has a mark") { barShownAt(screen, centre, top).shouldBeFalse() }
+                    }
+                }
+
+                test("the line under the title adds the usual phrase only while the usual app has focus$named") {
+                    testLook = theme
+
+                    showHome(
+                        SixColumns.copy(habitHint = true, cinematicHome = true),
+                        lastOpened =
+                            mapOf(
+                                "pkg.2" to yesterday,
+                                "pkg.3" to yesterday,
+                            ),
+                    )
+
+                    compose.onNodeWithTag("shelf:meta").assertTextEquals("Never opened")
+                    press(Key.DirectionRight)
+                    compose.onNodeWithTag("tile:pkg.2").assertIsFocused()
+                    compose.onNodeWithTag("shelf:meta").assertTextContains("Last opened", substring = true)
+                    compose.onNodeWithTag("shelf:meta").assertTextContains(" · You usually open it now", substring = true)
+
+                    press(Key.DirectionRight)
+                    compose.onNodeWithTag("tile:pkg.3").assertIsFocused()
+                    textOf("shelf:meta").contains("You usually open it now").shouldBeFalse()
+                    textOf("shelf:meta").startsWith("Last opened").shouldBeTrue()
+                }
+
+                test("the band over the grid adds the usual phrase too and alone for an app never opened$named") {
+                    testLook = theme
+
+                    showHome(SixColumns.copy(habitHint = true), lastOpened = mapOf("pkg.2" to yesterday))
+                    press(Key.DirectionRight)
+                    compose.onNodeWithTag("tile:pkg.2").assertIsFocused()
+                    withClue(textOf("shelf:title-meta")) {
+                        textOf("shelf:title-meta").endsWith(" · You usually open it now").shouldBeTrue()
+                    }
+
+                    usual = "pkg.3"
+                    viewModel.onStopped()
+                    settle()
+                    viewModel.onStarted()
+                    settle()
+                    press(Key.DirectionRight)
+                    compose.onNodeWithTag("tile:pkg.3").assertIsFocused()
+                    compose.onNodeWithTag("shelf:title-meta").assertTextEquals("You usually open it now")
+                }
             }
         }
     })
 
 private class HabitHintUiTestFixture : JUnit4RulesContext() {
+    /** The look the test runs in. */
+    var testLook = Look.Glass
+
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
     val apps = (1..18).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") }
@@ -224,7 +259,8 @@ private class HabitHintUiTestFixture : JUnit4RulesContext() {
     ) {
         val sources = sources(apps = flowOf(AppList(apps)), lastOpened = flowOf(lastOpened), habit = { usual })
         compose.setContent {
-            TvTheme(look = Look.Glass, motion = motion) {
+            TvTheme(look = testLook, motion = motion) {
+                colours = TvTheme.lookColors
                 viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(
@@ -271,8 +307,21 @@ private class HabitHintUiTestFixture : JUnit4RulesContext() {
         return centre to (bounds.bottom.value * DENSITY).roundToInt() + below * DENSITY + 21
     }
 
-    fun isFill(pixel: Color) =
-        abs(pixel.red - 0xF2 / 255f) < 0.02f && abs(pixel.green - 0xF4 / 255f) < 0.02f && abs(pixel.blue - 0xF8 / 255f) < 0.02f
+    /** The colours of the look the test runs in, as Home reads them. */
+    lateinit var colours: LookColors
+
+    /**
+     * Whether [pixel] is the mark's fill: Glass's light grey, or in Expressive the house tertiary, whose tone follows the
+     * ground the mark sits on while its hue stays.
+     */
+    fun isFill(pixel: Color): Boolean {
+        val fill = colours.habitMark()
+        return if (testLook == Look.Glass) {
+            abs(pixel.red - fill.red) < 0.02f && abs(pixel.green - fill.green) < 0.02f && abs(pixel.blue - fill.blue) < 0.02f
+        } else {
+            hsv(pixel)[1] > 0.15f && abs(hsv(pixel)[0] - hsv(fill)[0]) < 10f && pixel.red > fill.red * 0.4f
+        }
+    }
 
     fun barShownAt(
         screen: PixelMap,

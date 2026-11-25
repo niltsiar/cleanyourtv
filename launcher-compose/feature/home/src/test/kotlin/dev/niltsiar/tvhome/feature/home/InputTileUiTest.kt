@@ -8,6 +8,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PixelMap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
@@ -30,6 +31,7 @@ import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.designsystem.LookColors
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
@@ -75,82 +77,103 @@ class InputTileUiTestContent :
                 TileLayout("in the cinematic dock", SixColumns.copy(cinematicHome = true), docked = true, line = "shelf:meta"),
             )
         testFixture { InputTileUiTestFixture() } asContextForEach {
-            for (layout in layouts) {
-                test("${layout.name} an input tile shows its glyph and name and a green dot while connected, and its line says Connected") {
-                    showHome(layout.config, docked = layout.docked)
-                    press(if (layout.docked) Key.DirectionRight else Key.DirectionDown)
-                    compose.onNodeWithTag("tile:${PlayStationTile.key}").assertIsFocused()
+            for (theme in Look.entries) {
+                val named = if (theme == Look.Expressive) ", in Expressive" else ""
 
-                    faceText("PlayStation").assertExists()
-                    val screen = screen()
-                    val tile = tileBounds()
-                    withClue("glyph") { glyphShown(screen, tile, named = true).shouldBeTrue() }
-                    withClue("green dot") { dotAt(screen, tile).any(::isGreen).shouldBeTrue() }
-                    compose.onNodeWithTag(layout.line).assertTextEquals("Connected")
+                for (layout in layouts) {
+                    test(
+                        "${layout.name} an input tile shows its glyph and name and a green dot while connected, and its line says Connected$named",
+                    ) {
+                        testLook = theme
+
+                        showHome(layout.config, docked = layout.docked)
+                        press(if (layout.docked) Key.DirectionRight else Key.DirectionDown)
+                        compose.onNodeWithTag("tile:${PlayStationTile.key}").assertIsFocused()
+
+                        faceText("PlayStation").assertExists()
+                        val screen = screen()
+                        val tile = tileBounds()
+                        withClue("glyph") { glyphShown(screen, tile, named = true).shouldBeTrue() }
+                        withClue("green dot") { dotAt(screen, tile).any(::isGreen).shouldBeTrue() }
+                        compose.onNodeWithTag(layout.line).assertTextEquals("Connected")
+                    }
                 }
-            }
 
-            test("with always_show_names the name shows once, under the tile") {
-                showHome(SixColumns.copy(alwaysShowNames = true), docked = true)
+                test("with always_show_names the name shows once, under the tile$named") {
+                    testLook = theme
 
-                nodesTagged("name:${PlayStationTile.key}") shouldBe 1
-                faceText("PlayStation").assertDoesNotExist()
-                withClue("glyph") { glyphShown(screen(), tileBounds(), named = false).shouldBeTrue() }
-            }
+                    showHome(SixColumns.copy(alwaysShowNames = true), docked = true)
 
-            test("a listed input's tile shows the name its row reads now, and the stored name when it is not listed") {
-                inputs.value = playStationInputs(label = "PS5 · HDMI 2")
-                showHome(SixColumns, docked = true)
-                faceText("PS5 · HDMI 2").assertExists()
+                    nodesTagged("name:${PlayStationTile.key}") shouldBe 1
+                    faceText("PlayStation").assertDoesNotExist()
+                    withClue("glyph") { glyphShown(screen(), tileBounds(), named = false).shouldBeTrue() }
+                }
 
-                inputs.value = playStationInputs(label = null)
-                settle()
-                faceText("HDMI 2").assertExists()
-                faceText("PS5").assertDoesNotExist()
+                test("a listed input's tile shows the name its row reads now, and the stored name when it is not listed$named") {
+                    testLook = theme
 
-                inputs.value = playStationInputs(listed = false)
-                settle()
-                faceText("PlayStation").assertExists()
-            }
+                    inputs.value = playStationInputs(label = "PS5 · HDMI 2")
+                    showHome(SixColumns, docked = true)
+                    faceText("PS5 · HDMI 2").assertExists()
 
-            test("an input the TV does not list keeps its tile with a grey dot and its line says No device") {
-                inputs.value = playStationInputs(listed = false)
-                showHome(SixColumns, docked = true)
-                press(Key.DirectionRight)
-
-                val dot = dotAt(screen(), tileBounds())
-                withClue("grey dot") { dot.any(::isGrey).shouldBeTrue() }
-                dot.any(::isGreen).shouldBeFalse()
-                compose.onNodeWithTag("shelf:title-meta").assertTextEquals("No device")
-            }
-
-            test("an input with no state draws no dot") {
-                inputs.value = playStationInputs(connection = InputConnection.Unknown)
-                showHome(SixColumns, docked = true)
-
-                val dot = dotAt(screen(), tileBounds())
-                withClue("a dot") { dot.any { pixel -> isGreen(pixel) || isGrey(pixel) }.shouldBeFalse() }
-            }
-
-            test("a state change recomposes no tile") {
-                showHome(SixColumns, docked = true)
-                val counter = Recompositions()
-                startCounting(counter)
-                try {
-                    inputs.value = playStationInputs(connection = InputConnection.Disconnected)
+                    inputs.value = playStationInputs(label = null)
                     settle()
+                    faceText("HDMI 2").assertExists()
+                    faceText("PS5").assertDoesNotExist()
 
-                    withClue("grey dot") { dotAt(screen(), tileBounds()).any(::isGrey).shouldBeTrue() }
-                    counter.tiles shouldBe 0
-                    counter.faces shouldBe 0
-                } finally {
-                    stopCounting()
+                    inputs.value = playStationInputs(listed = false)
+                    settle()
+                    faceText("PlayStation").assertExists()
+                }
+
+                test("an input the TV does not list keeps its tile with a grey dot and its line says No device$named") {
+                    testLook = theme
+
+                    inputs.value = playStationInputs(listed = false)
+                    showHome(SixColumns, docked = true)
+                    press(Key.DirectionRight)
+
+                    val dot = dotAt(screen(), tileBounds())
+                    withClue("grey dot") { dot.any(::isGrey).shouldBeTrue() }
+                    dot.any(::isGreen).shouldBeFalse()
+                    compose.onNodeWithTag("shelf:title-meta").assertTextEquals("No device")
+                }
+
+                test("an input with no state draws no dot$named") {
+                    testLook = theme
+
+                    inputs.value = playStationInputs(connection = InputConnection.Unknown)
+                    showHome(SixColumns, docked = true)
+
+                    val dot = dotAt(screen(), tileBounds())
+                    withClue("a dot") { dot.any { pixel -> isGreen(pixel) || isGrey(pixel) }.shouldBeFalse() }
+                }
+
+                test("a state change recomposes no tile$named") {
+                    testLook = theme
+
+                    showHome(SixColumns, docked = true)
+                    val counter = Recompositions()
+                    startCounting(counter)
+                    try {
+                        inputs.value = playStationInputs(connection = InputConnection.Disconnected)
+                        settle()
+
+                        withClue("grey dot") { dotAt(screen(), tileBounds()).any(::isGrey).shouldBeTrue() }
+                        counter.tiles shouldBe 0
+                        counter.faces shouldBe 0
+                    } finally {
+                        stopCounting()
+                    }
                 }
             }
         }
     })
 
 private class InputTileUiTestFixture : JUnit4RulesContext() {
+    /** The look the test runs in. */
+    var testLook = Look.Glass
+
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
     val inputs = MutableStateFlow(playStationInputs())
@@ -168,7 +191,8 @@ private class InputTileUiTestFixture : JUnit4RulesContext() {
             }
         val sources = sources(apps = flowOf(AppList(apps)), inputs = inputs)
         compose.setContent {
-            TvTheme(look = Look.Glass) {
+            TvTheme(look = testLook) {
+                colours = TvTheme.lookColors
                 val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(
@@ -250,10 +274,28 @@ private class InputTileUiTestFixture : JUnit4RulesContext() {
         }
     }
 
-    fun isGreen(pixel: Color) = pixel.green > pixel.red + 0.25f && pixel.green > pixel.blue + 0.2f
+    /** The colours of the look the test runs in, as Home reads them. */
+    lateinit var colours: LookColors
 
+    /** The dot of a connected input: a clear green, of a tone that follows the ground in Expressive. */
+    fun isGreen(pixel: Color) = hsv(pixel).let { (hue, saturation, value) -> hue in 100f..170f && saturation > 0.3f && value > 0.3f }
+
+    /**
+     * The dot of an input without a device: Glass's grey, or in Expressive a ring in the house outline, a neutral of a tone
+     * that follows the ground.
+     */
     fun isGrey(pixel: Color) =
-        abs(pixel.red - 0x8E / 255f) < 0.06f && abs(pixel.green - 0x8E / 255f) < 0.06f && abs(pixel.blue - 0x93 / 255f) < 0.06f
+        if (testLook == Look.Glass) {
+            colours.idle().let {
+                abs(
+                    pixel.red - it.red,
+                ) < 0.06f && abs(pixel.green - it.green) < 0.06f && abs(pixel.blue - it.blue) < 0.06f
+            }
+        } else {
+            hsv(pixel).let { (_, saturation, value) -> saturation < 0.2f && value in 0.3f..0.75f }
+        }
+
+    private fun hsv(colour: Color): FloatArray = FloatArray(3).also { android.graphics.Color.colorToHSV(colour.toArgb(), it) }
 
     @OptIn(InternalComposeTracingApi::class)
     fun startCounting(counter: Recompositions) {

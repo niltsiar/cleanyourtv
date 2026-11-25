@@ -108,7 +108,8 @@ public val FocusRingReach: Dp = RingGap + RingWidth + HairlineWidth + OuterStrok
  * the ring clockwise from the top centre, whole as the menu opens ([HoldArcElement]), with [Motion.animations] only.
  *
  * In [Look.Expressive] focus shows as a band of the ring's colour, or the house primary without one, between a gap in the
- * house surface colour and a dark keyline, all inside [FocusRingReach], with no glow; [TvTheme] says the band's shape
+ * house surface colour and a dark keyline, all inside [FocusRingReach], with no glow; a press moves the band toward
+ * [TvElementColors.ringPressed] as it does the ring. [TvTheme] says the band's shape
  * ([dev.niltsiar.tvhome.core.config.ExpressiveTile]). The look and the shape are read in the draw phase.
  */
 @Composable
@@ -189,7 +190,9 @@ public fun FocusSurface(
                         val progress = focus.value.coerceIn(0f, 1f)
                         // The ring shows whole from the first frame of focus; it fades only on the way out.
                         val ringAlpha = if (focus.targetValue > 0f) 1f else progress
+                        val pressed = press?.value ?: 0f
                         if (lookState.look == Look.Expressive) {
+                            val rest = band()
                             this@drawWithContent.drawExpressiveTile(
                                 painter = painter,
                                 tile = lookState.tile,
@@ -197,7 +200,7 @@ public fun FocusSurface(
                                 base = shape,
                                 progress = progress,
                                 ringAlpha = ringAlpha,
-                                band = band(),
+                                band = if (pressed > 0f) lerp(rest, colours.ringPressed, colours.ringPressedMix * pressed) else rest,
                                 gap = lookState.scheme(dark = true).surface,
                                 keyline = colours.ringKeyline,
                                 plate = plateColor,
@@ -208,7 +211,6 @@ public fun FocusSurface(
                         val outline = if (ringAlpha > 0f) shape.createOutline(size, layoutDirection, this) else null
                         val width = style.ringWidth.toPx()
                         val gap = RingBand.toPx() - width
-                        val pressed = press?.value ?: 0f
                         val lit = width + PressRingGrowth.toPx() * pressed
                         val base = ring?.invoke() ?: colours.ring
                         val ringColour = if (pressed > 0f) lerp(base, colours.ringPressed, colours.ringPressedMix * pressed) else base

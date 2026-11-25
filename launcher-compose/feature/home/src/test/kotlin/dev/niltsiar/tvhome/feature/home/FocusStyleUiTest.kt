@@ -38,6 +38,7 @@ import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.floats.plusOrMinus
 import io.kotest.matchers.ranges.shouldBeIn
 import io.kotest.matchers.shouldBe
+import kotlin.math.abs
 
 /** What a focused tile draws in each [FocusStyle], read from pixels: a 100 dp grey tile on a mid-grey frame, at 2 pixels to the dp. */
 val FocusStyleUiTest by testSuite {
@@ -54,51 +55,70 @@ val FocusStyleUiTest by testSuite {
 class FocusStyleUiTestContent :
     RobolectricTestSuiteContent({
         testFixture { FocusStyleUiTestFixture() } asContextForEach {
-            test("glass lights the top of the tile and glows past the ring") {
-                showFocusedTile(FocusStyle.Glass)
+            for (theme in Look.entries) {
+                val named = if (theme == Look.Expressive) ", in Expressive" else ""
 
-                withClue("sheen ${sheen()}") { sheen().red shouldBeGreaterThan tile.red + 0.08f }
-                withClue("glow ${glow()}") { glow() shouldBeGreaterThan 0.015f }
-                withClue("ring ${ring()}") { (ring().red > 0.95f && ring().blue > 0.95f).shouldBeTrue() }
-            }
+                if (theme == Look.Glass) {
+                    test("glass lights the top of the tile and glows past the ring") {
 
-            test("rim draws the ring and its keyline and nothing else") {
-                showFocusedTile(FocusStyle.Rim)
+                        showFocusedTile(FocusStyle.Glass)
 
-                sheen().red shouldBe (tile.red plusOrMinus 0.01f)
-                glow() shouldBe (0f plusOrMinus 0.003f)
-                withClue("ring ${ring()}") { (ring().red > 0.95f && ring().blue > 0.95f).shouldBeTrue() }
-                withClue("keyline ${keyline()}") { keyline().red shouldBeLessThan frame.red - 0.04f }
-            }
+                        withClue("sheen ${sheen()}") { sheen().red shouldBeGreaterThan tile.red + 0.08f }
+                        withClue("glow ${glow()}") { glow() shouldBeGreaterThan 0.015f }
+                        withClue("ring ${ring()}") { isBand(ring(), 0.05f).shouldBeTrue() }
+                    }
+                }
 
-            test("rim draws its ring at least 2 px wider than glass on the same tile") {
-                showFocusedTile(FocusStyle.Glass)
-                val glass = ringPixels()
-                style = FocusStyle.Rim
-                compose.waitForIdle()
-                val rim = ringPixels()
+                test("rim draws the ring and its keyline and nothing else$named") {
+                    testLook = theme
 
-                withClue("glass $glass px, rim $rim px") { (glass >= 6 && rim >= glass + 2).shouldBeTrue() }
-            }
+                    showFocusedTile(FocusStyle.Rim)
 
-            test("halo draws the ring and a glow in its colour under the tile half as strong beside it where rim draws none") {
-                showFocusedTile(FocusStyle.Halo, ring = coral)
+                    sheen().red shouldBe (tile.red plusOrMinus 0.01f)
+                    glow() shouldBe (0f plusOrMinus 0.003f)
+                    withClue("ring ${ring()}") { isBand(ring(), 0.05f).shouldBeTrue() }
+                    withClue("keyline ${keyline()}") { keyline().red shouldBeLessThan frame.red - 0.04f }
+                }
 
-                sheen().red shouldBe (tile.red plusOrMinus 0.01f)
-                withClue("ring ${ring()}") { (ring().red > 0.95f && ring().blue in 0.2f..0.3f).shouldBeTrue() }
-                withClue("keyline ${keyline()}") { keyline().red shouldBeLessThan frame.red - 0.04f }
-                val under = redUnder()
-                withClue("under $under, bluer by ${glow()}") { (under >= 0.3f && under >= 3f * glow()).shouldBeTrue() }
-                withClue("beside ${redBeside()}, under $under") { redBeside() / under shouldBeIn 0.4f..0.6f }
+                if (theme == Look.Glass) {
+                    test("rim draws its ring at least 2 px wider than glass on the same tile") {
 
-                style = FocusStyle.Rim
-                compose.waitForIdle()
-                redUnder() shouldBe (0f plusOrMinus 0.003f)
+                        showFocusedTile(FocusStyle.Glass)
+                        val glass = ringPixels()
+                        style = FocusStyle.Rim
+                        compose.waitForIdle()
+                        val rim = ringPixels()
+
+                        withClue("glass $glass px, rim $rim px") { (glass >= 6 && rim >= glass + 2).shouldBeTrue() }
+                    }
+                }
+
+                test(
+                    "halo draws the ring and a glow in its colour under the tile half as strong beside it where rim draws none$named",
+                ) {
+                    testLook = theme
+
+                    showFocusedTile(FocusStyle.Halo, ring = coral)
+
+                    sheen().red shouldBe (tile.red plusOrMinus 0.01f)
+                    withClue("ring ${ring()}") { (ring().red > 0.95f && ring().blue in 0.2f..0.3f).shouldBeTrue() }
+                    withClue("keyline ${keyline()}") { keyline().red shouldBeLessThan frame.red - 0.04f }
+                    val under = redUnder()
+                    withClue("under $under, bluer by ${glow()}") { (under >= 0.3f && under >= 3f * glow()).shouldBeTrue() }
+                    withClue("beside ${redBeside()}, under $under") { redBeside() / under shouldBeIn 0.4f..0.6f }
+
+                    style = FocusStyle.Rim
+                    compose.waitForIdle()
+                    redUnder() shouldBe (0f plusOrMinus 0.003f)
+                }
             }
         }
     })
 
 private class FocusStyleUiTestFixture : JUnit4RulesContext() {
+    /** The look the test runs in. */
+    var testLook = Look.Glass
+
     val compose = rule(createComposeRule())
 
     val requester = FocusRequester()
@@ -111,6 +131,14 @@ private class FocusStyleUiTestFixture : JUnit4RulesContext() {
 
     var style by mutableStateOf(FocusStyle.Glass)
 
+    /** The colour of the focus band of a tile with no colour of its own: white in Glass, the house primary in Expressive. */
+    var band = Color.White
+
+    fun isBand(
+        pixel: Color,
+        tolerance: Float,
+    ) = abs(pixel.red - band.red) < tolerance && abs(pixel.green - band.green) < tolerance && abs(pixel.blue - band.blue) < tolerance
+
     fun showFocusedTile(
         style: FocusStyle,
         ring: Color? = null,
@@ -119,7 +147,8 @@ private class FocusStyleUiTestFixture : JUnit4RulesContext() {
         lateinit var view: View
         compose.setContent {
             view = LocalView.current
-            TvTheme(look = Look.Glass, focusStyle = this.style) {
+            TvTheme(look = testLook, focusStyle = this.style) {
+                band = TvTheme.lookColors.focusBand(Color.White, neutral = false)
                 Box(Modifier.size(180.dp).background(frame).testTag("frame"), contentAlignment = Alignment.Center) {
                     Box(Modifier.align(Alignment.TopStart).size(1.dp).focusable())
                     FocusSurface(
@@ -168,6 +197,6 @@ private class FocusStyleUiTestFixture : JUnit4RulesContext() {
     /** The pixels of the white ring down the middle of the tile, from the frame above it to the grown tile's top edge. */
     fun ringPixels(): Int {
         val pixels = compose.onNodeWithTag("frame").captureToImage().toPixelMap()
-        return (0 until (above(0f) * 2).toInt()).count { y -> pixels[180, y].let { it.red > 0.9f && it.blue > 0.9f } }
+        return (0 until (above(0f) * 2).toInt()).count { y -> isBand(pixels[180, y], 0.1f) }
     }
 }

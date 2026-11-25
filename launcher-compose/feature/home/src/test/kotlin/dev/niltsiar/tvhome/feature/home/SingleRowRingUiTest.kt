@@ -45,17 +45,28 @@ val SingleRowRingUiTest by testSuite {
 class SingleRowRingUiTestContent :
     RobolectricTestSuiteContent({
         testFixture { SingleRowRingUiTestFixture() } asContextForEach {
-            test("every focused tile of the single row has its whole ring inside the row") {
-                assertRingInsideAcrossTheRowAndBack(Motion(), scale = 1.08f)
-            }
+            for (theme in Look.entries) {
+                val named = if (theme == Look.Expressive) ", in Expressive" else ""
 
-            test("with focus overshoot every focused tile of the single row has its ring at the peak inside the row") {
-                assertRingInsideAcrossTheRowAndBack(Motion(focusOvershoot = true), scale = 1.144f)
+                test("every focused tile of the single row has its whole ring inside the row$named") {
+                    testLook = theme
+
+                    assertRingInsideAcrossTheRowAndBack(Motion(), scale = 1.08f)
+                }
+
+                test("with focus overshoot every focused tile of the single row has its ring at the peak inside the row$named") {
+                    testLook = theme
+
+                    assertRingInsideAcrossTheRowAndBack(Motion(focusOvershoot = true), scale = 1.144f)
+                }
             }
         }
     })
 
 private class SingleRowRingUiTestFixture : JUnit4RulesContext() {
+    /** The look the test runs in. */
+    var testLook = Look.Glass
+
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
     val apps = (1..12).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") }
@@ -64,7 +75,7 @@ private class SingleRowRingUiTestFixture : JUnit4RulesContext() {
         val config = TvConfig(columns = 4, singleRow = true)
         val sources = sources(apps = flowOf(AppList(apps)))
         compose.setContent {
-            TvTheme(look = Look.Glass, motion = motion) {
+            TvTheme(look = testLook, motion = motion) {
                 val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(

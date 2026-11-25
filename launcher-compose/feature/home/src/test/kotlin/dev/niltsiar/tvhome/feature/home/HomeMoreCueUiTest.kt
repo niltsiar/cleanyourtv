@@ -65,148 +65,175 @@ val HomeMoreCueUiTest by testSuite {
 class HomeMoreCueUiTestContent :
     RobolectricTestSuiteContent({
         testFixture { HomeMoreCueUiTestFixture() } closeWith { stopCounting() } asContextForEach {
-            test("the default grid with rows below the screen has the cue centred in the band under its second row") {
-                showHome()
+            for (theme in Look.entries) {
+                val named = if (theme == Look.Expressive) ", in Expressive" else ""
 
-                press(Key.DirectionDown)
-                compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
+                test("the default grid with rows below the screen has the cue centred in the band under its second row$named") {
+                    testLook = theme
 
-                val rowBottom = bottomOf("tile:pkg.9")
-                val screen =
-                    compose
-                        .onRoot()
-                        .getBoundsInRoot()
-                        .bottom.value * density
-                val pill = pill(from = rowBottom)
-                withClue("no cue under the second row") { pill.shouldNotBeNull() }
-                assertNear(20f * density, (pill!!.last - pill.first + 1).toFloat())
-                assertNear((rowBottom + screen) / 2f, (pill.first + pill.last + 1) / 2f)
-            }
+                    showHome()
 
-            test("the pill is black at 60 percent and the chevron white at 95 percent") {
-                showHome()
-                press(Key.DirectionDown)
+                    press(Key.DirectionDown)
+                    compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
 
-                val pill = pill(from = bottomOf("tile:pkg.9"))!!
-                val (pixels, x) = column()
-                val middle = (pill.first + pill.last) / 2
-                // Beside the chevron: 7 dp left of the middle, the pill's own colour.
-                pixels[pixels.width / 2 - (7f * density).toInt(), middle].red shouldBe (0.4f plusOrMinus 0.03f)
-                // The tip of the chevron, 4 dp under the pill's middle on the centre line, in the chevron's own colour.
-                val tip = pixels[pixels.width / 2, middle + (4f * density).toInt()]
-                withClue("chevron reads ${tip.red} at $x") { tip.red shouldBeGreaterThan 0.9f }
-            }
-
-            test(
-                "the cue stays while focus moves down the visible rows and goes when the grid scrolls to its last row with no recomposition",
-            ) {
-                showHome()
-                press(Key.DirectionDown)
-                val homeContent = count("HomeContent")
-                val before = homeContent()
-                withClue("cue with focus on the first row") { pill(from = bottomOf("tile:pkg.9")).shouldNotBeNull() }
-
-                press(Key.DirectionDown)
-                compose.onNodeWithTag("tile:pkg.9").assertIsFocused()
-                withClue("cue with focus on the second row") { pill(from = bottomOf("tile:pkg.9")).shouldNotBeNull() }
-
-                press(Key.DirectionDown)
-                press(Key.DirectionDown)
-                compose.onNodeWithTag("tile:pkg.17").assertIsFocused()
-                withClue("cue with the last row on screen") { pill(from = bottomOf("tile:pkg.17")).shouldBeNull() }
-                withClue("HomeContent recomposed with the focus moves") { homeContent() shouldBe before }
-            }
-
-            test("grid scroll cue false draws no cue where the default draws one") {
-                showHome()
-                press(Key.DirectionDown)
-                withClue("cue with grid_scroll_cue on") { pill(from = bottomOf("tile:pkg.9")).shouldNotBeNull() }
-
-                layout = TvConfig(columns = 4, gridScrollCue = false).homeLayout()
-                settle()
-                compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
-                withClue("cue with grid_scroll_cue false") { pill(from = bottomOf("tile:pkg.9")).shouldBeNull() }
-            }
-
-            test("the recomposition count sees home content run when its layout changes") {
-                showHome()
-                press(Key.DirectionDown)
-                val homeContent = count("HomeContent")
-                val before = homeContent()
-
-                layout = layout.copy(showNames = true)
-                settle()
-
-                withClue("HomeContent runs: before $before, after ${homeContent()}") { homeContent() shouldBeGreaterThan before }
-            }
-
-            test("the cue is partly transparent while the row it marks fades in as focus enters the grid") {
-                showHome()
-                val screen = compose.onRoot().captureToImage()
-                // Inside the pill, 7 dp left of the middle: white wallpaper until the cue comes, 0.40 grey at its full strength.
-                // Row 2 ends at 990 of 1080 and the band's middle is 1035.
-                val x = screen.width / 2 - (7f * density).toInt()
-                val y = screen.height * 1035 / 1080
-
-                compose.mainClock.autoAdvance = false
-                compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
-                val seen = mutableListOf<Float>()
-                repeat(60) {
-                    compose.mainClock.advanceTimeByFrame()
-                    seen +=
+                    val rowBottom = bottomOf("tile:pkg.9")
+                    val screen =
                         compose
                             .onRoot()
-                            .captureToImage()
-                            .toPixelMap()[x, y]
-                            .red
+                            .getBoundsInRoot()
+                            .bottom.value * density
+                    val pill = pill(from = rowBottom)
+                    withClue("no cue under the second row") { pill.shouldNotBeNull() }
+                    assertNear(20f * density, (pill!!.last - pill.first + 1).toFloat())
+                    assertNear((rowBottom + screen) / 2f, (pill.first + pill.last + 1) / 2f)
                 }
 
-                withClue("never partly transparent: $seen") { (seen.any { it in 0.5f..0.9f }).shouldBeTrue() }
-            }
+                if (theme == Look.Glass) {
+                    test("the pill is black at 60 percent and the chevron white at 95 percent") {
 
-            test("there is no cue with every row of apps on screen") {
-                showHome(count = 12)
+                        showHome()
+                        press(Key.DirectionDown)
 
-                press(Key.DirectionDown)
-                compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
+                        val pill = pill(from = bottomOf("tile:pkg.9"))!!
+                        val (pixels, x) = column()
+                        val middle = (pill.first + pill.last) / 2
+                        // Beside the chevron: 7 dp left of the middle, the pill's own colour.
+                        pixels[pixels.width / 2 - (7f * density).toInt(), middle].red shouldBe (0.4f plusOrMinus 0.03f)
+                        // The tip of the chevron, 4 dp under the pill's middle on the centre line, in the chevron's own colour.
+                        val tip = pixels[pixels.width / 2, middle + (4f * density).toInt()]
+                        withClue("chevron reads ${tip.red} at $x") { tip.red shouldBeGreaterThan 0.9f }
+                    }
+                }
 
-                pill(from = bottomOf("tile:pkg.9")).shouldBeNull()
-            }
+                test(
+                    "the cue stays while focus moves down the visible rows and goes when the grid scrolls to its last row with no recomposition$named",
+                ) {
+                    testLook = theme
+                    showHome()
+                    press(Key.DirectionDown)
+                    val homeContent = count("HomeContent")
+                    val before = homeContent()
+                    withClue("cue with focus on the first row") { pill(from = bottomOf("tile:pkg.9")).shouldNotBeNull() }
 
-            test("there is no cue in dock focus where the grid is not shown") {
-                showHome()
+                    press(Key.DirectionDown)
+                    compose.onNodeWithTag("tile:pkg.9").assertIsFocused()
+                    withClue("cue with focus on the second row") { pill(from = bottomOf("tile:pkg.9")).shouldNotBeNull() }
 
-                pill(from = 0f).shouldBeNull()
-            }
+                    press(Key.DirectionDown)
+                    press(Key.DirectionDown)
+                    compose.onNodeWithTag("tile:pkg.17").assertIsFocused()
+                    withClue("cue with the last row on screen") { pill(from = bottomOf("tile:pkg.17")).shouldBeNull() }
+                    withClue("HomeContent recomposed with the focus moves") { homeContent() shouldBe before }
+                }
 
-            test("with names and apps below a band too short for the cue has it over the tiles above the names") {
-                // Five columns with names: the second row's names end 38 px above the bottom edge, 10 px short of the 48 the cue needs.
-                showHome(TvConfig(columns = 5, alwaysShowNames = true), count = 30)
-                press(Key.DirectionDown)
-                compose.onNodeWithTag("tile:pkg.6").assertIsFocused()
-                val (withCue, x) = column()
+                test("grid scroll cue false draws no cue where the default draws one$named") {
+                    testLook = theme
 
-                layout = layout.copy(scrollCue = false)
-                settle()
-                val (without, _) = column()
+                    showHome()
+                    press(Key.DirectionDown)
+                    withClue("cue with grid_scroll_cue on") { pill(from = bottomOf("tile:pkg.9")).shouldNotBeNull() }
 
-                val drawn = (0 until withCue.height).filter { y -> withCue[x, y] != without[x, y] }
-                withClue("no cue with names on and apps below") { drawn.isNotEmpty().shouldBeTrue() }
-                val tileBottom = bottomOf("tile:pkg.13")
-                val nameTop =
-                    compose
-                        .onNodeWithTag("name:pkg.13")
-                        .getBoundsInRoot()
-                        .top.value * density
-                assertNear(20f * density, (drawn.last() - drawn.first() + 1).toFloat())
-                assertNear(tileBottom - 2f * density, drawn.last() + 1f)
-                withClue("cue ends at ${drawn.last()}, over the name at $nameTop") { drawn.last().toFloat() shouldBeLessThan nameTop }
+                    layout = TvConfig(columns = 4, gridScrollCue = false).homeLayout()
+                    settle()
+                    compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
+                    withClue("cue with grid_scroll_cue false") { pill(from = bottomOf("tile:pkg.9")).shouldBeNull() }
+                }
+
+                test("the recomposition count sees home content run when its layout changes$named") {
+                    testLook = theme
+
+                    showHome()
+                    press(Key.DirectionDown)
+                    val homeContent = count("HomeContent")
+                    val before = homeContent()
+
+                    layout = layout.copy(showNames = true)
+                    settle()
+
+                    withClue("HomeContent runs: before $before, after ${homeContent()}") { homeContent() shouldBeGreaterThan before }
+                }
+
+                test("the cue is partly transparent while the row it marks fades in as focus enters the grid$named") {
+                    testLook = theme
+
+                    showHome()
+                    val screen = compose.onRoot().captureToImage()
+                    // Inside the pill, 7 dp left of the middle: white wallpaper until the cue comes, 0.40 grey at its full strength.
+                    // Row 2 ends at 990 of 1080 and the band's middle is 1035.
+                    val x = screen.width / 2 - (7f * density).toInt()
+                    val y = screen.height * 1035 / 1080
+
+                    compose.mainClock.autoAdvance = false
+                    compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+                    val seen = mutableListOf<Float>()
+                    repeat(60) {
+                        compose.mainClock.advanceTimeByFrame()
+                        seen +=
+                            compose
+                                .onRoot()
+                                .captureToImage()
+                                .toPixelMap()[x, y]
+                                .red
+                    }
+
+                    withClue("never partly transparent: $seen") { (seen.any { it in 0.5f..0.9f }).shouldBeTrue() }
+                }
+
+                test("there is no cue with every row of apps on screen$named") {
+                    testLook = theme
+
+                    showHome(count = 12)
+
+                    press(Key.DirectionDown)
+                    compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
+
+                    pill(from = bottomOf("tile:pkg.9")).shouldBeNull()
+                }
+
+                test("there is no cue in dock focus where the grid is not shown$named") {
+                    testLook = theme
+
+                    showHome()
+
+                    pill(from = 0f).shouldBeNull()
+                }
+
+                test("with names and apps below a band too short for the cue has it over the tiles above the names$named") {
+                    testLook = theme
+
+                    // Five columns with names: the second row's names end 38 px above the bottom edge, 10 px short of the 48 the cue needs.
+                    showHome(TvConfig(columns = 5, alwaysShowNames = true), count = 30)
+                    press(Key.DirectionDown)
+                    compose.onNodeWithTag("tile:pkg.6").assertIsFocused()
+                    val (withCue, x) = column()
+
+                    layout = layout.copy(scrollCue = false)
+                    settle()
+                    val (without, _) = column()
+
+                    val drawn = (0 until withCue.height).filter { y -> withCue[x, y] != without[x, y] }
+                    withClue("no cue with names on and apps below") { drawn.isNotEmpty().shouldBeTrue() }
+                    val tileBottom = bottomOf("tile:pkg.13")
+                    val nameTop =
+                        compose
+                            .onNodeWithTag("name:pkg.13")
+                            .getBoundsInRoot()
+                            .top.value * density
+                    assertNear(20f * density, (drawn.last() - drawn.first() + 1).toFloat())
+                    assertNear(tileBottom - 2f * density, drawn.last() + 1f)
+                    withClue("cue ends at ${drawn.last()}, over the name at $nameTop") {
+                        drawn.last().toFloat() shouldBeLessThan nameTop
+                    }
+                }
             }
         }
     })
 
 @OptIn(InternalComposeTracingApi::class)
 private class HomeMoreCueUiTestFixture : JUnit4RulesContext() {
+    /** The look the test runs in. */
+    var testLook = Look.Glass
+
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
     val density get() = compose.activity.resources.displayMetrics.density
@@ -227,7 +254,7 @@ private class HomeMoreCueUiTestFixture : JUnit4RulesContext() {
         val sources = sources(apps = flowOf(AppList(apps)))
         layout = config.homeLayout()
         compose.setContent {
-            TvTheme(look = Look.Glass) {
+            TvTheme(look = testLook) {
                 val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(

@@ -120,8 +120,11 @@ public class LookColors internal constructor(
     public val tileShade: ColorProducer =
         ColorProducer { if (expressive) scheme.surfaceContainerLowest.copy(alpha = GlassTileShade.alpha) else GlassTileShade }
 
-    /** The edge inside a tile of light art, so it holds on any ground, and inside a tile on the glass dock. */
-    public val lightTileEdge: ColorProducer = ColorProducer { if (expressive) scheme.outline else GlassLightTileEdge }
+    /**
+     * The edge inside a tile of light art, so it holds on any light ground, and inside a tile on the glass dock. Expressive's
+     * is the house's darkest ink on either ground: on a dark ground the light art holds by itself.
+     */
+    public val lightTileEdge: ColorProducer = ColorProducer { if (expressive) look.scheme(dark = false).onSurface else GlassLightTileEdge }
     public val glassTileEdge: ColorProducer = ColorProducer { if (expressive) Color.Transparent else GlassGlassTileEdge }
 
     /** The mark under the app the household usually opens now, and its edge. */

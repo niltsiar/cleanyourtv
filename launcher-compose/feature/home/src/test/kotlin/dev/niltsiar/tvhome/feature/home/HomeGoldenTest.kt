@@ -5,10 +5,16 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.PixelMap
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -41,6 +47,8 @@ import dev.niltsiar.tvhome.core.model.ShelfItem
 import dev.niltsiar.tvhome.core.model.ShelfKind
 import dev.niltsiar.tvhome.core.model.ShelfPoster
 import dev.niltsiar.tvhome.core.model.Wallpaper
+import io.kotest.assertions.withClue
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
 import java.time.ZoneOffset
@@ -234,6 +242,97 @@ class HomeGoldenTestContent :
         }
     })
 
+/**
+ * No half-themed Home: in each scene every tagged node, the leaves Home draws, draws differently in its bounds once the look
+ * switches live from Glass to Expressive. Metrics are the same in both looks, so the bounds are read once, in Glass.
+ */
+val HomeLeafLookTest by testSuite {
+    robolectricTestSuite<HomeLeafLookTestContent>(
+        "sdk 31, 960x540 dp",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "w960dp-h540dp-xhdpi"
+            },
+    )
+}
+
+class HomeLeafLookTestContent :
+    RobolectricTestSuiteContent({
+        testFixture { HomeGoldenFixture() } asContextForEach {
+            val scenes: Map<String, HomeGoldenFixture.() -> Unit> =
+                mapOf(
+                    "home with focus on the dock" to { showHome() },
+                    "home with names under the tiles" to { showHome(TvConfig(alwaysShowNames = true), apps = apps(30)) },
+                    "tile faces on a glass dock with the habit mark" to {
+                        showHome(
+                            TvConfig(alwaysShowNames = true, dockGlass = true, inputTiles = true, habitHint = true),
+                            apps = faces,
+                            inputs = playStationInputs(InputConnection.Standby),
+                            habit = "pkg.light",
+                        )
+                    },
+                    "cinematic home with art" to { showHome(TvConfig(cinematicHome = true), heroArt = { art(it) }) },
+                    "cinematic home over a bright picture" to { showHome(TvConfig(cinematicHome = true), wallpaper = brightPicture) },
+                    "the app shelf" to {
+                        showHome(TvConfig(appShelf = true))
+                        press(Key.DirectionUp)
+                    },
+                    "a tile menu open" to {
+                        showHome()
+                        press(Key.Menu)
+                    },
+                    "reorder mode" to {
+                        showHome()
+                        press(Key.Menu)
+                        press(Key.DirectionDown)
+                        press(Key.DirectionCenter)
+                    },
+                    "the inputs list" to {
+                        showHome()
+                        inputsRequests++
+                        settle()
+                    },
+                    "the top bar with the sleep pill and focus on it" to {
+                        showHome(TvConfig(sleepTimer = true), sleepMinutesLeft = 25)
+                        press(Key.DirectionUp)
+                    },
+                )
+            for ((scene, show) in scenes) {
+                test("every tagged leaf of $scene draws differently in Expressive than in Glass") {
+                    show()
+                    val glass = compose.onRoot().captureToImage().toPixelMap()
+                    // A node outside the screen draws nothing there in either look.
+                    val screen = Rect(0f, 0f, glass.width.toFloat(), glass.height.toFloat())
+                    val leaves =
+                        leafBounds()
+                            .mapValues { (_, all) -> all.map { it.intersect(screen) }.filterNot { it.isEmpty } }
+                            .filterValues { it.isNotEmpty() }
+                    look = Look.Expressive
+                    settle()
+                    val expressive = compose.onRoot().captureToImage().toPixelMap()
+
+                    val same = leaves.filter { (_, bounds) -> bounds.all { samePixels(glass, expressive, it) } }.keys
+                    withClue("of $leaves") { same shouldBe emptySet() }
+                }
+            }
+        }
+    })
+
+/** Whether [a] and [b] hold the same pixels inside [bounds], which lie on the screen. */
+private fun samePixels(
+    a: PixelMap,
+    b: PixelMap,
+    bounds: Rect,
+): Boolean {
+    for (y in bounds.top.toInt() until bounds.bottom.toInt()) {
+        for (x in bounds.left.toInt() until bounds.right.toInt()) {
+            if (a[x, y] != b[x, y]) return false
+        }
+    }
+    return true
+}
+
 /** The house seed of the Expressive scenes, the warm one the design-system goldens use. */
 private val Ember = Color(0xFFFF6A3D)
 
@@ -250,6 +349,9 @@ private fun art(key: String) = bands(64, 36, listOf(Color(0xFF203A60), hue(key.l
 
 private class HomeGoldenFixture : JUnit4RulesContext() {
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
+
+    /** The look Home draws in: the config's when [showHome] runs, and switched live after that. */
+    var look by mutableStateOf(Look.Glass)
 
     var inputsRequests by mutableIntStateOf(0)
 
@@ -320,6 +422,7 @@ private class HomeGoldenFixture : JUnit4RulesContext() {
                 },
                 shelfPoster = { _, _, _ -> poster },
             )
+        look = config.look
         compose.mainClock.autoAdvance = false
         // A TV has no touch screen; the native graphics mode starts in touch mode, where nothing takes key focus.
         compose.runOnUiThread {
@@ -329,7 +432,7 @@ private class HomeGoldenFixture : JUnit4RulesContext() {
         compose.setContent {
             CompositionLocalProvider(LocalBakeDispatcher provides Dispatchers.Unconfined) {
                 TvTheme(
-                    look = config.look,
+                    look = look,
                     seed = { Ember },
                     motion = config.motion(),
                     focusStyle = config.focusStyle(),
@@ -371,6 +474,14 @@ private class HomeGoldenFixture : JUnit4RulesContext() {
         compose.onRoot().performKeyInput { pressKey(key) }
         settle()
     }
+
+    /** The bounds in the root of each tagged node, by tag, of every node that has a tag and a size. */
+    fun leafBounds(): Map<String, List<Rect>> =
+        compose
+            .onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.TestTag), useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .filter { it.config[SemanticsProperties.TestTag].isNotEmpty() && !it.boundsInRoot.isEmpty }
+            .groupBy({ it.config[SemanticsProperties.TestTag] }, { it.boundsInRoot })
 
     fun golden(scene: String) =
         compose

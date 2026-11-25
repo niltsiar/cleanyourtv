@@ -63,116 +63,144 @@ val DockPaddingUiTest by testSuite {
 class DockPaddingUiTestContent :
     RobolectricTestSuiteContent({
         testFixture { DockPaddingUiTestFixture() } asContextForEach {
-            test("a dock pads its sides by the rings room and its top and bottom by a gap unless the theme asks for even padding") {
-                showHome(SixColumns)
+            for (theme in Look.entries) {
+                val named = if (theme == Look.Expressive) ", in Expressive" else ""
 
-                val room = ringRoom(126.67f)
-                assertSides(Sides(room, 24f, room, 24f), padding(last = 6))
-            }
+                test(
+                    "a dock pads its sides by the rings room and its top and bottom by a gap unless the theme asks for even padding$named",
+                ) {
+                    testLook = theme
 
-            test("with focus overshoot a dock pads its sides for the ring at the peak of the pop") {
-                showHome(SixColumns, motion = Motion(focusOvershoot = true))
+                    showHome(SixColumns)
 
-                val room = 126.67f * 0.072f + 9f * 1.144f + 12f
-                assertSides(Sides(room, 24f, room, 24f), padding(last = 6))
-            }
+                    val room = ringRoom(126.67f)
+                    assertSides(Sides(room, 24f, room, 24f), padding(last = 6))
+                }
 
-            test("with focus overshoot and names the ring at the peak keeps 4 dp from the rim and the pill with 2 to 7 columns") {
-                showHome(TvConfig(columns = 2, alwaysShowNames = true), motion = Motion(focusOvershoot = true))
-                for (columns in 2..7) {
-                    switchTo(TvConfig(columns = columns, alwaysShowNames = true))
-                    val (ring, over, toPill) = namedRoom()
+                test("with focus overshoot a dock pads its sides for the ring at the peak of the pop$named") {
+                    testLook = theme
 
-                    withClue("$columns columns: $over dp over a ring of ${ring.over}") {
-                        over shouldBeGreaterThanOrEqualTo
+                    showHome(SixColumns, motion = Motion(focusOvershoot = true))
+
+                    val room = 126.67f * 0.072f + 9f * 1.144f + 12f
+                    assertSides(Sides(room, 24f, room, 24f), padding(last = 6))
+                }
+
+                test("with focus overshoot and names the ring at the peak keeps 4 dp from the rim and the pill with 2 to 7 columns$named") {
+                    testLook = theme
+
+                    showHome(TvConfig(columns = 2, alwaysShowNames = true), motion = Motion(focusOvershoot = true))
+                    for (columns in 2..7) {
+                        switchTo(TvConfig(columns = columns, alwaysShowNames = true))
+                        val (ring, over, toPill) = namedRoom()
+
+                        withClue("$columns columns: $over dp over a ring of ${ring.over}") {
+                            over shouldBeGreaterThanOrEqualTo
+                                ring.over + 4f - HALF_PIXEL
+                        }
+                        withClue("$columns columns: $toPill dp to the pill under a ring of ${ring.under}") {
+                            toPill shouldBeGreaterThanOrEqualTo
+                                ring.under + 4f - HALF_PIXEL
+                        }
+                    }
+                }
+
+                test("without focus overshoot a named dock keeps a gap over its tiles and 14 dp and their growth to the pill$named") {
+                    testLook = theme
+
+                    showHome(TvConfig(columns = 2, alwaysShowNames = true))
+                    for (columns in 2..7) {
+                        switchTo(TvConfig(columns = columns, alwaysShowNames = true))
+                        val (ring, over, toPill) = namedRoom()
+
+                        withClue("$columns columns") { over shouldBe (24f plusOrMinus 0.6f) }
+                        withClue("$columns columns") {
+                            toPill shouldBe
+                                (14f + 0.08f * (ring.height - minOf(ring.height, 128.5f)) plusOrMinus 0.6f)
+                        }
+                    }
+                }
+
+                test("with focus overshoot a 2 column dock without names pads its top and bottom for the ring at the peak$named") {
+                    testLook = theme
+
+                    showHome(TvConfig(columns = 2), motion = Motion(focusOvershoot = true))
+
+                    val sides = padding(last = 2)
+                    val tile = dockTile(1)
+                    val ring = peakRing((tile.bottom - tile.top).value, names = false)
+                    withClue("top ${sides.top} over a ring of ${ring.over}") {
+                        sides.top shouldBeGreaterThanOrEqualTo
                             ring.over + 4f - HALF_PIXEL
                     }
-                    withClue("$columns columns: $toPill dp to the pill under a ring of ${ring.under}") {
-                        toPill shouldBeGreaterThanOrEqualTo
+                    withClue("bottom ${sides.bottom} under a ring of ${ring.under}") {
+                        sides.bottom shouldBeGreaterThanOrEqualTo
                             ring.under + 4f - HALF_PIXEL
                     }
                 }
-            }
 
-            test("without focus overshoot a named dock keeps a gap over its tiles and 14 dp and their growth to the pill") {
-                showHome(TvConfig(columns = 2, alwaysShowNames = true))
-                for (columns in 2..7) {
-                    switchTo(TvConfig(columns = columns, alwaysShowNames = true))
-                    val (ring, over, toPill) = namedRoom()
+                test("without focus overshoot a 2 column dock without names pads its top and bottom by a gap$named") {
+                    testLook = theme
 
-                    withClue("$columns columns") { over shouldBe (24f plusOrMinus 0.6f) }
-                    withClue("$columns columns") {
-                        toPill shouldBe
-                            (14f + 0.08f * (ring.height - minOf(ring.height, 128.5f)) plusOrMinus 0.6f)
-                    }
+                    showHome(TvConfig(columns = 2))
+
+                    val sides = padding(last = 2)
+                    sides.top shouldBe (24f plusOrMinus 0.6f)
+                    sides.bottom shouldBe (24f plusOrMinus 0.6f)
                 }
-            }
 
-            test("with focus overshoot a 2 column dock without names pads its top and bottom for the ring at the peak") {
-                showHome(TvConfig(columns = 2), motion = Motion(focusOvershoot = true))
+                test("even padding gives the top and bottom the sides padding when that is more than a gap$named") {
+                    testLook = theme
 
-                val sides = padding(last = 2)
-                val tile = dockTile(1)
-                val ring = peakRing((tile.bottom - tile.top).value, names = false)
-                withClue("top ${sides.top} over a ring of ${ring.over}") {
-                    sides.top shouldBeGreaterThanOrEqualTo
-                        ring.over + 4f - HALF_PIXEL
+                    showHome(SixColumns.copy(dockEvenPadding = true))
+
+                    val room = ringRoom(126.67f)
+                    assertSides(Sides(room, room, room, room), padding(last = 6))
                 }
-                withClue("bottom ${sides.bottom} under a ring of ${ring.under}") {
-                    sides.bottom shouldBeGreaterThanOrEqualTo
-                        ring.under + 4f - HALF_PIXEL
+
+                test("even padding keeps the sides at the rings room in a four column dock$named") {
+                    testLook = theme
+
+                    showHome(TvConfig(columns = 4, dockEvenPadding = true))
+
+                    val room = ringRoom(202f)
+                    assertSides(Sides(room, room, room, room), padding(last = 4))
                 }
-            }
 
-            test("without focus overshoot a 2 column dock without names pads its top and bottom by a gap") {
-                showHome(TvConfig(columns = 2))
+                test("even padding of a dock with fewer tiles than the row holds is the shrunk docks side all round$named") {
+                    testLook = theme
 
-                val sides = padding(last = 2)
-                sides.top shouldBe (24f plusOrMinus 0.6f)
-                sides.bottom shouldBe (24f plusOrMinus 0.6f)
-            }
+                    showHome(SixColumns.copy(dockEvenPadding = true, fillDock = false), docked = 3)
 
-            test("even padding gives the top and bottom the sides padding when that is more than a gap") {
-                showHome(SixColumns.copy(dockEvenPadding = true))
+                    assertSides(Sides(28f, 28f, 28f, 28f), padding(last = 3))
+                }
 
-                val room = ringRoom(126.67f)
-                assertSides(Sides(room, room, room, room), padding(last = 6))
-            }
+                test("even padding does not move the panels top edge when focus moves$named") {
+                    testLook = theme
 
-            test("even padding keeps the sides at the rings room in a four column dock") {
-                showHome(TvConfig(columns = 4, dockEvenPadding = true))
+                    showHome(SixColumns)
+                    val rest = dock().top
 
-                val room = ringRoom(202f)
-                assertSides(Sides(room, room, room, room), padding(last = 4))
-            }
+                    look = look.copy(evenPadding = true)
+                    settle()
+                    press(Key.DirectionRight)
+                    press(Key.DirectionLeft)
 
-            test("even padding of a dock with fewer tiles than the row holds is the shrunk docks side all round") {
-                showHome(SixColumns.copy(dockEvenPadding = true, fillDock = false), docked = 3)
+                    dock().top.value shouldBe (rest.value plusOrMinus 0.6f)
+                    (dockTile(2).top - dock().top).value shouldBe (ringRoom(126.67f) plusOrMinus 0.6f)
+                }
 
-                assertSides(Sides(28f, 28f, 28f, 28f), padding(last = 3))
-            }
+                test("a dock tiles menu ends the same distance above the panel with even padding$named") {
+                    testLook = theme
 
-            test("even padding does not move the panels top edge when focus moves") {
-                showHome(SixColumns)
-                val rest = dock().top
+                    showHome(SixColumns)
+                    val plain = menuClearance()
 
-                look = look.copy(evenPadding = true)
-                settle()
-                press(Key.DirectionRight)
-                press(Key.DirectionLeft)
+                    look = look.copy(evenPadding = true)
+                    settle()
 
-                dock().top.value shouldBe (rest.value plusOrMinus 0.6f)
-                (dockTile(2).top - dock().top).value shouldBe (ringRoom(126.67f) plusOrMinus 0.6f)
-            }
-
-            test("a dock tiles menu ends the same distance above the panel with even padding") {
-                showHome(SixColumns)
-                val plain = menuClearance()
-
-                look = look.copy(evenPadding = true)
-                settle()
-
-                menuClearance() shouldBe (plain plusOrMinus 0.6f)
+                    menuClearance() shouldBe (plain plusOrMinus 0.6f)
+                }
             }
         }
     })
@@ -180,68 +208,84 @@ class DockPaddingUiTestContent :
 class DockPaddingUiTallTestContent :
     RobolectricTestSuiteContent({
         testFixture { DockPaddingUiTestFixture() } asContextForEach {
-            test("with focus overshoot a named docks room under its pills is a gap or one and a half times the pills gap") {
-                assertGapOrOneAndAHalfUnderPills(Motion(focusOvershoot = true))
-            }
+            for (theme in Look.entries) {
+                val named = if (theme == Look.Expressive) ", in Expressive" else ""
 
-            test("without focus overshoot a named docks room under its pills is a gap or one and a half times the pills gap") {
-                assertGapOrOneAndAHalfUnderPills(Motion())
-            }
+                test("with focus overshoot a named docks room under its pills is a gap or one and a half times the pills gap$named") {
+                    testLook = theme
 
-            test("with focus overshoot a first row tiles ring at the peak keeps 4 dp under the dock panel") {
-                showHome(rowOneConfigs.first(), motion = Motion(focusOvershoot = true))
-                for (config in rowOneConfigs) {
-                    switchTo(config)
-                    val tile = rowOneTile(config.columns)
-                    val ring = peakRing((tile.bottom - tile.top).value, config.alwaysShowNames)
-                    val room = (tile.top - dock().bottom).value
+                    assertGapOrOneAndAHalfUnderPills(Motion(focusOvershoot = true))
+                }
 
-                    withClue("$config: $room dp under the panel over a ring of ${ring.over}") {
-                        room shouldBeGreaterThanOrEqualTo
-                            ring.over + 4f - HALF_PIXEL
+                test("without focus overshoot a named docks room under its pills is a gap or one and a half times the pills gap$named") {
+                    testLook = theme
+
+                    assertGapOrOneAndAHalfUnderPills(Motion())
+                }
+
+                test("with focus overshoot a first row tiles ring at the peak keeps 4 dp under the dock panel$named") {
+                    testLook = theme
+
+                    showHome(rowOneConfigs.first(), motion = Motion(focusOvershoot = true))
+                    for (config in rowOneConfigs) {
+                        switchTo(config)
+                        val tile = rowOneTile(config.columns)
+                        val ring = peakRing((tile.bottom - tile.top).value, config.alwaysShowNames)
+                        val room = (tile.top - dock().bottom).value
+
+                        withClue("$config: $room dp under the panel over a ring of ${ring.over}") {
+                            room shouldBeGreaterThanOrEqualTo
+                                ring.over + 4f - HALF_PIXEL
+                        }
                     }
                 }
-            }
 
-            test("without focus overshoot the first row is a gap under the dock panel") {
-                showHome(rowOneConfigs.first())
-                for (config in rowOneConfigs) {
-                    switchTo(config)
+                test("without focus overshoot the first row is a gap under the dock panel$named") {
+                    testLook = theme
 
-                    withClue("$config") { (rowOneTile(config.columns).top - dock().bottom).value shouldBe (24f plusOrMinus 0.6f) }
-                }
-            }
+                    showHome(rowOneConfigs.first())
+                    for (config in rowOneConfigs) {
+                        switchTo(config)
 
-            test("with focus overshoot a lone grid tiles ring at the peak keeps 4 dp under the dock panel") {
-                val first = rowOneConfigs.first()
-                showHome(first, motion = Motion(focusOvershoot = true), list = apps.take(first.columns + 1))
-                for (config in rowOneConfigs) {
-                    appList.value = AppList(apps.take(config.columns + 1))
-                    switchTo(config)
-                    val tile = rowOneTile(config.columns)
-                    val ring = peakRing((tile.bottom - tile.top).value, config.alwaysShowNames)
-                    val room = (tile.top - dock().bottom).value
-
-                    withClue("$config: $room dp under the panel over a ring of ${ring.over}") {
-                        room shouldBeGreaterThanOrEqualTo
-                            ring.over + 4f - HALF_PIXEL
+                        withClue("$config") { (rowOneTile(config.columns).top - dock().bottom).value shouldBe (24f plusOrMinus 0.6f) }
                     }
                 }
-            }
 
-            test("with focus overshoot and an empty grid the library pill is as far under the dock panel as without") {
-                showHome(pillConfigs.first(), list = emptyGrid)
-                for (config in pillConfigs) {
-                    switchTo(config)
-                    compose.onNode(hasTestTag("tile:pkg.2") and hasAnyAncestor(hasTestTag("dock"))).assertExists()
-                    val plain = pillUnderPanel()
+                test("with focus overshoot a lone grid tiles ring at the peak keeps 4 dp under the dock panel$named") {
+                    testLook = theme
 
-                    motion = Motion(focusOvershoot = true)
-                    settle()
+                    val first = rowOneConfigs.first()
+                    showHome(first, motion = Motion(focusOvershoot = true), list = apps.take(first.columns + 1))
+                    for (config in rowOneConfigs) {
+                        appList.value = AppList(apps.take(config.columns + 1))
+                        switchTo(config)
+                        val tile = rowOneTile(config.columns)
+                        val ring = peakRing((tile.bottom - tile.top).value, config.alwaysShowNames)
+                        val room = (tile.top - dock().bottom).value
 
-                    withClue("$config") { pillUnderPanel() shouldBe (plain plusOrMinus 0.6f) }
-                    motion = Motion()
-                    settle()
+                        withClue("$config: $room dp under the panel over a ring of ${ring.over}") {
+                            room shouldBeGreaterThanOrEqualTo
+                                ring.over + 4f - HALF_PIXEL
+                        }
+                    }
+                }
+
+                test("with focus overshoot and an empty grid the library pill is as far under the dock panel as without$named") {
+                    testLook = theme
+
+                    showHome(pillConfigs.first(), list = emptyGrid)
+                    for (config in pillConfigs) {
+                        switchTo(config)
+                        compose.onNode(hasTestTag("tile:pkg.2") and hasAnyAncestor(hasTestTag("dock"))).assertExists()
+                        val plain = pillUnderPanel()
+
+                        motion = Motion(focusOvershoot = true)
+                        settle()
+
+                        withClue("$config") { pillUnderPanel() shouldBe (plain plusOrMinus 0.6f) }
+                        motion = Motion()
+                        settle()
+                    }
                 }
             }
         }
@@ -262,6 +306,9 @@ private data class PeakRing(
 )
 
 private class DockPaddingUiTestFixture : JUnit4RulesContext() {
+    /** The look the test runs in. */
+    var testLook = Look.Glass
+
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
     // Enough apps below the dock for the grid to scroll, which is what a pivot that is off would do.
@@ -287,7 +334,7 @@ private class DockPaddingUiTestFixture : JUnit4RulesContext() {
         shown = config
         this.motion = motion
         compose.setContent {
-            TvTheme(look = Look.Glass, motion = this.motion) {
+            TvTheme(look = testLook, motion = this.motion) {
                 key(shown) {
                     val viewModel = rememberHomeViewModel(sources, shown, mutableListOf())
                     val state = viewModel.uiState.collectAsState()

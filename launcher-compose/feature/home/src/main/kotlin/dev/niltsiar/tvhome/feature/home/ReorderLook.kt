@@ -147,18 +147,17 @@ internal fun Modifier.reorderLook(
             val lifted = lift.value.coerceIn(0f, 1f)
             val onLeft = lifted * left.value.coerceIn(0f, 1f)
             val onRight = lifted * right.value.coerceIn(0f, 1f)
+            // The layer is scaled by the lift: draw in the tile's own measures by undoing that.
+            val raised = 1f + (1f / grown - 1f) * lift.value
             val plate = colours.liftPlate()
-            if (lifted > 0f &&
-                plate.alpha > 0f
-            ) {
-                drawLiftPlate(focused.bandOutline(shape, size, layoutDirection, this), plate, lifted, grown, growthPivot)
+            if (lifted > 0f && plate.alpha > 0f) {
+                val outline = focused.bandOutline(shape, size, layoutDirection, this)
+                drawLiftPlate(outline, plate, lifted, grown, raised, growthPivot)
             }
             if (onLeft == 0f && onRight == 0f) {
                 drawContent()
                 return@onDrawWithContent
             }
-            // The layer is scaled by the lift: draw in the tile's own measures by undoing that.
-            val raised = 1f + (1f / grown - 1f) * lift.value
             val centre = ringReach(size.width, grown * raised, focused.sideReach(shape, size, this))
             val middle = size.height / 2f
             val pivot = Offset(size.width / 2f, middle)
@@ -192,18 +191,18 @@ internal fun Density.ringReach(
 
 /**
  * The plate a carried tile lifts off in Expressive: [outline], the outer edge of its focus band, in [colour] at [lifted],
- * grown by [grown] about the tile's growth pivot as the focused tile is, and left [LiftHeight] lower: the place the focused
- * tile filled before it lifted.
+ * grown by [grown] about the tile's growth pivot as the focused tile is, and left [LiftHeight] lower in a layer [raised]
+ * times the tile's size: the place the focused tile filled before it lifted.
  */
 private fun DrawScope.drawLiftPlate(
     outline: Outline,
     colour: Color,
     lifted: Float,
     grown: Float,
+    raised: Float,
     growthPivot: ((Float) -> Float)?,
 ) {
     val pivot = Offset(size.width / 2f, growthPivot?.invoke(size.height) ?: (size.height / 2f))
-    val raised = 1f + (1f / grown - 1f) * lifted
     translate(top = LiftHeight.toPx() * lifted / raised) {
         scale(grown, pivot) { drawOutline(outline, colour, alpha = lifted) }
     }

@@ -44,54 +44,78 @@ val ShelfRoomUiTest by testSuite {
 class ShelfRoomUiTestContent :
     RobolectricTestSuiteContent({
         testFixture { ShelfRoomUiTestFixture() } asContextForEach {
-            test("without names, columns 1 to 3 have no room for the cards and 4 to 8 have, plain or cinematic") {
-                for (cinematic in listOf(false, true)) {
-                    roomyColumns(Shelf.copy(cinematicHome = cinematic)) shouldBe (4..8).toList()
+            for (theme in Look.entries) {
+                val named = if (theme == Look.Expressive) ", in Expressive" else ""
+
+                test("without names, columns 1 to 3 have no room for the cards and 4 to 8 have, plain or cinematic$named") {
+                    testLook = theme
+
+                    for (cinematic in listOf(false, true)) {
+                        roomyColumns(Shelf.copy(cinematicHome = cinematic)) shouldBe (4..8).toList()
+                    }
                 }
-            }
 
-            test("always_show_names has room from columns 5, and with cinematic_home from columns 6") {
-                roomyColumns(Shelf.copy(alwaysShowNames = true)) shouldBe (5..8).toList()
-                roomyColumns(Shelf.copy(alwaysShowNames = true, cinematicHome = true)) shouldBe (6..8).toList()
-            }
+                test("always_show_names has room from columns 5, and with cinematic_home from columns 6$named") {
+                    testLook = theme
 
-            test("with animations off, always_show_names with cinematic_home has room from columns 5") {
-                roomyColumns(Shelf.copy(alwaysShowNames = true, cinematicHome = true, animations = false)) shouldBe (5..8).toList()
-            }
-
-            test("dock_even_padding with focus_overshoot needs one column more") {
-                val popping = Shelf.copy(dockEvenPadding = true, focusOvershoot = true)
-                roomyColumns(popping) shouldBe (5..8).toList()
-                roomyColumns(popping.copy(alwaysShowNames = true)) shouldBe (6..8).toList()
-                roomyColumns(popping.copy(alwaysShowNames = true, cinematicHome = true)) shouldBe (7..8).toList()
-            }
-
-            test("rows_below_dock 1 leaves room at columns 8 only, and none with names or with cinematic_home and dock_even_padding") {
-                val oneRow = Shelf.copy(rowsBelowDock = 1)
-                roomyColumns(oneRow) shouldBe listOf(8)
-                roomyColumns(oneRow.copy(cinematicHome = true)) shouldBe listOf(8)
-                roomyColumns(oneRow.copy(alwaysShowNames = true)) shouldBe emptyList()
-                roomyColumns(oneRow.copy(cinematicHome = true, dockEvenPadding = true)) shouldBe emptyList()
-            }
-
-            test("rows_below_dock 2 and 3 leave no room at any column") {
-                for (rows in 2..3) {
-                    withClue("rows_below_dock $rows") { roomyColumns(Shelf.copy(rowsBelowDock = rows)) shouldBe emptyList() }
+                    roomyColumns(Shelf.copy(alwaysShowNames = true)) shouldBe (5..8).toList()
+                    roomyColumns(Shelf.copy(alwaysShowNames = true, cinematicHome = true)) shouldBe (6..8).toList()
                 }
-            }
 
-            test("single_row has no room at any column") {
-                roomyColumns(Shelf.copy(singleRow = true)) shouldBe emptyList()
-            }
+                test("with animations off, always_show_names with cinematic_home has room from columns 5$named") {
+                    testLook = theme
 
-            test("with no grid rows to show, rows_below_dock 3 shrinks the tiles and leaves room from columns 3") {
-                roomyColumns(Shelf.copy(rowsBelowDock = 3), apps = 3) shouldBe (3..8).toList()
-            }
+                    roomyColumns(Shelf.copy(alwaysShowNames = true, cinematicHome = true, animations = false)) shouldBe (5..8).toList()
+                }
 
-            test("shelfHasRoom, which Settings reads, agrees with Home's measurement in every layout above") {
-                for ((index, measured) in Measured.withIndex()) {
-                    val (layout, apps) = measured
-                    withClue("layout $index") { ruledColumns(layout, apps) shouldBe roomyColumns(layout, apps) }
+                test("dock_even_padding with focus_overshoot needs one column more$named") {
+                    testLook = theme
+
+                    val popping = Shelf.copy(dockEvenPadding = true, focusOvershoot = true)
+                    roomyColumns(popping) shouldBe (5..8).toList()
+                    roomyColumns(popping.copy(alwaysShowNames = true)) shouldBe (6..8).toList()
+                    roomyColumns(popping.copy(alwaysShowNames = true, cinematicHome = true)) shouldBe (7..8).toList()
+                }
+
+                test(
+                    "rows_below_dock 1 leaves room at columns 8 only, and none with names or with cinematic_home and dock_even_padding$named",
+                ) {
+                    testLook = theme
+
+                    val oneRow = Shelf.copy(rowsBelowDock = 1)
+                    roomyColumns(oneRow) shouldBe listOf(8)
+                    roomyColumns(oneRow.copy(cinematicHome = true)) shouldBe listOf(8)
+                    roomyColumns(oneRow.copy(alwaysShowNames = true)) shouldBe emptyList()
+                    roomyColumns(oneRow.copy(cinematicHome = true, dockEvenPadding = true)) shouldBe emptyList()
+                }
+
+                test("rows_below_dock 2 and 3 leave no room at any column$named") {
+                    testLook = theme
+
+                    for (rows in 2..3) {
+                        withClue("rows_below_dock $rows") { roomyColumns(Shelf.copy(rowsBelowDock = rows)) shouldBe emptyList() }
+                    }
+                }
+
+                test("single_row has no room at any column$named") {
+                    testLook = theme
+
+                    roomyColumns(Shelf.copy(singleRow = true)) shouldBe emptyList()
+                }
+
+                test("with no grid rows to show, rows_below_dock 3 shrinks the tiles and leaves room from columns 3$named") {
+                    testLook = theme
+
+                    roomyColumns(Shelf.copy(rowsBelowDock = 3), apps = 3) shouldBe (3..8).toList()
+                }
+
+                test("shelfHasRoom, which Settings reads, agrees with Home's measurement in every layout above$named") {
+                    testLook = theme
+
+                    for ((index, measured) in Measured.withIndex()) {
+                        val (layout, apps) = measured
+                        withClue("layout $index") { ruledColumns(layout, apps) shouldBe roomyColumns(layout, apps) }
+                    }
                 }
             }
         }
@@ -120,6 +144,9 @@ private val Measured: List<Pair<TvConfig, Int>> =
     ).map { it to 18 } + (Shelf.copy(rowsBelowDock = 3) to 3)
 
 private class ShelfRoomUiTestFixture : JUnit4RulesContext() {
+    /** The look the test runs in. */
+    var testLook = Look.Glass
+
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
     private var config by mutableStateOf<TvConfig?>(null)
@@ -165,7 +192,7 @@ private class ShelfRoomUiTestFixture : JUnit4RulesContext() {
             key(current, appCount) {
                 val entries = (1..appCount).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") }
                 val sources = sources(apps = flowOf(AppList(entries)), inputs = flowOf(FourPorts))
-                TvTheme(look = Look.Glass, motion = Motion(current.animations, current.reducedMotion, current.focusOvershoot)) {
+                TvTheme(look = testLook, motion = Motion(current.animations, current.reducedMotion, current.focusOvershoot)) {
                     val viewModel = rememberHomeViewModel(sources, current, mutableListOf())
                     val state = viewModel.uiState.collectAsState()
                     HomeScreen(

@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
@@ -58,74 +59,117 @@ val PressFeedbackUiTest by testSuite {
 class PressFeedbackUiTestContent :
     RobolectricTestSuiteContent({
         testFixture { PressFeedbackUiTestFixture() } asContextForEach {
-            test("ok on an app tile dips it to 96 percent of its focused size over 80 ms and back") {
-                showHome(SixColumns.copy(pressFeedback = true))
-                val rest = look()
+            for (theme in Look.entries) {
+                val named = if (theme == Look.Expressive) ", in Expressive" else ""
 
-                val looks = afterOk()
-                val widths = looks.map { it.width / rest.width }
-                val deepest = widths.indexOf(widths.min())
+                if (theme == Look.Glass) {
+                    test("ok on an app tile dips it to 96 percent of its focused size over 80 ms and back") {
 
-                withClue("widths $widths") { widths.min() shouldBeIn 0.955f..0.967f }
-                withClue("deepest at frame $deepest of 16 ms: $widths") { deepest shouldBeIn 4..6 }
-                withClue("back at rest: $widths") { widths.last() shouldBeIn 0.997f..1.003f }
-            }
+                        showHome(SixColumns.copy(pressFeedback = true))
+                        val rest = look()
 
-            test("with reduced motion ok does not dip the tile and its ring brightens") {
-                showHome(SixColumns.copy(pressFeedback = true), Motion(reducedMotion = true))
-                val rest = look()
+                        val looks = afterOk()
+                        val widths = looks.map { it.width / rest.width }
+                        val deepest = widths.indexOf(widths.min())
 
-                val looks = afterOk()
-
-                withClue("widths ${looks.map { it.width }} against ${rest.width}") {
-                    looks.all { abs(it.width - rest.width) <= 1 }.shouldBeTrue()
+                        withClue("widths $widths") { widths.min() shouldBeIn 0.955f..0.967f }
+                        withClue("deepest at frame $deepest of 16 ms: $widths") { deepest shouldBeIn 4..6 }
+                        withClue("back at rest: $widths") { widths.last() shouldBeIn 0.997f..1.003f }
+                    }
                 }
-                withClue("ring ${looks.map { it.ring }} against ${rest.ring}") {
-                    looks.maxOf { it.ring } shouldBeGreaterThanOrEqualTo rest.ring + 3
+
+                if (theme == Look.Expressive) {
+                    test("ok on an app tile dips it to 96 percent of its focused size on its spring and back$named") {
+                        testLook = theme
+
+                        showHome(SixColumns.copy(pressFeedback = true))
+                        val rest = look()
+
+                        val widths = afterOk().map { it.width / rest.width }
+                        compose.mainClock.advanceTimeBy(1_000)
+
+                        withClue("widths $widths") { widths.min() shouldBeIn 0.955f..0.967f }
+                        withClue("back at rest") { look() shouldBe rest }
+                    }
                 }
-                looks.last().ring shouldBe rest.ring
-            }
 
-            test("without the key ok neither dips the tile nor brightens its ring") {
-                showHome(SixColumns)
-                val rest = look()
+                test("with reduced motion ok does not dip the tile and its ring brightens$named") {
+                    testLook = theme
 
-                val looks = afterOk()
+                    showHome(SixColumns.copy(pressFeedback = true), Motion(reducedMotion = true))
+                    val rest = look()
 
-                withClue("looks $looks against $rest") { looks.all { it == rest }.shouldBeTrue() }
-            }
+                    val looks = afterOk()
 
-            test("the line under the title says the app is opening once home has stayed in front 1 s") {
-                showHome(SixColumns.copy(pressFeedback = true))
-                compose.onNodeWithTag("shelf:title-meta").assertTextEquals("Never opened")
+                    withClue("widths ${looks.map { it.width }} against ${rest.width}") {
+                        looks.all { abs(it.width - rest.width) <= 1 }.shouldBeTrue()
+                    }
+                    if (theme == Look.Glass) {
+                        withClue("ring ${looks.map { it.ring }} against ${rest.ring}") {
+                            looks.maxOf { it.ring } shouldBeGreaterThanOrEqualTo rest.ring + 3
+                        }
+                    } else {
+                        withClue("band ${looks.map { it.band }} against ${rest.band}") {
+                            looks.maxOf { it.band } shouldBeGreaterThanOrEqualTo rest.band + 0.05f
+                        }
+                    }
+                    looks.last() shouldBe rest
+                }
 
-                ok()
-                compose.mainClock.advanceTimeBy(OPENING_SAYS_MS - 100)
-                compose.onNodeWithTag("shelf:title-meta").assertTextEquals("Never opened")
-                compose.mainClock.advanceTimeBy(200)
+                test("without the key ok neither dips the tile nor brightens its ring$named") {
+                    testLook = theme
 
-                compose.onNodeWithTag("shelf:title-meta").assertTextEquals(OpeningApp1)
-                effects.filterIsInstance<HomeEffect.LaunchApp>().map { it.app.key } shouldBe listOf("pkg.1")
-            }
+                    showHome(SixColumns)
+                    val rest = look()
 
-            test("with the cinematic shelf its line says the app is opening") {
-                showHome(SixColumns.copy(pressFeedback = true, cinematicHome = true))
+                    val looks = afterOk()
 
-                ok()
-                compose.mainClock.advanceTimeBy(OPENING_SAYS_MS + 100)
+                    withClue("looks $looks against $rest") { looks.all { it == rest }.shouldBeTrue() }
+                }
 
-                compose.onNodeWithTag("shelf:meta").assertTextEquals(OpeningApp1)
+                test("the line under the title says the app is opening once home has stayed in front 1 s$named") {
+                    testLook = theme
+
+                    showHome(SixColumns.copy(pressFeedback = true))
+                    compose.onNodeWithTag("shelf:title-meta").assertTextEquals("Never opened")
+
+                    ok()
+                    compose.mainClock.advanceTimeBy(OPENING_SAYS_MS - 100)
+                    compose.onNodeWithTag("shelf:title-meta").assertTextEquals("Never opened")
+                    compose.mainClock.advanceTimeBy(200)
+
+                    compose.onNodeWithTag("shelf:title-meta").assertTextEquals(OpeningApp1)
+                    effects.filterIsInstance<HomeEffect.LaunchApp>().map { it.app.key } shouldBe listOf("pkg.1")
+                }
+
+                test("with the cinematic shelf its line says the app is opening$named") {
+                    testLook = theme
+
+                    showHome(SixColumns.copy(pressFeedback = true, cinematicHome = true))
+
+                    ok()
+                    compose.mainClock.advanceTimeBy(OPENING_SAYS_MS + 100)
+
+                    compose.onNodeWithTag("shelf:meta").assertTextEquals(OpeningApp1)
+                }
             }
         }
     })
 
-/** The focused tile as drawn across its middle row: how many pixels its red art covers, and how many its white ring. */
+/**
+ * The focused tile as drawn across its middle row: how many pixels its red art covers, how many its white ring, and the
+ * luminance of the lightest pixel round the art.
+ */
 private data class PressLook(
     val width: Float,
     val ring: Int,
+    val band: Float,
 )
 
 private class PressFeedbackUiTestFixture : JUnit4RulesContext() {
+    /** The look the test runs in. */
+    var testLook = Look.Glass
+
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
     val effects = mutableListOf<HomeEffect>()
@@ -144,7 +188,7 @@ private class PressFeedbackUiTestFixture : JUnit4RulesContext() {
     ) {
         val sources = sources(apps = flowOf(AppList(apps)))
         compose.setContent {
-            TvTheme(look = Look.Glass, motion = motion) {
+            TvTheme(look = testLook, motion = motion) {
                 val viewModel = rememberHomeViewModel(sources, config, effects)
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(
@@ -193,11 +237,16 @@ private class PressFeedbackUiTestFixture : JUnit4RulesContext() {
         val to = ((bounds.right.value + 14f) * DENSITY).roundToInt().coerceAtMost(image.width - 1)
         var width = 0
         var ring = 0
+        var band = 0f
         for (x in from..to) {
             val pixel = image[x, row]
-            if (pixel.red > 0.8f && pixel.green < 0.25f && pixel.blue < 0.25f) width++
+            if (pixel.red > 0.8f && pixel.green < 0.25f && pixel.blue < 0.25f) {
+                width++
+            } else {
+                band = maxOf(band, pixel.luminance())
+            }
             if (pixel.red > 0.9f && pixel.green > 0.9f && pixel.blue > 0.9f) ring++
         }
-        return PressLook(width.toFloat(), ring)
+        return PressLook(width.toFloat(), ring, band)
     }
 }

@@ -54,36 +54,51 @@ val HaloClipUiTest by testSuite {
 class HaloClipUiTestContent :
     RobolectricTestSuiteContent({
         testFixture { HaloClipUiTestFixture() } asContextForEach {
-            test("the halo of a six column dock tile ends at the panel edge as rim does and glows 2 dp past the keyline") {
-                assertHaloEndsAtTheClipLikeRim(SixColumns)
+            for (theme in Look.entries) {
+                val named = if (theme == Look.Expressive) ", in Expressive" else ""
 
-                val tile = firstTile()
-                val centreY = (tile.top + tile.bottom).value / 2f
-                val underKeyline = centreY + 1.08f * ((tile.bottom - tile.top).value / 2f + 9f) + 2f
-                val x = ((tile.left + tile.right).value).roundToInt()
-                val y = (underKeyline * 2).roundToInt()
-                val rim = pixels()[x, y]
-                style = FocusStyle.Halo
-                settle()
-                val glow = levels(pixels()[x, y], rim)
-                withClue("2 dp past the keyline the halo differs from rim by $glow levels") { glow shouldBeGreaterThanOrEqualTo 20 }
-            }
+                test("the halo of a six column dock tile ends at the panel edge as rim does and glows 2 dp past the keyline$named") {
+                    testLook = theme
 
-            test("the halo of a four column dock tile ends at the panel edge as rim does") {
-                assertHaloEndsAtTheClipLikeRim(TvConfig(columns = 4))
-            }
+                    assertHaloEndsAtTheClipLikeRim(SixColumns)
 
-            test("the halo of a three column dock tile with names ends at the panel edge as rim does") {
-                assertHaloEndsAtTheClipLikeRim(TvConfig(columns = 3, alwaysShowNames = true))
-            }
+                    val tile = firstTile()
+                    val centreY = (tile.top + tile.bottom).value / 2f
+                    val underKeyline = centreY + 1.08f * ((tile.bottom - tile.top).value / 2f + 9f) + 2f
+                    val x = ((tile.left + tile.right).value).roundToInt()
+                    val y = (underKeyline * 2).roundToInt()
+                    val rim = pixels()[x, y]
+                    style = FocusStyle.Halo
+                    settle()
+                    val glow = levels(pixels()[x, y], rim)
+                    withClue("2 dp past the keyline the halo differs from rim by $glow levels") { glow shouldBeGreaterThanOrEqualTo 20 }
+                }
 
-            test("the halo of a single row tile ends at the panel edge as rim does") {
-                assertHaloEndsAtTheClipLikeRim(TvConfig(columns = 6, singleRow = true))
+                test("the halo of a four column dock tile ends at the panel edge as rim does$named") {
+                    testLook = theme
+
+                    assertHaloEndsAtTheClipLikeRim(TvConfig(columns = 4))
+                }
+
+                test("the halo of a three column dock tile with names ends at the panel edge as rim does$named") {
+                    testLook = theme
+
+                    assertHaloEndsAtTheClipLikeRim(TvConfig(columns = 3, alwaysShowNames = true))
+                }
+
+                test("the halo of a single row tile ends at the panel edge as rim does$named") {
+                    testLook = theme
+
+                    assertHaloEndsAtTheClipLikeRim(TvConfig(columns = 6, singleRow = true))
+                }
             }
         }
     })
 
 private class HaloClipUiTestFixture : JUnit4RulesContext() {
+    /** The look the test runs in. */
+    var testLook = Look.Glass
+
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
     val apps = (1..18).map { AppEntry(key = "pkg.$it", packageName = "pkg.$it", label = "App $it") }
@@ -93,7 +108,7 @@ private class HaloClipUiTestFixture : JUnit4RulesContext() {
     fun showHome(config: TvConfig) {
         val sources = sources(apps = flowOf(AppList(apps, 0)))
         compose.setContent {
-            TvTheme(look = Look.Glass, focusStyle = style) {
+            TvTheme(look = testLook, focusStyle = style) {
                 val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(
