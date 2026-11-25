@@ -71,8 +71,9 @@ internal class CapsuleSteps(
 /**
  * The band of a [dev.niltsiar.tvhome.core.config.ExpressiveTile.Wave] or
  * [dev.niltsiar.tvhome.core.config.ExpressiveTile.Cinch] tile of one size: each ring of the band as a path built once, or,
- * for the wave, as an alpha mask rendered once at [maskScale] times the size so the grown tile draws it sharp; and the
- * line the hold cue runs along, from the top centre clockwise. Everything is in the tile's own pixels, its top left at 0.
+ * for the wave, as an alpha mask rendered once at [maskScale] times the size so the grown tile draws it sharp; the
+ * line the hold cue runs along, from the top centre clockwise; and the band's outer edge for the charge. Everything is in
+ * the tile's own pixels, its top left at 0.
  */
 internal class BandGeometry(
     /** The rings from the tile outwards: gap, band, keyline. A null ring is not drawn. */
@@ -83,6 +84,8 @@ internal class BandGeometry(
     val maskReach: Float,
     /** The line through the middle of the band, from the top centre clockwise, for the hold cue. */
     val holdMeasure: PathMeasure,
+    /** The band's outer edge, which the charge of a held OK runs along. */
+    val charge: ChargeLine,
 )
 
 /** The outline of the cinch's cushion round a [width] by [height] tile, [offset] pixels out; see [cushion]. */
@@ -337,8 +340,16 @@ internal fun cinchGeometry(
         masks = null,
         maskReach = 0f,
         holdMeasure = PathMeasure().apply { setPath(hold, false) },
+        charge = chargeLine(bandEdge, width, height),
     )
 }
+
+/** The charge line along [edge], the outline round a [width] by [height] tile, from the middle of its top. */
+private fun chargeLine(
+    edge: Path,
+    width: Float,
+    height: Float,
+): ChargeLine = ChargeLine().apply { sample(PathMeasure().apply { setPath(edge, false) }, width / 2f, height / 2f) }
 
 /**
  * The wave band round a [width] by [height] tile with corners of [radius]: the band from the tile's edge, or from [inset]
@@ -371,6 +382,7 @@ internal fun waveGeometry(
         masks = Array(rings.size) { index -> rings[index]?.let { mask(it, width, height, reach, maskScale) } },
         maskReach = reach,
         holdMeasure = PathMeasure().apply { setPath(hold, false) },
+        charge = chargeLine(edge, width, height),
     )
 }
 

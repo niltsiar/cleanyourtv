@@ -105,7 +105,9 @@ public val FocusRingReach: Dp = RingGap + RingWidth + HairlineWidth + OuterStrok
  * its children by it ([popsOver]). [press] is the progress of a press ([pressDip]), 0 at rest: the surface draws up to 4% under
  * its size, with [Motion.animated] only, and its ring moves toward [TvElementColors.ringPressed] and grows wider into the gap inside it, its outer edge
  * where it was. While OK is held on a surface whose [modifier] has [holdOk], an arc in the ring's colour fills the gap and
- * the ring clockwise from the top centre, whole as the menu opens ([HoldArcElement]), with [Motion.animations] only.
+ * the ring clockwise from the top centre, whole as the menu opens ([HoldArcElement]), with [Motion.animations] only; in
+ * [Look.Expressive], while springs run, the held tile charges instead: it tightens, its capsule corner pinches and a wave
+ * runs round its band.
  *
  * In [Look.Expressive] focus shows as a band of the ring's colour, or the house primary without one, between a gap in the
  * house surface colour and a dark keyline, all inside [FocusRingReach], with no glow; a press moves the band toward
@@ -172,10 +174,27 @@ public fun FocusSurface(
                     }
                     ambientShadowColor = glowColor
                     spotShadowColor = glowColor
-                }.then(if (halo) FocusHaloElement(focus, grownScale, growthPivot, tileOutline, band, colours, press, dips) else Modifier)
-                .then(
+                }.then(
+                    if (halo) {
+                        FocusHaloElement(focus, grownScale, growthPivot, tileOutline, band, colours, press, dips, lookState, painter)
+                    } else {
+                        Modifier
+                    },
+                ).then(
                     if (motion.animations) {
-                        HoldArcElement(focus, grownScale, growthPivot, tileOutline, band, colours, press, dips, lookState, painter)
+                        HoldArcElement(
+                            focus,
+                            grownScale,
+                            growthPivot,
+                            shape,
+                            band,
+                            colours,
+                            press,
+                            dips,
+                            lookState,
+                            painter,
+                            motion.animated,
+                        )
                     } else {
                         Modifier
                     },
@@ -256,7 +275,7 @@ public fun FocusSurface(
                 }.graphicsLayer {
                     this.shape =
                         if (lookState.look == Look.Expressive) {
-                            painter.clip(shape, lookState.tile, focus.value, size, this)
+                            painter.clip(shape, lookState.tile, painter.morph(focus.value), size, this)
                         } else {
                             shape
                         }
@@ -394,8 +413,8 @@ private data class ScaledShape(
 }
 
 /**
- * The outline a focused surface's halo and hold cue follow: [base], or in [Look.Expressive] with the capsule the rounded
- * step its corners have reached at [focus]'s progress.
+ * The outline a focused surface's halo follows: [base], or in [Look.Expressive] with the capsule the rounded step its
+ * corners have reached at [focus]'s progress, pinched by a held OK's charge.
  */
 internal class TileOutline(
     private val base: Shape,
@@ -409,7 +428,7 @@ internal class TileOutline(
         density: Density,
     ): Outline =
         if (look.look == Look.Expressive) {
-            painter.clip(base, look.tile, focus.value, size, density).createOutline(size, layoutDirection, density)
+            painter.clip(base, look.tile, painter.morph(focus.value), size, density).createOutline(size, layoutDirection, density)
         } else {
             base.createOutline(size, layoutDirection, density)
         }

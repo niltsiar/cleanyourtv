@@ -1,5 +1,8 @@
 package dev.niltsiar.tvhome.core.designsystem.expressive
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
@@ -10,10 +13,13 @@ import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.isSpecified
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
@@ -84,6 +90,34 @@ internal class TilePainter {
 
     /** The arc of a hold cue, rewound and refilled each frame it shows. */
     internal val holdArc = Path()
+
+    /**
+     * The progress of the held OK on this surface, from the holdOk before it, while the look shows the charge; null
+     * otherwise. The hold cue sets it, so the clip, the band and the halo read the same press.
+     */
+    var held: (() -> Float)? by mutableStateOf(null)
+
+    /** How far the charge of the press on this surface is, 0 to 1 ([chargeOf]). */
+    fun charge(): Float = held?.let { chargeOf(it()) } ?: 0f
+
+    /** The capsule's morph at focus [progress]: the progress, less the corner a charge pinches back ([pinchOf]). */
+    fun morph(progress: Float): Float = if (progress > 0f) progress * pinchOf(charge()) else progress
+
+    /** The capsule's charge line, refilled for its corner each frame the charge shows; built on the first charge. */
+    private var capsuleCharge: ChargeLine? = null
+
+    fun capsuleCharge(): ChargeLine = capsuleCharge ?: ChargeLine().also { capsuleCharge = it }
+
+    /** The wave of a charge, rewound and refilled each frame it shows, with its round-capped stroke; built on the first charge. */
+    private var chargePath: Path? = null
+    private var chargeStroke: Stroke? = null
+    internal val chargeScratch = FloatArray(4)
+
+    fun chargePath(): Path = chargePath ?: Path().also { chargePath = it }
+
+    fun chargeStroke(width: Float): Stroke =
+        chargeStroke?.takeIf { it.width == width }
+            ?: Stroke(width, cap = StrokeCap.Round, join = StrokeJoin.Round).also { chargeStroke = it }
 
     /** The capsule's hold line, kept while its corner radius and the size stay. */
     private val capsuleLine = Path()
@@ -262,8 +296,8 @@ private fun Density.bandWidths(rim: Boolean): BandWidths =
 /**
  * Draws a focused tile in Expressive, already grown and dipped by the caller, with its content: in [style], a [plate] (when
  * specified, glass_style glass only) behind it, then the band in [band] round it as [tile] says, with the gap in [gap] and
- * the keyline in [keyline]. [progress] fades the plate and [ringAlpha] the band. Nothing here allocates once the painter
- * has the geometry for this size and style.
+ * the keyline in [keyline]. [progress] fades the plate and [ringAlpha] the band; a held OK's charge pinches the capsule's
+ * corner ([TilePainter.morph]). Nothing here allocates once the painter has the geometry for this size and style.
  */
 internal fun ContentDrawScope.drawExpressiveTile(
     painter: TilePainter,
@@ -282,7 +316,7 @@ internal fun ContentDrawScope.drawExpressiveTile(
     painter.lastRim = rim
     val capsule = tile == ExpressiveTile.Capsule
     val steps = painter.steps(base, size, this)
-    val radius = if (capsule) steps.radius(progress) else steps.rest
+    val radius = if (capsule) steps.radius(painter.morph(progress)) else steps.rest
     if (plate.isSpecified && style.slab && progress > 0f) {
         val grow = Gap.toPx()
         drawRoundRect(
@@ -400,6 +434,35 @@ internal fun DrawScope.drawExpressiveHold(
     measure.getSegment(0f, measure.length * held, arc, true)
     drawPath(arc, if (band.luminance() > HOLD_INK_FROM) Color.Black else Color.White, style = painter.stroke(HoldWidth.toPx()))
 }
+
+/**
+ * The charge of a held OK on a tile of [tile] at focus [progress]: a wave along the outer edge of the band the painter drew,
+ * whose colour moves from the tertiary of [band]'s family to [band] as the [charge] closes the loop. The capsule's edge
+ * follows its pinched corner; the wave's and the cinch's lines were sampled with their band.
+ */
+internal fun DrawScope.drawTileCharge(
+    painter: TilePainter,
+    tile: ExpressiveTile,
+    base: Shape,
+    progress: Float,
+    charge: Float,
+    band: Color,
+) {
+    val line =
+        if (tile == ExpressiveTile.Capsule) {
+            val steps = painter.steps(base, size, this)
+            val edge = bandEdge(painter.lastRim).toPx()
+            val radius = steps.radius(progress * pinchOf(charge))
+            painter.capsuleCharge().apply { sampleRoundRect(-edge, -edge, size.width + edge, size.height + edge, radius + edge) }
+        } else {
+            painter.lastBand()?.charge ?: return
+        }
+    val colour = lerp(AppBands[band].tertiary, band, charge)
+    drawCharge(line, charge, colour, painter.chargePath(), painter.chargeStroke(ChargeWidth.toPx()), painter.chargeScratch)
+}
+
+/** How far past the tile the band's outer edge lies, with glass_style rim or without. */
+private fun bandEdge(rim: Boolean) = if (rim) RimGap + RimBand else Gap + Band
 
 /** The hold line's width, and the band luminance from which it is black: where black and white read equally. */
 private val HoldWidth = 2.dp

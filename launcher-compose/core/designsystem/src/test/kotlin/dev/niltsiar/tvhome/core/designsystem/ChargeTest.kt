@@ -1,0 +1,193 @@
+package dev.niltsiar.tvhome.core.designsystem
+
+import androidx.activity.ComponentActivity
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.unit.dp
+import de.infix.testBalloon.framework.core.JUnit4RulesContext
+import de.infix.testBalloon.framework.core.TestConfig
+import de.infix.testBalloon.framework.core.testSuite
+import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
+import de.infix.testBalloon.integration.robolectric.robolectric
+import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.ExpressiveTile
+import dev.niltsiar.tvhome.core.config.Look
+import dev.niltsiar.tvhome.core.designsystem.expressive.ChargeLine
+import io.kotest.assertions.withClue
+import io.kotest.matchers.shouldBe
+
+/** In Expressive a held OK charges the held tile or pill after a dead zone, and the up or the menu ends it. */
+val ChargeTest by testSuite {
+    robolectricTestSuite<ChargeTestContent>(
+        "sdk 31, mdpi",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 31
+                qualifiers = "mdpi"
+            },
+    )
+}
+
+class ChargeTestContent :
+    RobolectricTestSuiteContent({
+        testFixture {
+            object : JUnit4RulesContext() {
+                val compose = rule(createAndroidComposeRule<ComponentActivity>())
+                val hold = OkHold { compose.mainClock.currentTime }
+                var opened = 0
+
+                /** [content], given the modifier of the held item, focused and settled on a black 320 x 200 dp scene in Expressive. */
+                fun show(
+                    tile: ExpressiveTile = ExpressiveTile.Capsule,
+                    motion: Motion = Motion(look = Look.Expressive),
+                    content: @Composable (Modifier) -> Unit = { held ->
+                        FocusSurface({}, held.size(100.dp, 60.dp), glow = false) {
+                            Box(Modifier.size(100.dp, 60.dp).background(Color(0xFF3B5B8C)))
+                        }
+                    },
+                ) {
+                    compose.mainClock.autoAdvance = false
+                    compose.runOnUiThread {
+                        compose.activity.window.decorView
+                            .requestFocusFromTouch()
+                    }
+                    val first = FocusRequester()
+                    compose.setContent {
+                        TvTheme(look = Look.Expressive, motion = motion, expressiveTile = tile) {
+                            Box(
+                                Modifier.size(320.dp, 200.dp).background(Color.Black).testTag("scene"),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                content(Modifier.focusRequester(first).holdOk(hold, { opened++ }))
+                            }
+                        }
+                    }
+                    compose.mainClock.advanceTimeByFrame()
+                    compose.runOnUiThread { first.requestFocus() }
+                    compose.mainClock.advanceTimeBy(2_000)
+                }
+
+                fun scene(): IntArray =
+                    compose.onNodeWithTag("scene").captureToImage().toPixelMap().let { map ->
+                        IntArray(map.width * map.height) { map[it % map.width, it / map.width].toArgb() }
+                    }
+
+                /** The scene's row through the middle of the tile, from its left edge to a third of the way in. */
+                fun leftEdgeRow(): IntArray =
+                    compose.onNodeWithTag("scene").captureToImage().toPixelMap().let { map ->
+                        IntArray(70) { map[60 + it, 100].toArgb() }
+                    }
+
+                fun okDown() = compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
+
+                fun okUp() = compose.onRoot().performKeyInput { keyUp(Key.DirectionCenter) }
+
+                /** Runs the test clock [ms] on, a frame at a time; with [drawn], each frame is drawn, as a TV draws every frame of a hold. */
+                fun frames(
+                    ms: Long,
+                    drawn: Boolean = false,
+                ) {
+                    val end = compose.mainClock.currentTime + ms
+                    while (compose.mainClock.currentTime < end) {
+                        compose.mainClock.advanceTimeByFrame()
+                        if (drawn) scene()
+                    }
+                }
+            }
+        } asContextForEach {
+            for (tile in ExpressiveTile.entries) {
+                test("a ${tile.name} tile shows nothing 100 ms into a held ok, charges by 300 ms, and the up clears it on the next frame") {
+                    show(tile)
+                    val rest = scene()
+
+                    okDown()
+                    frames(100)
+                    withClue("100 ms") { scene().contentEquals(rest) shouldBe true }
+                    frames(200)
+                    withClue("300 ms") { scene().contentEquals(rest) shouldBe false }
+
+                    okUp()
+                    compose.mainClock.advanceTimeByFrame()
+                    withClue("the frame after the up") { scene().contentEquals(rest) shouldBe true }
+                    opened shouldBe 0
+                }
+
+                test("a ${tile.name} tile's charge samples no line after its first frame") {
+                    show(tile)
+                    okDown()
+                    frames(140, drawn = true)
+                    val built = ChargeLine.built
+
+                    frames(420, drawn = true)
+
+                    ChargeLine.built shouldBe built
+                    opened shouldBe 1
+                }
+            }
+
+            test("a charged tile tightens, so its left edge moves in by the end of the hold") {
+                show()
+                val rest = leftEdgeRow()
+
+                okDown()
+                frames(540)
+
+                leftEdgeRow().contentEquals(rest) shouldBe false
+            }
+
+            test("with reduced motion a held ok draws a line from the first frame and the tile keeps its size") {
+                show(motion = Motion(reducedMotion = true, look = Look.Expressive))
+                val rest = scene()
+                val edge = leftEdgeRow()
+
+                okDown()
+                frames(100)
+                withClue("100 ms") { scene().contentEquals(rest) shouldBe false }
+                frames(440)
+                withClue("the left edge at 540 ms") { leftEdgeRow().contentEquals(edge) shouldBe true }
+            }
+
+            test("with animations off a held ok draws no charge and still opens the menu at 550 ms") {
+                show(motion = Motion(animations = false, look = Look.Expressive))
+                val rest = scene()
+
+                okDown()
+                frames(300)
+                scene().contentEquals(rest) shouldBe true
+                frames(260)
+                opened shouldBe 1
+            }
+
+            test("a round button shows nothing 100 ms into a held ok, a wave by 300 ms, and the up clears it on the next frame") {
+                val glass = GlassState()
+                show { held -> GlassIconButton(glass, "Settings", {}, held) { _, _ -> } }
+                val rest = scene()
+
+                okDown()
+                frames(100)
+                withClue("100 ms") { scene().contentEquals(rest) shouldBe true }
+                frames(200)
+                withClue("300 ms") { scene().contentEquals(rest) shouldBe false }
+
+                okUp()
+                compose.mainClock.advanceTimeByFrame()
+                withClue("the frame after the up") { scene().contentEquals(rest) shouldBe true }
+            }
+        }
+    })

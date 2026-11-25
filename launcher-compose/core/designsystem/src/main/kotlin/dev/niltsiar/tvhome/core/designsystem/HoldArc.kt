@@ -2,34 +2,50 @@ package dev.niltsiar.tvhome.core.designsystem
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ColorProducer
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.modifier.ModifierLocalModifierNode
 import androidx.compose.ui.node.DrawModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.invalidateDraw
 import androidx.compose.ui.platform.InspectorInfo
+import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.config.Look
+import dev.niltsiar.tvhome.core.designsystem.expressive.ChargeLine
+import dev.niltsiar.tvhome.core.designsystem.expressive.ChargeWidth
 import dev.niltsiar.tvhome.core.designsystem.expressive.TilePainter
+import dev.niltsiar.tvhome.core.designsystem.expressive.chargeOf
+import dev.niltsiar.tvhome.core.designsystem.expressive.chargedScale
+import dev.niltsiar.tvhome.core.designsystem.expressive.drawCharge
 import dev.niltsiar.tvhome.core.designsystem.expressive.drawExpressiveHold
+import dev.niltsiar.tvhome.core.designsystem.expressive.drawTileCharge
 
 /**
  * The hold cue of a [FocusSurface]: while OK is held on it, an arc in [ring]'s colour, [TvElementColors.ring] of [colours]
  * without one, covers the gap
  * and the ring ([RingBand]) from the top centre clockwise, as far round as the hold is to the menu. It reads the progress
  * from the [holdOk] earlier in the chain and is drawn grown as the ring is: [scale] when [focus] is 1, less while a
- * [press] [dips] it, about [pivot]'s height or the middle. In [Look.Expressive] it is a thin line in black or white,
- * whichever reads on the band, along the middle of the band [painter] drew.
+ * [press] [dips] it, about [pivot]'s height or the middle. In [Look.Expressive] with [charges] (springs run) it is the
+ * charge: after a dead zone the tile tightens toward [chargedScale], the capsule's corner pinches ([TilePainter.morph]) and a wave runs
+ * round the band's outer edge ([drawTileCharge]); the [painter] gets the press ([TilePainter.held]) so the clip, the band
+ * and the halo follow it. Without [charges] it is a thin line in black or white, whichever reads on the band, along the
+ * middle of the band [painter] drew.
  */
 internal data class HoldArcElement(
     val focus: Animatable<Float, AnimationVector1D>,
@@ -42,6 +58,7 @@ internal data class HoldArcElement(
     val dips: Boolean,
     val look: LookState,
     val painter: TilePainter,
+    val charges: Boolean,
 ) : ModifierNodeElement<HoldArcNode>() {
     override fun create(): HoldArcNode = HoldArcNode(this)
 
@@ -65,12 +82,37 @@ internal class HoldArcNode(
     private val measure = PathMeasure()
 
     override fun ContentDrawScope.draw() {
+        if (spec.look.look == Look.Expressive) {
+            drawExpressive()
+            return
+        }
         drawContent()
         val held = ModifierLocalHeldOk.current?.invoke() ?: 0f
         val focus = spec.focus.value
         if (held <= 0f || focus <= 0f) return
         val grown = (1f + (spec.scale - 1f) * focus) * dipOf(spec.press, spec.dips)
         scale(grown, Offset(size.width / 2f, spec.pivot?.invoke(size.height) ?: (size.height / 2f))) { drawArc(held) }
+    }
+
+    private fun ContentDrawScope.drawExpressive() {
+        val source = ModifierLocalHeldOk.current
+        val painter = spec.painter
+        val shown = if (spec.charges) source else null
+        if (Snapshot.withoutReadObservation { painter.held } !== shown) painter.held = shown
+        val focus = spec.focus.value
+        val held = source?.invoke() ?: 0f
+        val charge = if (spec.charges && focus > 0f) chargeOf(held) else 0f
+        val grown = (1f + (spec.scale - 1f) * focus) * dipOf(spec.press, spec.dips)
+        val pivot = Offset(size.width / 2f, spec.pivot?.invoke(size.height) ?: (size.height / 2f))
+        if (charge <= 0f) {
+            drawContent()
+            if (!spec.charges && held > 0f && focus > 0f) scale(grown, pivot) { drawArc(held) }
+            return
+        }
+        val charged = chargedScale(grown, charge)
+        scale(charged / grown, pivot) { this@drawExpressive.drawContent() }
+        val band = spec.ring?.invoke() ?: spec.colours.ring
+        scale(charged, pivot) { drawTileCharge(painter, spec.look.tile, spec.shape, focus, charge, band) }
     }
 
     private fun DrawScope.drawArc(held: Float) {
@@ -112,3 +154,74 @@ internal fun Path.addFromTopCentre(r: RoundRect) {
     arcTo(Rect(r.left, r.top, r.left + 2f * r.topLeftCornerRadius.x, r.top + 2f * r.topLeftCornerRadius.y), 180f, 90f, false)
     close()
 }
+
+/**
+ * The hold cue of a [FocusPill] in [Look.Expressive]: while OK is held on it, from the [holdOk] earlier in the chain, a wave
+ * runs round [shape]'s edge, [PillChargeGap] outside it, from the middle of its top clockwise, after the same dead zone as
+ * a tile's charge, its colour moving from the house tertiary to the house primary of the [dark] scheme; the pill itself
+ * does not change. Without [charges] (reduced motion) a plain line in the primary grows with the hold instead. Glass draws
+ * nothing.
+ */
+internal data class PillChargeElement(
+    val shape: Shape,
+    val look: LookState,
+    val dark: Boolean,
+    val charges: Boolean,
+) : ModifierNodeElement<PillChargeNode>() {
+    override fun create(): PillChargeNode = PillChargeNode(this)
+
+    override fun update(node: PillChargeNode) {
+        node.spec = this
+        node.invalidateDraw()
+    }
+
+    override fun InspectorInfo.inspectableProperties() {
+        name = "pillCharge"
+    }
+}
+
+internal class PillChargeNode(
+    var spec: PillChargeElement,
+) : Modifier.Node(),
+    DrawModifierNode,
+    ModifierLocalModifierNode {
+    /** Built on the first hold and sampled again only when the pill's size changes. */
+    private var line: ChargeLine? = null
+    private var lineSize = Size.Unspecified
+    private val path by lazy { Path() }
+    private var stroke: Stroke? = null
+    private val scratch by lazy { FloatArray(4) }
+
+    override fun ContentDrawScope.draw() {
+        drawContent()
+        if (spec.look.look != Look.Expressive) return
+        val held = ModifierLocalHeldOk.current?.invoke() ?: 0f
+        if (held <= 0f) return
+        val progress = if (spec.charges) chargeOf(held) else held
+        if (progress <= 0f) return
+        val scheme = spec.look.scheme(spec.dark)
+        val colour = if (spec.charges) lerp(scheme.tertiary, scheme.primary, progress) else scheme.primary
+        val width = ChargeWidth.toPx()
+        val drawn =
+            stroke?.takeIf { it.width == width } ?: Stroke(width, cap = StrokeCap.Round, join = StrokeJoin.Round).also { stroke = it }
+        drawCharge(lineFor(), progress, colour, path, drawn, scratch, wavy = spec.charges)
+    }
+
+    private fun DrawScope.lineFor(): ChargeLine {
+        val kept = line
+        if (kept != null && lineSize == size) return kept
+        val gap = PillChargeGap.toPx()
+        val radius =
+            when (val outline = spec.shape.createOutline(size, layoutDirection, this)) {
+                is Outline.Rounded -> outline.roundRect.topLeftCornerRadius.x
+                else -> 0f
+            }
+        return (kept ?: ChargeLine()).apply { sampleRoundRect(-gap, -gap, size.width + gap, size.height + gap, radius + gap) }.also {
+            line = it
+            lineSize = size
+        }
+    }
+}
+
+/** How far outside a pill's edge its charge runs. */
+private val PillChargeGap = 3.dp

@@ -113,6 +113,50 @@ internal fun houseScheme(
 }
 
 /**
+ * The focus band of an app whose colour is [accent], and the band's [tertiary]: the dark scheme's primary and tertiary
+ * tones of the accent's own palettes, so the band keeps the house primary's contrast whatever the art.
+ */
+internal class AppBand(
+    val band: Color,
+    val tertiary: Color,
+)
+
+internal fun appBand(accent: Color): AppBand {
+    val (hue, chroma) = hueAndChroma(accent)
+    return AppBand(
+        band = Palette(hue, chroma.coerceIn(PRIMARY_CHROMA_FLOOR, PRIMARY_CHROMA_CEILING))(BAND_TONE),
+        tertiary = Palette(hue + TERTIARY_TURN, TERTIARY_CHROMA)(BAND_TONE),
+    )
+}
+
+/** The tone of the dark scheme's primary and tertiary roles, which the focus band takes. */
+private const val BAND_TONE = 80
+
+/**
+ * The [AppBand]s of the last [KEEP] colours asked for, so a band read in every frame builds nothing once its colour was
+ * seen: a lookup scans the keys, and a new colour takes the oldest slot.
+ */
+internal object AppBands {
+    private const val KEEP = 64
+    private val keys = LongArray(KEEP)
+    private val bands = arrayOfNulls<AppBand>(KEEP)
+    private var next = 0
+
+    operator fun get(accent: Color): AppBand {
+        val key = accent.value.toLong()
+        for (i in 0 until KEEP) {
+            val kept = bands[i]
+            if (kept != null && keys[i] == key) return kept
+        }
+        return appBand(accent).also {
+            keys[next] = key
+            bands[next] = it
+            next = (next + 1) % KEEP
+        }
+    }
+}
+
+/**
  * The status roles the house scheme adds to Material 3's: [success] and [warning] ink, at the error role's tones, and a
  * success container with its text.
  */

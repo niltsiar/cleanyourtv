@@ -405,6 +405,25 @@ class DesignSystemGoldenTestContent :
                 }
             }
 
+            for (tile in ExpressiveTile.entries) {
+                test("an Expressive ${tile.name} tile 100, 300 and 540 ms into a held ok") {
+                    val hold = OkHold { compose.mainClock.currentTime }
+                    show(focused = true, look = Look.Expressive, tile = tile) { focus -> Tile(focus.holdOk(hold, {})) }
+                    compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
+                    steps(100, 300, 540) { golden("expressive-${tile.name.lowercase()}-charge-${it}ms") }
+                }
+            }
+
+            test("an Expressive round button 300 ms into a held ok") {
+                val hold = OkHold { compose.mainClock.currentTime }
+                val glass = GlassState().apply { frost = frost() }
+                show(focused = true, look = Look.Expressive) { focus ->
+                    GlassIconButton(glass, "Settings", {}, focus.holdOk(hold, {})) { progress, ink -> BarIcon(progress, ink) }
+                }
+                compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
+                steps(300) { golden("expressive-button-charge-300ms") }
+            }
+
             test("an Expressive tile at rest is the same rounded rectangle in every tile shape, for each focus style") {
                 val kinds = ExpressiveTile.entries.flatMap { tile -> FocusStyle.entries.map { tile to it } }
                 show(size = 480, look = Look.Expressive) {

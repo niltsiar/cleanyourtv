@@ -46,6 +46,8 @@ public class FocusInk internal constructor(
  * shadow of [shadowElevation] in [TvElementColors.pillShadow] while idle too, about [transformOrigin]. As with [FocusSurface], the animation starts in the focus callback and is
  * read in the layer and draw lambdas only, so a focus change neither recomposes nor relays out. In [Look.Expressive] the
  * fill is the house primary, its text the house on-primary, and it casts no shadow; the look is read in the draw phase.
+ * There, while OK is held on a pill whose [modifier] has [holdOk], a wave runs round it ([PillChargeElement]), with
+ * [Motion.animations] only.
  */
 @Composable
 public fun FocusPill(
@@ -95,7 +97,8 @@ public fun FocusPill(
                         ambientShadowColor = shadow
                         spotShadowColor = shadow
                     }
-                }.clip(shape)
+                }.then(if (motion.animations) PillChargeElement(shape, lookState, surfaces.dark, motion.animated) else Modifier)
+                .clip(shape)
                 .onFocusChanged {
                     val target = if (it.isFocused) 1f else 0f
                     if (focus.targetValue != target) {

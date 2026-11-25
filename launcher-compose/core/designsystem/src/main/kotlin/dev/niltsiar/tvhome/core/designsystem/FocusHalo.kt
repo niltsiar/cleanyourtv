@@ -25,6 +25,9 @@ import androidx.compose.ui.node.requireLayoutCoordinates
 import androidx.compose.ui.node.traverseAncestors
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.dp
+import dev.niltsiar.tvhome.core.config.Look
+import dev.niltsiar.tvhome.core.designsystem.expressive.TilePainter
+import dev.niltsiar.tvhome.core.designsystem.expressive.chargedScale
 import kotlin.math.pow
 
 private val HaloWidth = 16.dp
@@ -64,7 +67,8 @@ private class HaloClipNode :
 
 /**
  * The halo glow of a focused [FocusSurface] in [ring]'s colour, [TvElementColors.ring] of [colours] without one, drawn grown
- * as the surface is: [scale] when [focus] is 1, less while a [press] [dips] it, about [pivot]'s height or the middle. It runs up to
+ * as the surface is: [scale] when [focus] is 1, less while a [press] [dips] it or, in [look]'s Expressive, while a held OK
+ * charges the surface's [painter] ([chargedScale]), about [pivot]'s height or the middle. It runs up to
  * [HaloWidth] past the ring's keyline, at [TvElementColors.haloUnderAlpha] under the surface and [TvElementColors.haloSideAlpha] at
  * its sides and top, in [HALO_STEPS] bands that fade out. On a side where a [clipsHalo]
  * container leaves less room, the glow on that side is narrowed to end before the container's edge, so the clip never cuts it.
@@ -78,6 +82,8 @@ internal data class FocusHaloElement(
     val colours: TvElementColors,
     val press: Animatable<Float, AnimationVector1D>? = null,
     val dips: Boolean = false,
+    val look: LookState,
+    val painter: TilePainter,
 ) : ModifierNodeElement<FocusHaloNode>() {
     override fun create(): FocusHaloNode = FocusHaloNode(this)
 
@@ -112,7 +118,8 @@ internal class FocusHaloNode(
         val focus = spec.focus.value
         val progress = focus.coerceIn(0f, 1f)
         if (progress > 0f) {
-            val grown = (1f + (spec.scale - 1f) * focus) * dipOf(spec.press, spec.dips)
+            val dipped = (1f + (spec.scale - 1f) * focus) * dipOf(spec.press, spec.dips)
+            val grown = if (spec.look.look == Look.Expressive) chargedScale(dipped, spec.painter.charge()) else dipped
             val pivot = Offset(size.width / 2f, spec.pivot?.invoke(size.height) ?: (size.height / 2f))
             scale(grown, pivot) { drawHalo(progress, grown, pivot) }
         }
