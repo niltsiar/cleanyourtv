@@ -4,6 +4,7 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorProducer
+import androidx.compose.ui.graphics.lerp
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.expressive.HouseStatus
 import dev.niltsiar.tvhome.core.designsystem.expressive.houseStatus
@@ -23,6 +24,13 @@ private val GlassIdle = Color(0xFF8E8E93)
 private val GlassSubtitlePill = Color.Black.copy(alpha = 0.45f)
 private val GlassSubtitlePillEdge = Color.White.copy(alpha = 0.12f)
 private val GlassPositionRest = Color(0x80FFFFFF)
+private val GlassConnectedFillOnDark = Color(0x2934C759)
+private val GlassConnectedRimOnDark = Color(0x6634C759)
+private val GlassConnectedTextOnDark = Color(0xFF6EE787)
+private val GlassConnectedFillOnLight = Color(0x2E34C759)
+private val GlassConnectedRimOnLight = Color(0x8034C759)
+private val GlassConnectedTextOnLight = Color(0xFF1B7A35)
+private val GlassConnectedSolid = Color(0xFF146C2E)
 private val GlassSuccess = Color(0xFF34C759)
 private val GlassWarning = Color(0xFFFF9F0A)
 private val GlassError = Color(0xFFFF453A)
@@ -45,6 +53,7 @@ public class LookColors internal constructor(
     private val expressive: Boolean get() = look.look == Look.Expressive
     private val scheme: ColorScheme get() = look.scheme(dark)
     private val status: HouseStatus get() = if (dark) DarkStatus else LightStatus
+    private val light: Float = if (dark) 0f else 1f
 
     /** Text and icons. */
     public val text: ColorProducer = ColorProducer { if (expressive) scheme.onSurface else colors.onSurface }
@@ -128,6 +137,44 @@ public class LookColors internal constructor(
 
     /** A state with nothing to say: a port asleep or without a device. */
     public val idle: ColorProducer = ColorProducer { if (expressive) scheme.outline else GlassIdle }
+
+    /**
+     * The "Connected" capsule of an input row whose ink is [focus] of the way to the focused row's: its fill, rim and word.
+     * Glass's is a faint green on the idle row and a solid green pill with white text on the focused one; Expressive's is
+     * one success container that stays as it is.
+     */
+    public fun connectedFill(focus: Float): Color =
+        if (expressive) {
+            status.successContainer
+        } else {
+            lerp(
+                lerp(GlassConnectedFillOnDark, GlassConnectedFillOnLight, light),
+                GlassConnectedSolid,
+                focus,
+            )
+        }
+
+    public fun connectedRim(focus: Float): Color =
+        if (expressive) {
+            Color.Transparent
+        } else {
+            lerp(
+                lerp(GlassConnectedRimOnDark, GlassConnectedRimOnLight, light),
+                GlassConnectedSolid,
+                focus,
+            )
+        }
+
+    public fun connectedText(focus: Float): Color =
+        if (expressive) {
+            status.onSuccessContainer
+        } else {
+            lerp(
+                lerp(GlassConnectedTextOnDark, GlassConnectedTextOnLight, light),
+                Color.White,
+                focus,
+            )
+        }
 
     /** A state that works: online, a VPN up, a connected input. */
     public val success: ColorProducer = ColorProducer { if (expressive) status.success else GlassSuccess }

@@ -30,10 +30,8 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
@@ -66,18 +64,6 @@ private val RowShape = menuRowShape()
 private const val ICON_ALPHA = 0.9f
 private const val NO_DEVICE_ALPHA = 0.65f
 private val CapsuleHeight = 24.dp
-internal val ConnectedGreen: Color = Color(0xFF34C759)
-
-/** The "Connected" capsule of an idle row, on the dark surface and on the light one. */
-private val CapsuleFillOnDark = Color(0x2934C759)
-private val CapsuleRimOnDark = Color(0x6634C759)
-private val CapsuleTextOnDark = Color(0xFF6EE787)
-private val CapsuleFillOnLight = Color(0x2E34C759)
-private val CapsuleRimOnLight = Color(0x8034C759)
-private val CapsuleTextOnLight = Color(0xFF1B7A35)
-
-/** On the focused row, whose fill is white or black, the capsule is a solid green pill with white text. */
-private val CapsuleSolid = Color(0xFF146C2E)
 
 /**
  * The TV's input list hanging under the Inputs button at [anchor], its right edge on the top bar's: as wide as the button,
@@ -281,16 +267,12 @@ private fun InputItem(
     }
 }
 
-/**
- * "Connected" in a green capsule: faint on the idle row, in the colours of the surface behind it, and a solid [CapsuleSolid]
- * pill with white text as the row's [ink] fills.
- */
+/** "Connected" in the look's capsule for the surface behind it, as the row's [ink] fills. */
 @Composable
 private fun ConnectedCapsule(ink: FocusInk) {
-    val dark = TvTheme.surfaces.dark
+    val colours = TvTheme.lookColors
     val typography = TvTheme.typography
     val style = remember(typography) { typography.chipKey.copy(fontSize = 12.sp) }
-    val idleLight = if (dark) 0f else 1f
     Row(
         modifier =
             Modifier
@@ -298,10 +280,12 @@ private fun ConnectedCapsule(ink: FocusInk) {
                 .drawBehind {
                     val focus = ink.progress()
                     val radius = CornerRadius(size.height / 2f)
-                    drawRoundRect(lerp(lerp(CapsuleFillOnDark, CapsuleFillOnLight, idleLight), CapsuleSolid, focus), cornerRadius = radius)
+                    drawRoundRect(colours.connectedFill(focus), cornerRadius = radius)
+                    val edge = colours.connectedRim(focus)
+                    if (edge.alpha == 0f) return@drawBehind
                     val rim = 1.dp.toPx()
                     drawRoundRect(
-                        lerp(lerp(CapsuleRimOnDark, CapsuleRimOnLight, idleLight), CapsuleSolid, focus),
+                        edge,
                         topLeft = Offset(rim / 2f, rim / 2f),
                         size = Size(size.width - rim, size.height - rim),
                         cornerRadius = CornerRadius(size.height / 2f - rim / 2f),
@@ -314,7 +298,7 @@ private fun ConnectedCapsule(ink: FocusInk) {
             stringResource(R.string.input_connected),
             style = style,
             maxLines = 1,
-            color = { lerp(lerp(CapsuleTextOnDark, CapsuleTextOnLight, idleLight), Color.White, ink.progress()) },
+            color = { colours.connectedText(ink.progress()) },
         )
     }
 }

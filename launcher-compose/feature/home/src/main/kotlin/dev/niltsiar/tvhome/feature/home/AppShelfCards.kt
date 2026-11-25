@@ -161,6 +161,7 @@ internal fun AppShelfCards(
     visible: State<Boolean>,
     app: (String) -> AppEntry?,
     ring: (AppEntry) -> Color,
+    neutralRing: Boolean,
     shelfBottom: Dp,
     groupShift: () -> Float,
     poster: suspend (String, Int, Int) -> ShelfPoster?,
@@ -225,6 +226,7 @@ internal fun AppShelfCards(
                             item = item,
                             art = owner.image,
                             ring = colour,
+                            neutralRing = neutralRing,
                             accent = owner.accent,
                             band = band,
                             poster = poster,
@@ -284,6 +286,7 @@ private fun ShelfCard(
     item: ShelfItem,
     art: ImageBitmap?,
     ring: Color,
+    neutralRing: Boolean,
     accent: Color,
     band: ShelfBand,
     poster: suspend (String, Int, Int) -> ShelfPoster?,
@@ -314,6 +317,7 @@ private fun ShelfCard(
     val press = if (pressFeedback) remember { Animatable(0f) } else null
     val focus = remember { Animatable(0f) }
     val ringBlends = remember(ring, accent) { ringBlendsWith(ring, accent) }
+    val colours = TvTheme.lookColors
     FocusSurface(
         onClick = {
             if (press != null && !launching.value) scope.launch { press.pressDip(motion) }
@@ -321,15 +325,14 @@ private fun ShelfCard(
         },
         shape = ShelfCardShape,
         glow = false,
-        ring = { ring },
+        ring = { colours.focusBand(ring, neutralRing) },
         ringBlends = ringBlends,
         plate = TvTheme.colors.onSurface,
         focus = focus,
         press = press,
         modifier = modifier.popsOver(focus).size(band.cardWidth, band.cardHeight).semantics { contentDescription = item.title },
     ) {
-        val surface = TvTheme.colors.surface
-        Box(Modifier.fillMaxSize().drawBehind { drawRect(surface) }, contentAlignment = Alignment.BottomStart) {
+        Box(Modifier.fillMaxSize().drawBehind { drawRect(colours.tileFill()) }, contentAlignment = Alignment.BottomStart) {
             val shown = carried ?: decoded
             if (shown != null) {
                 val fill = shown.fill
@@ -354,6 +357,7 @@ private fun ShelfCard(
                     style = TvTheme.typography.tileLabel,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
+                    color = colours.tileLabel,
                     modifier = Modifier.padding(TextCardInset).testTag("shelf:card-title"),
                 )
             }

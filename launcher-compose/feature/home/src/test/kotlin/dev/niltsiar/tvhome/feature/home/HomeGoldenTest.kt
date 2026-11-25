@@ -122,6 +122,14 @@ class HomeGoldenTestContent :
                     golden("${prefix}inputs-list")
                 }
 
+                test("the inputs list with night mode off$named") {
+                    showHome(x, dark = false)
+                    inputsRequests++
+                    settle()
+                    compose.onNodeWithTag("menu").assertExists()
+                    golden("${prefix}inputs-list-light")
+                }
+
                 test("reorder mode$named") {
                     showHome(x)
                     press(Key.Menu)

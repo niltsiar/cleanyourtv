@@ -423,6 +423,9 @@ private class HomeInputsUiTestFixture : JUnit4RulesContext() {
     fun rowTags() = ((0..7) + 9).map { "input:$it" }
 }
 
+/** The solid green of an input tile's status dot in Glass. */
+private val ConnectedGreen = Color(0xFF34C759)
+
 /** Whether each channel of this colour is within 12 of [other]'s, on a 0 to 255 scale. */
 private fun Color.isNear(other: Color): Boolean =
     listOf(red - other.red, green - other.green, blue - other.blue).all { abs(it) * 255 <= 12 }

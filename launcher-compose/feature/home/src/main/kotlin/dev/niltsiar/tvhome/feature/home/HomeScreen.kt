@@ -639,6 +639,7 @@ public fun HomeScreen(
                     visible = shelfVisible,
                     app = { key -> state().dock.firstOrNull { it.key == key } },
                     ring = { shelfLayout.ringColour(it.accent, inDock = true, edge = it.edge) },
+                    neutralRing = shelfLayout.whiteFocus,
                     shelfBottom = shelfBottom,
                     groupShift = dim::lowPx,
                     poster = shelfPoster,
