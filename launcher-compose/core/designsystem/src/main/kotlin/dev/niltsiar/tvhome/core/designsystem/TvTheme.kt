@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import dev.niltsiar.tvhome.core.config.ExpressiveTile
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.expressive.ExpressiveShapes
 import dev.niltsiar.tvhome.core.designsystem.expressive.expressiveElementColors
@@ -419,6 +420,9 @@ public class LookState internal constructor(
     internal var seedSource: () -> Color by mutableStateOf(seed)
     public val seed: Color get() = seedSource()
 
+    /** The shape a focused tile takes in [Look.Expressive]. */
+    internal var tile: ExpressiveTile by mutableStateOf(ExpressiveTile.Capsule)
+
     private val schemes = arrayOfNulls<ColorScheme>(2)
     private val schemeSeeds = arrayOfNulls<Color>(2)
 
@@ -481,7 +485,8 @@ public object TvTheme {
  * The TV theme. Text over the wallpaper is always light; the [TvTheme.surfaces] are light or dark with [darkTheme].
  * [look] is the design and [seed] gives the house colour of [Look.Expressive]; both reach [TvTheme.lookState]. [seed] is
  * read where the colour is drawn, so a seed held in a state changes the drawing without recomposing the caller. [motion]
- * says how anything moves, [focusStyle] how a focused tile is lit. The [TvTheme.typography], [TvTheme.motion],
+ * says how anything moves, [focusStyle] how a focused tile is lit, and [expressiveTile] the shape it takes in
+ * [Look.Expressive]. The [TvTheme.typography], [TvTheme.motion],
  * [TvTheme.elementColors] and [TvTheme.shapes] it gives are the look's, chosen as they are read: a change of [look] recomposes what reads them,
  * and leaves the composition's structure and its focus as they are.
  */
@@ -491,12 +496,14 @@ public fun TvTheme(
     seed: () -> Color = { DefaultSeed },
     motion: Motion = Motion(),
     focusStyle: FocusStyle = FocusStyle.Glass,
+    expressiveTile: ExpressiveTile = ExpressiveTile.Capsule,
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
     val lookState = remember { LookState(look, seed) }
     lookState.look = look
     lookState.seedSource = seed
+    lookState.tile = expressiveTile
     val motions = remember(motion) { ByLook(motion.copy(look = Look.Glass), motion.copy(look = Look.Expressive)) }
     CompositionLocalProvider(
         LocalTvColors provides DarkColors,

@@ -97,9 +97,10 @@ internal fun SettingsHost(
     val motion by config.derived(TvConfig::motion)
     val focusStyle by config.derived(TvConfig::focusStyle)
     val look by config.derived(TvConfig::look)
+    val expressiveTile by config.derived(TvConfig::expressiveTile)
     val seed = graph.houseSeed.collectAsStateWithLifecycle()
     val state = viewModel.uiState.collectAsStateWithLifecycle()
-    TvTheme(look = look, seed = { seed.value }, motion = motion, focusStyle = focusStyle) {
+    TvTheme(look = look, seed = { seed.value }, motion = motion, focusStyle = focusStyle, expressiveTile = expressiveTile) {
         SettingsScreen(
             state = { state.value },
             actions = viewModel.actions,

@@ -417,6 +417,21 @@ val TvConfigParserTest by testSuite {
         }
     }
 
+    test("expressive tile is capsule unless a theme says wave or cinch in any case, and any other value keeps capsule") {
+        parseTvConfig("""{}""").config.expressiveTile shouldBe ExpressiveTile.Capsule
+        parseTvConfig("""{"expressive_tile": "capsule"}""").config.expressiveTile shouldBe ExpressiveTile.Capsule
+        parseTvConfig("""{"expressive_tile": "wave"}""").config.expressiveTile shouldBe ExpressiveTile.Wave
+        val cinch = parseTvConfig("""{"expressive_tile": " Cinch "}""")
+        cinch.config.expressiveTile shouldBe ExpressiveTile.Cinch
+        cinch.rejectedKeys + cinch.unknownKeys + cinch.unsupportedKeys shouldBe emptyList<String>()
+
+        for (bad in listOf("\"cookie\"", "\"\"", "1", "true")) {
+            val parsed = parseTvConfig("""{"expressive_tile": $bad}""")
+            withClue(bad) { parsed.config.expressiveTile shouldBe ExpressiveTile.Capsule }
+            withClue(bad) { parsed.rejectedKeys shouldBe listOf("expressive_tile") }
+        }
+    }
+
     test("the expressive seed is an opaque rgb colour and any other form is null and rejected") {
         parseTvConfig("""{}""").config.expressiveSeed shouldBe null
         parseTvConfig("""{"expressive_seed": "#1A2b3C"}""").config.expressiveSeed shouldBe 0xFF1A2B3C.toInt()
@@ -669,6 +684,7 @@ val TvConfigParserTest by testSuite {
             "glass_style" to (""""rim"""" to defaults.copy(glassStyle = GlassStyle.Rim)),
             "look" to (""""expressive"""" to defaults.copy(look = Look.Expressive)),
             "expressive_seed" to (""""#336699"""" to defaults.copy(expressiveSeed = 0xFF336699.toInt())),
+            "expressive_tile" to (""""wave"""" to defaults.copy(expressiveTile = ExpressiveTile.Wave)),
             "wallpaper" to ("false" to defaults.copy(wallpaper = false)),
             "wallpaper_rotation_minutes" to ("30" to defaults.copy(wallpaperRotationMinutes = 30)),
             "wallpaper_dim" to ("40" to defaults.copy(wallpaperDim = 40)),

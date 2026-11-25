@@ -133,9 +133,10 @@ class MainActivity : ComponentActivity() {
             val motion by current.derived(TvConfig::motion)
             val focusStyle by current.derived(TvConfig::focusStyle)
             val look by current.derived(TvConfig::look)
+            val expressiveTile by current.derived(TvConfig::expressiveTile)
             val seed = graph.houseSeed.collectAsStateWithLifecycle()
             val appLibrary by current.derived(TvConfig::appLibrary)
-            TvTheme(look = look, seed = { seed.value }, motion = motion, focusStyle = focusStyle) {
+            TvTheme(look = look, seed = { seed.value }, motion = motion, focusStyle = focusStyle, expressiveTile = expressiveTile) {
                 val glass = rememberGlassState()
                 val libraryOpen = if (appLibrary) library.uiState.collectAsStateWithLifecycle() else null
                 HomeHost(

@@ -36,6 +36,8 @@ import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -54,11 +56,14 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.ExpressiveTile
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.golden.assertMatchesGolden
+import io.kotest.assertions.withClue
+import io.kotest.matchers.shouldBe
 import androidx.compose.ui.graphics.Canvas as ImageCanvas
 
-/** Golden images of the design system's surfaces in the Glass look (docs/testing.md, "Golden tests"). */
+/** Golden images of the design system's surfaces in the Glass and Expressive looks (docs/testing.md, "Golden tests"). */
 val DesignSystemGoldenTest by testSuite {
     robolectricTestSuite<DesignSystemGoldenTestContent>(
         "sdk 31, 960x540 dp",
@@ -315,6 +320,56 @@ class DesignSystemGoldenTestContent :
                 golden("marquee-1696ms")
             }
 
+            for (tile in ExpressiveTile.entries) {
+                for (style in FocusStyle.entries) {
+                    val name = "expressive-${tile.name.lowercase()}-${style.name.lowercase()}"
+                    test("an Expressive ${tile.name} tile in ${style.name}, focused") {
+                        show(style, focused = true, look = Look.Expressive, tile = tile) { focus -> Tile(focus) }
+                        golden("$name-focused")
+                    }
+
+                    test("an Expressive ${tile.name} tile in ${style.name}, half way through a held ok") {
+                        val hold = OkHold { compose.mainClock.currentTime }
+                        show(style, focused = true, look = Look.Expressive, tile = tile) { focus -> Tile(focus.holdOk(hold, {})) }
+                        compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
+                        compose.mainClock.advanceTimeBy(HOLD_OK_MS / 2)
+                        golden("$name-held")
+                    }
+                }
+            }
+
+            test("an Expressive tile at rest is the same rounded rectangle in every tile shape, for each focus style") {
+                val kinds = ExpressiveTile.entries.flatMap { tile -> FocusStyle.entries.map { tile to it } }
+                show(size = 480, look = Look.Expressive) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        kinds.chunked(3).forEach { row ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                row.forEach { (tile, style) ->
+                                    TvTheme(look = Look.Expressive, seed = { Ember }, focusStyle = style, expressiveTile = tile) {
+                                        // A flat ground, so the corners compare the tile and not the backdrop behind it.
+                                        Box(Modifier.background(Color.Black)) { Tile(Modifier.testTag("rest:$tile:$style"), SmallTile) }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                kinds.forEach { (tile, style) ->
+                    val capsule = pixels("rest:${ExpressiveTile.Capsule}:$style")
+                    withClue("$tile $style") { pixels("rest:$tile:$style").contentEquals(capsule) shouldBe true }
+                }
+                golden("expressive-tile-rest")
+            }
+
+            test("an Expressive capsule with an app's ring and plate, focused in Glass's style") {
+                show(focused = true, look = Look.Expressive) { focus ->
+                    FocusSurface(onClick = {}, modifier = focus.size(240.dp, 135.dp), ring = { Mint }, plate = Mint) {
+                        Box(Modifier.fillMaxSize().background(Color(0xFF3B5B8C)))
+                    }
+                }
+                golden("expressive-capsule-app-ring-plate")
+            }
+
             test("every type role on the dark ground and on the light surface") {
                 show(size = 480, dark = false) {
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -329,6 +384,9 @@ class DesignSystemGoldenTestContent :
 
 /** The suite's ground: a fixed diagonal gradient, so translucent surfaces show what lies under them. */
 private val Ground = Brush.linearGradient(listOf(Color(0xFF1E3A5F), Color(0xFF6B4E8C)))
+
+/** The house seed of the Expressive scenes. */
+private val Ember = Color(0xFFFF6A3D)
 
 /** A light green for the coloured rings, plates and dock lights of the scenes. */
 private val Mint = Color(0xFF80E0A0)
@@ -431,7 +489,8 @@ private class DesignSystemGoldenFixture : JUnit4RulesContext() {
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
     /**
-     * Shows [content] centred on a [size] x [size] * 9 / 16 dp ground, in [style] and with night mode [dark]. With [focused]
+     * Shows [content] centred on a [size] x [size] * 9 / 16 dp ground, in [look] with [tile] tiles and the house [seed], in
+     * [style] and with night mode [dark]. With [focused]
      * the node that takes the modifier [content] gets is focused. The test clock then runs [settle] ms, by default long
      * enough for every animation to finish.
      */
@@ -441,6 +500,9 @@ private class DesignSystemGoldenFixture : JUnit4RulesContext() {
         size: Int = 400,
         focused: Boolean = false,
         settle: Long = 2_000,
+        look: Look = Look.Glass,
+        tile: ExpressiveTile = ExpressiveTile.Capsule,
+        seed: Color = Ember,
         content: @Composable (Modifier) -> Unit,
     ) {
         compose.mainClock.autoAdvance = false
@@ -451,7 +513,7 @@ private class DesignSystemGoldenFixture : JUnit4RulesContext() {
         }
         val focus = FocusRequester()
         compose.setContent {
-            TvTheme(look = Look.Glass, focusStyle = style, darkTheme = dark) {
+            TvTheme(look = look, seed = { seed }, focusStyle = style, expressiveTile = tile, darkTheme = dark) {
                 Box(Modifier.size(size.dp, (size * 9 / 16).dp).background(Ground).testTag("scene"), contentAlignment = Alignment.Center) {
                     content(Modifier.focusRequester(focus))
                 }
@@ -478,6 +540,12 @@ private class DesignSystemGoldenFixture : JUnit4RulesContext() {
             capture(ms)
         }
     }
+
+    /** The pixels of the node tagged [tag], row by row. */
+    fun pixels(tag: String): IntArray =
+        compose.onNodeWithTag(tag).captureToImage().toPixelMap().let { map ->
+            IntArray(map.width * map.height) { map[it % map.width, it / map.width].toArgb() }
+        }
 
     fun golden(scene: String) =
         compose

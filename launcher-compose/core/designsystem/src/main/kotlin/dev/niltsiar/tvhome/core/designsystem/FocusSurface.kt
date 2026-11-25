@@ -11,7 +11,6 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
@@ -24,6 +23,7 @@ import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.addOutline
 import androidx.compose.ui.graphics.drawOutline
@@ -39,6 +39,9 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import dev.niltsiar.tvhome.core.config.Look
+import dev.niltsiar.tvhome.core.designsystem.expressive.TilePainter
+import dev.niltsiar.tvhome.core.designsystem.expressive.drawExpressiveTile
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -103,6 +106,10 @@ public val FocusRingReach: Dp = RingGap + RingWidth + HairlineWidth + OuterStrok
  * its size, with [Motion.animated] only, and its ring moves toward [TvElementColors.ringPressed] and grows wider into the gap inside it, its outer edge
  * where it was. While OK is held on a surface whose [modifier] has [holdOk], an arc in the ring's colour fills the gap and
  * the ring clockwise from the top centre, whole as the menu opens ([HoldArcElement]), with [Motion.animations] only.
+ *
+ * In [Look.Expressive] focus shows as a band of the ring's colour, or the house primary without one, between a gap in the
+ * house surface colour and a dark keyline, all inside [FocusRingReach], with no glow; [TvTheme] says the band's shape
+ * ([dev.niltsiar.tvhome.core.config.ExpressiveTile]). The look and the shape are read in the draw phase.
  */
 @Composable
 public fun FocusSurface(
@@ -143,17 +150,34 @@ public fun FocusSurface(
             }
         }
     val gloss = remember(colours) { Brush.verticalGradient(listOf(colours.tileGloss, Color.Transparent)) }
+    val lookState = TvTheme.lookState
+    val painter = remember { TilePainter() }
+    val tileOutline = remember(shape, lookState, painter, focus) { TileOutline(shape, lookState, painter, focus) }
+    val band =
+        remember(ring, lookState, colours) {
+            ring ?: ColorProducer { if (lookState.look == Look.Expressive) lookState.scheme(dark = true).primary else colours.ring }
+        }
     Box(
         modifier =
             modifier
                 .graphicsLayer {
-                    shadowElevation = if (glowing) GlowElevation.toPx() * focus.value.coerceIn(0f, 1f) else 0f
-                    this.shape = ScaledShape(shape, (1f + (grownScale - 1f) * focus.value) * dipOf(press, dips), growthPivot)
+                    if (lookState.look == Look.Expressive) {
+                        // The band and its keyline show the focus; no glow, so no outline to follow per frame.
+                        shadowElevation = 0f
+                        this.shape = RectangleShape
+                    } else {
+                        shadowElevation = if (glowing) GlowElevation.toPx() * focus.value.coerceIn(0f, 1f) else 0f
+                        this.shape = ScaledShape(shape, (1f + (grownScale - 1f) * focus.value) * dipOf(press, dips), growthPivot)
+                    }
                     ambientShadowColor = glowColor
                     spotShadowColor = glowColor
-                }.then(if (halo) FocusHaloElement(focus, grownScale, growthPivot, shape, ring, colours, press, dips) else Modifier)
+                }.then(if (halo) FocusHaloElement(focus, grownScale, growthPivot, tileOutline, band, colours, press, dips) else Modifier)
                 .then(
-                    if (motion.animations) HoldArcElement(focus, grownScale, growthPivot, shape, ring, colours, press, dips) else Modifier,
+                    if (motion.animations) {
+                        HoldArcElement(focus, grownScale, growthPivot, tileOutline, band, colours, press, dips, lookState, painter)
+                    } else {
+                        Modifier
+                    },
                 ).drawWithContent {
                     scale(
                         (1f + (grownScale - 1f) * focus.value) * dipOf(press, dips),
@@ -165,6 +189,22 @@ public fun FocusSurface(
                         val progress = focus.value.coerceIn(0f, 1f)
                         // The ring shows whole from the first frame of focus; it fades only on the way out.
                         val ringAlpha = if (focus.targetValue > 0f) 1f else progress
+                        if (lookState.look == Look.Expressive) {
+                            this@drawWithContent.drawExpressiveTile(
+                                painter = painter,
+                                tile = lookState.tile,
+                                style = style,
+                                base = shape,
+                                progress = progress,
+                                ringAlpha = ringAlpha,
+                                band = band(),
+                                gap = lookState.scheme(dark = true).surface,
+                                keyline = colours.ringKeyline,
+                                plate = plateColor,
+                                plateAlpha = colours.plateTopAlpha,
+                            )
+                            return@scale
+                        }
                         val outline = if (ringAlpha > 0f) shape.createOutline(size, layoutDirection, this) else null
                         val width = style.ringWidth.toPx()
                         val gap = RingBand.toPx() - width
@@ -211,8 +251,15 @@ public fun FocusSurface(
                             )
                         }
                     }
-                }.clip(shape)
-                .onFocusChanged {
+                }.graphicsLayer {
+                    this.shape =
+                        if (lookState.look == Look.Expressive) {
+                            painter.clip(shape, lookState.tile, focus.value, size, this)
+                        } else {
+                            shape
+                        }
+                    clip = true
+                }.onFocusChanged {
                     val target = if (it.isFocused) 1f else 0f
                     if (focus.targetValue != target) {
                         // Undispatched, its first frame is the one that shows the new focus, not the frame after.
@@ -342,4 +389,26 @@ private data class ScaledShape(
             },
         )
     }
+}
+
+/**
+ * The outline a focused surface's halo and hold cue follow: [base], or in [Look.Expressive] with the capsule the rounded
+ * step its corners have reached at [focus]'s progress.
+ */
+internal class TileOutline(
+    private val base: Shape,
+    private val look: LookState,
+    private val painter: TilePainter,
+    private val focus: Animatable<Float, AnimationVector1D>,
+) : Shape {
+    override fun createOutline(
+        size: Size,
+        layoutDirection: LayoutDirection,
+        density: Density,
+    ): Outline =
+        if (look.look == Look.Expressive) {
+            painter.clip(base, look.tile, focus.value, size, density).createOutline(size, layoutDirection, density)
+        } else {
+            base.createOutline(size, layoutDirection, density)
+        }
 }

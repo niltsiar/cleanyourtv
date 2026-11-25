@@ -19,13 +19,17 @@ import androidx.compose.ui.node.DrawModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.invalidateDraw
 import androidx.compose.ui.platform.InspectorInfo
+import dev.niltsiar.tvhome.core.config.Look
+import dev.niltsiar.tvhome.core.designsystem.expressive.TilePainter
+import dev.niltsiar.tvhome.core.designsystem.expressive.drawExpressiveHold
 
 /**
  * The hold cue of a [FocusSurface]: while OK is held on it, an arc in [ring]'s colour, [TvElementColors.ring] of [colours]
  * without one, covers the gap
  * and the ring ([RingBand]) from the top centre clockwise, as far round as the hold is to the menu. It reads the progress
  * from the [holdOk] earlier in the chain and is drawn grown as the ring is: [scale] when [focus] is 1, less while a
- * [press] [dips] it, about [pivot]'s height or the middle.
+ * [press] [dips] it, about [pivot]'s height or the middle. In [Look.Expressive] it is a thin line in black or white,
+ * whichever reads on the band, along the middle of the band [painter] drew.
  */
 internal data class HoldArcElement(
     val focus: Animatable<Float, AnimationVector1D>,
@@ -36,6 +40,8 @@ internal data class HoldArcElement(
     val colours: TvElementColors,
     val press: Animatable<Float, AnimationVector1D>?,
     val dips: Boolean,
+    val look: LookState,
+    val painter: TilePainter,
 ) : ModifierNodeElement<HoldArcNode>() {
     override fun create(): HoldArcNode = HoldArcNode(this)
 
@@ -68,6 +74,11 @@ internal class HoldArcNode(
     }
 
     private fun DrawScope.drawArc(held: Float) {
+        val colour = spec.ring?.invoke() ?: spec.colours.ring
+        if (spec.look.look == Look.Expressive) {
+            drawExpressiveHold(spec.painter, spec.look.tile, spec.shape, spec.focus.value, held, colour)
+            return
+        }
         val band = RingBand.toPx()
         outline.rewind()
         outline.addFromTopCentre(
@@ -79,12 +90,12 @@ internal class HoldArcNode(
         measure.setPath(outline, false)
         arc.rewind()
         measure.getSegment(0f, measure.length * held, arc, true)
-        drawPath(arc, spec.ring?.invoke() ?: spec.colours.ring, style = Stroke(band))
+        drawPath(arc, colour, style = Stroke(band))
     }
 }
 
 /** [r] as one closed contour that starts at the middle of its top edge and runs clockwise. */
-private fun Path.addFromTopCentre(r: RoundRect) {
+internal fun Path.addFromTopCentre(r: RoundRect) {
     moveTo((r.left + r.right) / 2f, r.top)
     lineTo(r.right - r.topRightCornerRadius.x, r.top)
     arcTo(Rect(r.right - 2f * r.topRightCornerRadius.x, r.top, r.right, r.top + 2f * r.topRightCornerRadius.y), 270f, 90f, false)

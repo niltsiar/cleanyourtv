@@ -121,6 +121,7 @@ public fun parseTvConfig(json: String): ParsedConfig {
             glassStyle = o.enum("glass_style", d.glassStyle, GlassStyle.entries, ignoreCase = true) { it.jsonValue },
             look = o.enum("look", d.look, Look.entries, ignoreCase = true) { it.jsonValue },
             expressiveSeed = o.rgb("expressive_seed"),
+            expressiveTile = o.enum("expressive_tile", d.expressiveTile, ExpressiveTile.entries, ignoreCase = true) { it.jsonValue },
             wallpaper = o.bool("wallpaper", d.wallpaper),
             wallpaperRotationMinutes = o.int("wallpaper_rotation_minutes", d.wallpaperRotationMinutes, 0..1440),
             wallpaperDim = o.int("wallpaper_dim", d.wallpaperDim, 0..90),
