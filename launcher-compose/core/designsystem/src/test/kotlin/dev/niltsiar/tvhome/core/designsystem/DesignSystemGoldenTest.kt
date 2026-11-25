@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -314,6 +315,50 @@ class DesignSystemGoldenTestContent :
                 steps(80, 2_000) { golden(if (it == 80L) "dock-surface-light-fading-80ms" else "dock-surface-shaded") }
                 compose.runOnUiThread { light.focus(light.panelLeft + 240f * density) { Mint } }
                 steps(48) { golden("dock-surface-light-following-48ms") }
+            }
+
+            test("an Expressive dock at rest, its light settled on a tile, 48 and 160 ms into a move, and settled again") {
+                var edge: DockEdgeLight? = null
+                var density = 1f
+                var shown by mutableStateOf(false)
+                show(look = Look.Expressive) {
+                    val glass = remember { GlassState().apply { frost = frost() } }
+                    val scope = rememberCoroutineScope()
+                    val light = remember { DockEdgeLight(scope) }
+                    edge = light
+                    density = LocalDensity.current.density
+                    LaunchedEffect(shown) { light.show(shown) }
+                    DockSurface(
+                        glass = glass,
+                        tint = { Color(0xFF0B0D12).copy(alpha = 0.55f) },
+                        shape = RoundedCornerShape(32.dp),
+                        modifier = Modifier.size(360.dp, 120.dp),
+                        edgeLight = light,
+                    ) {
+                        for (centre in listOf(120.dp, 240.dp)) {
+                            Box(Modifier.offset(x = centre - 48.dp, y = 33.dp).size(96.dp, 54.dp).background(Color(0xFF3B5B8C)))
+                        }
+                    }
+                }
+                golden("expressive-dock-rest")
+                val light = checkNotNull(edge)
+                compose.runOnUiThread {
+                    light.focus(light.panelLeft + 120f * density) { Mint }
+                    shown = true
+                }
+                steps(2_000) { golden("expressive-dock-light-settled") }
+                compose.runOnUiThread { light.focus(light.panelLeft + 240f * density) { Mint } }
+                steps(48, 160, 2_000) {
+                    golden(
+                        if (it ==
+                            2_000L
+                        ) {
+                            "expressive-dock-light-moved"
+                        } else {
+                            "expressive-dock-light-moving-${it}ms"
+                        },
+                    )
+                }
             }
 
             for (look in Look.entries) {

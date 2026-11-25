@@ -160,12 +160,9 @@ public data class Motion(
          * keys: in [Look.Expressive] on the default spatial spring, which overshoots.
          */
         public fun dockLightFollowSpec(look: Look = Look.Glass): FiniteAnimationSpec<Float> =
-            if (look ==
-                Look.Expressive
-            ) {
-                MotionScheme.expressive().defaultSpatialSpec()
-            } else {
-                spring(DOCK_LIGHT_DAMPING, DOCK_LIGHT_STIFFNESS)
+            when (look) {
+                Look.Glass -> spring(DOCK_LIGHT_DAMPING, DOCK_LIGHT_STIFFNESS)
+                Look.Expressive -> MotionScheme.expressive().defaultSpatialSpec()
             }
 
         /** How the dock's edge light fades in and out ([DockEdgeLight.show]), whatever the motion keys. */
