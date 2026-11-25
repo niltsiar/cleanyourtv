@@ -656,6 +656,7 @@ public fun HomeScreen(
                 CinematicShelf(
                     shelf = { state().takeIf { it.reorder == null && !input.pillFocused && input.headerControl(it) == null }?.shelf },
                     layout = shelfLayout,
+                    travel = input.travel,
                     modifier = shelfModifier,
                     titleAlpha = { band.title.value },
                     detailAlpha = { band.detail.value },

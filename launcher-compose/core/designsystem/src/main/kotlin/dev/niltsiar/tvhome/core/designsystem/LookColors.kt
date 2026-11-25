@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.lerp
 import dev.niltsiar.tvhome.core.config.Look
+import dev.niltsiar.tvhome.core.designsystem.expressive.AppBands
 import dev.niltsiar.tvhome.core.designsystem.expressive.HouseStatus
 import dev.niltsiar.tvhome.core.designsystem.expressive.houseStatus
 
@@ -80,9 +81,10 @@ public class LookColors internal constructor(
     public val active: ColorProducer = ColorProducer { if (expressive) scheme.primary else colors.accent }
 
     /**
-     * The focus band of a tile whose Glass ring is [ring]: the ring itself in Glass. In Expressive it is the app's colour, the
-     * house primary for a white ring (no app colour, or a grid tile without app_glow), or with [neutral]
-     * (cinematic_white_focus) the house's light neutral. Read it in draw.
+     * The focus band of a tile whose Glass ring is [ring]: the ring itself in Glass. In Expressive it is the primary tone of
+     * the ring's own palette, so it keeps the house primary's contrast whatever the art; the house primary for a white ring
+     * (no app colour, or a grid tile without app_glow); or with [neutral] (cinematic_white_focus) the house's light
+     * neutral. Read it in draw.
      */
     public fun focusBand(
         ring: Color,
@@ -92,7 +94,7 @@ public class LookColors internal constructor(
             !expressive -> ring
             neutral -> look.scheme(dark = true).inverseSurface
             ring == Color.White -> look.scheme(dark = true).primary
-            else -> ring
+            else -> AppBands[ring].band
         }
 
     /** The line under a hero title: when the app was last opened, a status, a hint. */

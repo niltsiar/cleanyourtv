@@ -5,6 +5,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -18,7 +19,7 @@ private const val RING_TRAVEL_MS = 220
  * another one starts at the colour the old ring had and blends to its own in OKLab over [RING_TRAVEL_MS]; one that takes
  * it from anywhere else ([reset]: the top bar, a menu, the App library, another app) starts at its own. The ring of a
  * tile that loses focus mid-blend fades out in the colour it had reached. Only the ring's draw reads [colourFor], so a
- * move recomposes nothing.
+ * move recomposes nothing. With animations off, or in Expressive with reduced motion, the colour snaps.
  */
 @Stable
 internal class RingTravel {
@@ -56,7 +57,7 @@ internal class RingTravel {
         this.key = key
         from = start
         to = own
-        if (start == own || !motion.animations) {
+        if (start == own || !motion.animations || (motion.reducedMotion && motion.look == Look.Expressive)) {
             progress.floatValue = 1f
             return
         }

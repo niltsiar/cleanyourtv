@@ -160,6 +160,19 @@ class HomeGoldenTestContent :
                         }
                     }
 
+                    test("a dock move between a red and a blue app 110 ms in and settled, in Expressive") {
+                        val accents = listOf(Color(0xFFE0453A), Color(0xFF2F9FD8))
+                        showHome(
+                            x.copy(cinematicHome = true),
+                            apps = eighteenApps.mapIndexed { i, app -> accents.getOrNull(i)?.let { app.copy(accent = it) } ?: app },
+                        )
+                        compose.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
+                        compose.mainClock.advanceTimeBy(110)
+                        golden("expressive-tide-110ms")
+                        settle()
+                        golden("expressive-tide-settled")
+                    }
+
                     for (tile in listOf(ExpressiveTile.Wave, ExpressiveTile.Cinch)) {
                         val variant = tile.name.lowercase()
                         test("a tile menu open, in Expressive with the $variant tile") {

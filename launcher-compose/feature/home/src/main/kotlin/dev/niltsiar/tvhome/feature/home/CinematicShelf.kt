@@ -136,12 +136,14 @@ private class HeldShelf {
  * draws at [titleAlpha], the time and the dots at [detailAlpha]. Every animated value is read in a layer, placement or
  * draw lambda. The time sits on a pill while [pill] says so, and [extent] gets the width of the text block, as drawn: it follows
  * the swap of the names and the fade of the shelf. While an app shelf [card] has focus the line says what it is, and the dots
- * fade out as the app shelf's cards fade in ([cardsShown]).
+ * fade out as the app shelf's cards fade in ([cardsShown]). Expressive's focused segment takes the colour of the focused
+ * tile's band as it travels ([travel]).
  */
 @Composable
 internal fun CinematicShelf(
     shelf: () -> Shelf?,
     layout: ShelfLayout,
+    travel: RingTravel,
     modifier: Modifier = Modifier,
     titleAlpha: () -> Float = { 1f },
     detailAlpha: () -> Float = { 1f },
@@ -223,7 +225,12 @@ internal fun CinematicShelf(
                     position = shown.position,
                     count = shown.count,
                     animated = layout.animated,
-                    band = { colours.focusBand(layout.ringColour(shown.accent, inDock = true), layout.whiteFocus) },
+                    band = {
+                        travel.colourFor(
+                            shown.key,
+                            colours.focusBand(layout.ringColour(shown.accent, inDock = true, edge = shown.edge), layout.whiteFocus),
+                        )
+                    },
                     modifier = Modifier.padding(top = DotsGap).drawnAt { detailAlpha() * (1f - cardsShown()) },
                 )
             } else {

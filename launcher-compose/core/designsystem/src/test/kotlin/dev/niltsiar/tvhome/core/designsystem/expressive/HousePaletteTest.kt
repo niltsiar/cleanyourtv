@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import de.infix.testBalloon.framework.core.testSuite
 import io.kotest.assertions.withClue
+import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
@@ -32,6 +33,39 @@ val HousePaletteTest by testSuite {
                 }
             }
         failures.shouldBeEmpty()
+    }
+
+    test(
+        "an app's band and its charge's start read at 3:1 against the tile fill, the dock, the gap and the keyline, for every accent and seed",
+    ) {
+        val bands = seeds().map { (name, accent) -> name to appBand(accent) }
+        val failures =
+            seeds().flatMap { (seedName, seed) ->
+                val scheme = houseScheme(seed, dark = true)
+                val grounds =
+                    listOf(
+                        "tile fill" to scheme.surfaceContainerHigh,
+                        "dock" to scheme.surfaceContainer,
+                        "surface gap" to scheme.surface,
+                        "scrim keyline" to scheme.scrim,
+                    )
+                bands.flatMap { (accentName, band) ->
+                    grounds.flatMap { (groundName, ground) ->
+                        listOf("band" to band.band, "charge start" to band.tertiary).mapNotNull { (role, colour) ->
+                            contrast(colour, ground).takeIf { it < 3.0 }?.let { "$accentName $role on $seedName $groundName: $it" }
+                        }
+                    }
+                }
+            }
+        failures.shouldBeEmpty()
+    }
+
+    test("an app's band keeps the hue of its colour, and two app colours give two bands") {
+        val red = appBand(Color(0xFFE0453A)).band
+        val blue = appBand(Color(0xFF2F9FD8)).band
+        withClue("$red") { (red.red > red.blue).shouldBeTrue() }
+        withClue("$blue") { (blue.blue > blue.red).shouldBeTrue() }
+        AppBands[Color(0xFFE0453A)].band shouldBe red
     }
 
     test("the error role stays apart from the primary for every seed, dark and light") {

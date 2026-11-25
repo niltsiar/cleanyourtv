@@ -131,7 +131,8 @@ public const val NO_ARRIVAL: Int = -1
  * the [count] dock apps (one dot each), [lastOpened], when Home last opened it, null if it never did or the time is not
  * valid yet, [neverOpened] when Home has no record of opening it, and whether it is the [usual] app of this time of day.
  * [opening] is the name of the app a tile press is opening, which the line says in place of when Home last opened the app.
- * [input] is set for an input tile, whose line says its state instead.
+ * [input] is set for an input tile, whose line says its state instead. [edge] is the colour its art shows at the tile's
+ * edge, which the tile's focus ring takes into account.
  */
 @Immutable
 public data class Shelf(
@@ -145,6 +146,7 @@ public data class Shelf(
     val usual: Boolean = false,
     val opening: String? = null,
     val input: InputTileLive? = null,
+    val edge: Color = Color.Unspecified,
 )
 
 /** One-shot results the host handles outside the UI state. */
@@ -533,7 +535,11 @@ internal fun shelfFor(
     val position = apps.dock.indexOfFirst { it.key == app.key }
     if (position < 0) return null
     val input = inputTiles[app.key]
-    if (input != null) return Shelf(app.key, input.label, app.accent, position, apps.dock.size, lastOpened = null, input = input)
+    if (input !=
+        null
+    ) {
+        return Shelf(app.key, input.label, app.accent, position, apps.dock.size, lastOpened = null, input = input, edge = app.edge)
+    }
     return Shelf(
         key = app.key,
         label = app.label,
@@ -543,6 +549,7 @@ internal fun shelfFor(
         lastOpened = openedAt(app.key, lastOpened, now, hour24, zone),
         neverOpened = app.key !in lastOpened,
         usual = habit != null && app.packageName == habit,
+        edge = app.edge,
     )
 }
 
