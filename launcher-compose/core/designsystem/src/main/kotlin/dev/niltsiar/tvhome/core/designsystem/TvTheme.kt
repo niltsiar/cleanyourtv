@@ -392,6 +392,15 @@ private val LocalFocusStyle = staticCompositionLocalOf { FocusStyle.Glass }
 @Suppress("CompositionLocalAllowlist")
 private val LocalLookState = staticCompositionLocalOf { LookState(Look.Glass) { DefaultSeed } }
 
+@Suppress("CompositionLocalAllowlist")
+private val LocalLookColorSets = staticCompositionLocalOf { lookColorSets(LookState(Look.Glass) { DefaultSeed }) }
+
+@Suppress("CompositionLocalAllowlist")
+private val LocalLookColors = staticCompositionLocalOf { lookColorSets(LookState(Look.Glass) { DefaultSeed }).dark }
+
+private fun lookColorSets(look: LookState) =
+    LookColorSets(look, dark = DarkColors to DarkElementColors, light = OnLightColors to OnLightElementColors)
+
 /** The theme's [LookState], for a modifier node that reads the look in its draw. */
 internal fun CompositionLocalConsumerModifierNode.currentLookState(): LookState = currentValueOf(LocalLookState)
 
@@ -484,6 +493,11 @@ public object TvTheme {
         @Composable
         @ReadOnlyComposable
         get() = LocalLookState.current
+
+    public val lookColors: LookColors
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalLookColors.current
 }
 
 /**
@@ -510,6 +524,7 @@ public fun TvTheme(
     lookState.seedSource = seed
     lookState.tile = expressiveTile
     val motions = remember(motion) { ByLook(motion.copy(look = Look.Glass), motion.copy(look = Look.Expressive)) }
+    val lookColors = remember(lookState) { lookColorSets(lookState) }
     CompositionLocalProvider(
         LocalTvColors provides DarkColors,
         LocalTvTypography provides DarkTypography,
@@ -519,6 +534,8 @@ public fun TvTheme(
         LocalFocusStyle provides focusStyle,
         LocalTvSurfaces provides if (darkTheme) DarkSurfaces else LightSurfaces,
         LocalLookState provides lookState,
+        LocalLookColorSets provides lookColors,
+        LocalLookColors provides lookColors.dark,
         content = content,
     )
 }
@@ -534,6 +551,7 @@ internal fun SurfaceContent(content: @Composable () -> Unit) {
         LocalTvColors provides if (dark) DarkColors else OnLightColors,
         LocalTvTypography provides if (dark) DarkTypography else OnLightTypography,
         LocalTvElementColors provides if (dark) DarkElements else OnLightElements,
+        LocalLookColors provides LocalLookColorSets.current.let { if (dark) it.dark else it.light },
         content = content,
     )
 }

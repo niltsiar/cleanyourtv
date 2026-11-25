@@ -62,20 +62,20 @@ public fun FocusPill(
 ) {
     val motion = TvTheme.motion
     val surfaces = TvTheme.surfaces
-    val colors = TvTheme.colors
+    val rest = TvTheme.lookColors
     val shadow = TvTheme.elementColors.pillShadow
     val lookState = TvTheme.lookState
     val focus = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val grownScale = motion.focusScale(focusedScale)
     val ink =
-        remember(surfaces, colors, lookState) {
+        remember(surfaces, rest, lookState) {
             val filled = ColorProducer { lookState.pillContent(surfaces) }
             FocusInk(
-                content = { lerp(colors.onSurface, filled(), focus.value.coerceIn(0f, 1f)) },
+                content = { lerp(rest.text(), filled(), focus.value.coerceIn(0f, 1f)) },
                 secondary = {
                     val expressive = lookState.look == Look.Expressive
-                    lerp(colors.onSurfaceMuted, if (expressive) filled() else surfaces.pillSecondary, focus.value.coerceIn(0f, 1f))
+                    lerp(rest.textMuted(), if (expressive) filled() else surfaces.pillSecondary, focus.value.coerceIn(0f, 1f))
                 },
                 progress = { focus.value.coerceIn(0f, 1f) },
                 filled = filled,

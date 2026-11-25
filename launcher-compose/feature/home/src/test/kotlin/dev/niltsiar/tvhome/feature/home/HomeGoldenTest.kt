@@ -43,7 +43,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
 import java.time.ZoneOffset
 
-/** Golden images of Home in the Glass look on the real presenter and screen (docs/testing.md, "Golden tests"). */
+/** Golden images of Home in each look on the real presenter and screen (docs/testing.md, "Golden tests"). */
 val HomeGoldenTest by testSuite {
     robolectricTestSuite<HomeGoldenTestContent>(
         "sdk 31, 960x540 dp",
@@ -58,106 +58,130 @@ val HomeGoldenTest by testSuite {
 class HomeGoldenTestContent :
     RobolectricTestSuiteContent({
         testFixture { HomeGoldenFixture() } asContextForEach {
-            test("home with focus on the dock") {
-                showHome()
-                golden("dock-focus")
-            }
+            for (look in Look.entries) {
+                val x = TvConfig(look = look)
+                val prefix = if (look == Look.Expressive) "expressive-" else ""
+                val named = if (look == Look.Expressive) ", in Expressive" else ""
 
-            test("home with focus in the grid") {
-                showHome()
-                press(Key.DirectionDown)
-                compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
-                golden("grid-focus")
-            }
+                test("home with focus on the dock$named") {
+                    showHome(x)
+                    golden("${prefix}dock-focus")
+                }
 
-            test("cinematic home with art") {
-                showHome(TvConfig(cinematicHome = true), heroArt = { art(it) })
-                golden("cinematic-art")
-            }
+                test("home with focus in the grid$named") {
+                    showHome(x)
+                    press(Key.DirectionDown)
+                    compose.onNodeWithTag("tile:pkg.5").assertIsFocused()
+                    golden("${prefix}grid-focus")
+                }
 
-            test("cinematic home without art") {
-                showHome(TvConfig(cinematicHome = true))
-                golden("cinematic-no-art")
-            }
+                test("cinematic home with art$named") {
+                    showHome(x.copy(cinematicHome = true), heroArt = { art(it) })
+                    golden("${prefix}cinematic-art")
+                }
 
-            test("the app highlights shelf") {
-                showHome(TvConfig(cinematicHome = true, appShelf = true, appShelfSources = listOf("pkg.1")), heroArt = { art(it) })
-                compose.onNodeWithTag("shelf:card:0").assertExists()
-                golden("app-shelf")
-            }
+                test("cinematic home without art$named") {
+                    showHome(x.copy(cinematicHome = true))
+                    golden("${prefix}cinematic-no-art")
+                }
 
-            test("a tile menu open") {
-                showHome()
-                press(Key.Menu)
-                compose.onNodeWithTag("menu").assertExists()
-                golden("tile-menu")
-            }
+                test("the app highlights shelf$named") {
+                    showHome(x.copy(cinematicHome = true, appShelf = true, appShelfSources = listOf("pkg.1")), heroArt = { art(it) })
+                    compose.onNodeWithTag("shelf:card:0").assertExists()
+                    golden("${prefix}app-shelf")
+                }
 
-            test("the inputs list with a connected input") {
-                showHome()
-                inputsRequests++
-                settle()
-                compose.onNodeWithTag("menu").assertExists()
-                golden("inputs-list")
-            }
+                test("a tile menu open$named") {
+                    showHome(x)
+                    press(Key.Menu)
+                    compose.onNodeWithTag("menu").assertExists()
+                    golden("${prefix}tile-menu")
+                }
 
-            test("reorder mode") {
-                showHome()
-                press(Key.Menu)
-                press(Key.DirectionDown)
-                press(Key.DirectionCenter)
-                compose.onNodeWithTag("reorder:hint").assertExists()
-                golden("reorder")
-            }
+                test("the inputs list with a connected input$named") {
+                    showHome(x)
+                    inputsRequests++
+                    settle()
+                    compose.onNodeWithTag("menu").assertExists()
+                    golden("${prefix}inputs-list")
+                }
 
-            test("an input tile in the dock") {
-                showHome(
-                    TvConfig(inputTiles = true),
-                    apps = listOf(eighteenApps[0], PlayStationTile) + eighteenApps.drop(1),
-                    inputs = playStationInputs(),
-                )
-                golden("input-tiles")
-            }
+                test("reorder mode$named") {
+                    showHome(x)
+                    press(Key.Menu)
+                    press(Key.DirectionDown)
+                    press(Key.DirectionCenter)
+                    compose.onNodeWithTag("reorder:hint").assertExists()
+                    golden("${prefix}reorder")
+                }
 
-            test("the habit mark") {
-                showHome(TvConfig(habitHint = true), habit = "pkg.3")
-                golden("habit-mark")
-            }
+                test("an input tile in the dock$named") {
+                    showHome(
+                        x.copy(inputTiles = true),
+                        apps = listOf(eighteenApps[0], PlayStationTile) + eighteenApps.drop(1),
+                        inputs = playStationInputs(),
+                    )
+                    golden("${prefix}input-tiles")
+                }
 
-            test("the grid edges and the more cue") {
-                showHome(apps = apps(30))
-                press(Key.DirectionDown)
-                press(Key.DirectionDown)
-                golden("grid-edges-more-cue")
-            }
+                test("the habit mark$named") {
+                    showHome(x.copy(habitHint = true), habit = "pkg.3")
+                    golden("${prefix}habit-mark")
+                }
 
-            test("the top bar online with focus on it") {
-                showHome()
-                press(Key.DirectionUp)
-                golden("top-bar-online")
-            }
+                test("the grid edges and the more cue$named") {
+                    showHome(x, apps = apps(30))
+                    press(Key.DirectionDown)
+                    press(Key.DirectionDown)
+                    golden("${prefix}grid-edges-more-cue")
+                }
 
-            test("the top bar with the sleep pill") {
-                showHome(TvConfig(sleepTimer = true), sleepMinutesLeft = 25)
-                compose.onNodeWithTag("sleep_timer").assertExists()
-                golden("top-bar-sleep")
-            }
+                test("the top bar online with focus on it$named") {
+                    showHome(x)
+                    press(Key.DirectionUp)
+                    golden("${prefix}top-bar-online")
+                }
 
-            test("home with night mode off and a tile menu open") {
-                showHome(dark = false)
-                press(Key.Menu)
-                compose.onNodeWithTag("menu").assertExists()
-                golden("night-off-tile-menu")
-            }
+                test("the top bar with the sleep pill$named") {
+                    showHome(x.copy(sleepTimer = true), sleepMinutesLeft = 25)
+                    compose.onNodeWithTag("sleep_timer").assertExists()
+                    golden("${prefix}top-bar-sleep")
+                }
 
-            for (style in listOf(GlassStyle.Rim, GlassStyle.Halo)) {
-                test("home with glass style ${style.name}") {
-                    showHome(TvConfig(glassStyle = style))
-                    golden("glass-style-${style.name.lowercase()}")
+                val status = x.copy(wifiStatusColor = true, wifiStatusWarnings = true, iconOnlyButtons = false, reorderButton = true)
+
+                test("the top bar with a VPN up and reorder on$named") {
+                    showHome(status, network = NetworkState(NetworkLink.Wifi, ssid = "Home", validated = true, vpn = true))
+                    press(Key.Menu)
+                    press(Key.DirectionDown)
+                    press(Key.DirectionCenter)
+                    golden("${prefix}top-bar-vpn-reorder")
+                }
+
+                test("the top bar without internet and its VPN down$named") {
+                    showHome(status.copy(vpnApp = "pkg.18"), network = NetworkState(NetworkLink.Wifi, ssid = "Home", validated = false))
+                    golden("${prefix}top-bar-no-internet")
+                }
+
+                test("home with night mode off and a tile menu open$named") {
+                    showHome(x, dark = false)
+                    press(Key.Menu)
+                    compose.onNodeWithTag("menu").assertExists()
+                    golden("${prefix}night-off-tile-menu")
+                }
+
+                for (style in listOf(GlassStyle.Rim, GlassStyle.Halo)) {
+                    test("home with glass style ${style.name}$named") {
+                        showHome(x.copy(glassStyle = style))
+                        golden("${prefix}glass-style-${style.name.lowercase()}")
+                    }
                 }
             }
         }
     })
+
+/** The house seed of the Expressive scenes, the warm one the design-system goldens use. */
+private val Ember = Color(0xFFFF6A3D)
 
 private fun hue(n: Int) = Color.hsv((n * 47f) % 360f, 0.55f, 0.75f)
 
@@ -186,13 +210,14 @@ private class HomeGoldenFixture : JUnit4RulesContext() {
         inputs: InputsMenu = FourPorts,
         habit: String? = null,
         sleepMinutesLeft: Int? = null,
+        network: NetworkState = NetworkState(NetworkLink.Wifi, ssid = "Home", validated = true),
         heroArt: suspend (String) -> ImageBitmap? = { null },
     ) {
         val poster = ShelfPoster(bands(18, 27, listOf(Color(0xFF5A2E6E), Color(0xFFD08A3A))))
         val sources =
             sources(
                 apps = flowOf(AppList(apps)),
-                network = flowOf(NetworkState(NetworkLink.Wifi, ssid = "Home", validated = true)),
+                network = flowOf(network),
                 wallpaper = flowOf(Wallpaper(picture = picture, thumbnail = picture)),
                 inputs = flowOf(inputs),
                 libraryCount = flowOf(apps.size),
@@ -217,7 +242,14 @@ private class HomeGoldenFixture : JUnit4RulesContext() {
         }
         compose.setContent {
             CompositionLocalProvider(LocalBakeDispatcher provides Dispatchers.Unconfined) {
-                TvTheme(look = Look.Glass, motion = config.motion(), focusStyle = config.focusStyle(), darkTheme = dark) {
+                TvTheme(
+                    look = config.look,
+                    seed = { Ember },
+                    motion = config.motion(),
+                    focusStyle = config.focusStyle(),
+                    expressiveTile = config.expressiveTile,
+                    darkTheme = dark,
+                ) {
                     val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                     val state = viewModel.uiState.collectAsState()
                     HomeScreen(

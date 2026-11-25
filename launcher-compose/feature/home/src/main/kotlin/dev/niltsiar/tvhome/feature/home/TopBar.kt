@@ -2,7 +2,6 @@ package dev.niltsiar.tvhome.feature.home
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.EaseOutCubic
@@ -28,7 +27,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -52,7 +50,6 @@ import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.isUnspecified
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.FirstBaseline
@@ -78,6 +75,7 @@ import dev.niltsiar.tvhome.core.designsystem.FocusInk
 import dev.niltsiar.tvhome.core.designsystem.GlassIconButton
 import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.designsystem.GlassSurface
+import dev.niltsiar.tvhome.core.designsystem.LookColors
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.holdOk
@@ -104,8 +102,6 @@ private const val APP_ICON_ZOOM = 0.12f
 private const val APPS_ICON_GROWTH = 0.18f
 private const val DEFAULT_NETWORK_WIDTH_DP = 180
 private const val CLOCK_SLOTS = 5
-private const val DIVIDER_ALPHA = 0.2f
-private const val DATE_INK_ALPHA = 0.88f
 private val NetworkIconRise = 6.dp
 private val DigitRise = 10.dp
 private val ClockPillPadding = 24.dp
@@ -119,9 +115,6 @@ private val DateBaselineTop = 47.dp
  * adds the rise offset of its first measure, so each digit sets this line outside the layer.
  */
 private val DigitBaseline = HorizontalAlignmentLine(::min)
-private val OnlineGreen = Color(0xFF34C759)
-private val NoInternetOrange = Color(0xFFFF9F0A)
-private val OfflineRed = Color(0xFFFF453A)
 
 /**
  * The theme's say over the top bar: [showNetworkPill] and [showInputsPill] hide those buttons. Every button is a round
@@ -169,20 +162,39 @@ public fun TvConfig.topBarLayout(): TopBarLayout =
         animated = animations && !reducedMotion,
     )
 
+/** What the network icon's colour says: nothing, online, connected without internet, or offline. */
+internal enum class NetworkStatus {
+    Plain,
+    Online,
+    NoInternet,
+    Offline,
+}
+
 /**
- * The network icon's colour. With wifi_status_color it is green while online; with wifi_status_warnings orange
- * while connected without internet (a captive portal) and red while offline. Otherwise, and offline without warnings, [plain].
+ * What the network icon's colour says. With wifi_status_color it is online (green); with wifi_status_warnings connected
+ * without internet (a captive portal, orange) and offline (red). Otherwise, and offline without warnings, plain.
  */
-internal fun networkTint(
+internal fun networkStatus(
     network: NetworkState,
     layout: TopBarLayout,
+): NetworkStatus =
+    when {
+        !layout.wifiStatusColor -> NetworkStatus.Plain
+        network.link == NetworkLink.Offline -> if (layout.wifiStatusWarnings) NetworkStatus.Offline else NetworkStatus.Plain
+        layout.wifiStatusWarnings && !network.validated -> NetworkStatus.NoInternet
+        else -> NetworkStatus.Online
+    }
+
+/** The colour of [status] in [colours], [plain] for none. Read it in draw. */
+private fun NetworkStatus.colour(
+    colours: LookColors,
     plain: Color,
 ): Color =
-    when {
-        !layout.wifiStatusColor -> plain
-        network.link == NetworkLink.Offline -> if (layout.wifiStatusWarnings) OfflineRed else plain
-        layout.wifiStatusWarnings && !network.validated -> NoInternetOrange
-        else -> OnlineGreen
+    when (this) {
+        NetworkStatus.Plain -> plain
+        NetworkStatus.Online -> colours.success()
+        NetworkStatus.NoInternet -> colours.warning()
+        NetworkStatus.Offline -> colours.error()
     }
 
 /** What a top-bar button is, so the band can name it while it has focus. */
@@ -356,7 +368,7 @@ private fun ReorderButton(
     glass: GlassState,
     input: HomeInput,
 ) {
-    val accent = TvTheme.colors.accent
+    val active = TvTheme.lookColors.active
     val reordering by input.reordering
     val on = animateFloatAsState(if (reordering) 1f else 0f, tween(NETWORK_FADE_MS), label = "reorderTint")
     val reorder = stringResource(R.string.reorder)
@@ -367,7 +379,7 @@ private fun ReorderButton(
         modifier = Modifier.nameInBand(input, BarControl.Named(reorder)),
         focusLabel = reorder,
     ) { _, ink ->
-        IconPart(R.drawable.ic_reorder, { lerp(ink(), accent, on.value) })
+        IconPart(R.drawable.ic_reorder, { lerp(ink(), active(), on.value) })
     }
 }
 
@@ -383,10 +395,10 @@ internal fun ClockPill(
     GlassSurface(
         glass = glass,
         modifier = Modifier.fillMaxHeight().testTag("clock").clearAndSetSemantics {},
-        shape = CircleShape,
+        shape = TvTheme.shapes.chromePill,
         shadow = ChromeShadow.Pill,
     ) {
-        val dateInk = TvTheme.colors.onSurface.copy(alpha = DATE_INK_ALPHA)
+        val dateInk = TvTheme.lookColors.clockDate
         if (dateBelowClock) {
             DateBelowClock(state, dateInk)
         } else {
@@ -403,11 +415,10 @@ private fun SleepPill(
 ) {
     val minutes by remember(state) { derivedStateOf { state().sleepMinutesLeft } }
     val left = minutes ?: return
-    val ink = TvTheme.colors.onSurface
     GlassSurface(
         glass = glass,
         modifier = Modifier.fillMaxHeight().testTag("sleep_timer").semantics(mergeDescendants = true) {},
-        shape = CircleShape,
+        shape = TvTheme.shapes.chromePill,
         shadow = ChromeShadow.Pill,
     ) {
         Row(
@@ -415,12 +426,13 @@ private fun SleepPill(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Box(Modifier.size(20.dp)) { IconPart(R.drawable.ic_sleep_moon, { ink }) }
+            val colours = TvTheme.lookColors
+            Box(Modifier.size(20.dp)) { IconPart(R.drawable.ic_sleep_moon, colours.sleepIcon) }
             BasicText(
                 stringResource(R.string.sleep_timer_minutes, left),
                 style = TvTheme.typography.pillLabel,
                 maxLines = 1,
-                color = { ink },
+                color = colours.text,
             )
         }
     }
@@ -429,21 +441,20 @@ private fun SleepPill(
 @Composable
 private fun DateBesideClock(
     state: () -> HomeUiState,
-    dateInk: Color,
+    dateInk: ColorProducer,
 ) {
     val typography = TvTheme.typography
-    val dateStyle = remember(typography, dateInk) { typography.date.copy(color = dateInk) }
-    val divider = TvTheme.colors.onSurface.copy(alpha = DIVIDER_ALPHA)
+    val divider = TvTheme.lookColors.clockDivider
     Row(
         modifier = Modifier.fillMaxHeight().padding(horizontal = ClockPillPadding),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         ClockTime(state, typography.clock)
-        Spacer(Modifier.width(1.dp).height(24.dp).drawBehind { drawRect(divider) })
+        Spacer(Modifier.width(1.dp).height(24.dp).drawBehind { drawRect(divider()) })
         Column(verticalArrangement = Arrangement.Center) {
             GreetingText(state)
-            DateText(state, dateStyle)
+            DateText(state, typography.date, dateInk)
         }
     }
 }
@@ -455,14 +466,13 @@ private fun DateBesideClock(
 @Composable
 private fun DateBelowClock(
     state: () -> HomeUiState,
-    dateInk: Color,
+    dateInk: ColorProducer,
 ) {
     val typography = TvTheme.typography
-    val dateStyle = remember(typography, dateInk) { typography.dateCompact.copy(color = dateInk) }
     Layout(
         content = {
             ClockTime(state, typography.clockCompact)
-            DateText(state, dateStyle)
+            DateText(state, typography.dateCompact, dateInk)
             GreetingText(state)
         },
         modifier = Modifier.padding(horizontal = ClockPillPadding),
@@ -490,9 +500,12 @@ private fun ClockTime(
 ) {
     val clock by remember(state) { derivedStateOf { state().clock } }
     val amPm by remember(state) { derivedStateOf { state().amPm } }
+    val colours = TvTheme.lookColors
     Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        ClockDigits(clock, style)
-        if (amPm.isNotEmpty()) BasicText(amPm, style = TvTheme.typography.amPm, modifier = Modifier.padding(bottom = 4.dp))
+        ClockDigits(clock, style, colours.text)
+        if (amPm.isNotEmpty()) {
+            BasicText(amPm, style = TvTheme.typography.amPm, modifier = Modifier.padding(bottom = 4.dp), color = colours.textMuted)
+        }
     }
 }
 
@@ -505,10 +518,11 @@ private fun ClockTime(
 private fun ClockDigits(
     text: String,
     style: TextStyle,
+    ink: ColorProducer,
 ) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Row {
-            text.padStart(CLOCK_SLOTS).forEachIndexed { index, char -> key(index) { ClockDigit(char, style) } }
+            text.padStart(CLOCK_SLOTS).forEachIndexed { index, char -> key(index) { ClockDigit(char, style, ink) } }
         }
     }
 }
@@ -517,6 +531,7 @@ private fun ClockDigits(
 private fun ClockDigit(
     char: Char,
     style: TextStyle,
+    ink: ColorProducer,
 ) {
     val motion = TvTheme.motion
     val reveal = remember(char) { Animatable(if (motion.animations) 0f else 1f) }
@@ -525,6 +540,7 @@ private fun ClockDigit(
     BasicText(
         text = if (blank) "0" else char.toString(),
         style = style,
+        color = ink,
         modifier =
             Modifier
                 .layout { measurable, constraints ->
@@ -542,9 +558,10 @@ private fun ClockDigit(
 private fun DateText(
     state: () -> HomeUiState,
     style: TextStyle,
+    ink: ColorProducer,
 ) {
     val date by remember(state) { derivedStateOf { state().date } }
-    BasicText(date, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    BasicText(date, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, color = ink)
 }
 
 @Composable
@@ -558,6 +575,7 @@ private fun GreetingText(state: () -> HomeUiState) {
         style = TvTheme.typography.greeting,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
+        color = TvTheme.lookColors.greeting,
     )
 }
 
@@ -621,8 +639,9 @@ private fun NetworkButton(
     onHold: () -> Unit,
 ) {
     val network by remember(state) { derivedStateOf { state().network } }
-    val plain = networkTint(network, layout, Color.Unspecified).isUnspecified
-    val status = animateColorAsState(networkTint(network, layout, TvTheme.colors.onSurface), tween(NETWORK_FADE_MS), label = "networkTint")
+    val status = networkStatus(network, layout)
+    val colours = TvTheme.lookColors
+    val fade = rememberStatusFade(status)
     val wifi = animateFloatAsState(if (network.link == NetworkLink.Wifi) 1f else 0f, tween(NETWORK_FADE_MS), label = "wifi")
     val ethernet = animateFloatAsState(if (network.link == NetworkLink.Ethernet) 1f else 0f, tween(NETWORK_FADE_MS), label = "ethernet")
     val offline = animateFloatAsState(if (network.link == NetworkLink.Offline) 1f else 0f, tween(NETWORK_FADE_MS), label = "offline")
@@ -657,8 +676,9 @@ private fun NetworkButton(
                         Spacer(Modifier.width(6.dp))
                         BasicText(
                             badge.first,
-                            style = TvTheme.typography.pillLabel.copy(color = badge.second, fontSize = 12.sp),
+                            style = TvTheme.typography.pillLabel.copy(fontSize = 12.sp),
                             maxLines = 1,
+                            color = badge.second,
                         )
                     }
                 }
@@ -666,7 +686,7 @@ private fun NetworkButton(
                 null
             },
     ) { _, ink ->
-        val tint = ColorProducer { if (plain) ink() else status.value }
+        val tint = ColorProducer { if (status == NetworkStatus.Plain) ink() else fade.colour { it.colour(colours, colours.text()) } }
         IconPart(R.drawable.ic_wifi_dot, tint) {
             fade(wifi.value)
             alpha *= wifiLight(light.value, part = 0)
@@ -710,18 +730,44 @@ private fun linkName(link: NetworkLink): String =
         NetworkLink.Offline -> stringResource(R.string.offline)
     }
 
-/** "VPN" in green while a VPN is up; "VPN off" in red while none is and a VPN app is set; else none. */
+/** "VPN" in the success colour while a VPN is up; "VPN off" in the error colour while none is and a VPN app is set; else none. */
 @Composable
 @ReadOnlyComposable
 private fun vpnBadge(
     network: NetworkState,
     layout: TopBarLayout,
-): Pair<String, Color>? =
+): Pair<String, ColorProducer>? =
     when {
-        network.vpn && network.link != NetworkLink.Offline -> stringResource(R.string.vpn) to OnlineGreen
-        layout.vpnApp && network.link != NetworkLink.Offline -> stringResource(R.string.vpn_off) to OfflineRed
+        network.vpn && network.link != NetworkLink.Offline -> stringResource(R.string.vpn) to TvTheme.lookColors.success
+        layout.vpnApp && network.link != NetworkLink.Offline -> stringResource(R.string.vpn_off) to TvTheme.lookColors.error
         else -> null
     }
+
+/** The network icon's colour moving from one [NetworkStatus] to the next over [NETWORK_FADE_MS]. */
+private class StatusFade(
+    status: NetworkStatus,
+) {
+    var from: NetworkStatus = status
+    var to: NetworkStatus = status
+    val progress = Animatable(1f)
+
+    /** The colour now, from the [colour] of each end. Read it in draw. */
+    inline fun colour(colour: (NetworkStatus) -> Color): Color = lerp(colour(from), colour(to), progress.value)
+}
+
+@Composable
+private fun rememberStatusFade(status: NetworkStatus): StatusFade {
+    val fade = remember { StatusFade(status) }
+    LaunchedEffect(status) {
+        if (fade.to != status) {
+            fade.from = fade.to
+            fade.to = status
+            fade.progress.snapTo(0f)
+            fade.progress.animateTo(1f, tween(NETWORK_FADE_MS))
+        }
+    }
+    return fade
+}
 
 /**
  * One layer of a top bar icon, drawn over the others in the same 24-unit viewport. [layer] runs in the layer

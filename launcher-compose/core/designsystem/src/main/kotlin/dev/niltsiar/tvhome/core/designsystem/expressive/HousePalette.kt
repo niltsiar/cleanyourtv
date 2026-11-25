@@ -112,6 +112,33 @@ internal fun houseScheme(
     }
 }
 
+/**
+ * The status roles the house scheme adds to Material 3's: [success] and [warning] ink, at the error role's tones, and a
+ * success container with its text.
+ */
+internal class HouseStatus(
+    val success: Color,
+    val warning: Color,
+    val successContainer: Color,
+    val onSuccessContainer: Color,
+)
+
+/** The status roles of the house scheme, [dark] or light; they take no hue from the seed. */
+internal fun houseStatus(dark: Boolean): HouseStatus {
+    val success = Palette(SUCCESS_HUE, STATUS_CHROMA)
+    val warning = Palette(WARNING_HUE, STATUS_CHROMA)
+    return if (dark) {
+        HouseStatus(success = success(80), warning = warning(80), successContainer = success(30), onSuccessContainer = success(90))
+    } else {
+        HouseStatus(success = success(40), warning = warning(40), successContainer = success(90), onSuccessContainer = success(10))
+    }
+}
+
+/** The hues of the success (a green) and warning (an amber) roles, in radians, the same for every seed. */
+private const val SUCCESS_HUE = 2.5f
+private const val WARNING_HUE = 1.2f
+private const val STATUS_CHROMA = 0.14f
+
 /** OKLCH chroma of the palettes, in OKLab units. Expressive keeps primary above [PRIMARY_CHROMA_FLOOR], so a grey seed still gives a coloured band. */
 private const val PRIMARY_CHROMA_FLOOR = 0.10f
 private const val PRIMARY_CHROMA_CEILING = 0.20f

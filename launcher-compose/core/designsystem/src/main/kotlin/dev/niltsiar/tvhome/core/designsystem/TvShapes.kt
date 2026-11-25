@@ -21,6 +21,8 @@ public class TvShapes internal constructor(
     public val chromePanel: RoundedCornerShape,
     /** A [GlassIconButton]: its glass and its fill. */
     public val chromeButton: RoundedCornerShape,
+    /** A chrome pill with text, as the clock's. */
+    public val chromePill: RoundedCornerShape,
     /** The corner of an overlay panel. */
     public val overlayCorner: Dp,
     /** A [KeyChip]'s backing and rim. */
@@ -41,6 +43,7 @@ internal val GlassShapes: TvShapes =
         pill = CircleShape,
         chromePanel = RoundedCornerShape(20.dp),
         chromeButton = CircleShape,
+        chromePill = CircleShape,
         overlayCorner = 28.dp,
         chip = CircleShape,
         chipKey = CircleShape,

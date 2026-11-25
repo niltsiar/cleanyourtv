@@ -14,6 +14,7 @@ internal val ExpressiveShapes: TvShapes =
         pill = CircleShape,
         chromePanel = RoundedCornerShape(24.dp),
         chromeButton = CircleShape,
+        chromePill = CircleShape,
         overlayCorner = 28.dp,
         chip = CircleShape,
         chipKey = RoundedCornerShape(6.dp),

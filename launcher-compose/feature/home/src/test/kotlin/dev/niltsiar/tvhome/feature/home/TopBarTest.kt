@@ -34,10 +34,6 @@ import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import java.util.Locale
 
-private val Plain = Color.White
-private val Green = Color(0xFF34C759)
-private val Orange = Color(0xFFFF9F0A)
-private val Red = Color(0xFFFF453A)
 private val Wifi = NetworkState(NetworkLink.Wifi, ssid = "Home", validated = true)
 private val LongWifi = Wifi.copy(ssid = "guest network ".repeat(40))
 
@@ -46,21 +42,21 @@ val NetworkTintTest by testSuite {
         network: NetworkState,
         colour: Boolean = true,
         warnings: Boolean = false,
-    ) = networkTint(network, TopBarLayout(wifiStatusColor = colour, wifiStatusWarnings = warnings), Plain)
+    ) = networkStatus(network, TopBarLayout(wifiStatusColor = colour, wifiStatusWarnings = warnings))
 
     test("the icon keeps its colour unless wifi status color is on") {
-        tint(Wifi, colour = false, warnings = true) shouldBe Plain
+        tint(Wifi, colour = false, warnings = true) shouldBe NetworkStatus.Plain
     }
 
     test("online is green and offline stays plain without warnings") {
-        tint(Wifi.copy(validated = false)) shouldBe Green
-        tint(NetworkState()) shouldBe Plain
+        tint(Wifi.copy(validated = false)) shouldBe NetworkStatus.Online
+        tint(NetworkState()) shouldBe NetworkStatus.Plain
     }
 
     test("warnings make a captive portal orange and offline red") {
-        tint(Wifi.copy(validated = false), warnings = true) shouldBe Orange
-        tint(Wifi, warnings = true) shouldBe Green
-        tint(NetworkState(), warnings = true) shouldBe Red
+        tint(Wifi.copy(validated = false), warnings = true) shouldBe NetworkStatus.NoInternet
+        tint(Wifi, warnings = true) shouldBe NetworkStatus.Online
+        tint(NetworkState(), warnings = true) shouldBe NetworkStatus.Offline
     }
 }
 

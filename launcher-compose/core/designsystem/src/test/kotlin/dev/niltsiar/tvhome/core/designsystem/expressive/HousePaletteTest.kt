@@ -47,6 +47,30 @@ val HousePaletteTest by testSuite {
         failures.shouldBeEmpty()
     }
 
+    test("the status roles read at 4.5:1 on every container, dark and light") {
+        val failures =
+            listOf(true, false).flatMap { dark ->
+                val scheme = houseScheme(Ember, dark)
+                val status = houseStatus(dark)
+                val grounds =
+                    listOf(
+                        scheme.surface,
+                        scheme.surfaceContainerLowest,
+                        scheme.surfaceContainerLow,
+                        scheme.surfaceContainer,
+                        scheme.surfaceContainerHigh,
+                        scheme.surfaceContainerHighest,
+                    )
+                val pairs =
+                    grounds.flatMap { listOf(Triple("success", status.success, it), Triple("warning", status.warning, it)) } +
+                        Triple("onSuccessContainer", status.onSuccessContainer, status.successContainer)
+                pairs.mapNotNull { (name, fg, bg) ->
+                    contrast(fg, bg).takeIf { it < 4.5 }?.let { "${if (dark) "dark" else "light"} $name on $bg: $it" }
+                }
+            }
+        failures.shouldBeEmpty()
+    }
+
     test("a seed far from red keeps a red error role") {
         val error = houseScheme(Color(0xFF3050D0), dark = true).error
 
