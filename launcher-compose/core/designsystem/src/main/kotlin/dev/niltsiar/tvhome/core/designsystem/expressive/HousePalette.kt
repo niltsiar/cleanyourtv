@@ -137,7 +137,7 @@ private class Palette(
 }
 
 /** The OKLCH hue, in radians, and chroma of [colour]. */
-internal fun hueAndChroma(colour: Color): Pair<Float, Float> {
+private fun hueAndChroma(colour: Color): Pair<Float, Float> {
     val lab = oklab(linear(colour.red), linear(colour.green), linear(colour.blue))
     return atan2(lab[2], lab[1]) to sqrt(lab[1] * lab[1] + lab[2] * lab[2])
 }

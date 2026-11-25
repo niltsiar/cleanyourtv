@@ -152,7 +152,8 @@ internal class TilePainter {
 
     fun stroke(width: Float): Stroke {
         for (i in 0 until STROKES) {
-            if (strokes[i] != null && strokeWidths[i] == width) return strokes[i]!!
+            val kept = strokes[i]
+            if (kept != null && strokeWidths[i] == width) return kept
         }
         val slot = strokes.indexOfFirst { it == null }.takeIf { it >= 0 } ?: 0
         return Stroke(width).also {

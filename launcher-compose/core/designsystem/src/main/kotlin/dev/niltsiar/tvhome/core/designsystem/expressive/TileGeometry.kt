@@ -82,7 +82,6 @@ internal class BandGeometry(
     /** How far the masks reach past the tile on every side, in pixels. */
     val maskReach: Float,
     /** The line through the middle of the band, from the top centre clockwise, for the hold cue. */
-    val hold: Path,
     val holdMeasure: PathMeasure,
 )
 
@@ -317,7 +316,6 @@ internal fun cinchGeometry(
         rings = arrayOf(if (widths.gapFilled) ring(gapEdge, base) else null, ring(bandEdge, gapEdge), ring(outer, bandEdge)),
         masks = null,
         maskReach = 0f,
-        hold = hold,
         holdMeasure = PathMeasure().apply { setPath(hold, false) },
     )
 }
@@ -352,7 +350,6 @@ internal fun waveGeometry(
         rings = rings,
         masks = Array(rings.size) { index -> rings[index]?.let { mask(it, width, height, reach, maskScale) } },
         maskReach = reach,
-        hold = hold,
         holdMeasure = PathMeasure().apply { setPath(hold, false) },
     )
 }
