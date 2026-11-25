@@ -1,6 +1,7 @@
 package dev.niltsiar.tvhome.core.designsystem
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
@@ -22,6 +23,9 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.config.Look
+import dev.niltsiar.tvhome.core.designsystem.expressive.ExpressiveShapes
+import dev.niltsiar.tvhome.core.designsystem.expressive.expressiveElementColors
+import dev.niltsiar.tvhome.core.designsystem.expressive.houseScheme
 
 @Immutable
 public class TvColors(
@@ -118,6 +122,21 @@ private val DarkElementColors =
 private val OnLightElementColors =
     glassElementColors(ink = OnLightColors.onSurface, tileInk = DarkColors.onSurface, menuTitleInk = OnLightColors.onSurface)
 
+private val DarkExpressiveElementColors =
+    expressiveElementColors(ink = DarkColors.onSurface, tileInk = DarkColors.onSurface, menuTitleInk = Color.White)
+
+private val OnLightExpressiveElementColors =
+    expressiveElementColors(ink = OnLightColors.onSurface, tileInk = DarkColors.onSurface, menuTitleInk = OnLightColors.onSurface)
+
+/** A token's value in each look; [TvTheme] gives the one of the window's look. */
+@Immutable
+private class ByLook<T>(
+    val glass: T,
+    val expressive: T,
+) {
+    fun of(look: Look): T = if (look == Look.Expressive) expressive else glass
+}
+
 private val LightSurfaces =
     TvSurfaces(
         dark = false,
@@ -130,11 +149,13 @@ private val LightSurfaces =
         warnInk = Color(0xFFC62828),
     )
 
+private const val FULL_ROUNDNESS = 100f
+
 /**
  * One face from the bundled Google Sans Flex variable font. Width, optical size and roundness are fixed per
  * style, so each style gets its own family.
  */
-private fun googleSansFlex(
+private fun googleSansFlexFace(
     weight: FontWeight,
     size: TextUnit,
     width: Float,
@@ -155,10 +176,21 @@ private fun googleSansFlex(
         ),
     )
 
+/**
+ * The type roles in [colors] and [elements]. With [round] every role takes full roundness, the Expressive faces; the axes
+ * that set a glyph's advance (weight and width) stay, so a text is as wide in both looks.
+ */
 private fun typographyFor(
     colors: TvColors,
     elements: TvElementColors,
+    round: Boolean = false,
 ): TvTypography {
+    fun googleSansFlex(
+        weight: FontWeight,
+        size: TextUnit,
+        width: Float,
+        roundness: Float,
+    ): FontFamily = googleSansFlexFace(weight, size, width, if (round) FULL_ROUNDNESS else roundness)
     val clockSize = 32.sp
     val clockCompactSize = 28.sp
     val dateSize = 18.sp
@@ -340,13 +372,13 @@ private val LocalTvColors = staticCompositionLocalOf { DarkColors }
 private val LocalTvTypography = staticCompositionLocalOf { DarkTypography }
 
 @Suppress("CompositionLocalAllowlist")
-private val LocalMotion = staticCompositionLocalOf { Motion() }
+private val LocalMotion = staticCompositionLocalOf { ByLook(Motion(), Motion(look = Look.Expressive)) }
 
 @Suppress("CompositionLocalAllowlist")
-private val LocalTvElementColors = staticCompositionLocalOf { DarkElementColors }
+private val LocalTvElementColors = staticCompositionLocalOf { DarkElements }
 
 @Suppress("CompositionLocalAllowlist")
-private val LocalTvShapes = staticCompositionLocalOf { GlassShapes }
+private val LocalTvShapes = staticCompositionLocalOf { Shapes }
 
 @Suppress("CompositionLocalAllowlist")
 private val LocalTvSurfaces = staticCompositionLocalOf { DarkSurfaces }
@@ -357,8 +389,18 @@ private val LocalFocusStyle = staticCompositionLocalOf { FocusStyle.Glass }
 @Suppress("CompositionLocalAllowlist")
 private val LocalLookState = staticCompositionLocalOf { LookState(Look.Glass) { DefaultSeed } }
 
-private val DarkTypography by lazy { typographyFor(DarkColors, DarkElementColors) }
-private val OnLightTypography by lazy { typographyFor(OnLightColors, OnLightElementColors) }
+private val DarkTypography by lazy {
+    ByLook(typographyFor(DarkColors, DarkElementColors), typographyFor(DarkColors, DarkExpressiveElementColors, round = true))
+}
+private val OnLightTypography by lazy {
+    ByLook(
+        typographyFor(OnLightColors, OnLightElementColors),
+        typographyFor(OnLightColors, OnLightExpressiveElementColors, round = true),
+    )
+}
+private val DarkElements = ByLook(DarkElementColors, DarkExpressiveElementColors)
+private val OnLightElements = ByLook(OnLightElementColors, OnLightExpressiveElementColors)
+private val Shapes = ByLook(GlassShapes, ExpressiveShapes)
 
 /** The seed of a [TvTheme] whose caller gives none. */
 private val DefaultSeed = DarkColors.accent
@@ -376,6 +418,21 @@ public class LookState internal constructor(
         internal set
     internal var seedSource: () -> Color by mutableStateOf(seed)
     public val seed: Color get() = seedSource()
+
+    private val schemes = arrayOfNulls<ColorScheme>(2)
+    private val schemeSeeds = arrayOfNulls<Color>(2)
+
+    /** The house scheme of the [seed], [dark] or light; built once per seed and kept, so reading it in draw allocates nothing. */
+    internal fun scheme(dark: Boolean): ColorScheme {
+        val from = seed
+        val slot = if (dark) 0 else 1
+        val kept = schemes[slot]
+        if (kept != null && schemeSeeds[slot] == from) return kept
+        return houseScheme(from, dark).also {
+            schemes[slot] = it
+            schemeSeeds[slot] = from
+        }
+    }
 }
 
 public object TvTheme {
@@ -387,12 +444,12 @@ public object TvTheme {
     public val typography: TvTypography
         @Composable
         @ReadOnlyComposable
-        get() = LocalTvTypography.current
+        get() = LocalTvTypography.current.of(LocalLookState.current.look)
 
     public val motion: Motion
         @Composable
         @ReadOnlyComposable
-        get() = LocalMotion.current
+        get() = LocalMotion.current.of(LocalLookState.current.look)
 
     public val surfaces: TvSurfaces
         @Composable
@@ -402,12 +459,12 @@ public object TvTheme {
     public val elementColors: TvElementColors
         @Composable
         @ReadOnlyComposable
-        get() = LocalTvElementColors.current
+        get() = LocalTvElementColors.current.of(LocalLookState.current.look)
 
     public val shapes: TvShapes
         @Composable
         @ReadOnlyComposable
-        get() = LocalTvShapes.current
+        get() = LocalTvShapes.current.of(LocalLookState.current.look)
 
     public val focusStyle: FocusStyle
         @Composable
@@ -424,7 +481,9 @@ public object TvTheme {
  * The TV theme. Text over the wallpaper is always light; the [TvTheme.surfaces] are light or dark with [darkTheme].
  * [look] is the design and [seed] gives the house colour of [Look.Expressive]; both reach [TvTheme.lookState]. [seed] is
  * read where the colour is drawn, so a seed held in a state changes the drawing without recomposing the caller. [motion]
- * says how anything moves, [focusStyle] how a focused tile is lit.
+ * says how anything moves, [focusStyle] how a focused tile is lit. The [TvTheme.typography], [TvTheme.motion],
+ * [TvTheme.elementColors] and [TvTheme.shapes] it gives are the look's, chosen as they are read: a change of [look] recomposes what reads them,
+ * and leaves the composition's structure and its focus as they are.
  */
 @Composable
 public fun TvTheme(
@@ -438,12 +497,13 @@ public fun TvTheme(
     val lookState = remember { LookState(look, seed) }
     lookState.look = look
     lookState.seedSource = seed
+    val motions = remember(motion) { ByLook(motion.copy(look = Look.Glass), motion.copy(look = Look.Expressive)) }
     CompositionLocalProvider(
         LocalTvColors provides DarkColors,
         LocalTvTypography provides DarkTypography,
-        LocalTvElementColors provides DarkElementColors,
-        LocalTvShapes provides GlassShapes,
-        LocalMotion provides motion,
+        LocalTvElementColors provides DarkElements,
+        LocalTvShapes provides Shapes,
+        LocalMotion provides motions,
         LocalFocusStyle provides focusStyle,
         LocalTvSurfaces provides if (darkTheme) DarkSurfaces else LightSurfaces,
         LocalLookState provides lookState,
@@ -461,7 +521,7 @@ internal fun SurfaceContent(content: @Composable () -> Unit) {
     CompositionLocalProvider(
         LocalTvColors provides if (dark) DarkColors else OnLightColors,
         LocalTvTypography provides if (dark) DarkTypography else OnLightTypography,
-        LocalTvElementColors provides if (dark) DarkElementColors else OnLightElementColors,
+        LocalTvElementColors provides if (dark) DarkElements else OnLightElements,
         content = content,
     )
 }

@@ -92,6 +92,31 @@ class LookStateTestContent :
                 counts.compositions shouldBe 1
             }
 
+            test("a look change gives a reader the look's tokens and keeps what it remembers") {
+                val counts = Counts()
+                val read = mutableListOf<Pair<TvShapes, Motion>>()
+                var look by mutableStateOf(Look.Glass)
+                compose.setContent {
+                    TvTheme(look = look) {
+                        val token = remember { Any() }
+                        val shapes = TvTheme.shapes
+                        val motion = TvTheme.motion
+                        SideEffect {
+                            counts.remembered += token
+                            read += shapes to motion
+                        }
+                    }
+                }
+                compose.waitForIdle()
+
+                look = Look.Expressive
+                compose.waitForIdle()
+
+                read.map { it.second.look } shouldBe listOf(Look.Glass, Look.Expressive)
+                read.map { it.first.tile }.distinct().size shouldBe 2
+                counts.remembered.distinct().size shouldBe 1
+            }
+
             test("a surface that turns light or dark keeps what its content remembers") {
                 val counts = Counts()
                 var dark by mutableStateOf(true)

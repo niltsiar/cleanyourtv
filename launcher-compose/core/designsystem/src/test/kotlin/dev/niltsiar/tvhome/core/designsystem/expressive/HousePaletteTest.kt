@@ -1,0 +1,187 @@
+package dev.niltsiar.tvhome.core.designsystem.expressive
+
+import androidx.compose.material3.ColorScheme
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.toArgb
+import de.infix.testBalloon.framework.core.testSuite
+import io.kotest.assertions.withClue
+import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
+import kotlin.math.abs
+import kotlin.math.cbrt
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.pow
+
+val HousePaletteTest by testSuite {
+    test("every text role reads at 4.5:1 and the focus band at 3:1 against its neighbours, for every seed, dark and light") {
+        val failures =
+            seeds().flatMap { (name, seed) ->
+                listOf(true, false).flatMap { dark ->
+                    val scheme = houseScheme(seed, dark)
+                    textPairs(scheme).mapNotNull { (pair, fg, bg) ->
+                        contrast(fg, bg).takeIf { it < 4.5 }?.let { "$name ${if (dark) "dark" else "light"} $pair: $it" }
+                    } +
+                        bandPairs(scheme).mapNotNull { (pair, fg, bg) ->
+                            contrast(fg, bg).takeIf { it < 3.0 }?.let { "$name ${if (dark) "dark" else "light"} $pair: $it" }
+                        }
+                }
+            }
+        failures.shouldBeEmpty()
+    }
+
+    test("each role sits at its tone in CIE L*") {
+        val dark = houseScheme(Ember, dark = true)
+        val light = houseScheme(Ember, dark = false)
+
+        lightness(dark.primary) shouldBe (80.0 plusOrMinus 0.6)
+        lightness(dark.primaryContainer) shouldBe (30.0 plusOrMinus 0.6)
+        lightness(dark.surface) shouldBe (6.0 plusOrMinus 0.6)
+        lightness(dark.surfaceContainerHigh) shouldBe (17.0 plusOrMinus 0.6)
+        lightness(dark.onSurface) shouldBe (90.0 plusOrMinus 0.6)
+        lightness(light.primary) shouldBe (40.0 plusOrMinus 0.6)
+        lightness(light.surfaceContainer) shouldBe (94.0 plusOrMinus 0.6)
+    }
+
+    test("the primary keeps the seed's hue, and two seeds give two schemes") {
+        val red = houseScheme(Color(0xFFD03030), dark = true).primary
+        val blue = houseScheme(Color(0xFF3050D0), dark = true).primary
+
+        withClue("red primary $red") { (red.red > red.blue) shouldBe true }
+        withClue("blue primary $blue") { (blue.blue > blue.red) shouldBe true }
+        red shouldNotBe blue
+    }
+
+    test("a grey seed still gives a coloured primary and grey containers") {
+        val scheme = houseScheme(Color(0xFF808080), dark = true)
+
+        withClue("primary ${scheme.primary}") { spread(scheme.primary) shouldNotBe 0f }
+        withClue("container ${scheme.surfaceContainer}") { (spread(scheme.surfaceContainer) < 0.05f) shouldBe true }
+    }
+}
+
+private val Ember = Color(0xFFFF6A3D)
+
+/** The seeds: hue by chroma by tone, in HSL, then the named ones the house seed chain gives. */
+private fun seeds(): List<Pair<String, Color>> {
+    val swept =
+        (0 until 360 step 15).flatMap { hue ->
+            listOf(0f, 0.2f, 0.55f, 1f).flatMap { saturation ->
+                listOf(0.08f, 0.3f, 0.5f, 0.7f, 0.92f).map { tone ->
+                    "hsl($hue, $saturation, $tone)" to hsl(hue.toFloat(), saturation, tone)
+                }
+            }
+        }
+    val glowWarmth = Color(0xFFFFD9A0)
+    val named =
+        listOf(
+            // The day-part seeds of :data:wallpaper's HouseSeed.kt.
+            "night teal" to Color(0xFF1F8A8A),
+            "morning amber" to Color(0xFFE8A33D),
+            "forenoon sky blue" to Color(0xFF4A9FE0),
+            "afternoon periwinkle" to Color(0xFF8B93E8),
+            "evening magenta" to Color(0xFFC03A8C),
+            // SkyPalette.glow: a horizon colour of Sky.kt lerped 0.65 toward its glow warmth.
+            "night sky glow" to lerp(Color(0xFF0B1326), glowWarmth, 0.65f),
+            "sunset sky glow" to lerp(Color(0xFFE2704A), glowWarmth, 0.65f),
+            "dawn sky glow" to lerp(Color(0xFF8A4A6B), glowWarmth, 0.65f),
+            "near-black accent" to Color(0xFF050505),
+            "near-white accent" to Color(0xFFFAFAFA),
+            "pure blue accent" to Color(0xFF0000FF),
+            "pure yellow accent" to Color(0xFFFFFF00),
+            "default seed" to Color(0xFF7CB7FF),
+            "ember" to Ember,
+            "transparent seed" to Color(0x00FF0000),
+            "unspecified seed" to Color.Unspecified,
+        )
+    return swept + named
+}
+
+private fun textPairs(s: ColorScheme): List<Triple<String, Color, Color>> =
+    listOf(
+        Triple("onPrimary on primary", s.onPrimary, s.primary),
+        Triple("onPrimaryContainer on primaryContainer", s.onPrimaryContainer, s.primaryContainer),
+        Triple("onSecondary on secondary", s.onSecondary, s.secondary),
+        Triple("onSecondaryContainer on secondaryContainer", s.onSecondaryContainer, s.secondaryContainer),
+        Triple("onTertiary on tertiary", s.onTertiary, s.tertiary),
+        Triple("onTertiaryContainer on tertiaryContainer", s.onTertiaryContainer, s.tertiaryContainer),
+        Triple("onError on error", s.onError, s.error),
+        Triple("onErrorContainer on errorContainer", s.onErrorContainer, s.errorContainer),
+        Triple("inverseOnSurface on inverseSurface", s.inverseOnSurface, s.inverseSurface),
+    ) +
+        listOf(
+            "surface" to s.surface,
+            "surfaceContainerLowest" to s.surfaceContainerLowest,
+            "surfaceContainerLow" to s.surfaceContainerLow,
+            "surfaceContainer" to s.surfaceContainer,
+            "surfaceContainerHigh" to s.surfaceContainerHigh,
+            "surfaceContainerHighest" to s.surfaceContainerHighest,
+        ).flatMap { (name, ground) ->
+            listOf(
+                Triple("onSurface on $name", s.onSurface, ground),
+                Triple("onSurfaceVariant on $name", s.onSurfaceVariant, ground),
+                Triple("primary on $name", s.primary, ground),
+                Triple("error on $name", s.error, ground),
+            )
+        }
+
+/** The focus band and what lies beside it: the gap in the surface colour, the dark keyline, a tile at rest. */
+private fun bandPairs(s: ColorScheme): List<Triple<String, Color, Color>> =
+    listOf(
+        Triple("primary band beside the surface gap", s.primary, s.surface),
+        Triple("primary band beside the lowest container", s.primary, s.surfaceContainerLowest),
+        Triple("primary band beside the scrim keyline", s.primary, s.scrim),
+        Triple("tertiary band beside the surface gap", s.tertiary, s.surface),
+    )
+
+/** WCAG 2 contrast ratio, from the 8-bit sRGB channels. */
+private fun contrast(
+    a: Color,
+    b: Color,
+): Double {
+    val la = wcagLuminance(a)
+    val lb = wcagLuminance(b)
+    return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+}
+
+private fun wcagLuminance(colour: Color): Double {
+    val argb = colour.toArgb()
+
+    fun channel(shift: Int): Double {
+        val c = ((argb shr shift) and 0xFF) / 255.0
+        return if (c <= 0.04045) c / 12.92 else ((c + 0.055) / 1.055).pow(2.4)
+    }
+    return 0.2126 * channel(16) + 0.7152 * channel(8) + 0.0722 * channel(0)
+}
+
+/** CIE L* of [colour]. */
+private fun lightness(colour: Color): Double {
+    val y = wcagLuminance(colour)
+    return if (y > 216.0 / 24389.0) 116.0 * cbrt(y) - 16.0 else y * 24389.0 / 27.0
+}
+
+private fun spread(colour: Color): Float = max(colour.red, max(colour.green, colour.blue)) - min(colour.red, min(colour.green, colour.blue))
+
+private fun hsl(
+    hue: Float,
+    saturation: Float,
+    lightness: Float,
+): Color {
+    val chroma = (1f - abs(2f * lightness - 1f)) * saturation
+    val sector = hue / 60f
+    val x = chroma * (1f - abs(sector.mod(2f) - 1f))
+    val m = lightness - chroma / 2f
+    val (r, g, b) =
+        when (sector.toInt()) {
+            0 -> Triple(chroma, x, 0f)
+            1 -> Triple(x, chroma, 0f)
+            2 -> Triple(0f, chroma, x)
+            3 -> Triple(0f, x, chroma)
+            4 -> Triple(x, 0f, chroma)
+            else -> Triple(chroma, 0f, x)
+        }
+    return Color(r + m, g + m, b + m)
+}

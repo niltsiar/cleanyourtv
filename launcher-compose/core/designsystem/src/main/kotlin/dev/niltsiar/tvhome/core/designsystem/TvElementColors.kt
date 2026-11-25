@@ -7,7 +7,8 @@ import androidx.compose.ui.graphics.Color
  * The colours each element of the design system draws with, and the alphas it lays over a colour its caller gives, named
  * for the element. [TvTheme.elementColors] gives the set for the ground the element sits on: the dark set over the
  * wallpaper and on a dark surface, the on-light set for text on a light one; an element whose colour does not depend on
- * the ground has the same value in both.
+ * the ground has the same value in both. Each look has its sets; in [dev.niltsiar.tvhome.core.config.Look.Expressive] a
+ * colour that comes from the house scheme is [Color.Unspecified], and the element takes it from [LookState] as it draws.
  */
 @Immutable
 public class TvElementColors internal constructor(

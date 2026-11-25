@@ -12,6 +12,7 @@ import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.ui.unit.IntOffset
 import de.infix.testBalloon.framework.core.testSuite
+import dev.niltsiar.tvhome.core.config.Look
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.matchers.booleans.shouldBeFalse
@@ -204,5 +205,56 @@ val MotionTest by testSuite {
                 }
             }
         }
+    }
+
+    val expressiveMotions =
+        listOf(
+            "Expressive" to Motion(look = Look.Expressive),
+            "Expressive with reduced motion" to Motion(reducedMotion = true, look = Look.Expressive),
+            "Expressive with animations off" to Motion(animations = false, look = Look.Expressive),
+        )
+    val expressiveFactories =
+        listOf(
+            Factory("focus in", { it.focusSpec(focused = true, from = 0f) }, listOf(spring(1f, 800f), tween(90), snap)),
+            Factory("focus out", { it.focusSpec(focused = false, from = 1f) }, listOf(tween(160), tween(90), snap)),
+            Factory("pill fill", { it.pillFillSpec() }, listOf(spring(1f, 3800f), tween(90), snap)),
+            Factory("press dip", { it.pressDipSpec() }, listOf(spring(0.9f, 1400f), tween(80), tween(80))),
+            Factory("menu enter", { it.menuEnterSpec() }, listOf(spring(0.8f, 380f), tween(90), snap)),
+            Factory("button grow", { it.buttonGrowSpec() }, listOf(spring(0.8f, 380f), tween(90), snap)),
+            Factory("offer grow", { it.offerGrowSpec() }, listOf(spring(0.8f, 380f), snap, snap)),
+            Factory("button icon", { it.buttonIconSpec() }, listOf(tween(750), tween(90), snap)),
+            Factory("button active", { it.buttonActiveSpec() }, listOf(spring(1f, 3800f), tween(90), snap)),
+            Factory("offer pulse", { it.offerPulseSpec() }, List(3) { linear(600) }),
+            Factory("scrim in", { it.scrimSpec(shown = true) }, listOf(spring(1f, 1600f), tween(90), snap)),
+            Factory("scrim out", { it.scrimSpec(shown = false) }, listOf(spring(1f, 3800f), tween(90), snap)),
+            Factory("dock light follow", { Motion.dockLightFollowSpec(Look.Expressive) }, List(3) { spring(0.8f, 380f) }),
+        )
+
+    for (factory in expressiveFactories) {
+        test("in Expressive the ${factory.name} spec is the motion scheme's, and Glass's stand-in with reduced motion or animations off") {
+            assertSoftly {
+                expressiveMotions.zip(factory.today).forEach { (motion, expected) ->
+                    withClue(motion.first) { factory.spec(motion.second).values() shouldBe expected }
+                }
+            }
+        }
+    }
+
+    test("in Expressive a pop is the fast spatial spring, which peaks under the Glass pop, so the room for it holds") {
+        val motion = Motion(focusOvershoot = true, look = Look.Expressive)
+        val values = samples(motion.focusSpec(focused = true, from = 0f), 0f, 1f, lastMs = 1_000)
+
+        motion.focusSpec(focused = true, from = 0f).values() shouldBe spring(0.6f, 800f)
+        withClue("peak ${values.max()}") { values.max() shouldBeGreaterThan 1f }
+        val peakScale = 1f + 0.08f * values.max()
+        peakScale shouldBeLessThanOrEqual motion.focusPeakScale(1.08f)
+        motion.focusPeakScale(1.08f) shouldBe Motion(focusOvershoot = true).focusPeakScale(1.08f)
+    }
+
+    test("in Expressive a lazy list moves its items on the default spatial spring") {
+        val spec = Motion(look = Look.Expressive).placementSpec.shouldBeInstanceOf<SpringSpec<IntOffset>>()
+
+        spec.dampingRatio to spec.stiffness shouldBe (0.8f to 380f)
+        spec.visibilityThreshold shouldBe IntOffset.VisibilityThreshold
     }
 }
