@@ -61,6 +61,10 @@ import kotlin.math.hypot
 
 private const val WHITE = 0xFFFFFFFF.toInt()
 
+/** Glass's move arrow: a black disc at 0.60 under a white chevron at 0.95. */
+private val GlassArrowDisc = Color.Black.copy(alpha = 0.60f)
+private val GlassChevron = Color.White.copy(alpha = 0.95f)
+
 /** How Home draws over its wallpaper, read from the rendered pixels: the scrim, the grid's edges and the dimmed tiles. */
 val HomeLookUiTest by testSuite {
     robolectricTestSuite<HomeLookUiTestContent>(
@@ -874,8 +878,8 @@ private class HomeLookUiTestFixture : JUnit4RulesContext() {
         val image = ImageBitmap(100, 100)
         Canvas(image).drawRect(Rect(0f, 0f, 100f, 100f), Paint().apply { color = ground })
         CanvasDrawScope().draw(Density(2f), LayoutDirection.Ltr, Canvas(image), Size(100f, 100f)) {
-            drawArrowDisc(Offset(50f, 50f), alpha = 1f)
-            drawChevron(Offset(50f, 50f), pointsLeft = pointsLeft, alpha = 1f)
+            drawArrowDisc(Offset(50f, 50f), GlassArrowDisc, alpha = 1f)
+            drawChevron(Offset(50f, 50f), GlassChevron, pointsLeft = pointsLeft, alpha = 1f)
         }
         return image.toPixelMap()
     }

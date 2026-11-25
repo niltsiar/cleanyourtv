@@ -49,6 +49,20 @@ private val CinchDip = 6.dp
 private val CinchCorner = 24.dp
 private val CinchWaist = 48.dp
 
+/** The cinch's cushion round a [width] by [height] tile, [offset] pixels out: at 0 the tile as it shows, at the band's reach its outer edge. */
+internal fun Density.cinchOutline(
+    width: Float,
+    height: Float,
+    offset: Float,
+): Path = cushionPath(width, height, offset, CinchDip.toPx(), CinchCorner.toPx(), CinchWaist.toPx())
+
+/** The outer edge of the wave's keyline round a [width] by [height] tile with corners of [radius]. */
+internal fun Density.waveOutline(
+    width: Float,
+    height: Float,
+    radius: Float,
+): Path = wavePath(width, height, radius, WavePeak.toPx() + WaveKeyline.toPx(), WaveWaist.toPx() + WaveKeyline.toPx(), WAVE_LOBES)
+
 /** The widest a band ring reaches round the tile, for the masks; whole pixels so they land on the pixel grid. */
 private fun Density.maskReach(): Float = ceil(FocusRingReach.toPx())
 

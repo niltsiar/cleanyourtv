@@ -24,6 +24,7 @@ private val GlassIdle = Color(0xFF8E8E93)
 private val GlassSubtitlePill = Color.Black.copy(alpha = 0.45f)
 private val GlassSubtitlePillEdge = Color.White.copy(alpha = 0.12f)
 private val GlassPositionRest = Color(0x80FFFFFF)
+private val GlassCarriedRing = Color(0xFFFF6B4A)
 private val GlassConnectedFillOnDark = Color(0x2934C759)
 private val GlassConnectedRimOnDark = Color(0x6634C759)
 private val GlassConnectedTextOnDark = Color(0xFF6EE787)
@@ -130,6 +131,10 @@ public class LookColors internal constructor(
     /** A cue that more lies beyond: its chevron, and the pill or disc under it. */
     public val cueChevron: ColorProducer = ColorProducer { if (expressive) scheme.onSecondaryContainer else GlassCueChevron }
     public val cuePill: ColorProducer = ColorProducer { if (expressive) scheme.secondaryContainer else GlassCuePill }
+
+    /** The ring of a tile carried in reorder mode, and the plate it lifts off; Glass lifts on a shadow instead. */
+    public val carriedRing: ColorProducer = ColorProducer { if (expressive) scheme.tertiary else GlassCarriedRing }
+    public val liftPlate: ColorProducer = ColorProducer { if (expressive) scheme.tertiaryContainer else Color.Transparent }
 
     /** A medallion behind a glyph, and the glyph on it; Glass has no medallion. */
     public val medallion: ColorProducer = ColorProducer { if (expressive) scheme.secondaryContainer else Color.Transparent }

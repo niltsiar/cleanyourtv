@@ -19,22 +19,27 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.FocusRingReach
 import dev.niltsiar.tvhome.core.designsystem.TILE_FOCUSED_SCALE
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.designsystem.rememberFocusedShape
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
@@ -57,24 +62,23 @@ private val LiftShadowColor = Color.Black.copy(alpha = 0.55f)
 private val LiftHeight = TileGap - FocusRingReach - TrayRimClear
 
 /**
- * A move arrow: a round [ArrowDisc] of black at 0.60 centred on the outer edge of a carried tile's ring, so that half its
- * width lies under the ring and tile and the other half, [ArrowDisc] / 2 past the ring, leaves the rest of the [TileGap]
- * (4 dp) to the next tile. On it stands a white chevron at 0.95, [ChevronHeight] tall and [ChevronDepth] deep, drawn with a
- * round-capped [ChevronStroke] stroke; the disc keeps it readable, so the chevron has no outline of its own. The chevron is
- * centred on the middle of the disc's outer half, so its stroke, caps included, keeps off the ring and inside the disc.
+ * A move arrow: a round [ArrowDisc] in the cue's pill colour centred on the outer edge of a carried tile's ring, so that half
+ * its width lies under the ring and tile and the other half, [ArrowDisc] / 2 past the ring, leaves the rest of the [TileGap]
+ * (4 dp) to the next tile. On it stands a chevron in the cue's chevron colour, [ChevronHeight] tall and [ChevronDepth] deep,
+ * drawn with a round-capped [ChevronStroke] stroke; the disc keeps it readable, so the chevron has no outline of its own. The
+ * chevron is centred on the middle of the disc's outer half, so its stroke, caps included, keeps off the ring and inside the disc.
  */
 private val ArrowDisc = 22.dp
-internal val ArrowDiscColor = Color.Black.copy(alpha = 0.60f)
 private val ChevronHeight = 12.dp
 private val ChevronDepth = 6.dp
 private val ChevronStroke = 2.5.dp
-internal val ChevronColor = Color.White.copy(alpha = 0.95f)
 
 /**
  * A tile's look in reorder and edit-dock modes: dimmed unless it is the carried one, which lifts, is drawn at its rest size
  * (a focused tile is grown), casts a shadow in its [shape], wiggles a little and shows a move arrow on its ring beside each
- * edge it can still move towards; it settles back with a spring when it is put down. No other tile moves. The
- * animated values are read in the layer and draw lambdas only.
+ * edge it can still move towards; it settles back with a spring when it is put down. No other tile moves. In Expressive the
+ * carried tile is a sticker: it lifts off a plate in its focused shape, left where the tile was, with no shadow and no wiggle,
+ * and its arrows stand on the outer edge of that shape's band. The animated values are read in the layer and draw lambdas only.
  */
 @Composable
 internal fun Modifier.reorderLook(
@@ -84,6 +88,9 @@ internal fun Modifier.reorderLook(
     growthPivot: ((Float) -> Float)? = null,
 ): Modifier {
     val motion = TvTheme.motion
+    val colours = TvTheme.lookColors
+    val look = TvTheme.lookState
+    val focused = rememberFocusedShape()
     // A tile built mid-session (it crossed from the grid into the dock) starts where it ends up.
     val dim = remember { Animatable(Snapshot.withoutReadObservation { if (key in input.dimmed.value) DIMMED_ALPHA else 1f }) }
     val lift = remember { Animatable(Snapshot.withoutReadObservation { if (input.carried.value == key) 1f else 0f }) }
@@ -104,7 +111,7 @@ internal fun Modifier.reorderLook(
                         launch { lift.animateTo(1f, liftSpec) }
                         launch { snapshotFlow { input.canMoveLeft.value }.collect { left.animateTo(if (it) 1f else 0f, sideSpec) } }
                         launch { snapshotFlow { input.canMoveRight.value }.collect { right.animateTo(if (it) 1f else 0f, sideSpec) } }
-                        if (motion.animated) {
+                        if (motion.animated && look.look != Look.Expressive) {
                             launch {
                                 wiggle.snapTo(-1f)
                                 wiggle.animateTo(1f, infiniteRepeatable(tween(WIGGLE_MS), RepeatMode.Reverse))
@@ -129,8 +136,9 @@ internal fun Modifier.reorderLook(
         // A growth anchored under the tile's centre, cancelled about the centre, would leave the tile this much higher than at rest.
         val regrown = growthPivot?.let { (it(size.height) - size.height / 2f) * (1f - 1f / grown) } ?: 0f
         translationY = (regrown - LiftHeight.toPx()) * raised
-        rotationZ = WIGGLE_DEGREES * wiggle.value * raised
-        shadowElevation = LiftShadow.toPx() * raised.coerceIn(0f, 1f)
+        val sticker = look.look == Look.Expressive
+        rotationZ = if (sticker) 0f else WIGGLE_DEGREES * wiggle.value * raised
+        shadowElevation = if (sticker) 0f else LiftShadow.toPx() * raised.coerceIn(0f, 1f)
         this.shape = shape
         ambientShadowColor = LiftShadowColor
         spotShadowColor = LiftShadowColor
@@ -139,50 +147,79 @@ internal fun Modifier.reorderLook(
             val lifted = lift.value.coerceIn(0f, 1f)
             val onLeft = lifted * left.value.coerceIn(0f, 1f)
             val onRight = lifted * right.value.coerceIn(0f, 1f)
+            val plate = colours.liftPlate()
+            if (lifted > 0f &&
+                plate.alpha > 0f
+            ) {
+                drawLiftPlate(focused.bandOutline(shape, size, layoutDirection, this), plate, lifted, grown, growthPivot)
+            }
             if (onLeft == 0f && onRight == 0f) {
                 drawContent()
                 return@onDrawWithContent
             }
             // The layer is scaled by the lift: draw in the tile's own measures by undoing that.
             val raised = 1f + (1f / grown - 1f) * lift.value
-            val centre = ringReach(size.width, grown * raised)
+            val centre = ringReach(size.width, grown * raised, focused.sideReach(shape, size, this))
             val middle = size.height / 2f
             val pivot = Offset(size.width / 2f, middle)
             val leftAt = Offset(-centre, middle)
             val rightAt = Offset(size.width + centre, middle)
+            val disc = colours.cuePill()
+            val chevron = colours.cueChevron()
             // The discs go under the tile, so that its ring is drawn over them; the chevrons stay on top.
             scale(1f / raised, pivot) {
-                if (onLeft > 0f) drawArrowDisc(leftAt, alpha = onLeft)
-                if (onRight > 0f) drawArrowDisc(rightAt, alpha = onRight)
+                if (onLeft > 0f) drawArrowDisc(leftAt, disc, alpha = onLeft)
+                if (onRight > 0f) drawArrowDisc(rightAt, disc, alpha = onRight)
             }
             drawContent()
             scale(1f / raised, pivot) {
-                if (onLeft > 0f) drawChevron(leftAt, pointsLeft = true, alpha = onLeft)
-                if (onRight > 0f) drawChevron(rightAt, pointsLeft = false, alpha = onRight)
+                if (onLeft > 0f) drawChevron(leftAt, chevron, pointsLeft = true, alpha = onLeft)
+                if (onRight > 0f) drawChevron(rightAt, chevron, pointsLeft = false, alpha = onRight)
             }
         }
     }
 }
 
 /**
- * How far outside the edge of a tile [width] wide, drawn [scale] times its size, its ring's outer edge stands: [FocusRingReach]
- * x [scale] past the art. A carried tile's arrow is centred there.
+ * How far outside the edge of a tile [width] wide, drawn [scale] times its size, its ring's outer edge stands: [reach] (the
+ * ring's, [FocusRingReach], unless a focused shape says otherwise) x [scale] past the art. A carried tile's arrow is centred there.
  */
 internal fun Density.ringReach(
     width: Float,
     scale: Float,
-): Float = width * (scale - 1f) / 2f + FocusRingReach.toPx() * scale
+    reach: Float = FocusRingReach.toPx(),
+): Float = width * (scale - 1f) / 2f + reach * scale
+
+/**
+ * The plate a carried tile lifts off in Expressive: [outline], the outer edge of its focus band, in [colour] at [lifted],
+ * grown by [grown] about the tile's growth pivot as the focused tile is, and left [LiftHeight] lower: the place the focused
+ * tile filled before it lifted.
+ */
+private fun DrawScope.drawLiftPlate(
+    outline: Outline,
+    colour: Color,
+    lifted: Float,
+    grown: Float,
+    growthPivot: ((Float) -> Float)?,
+) {
+    val pivot = Offset(size.width / 2f, growthPivot?.invoke(size.height) ?: (size.height / 2f))
+    val raised = 1f + (1f / grown - 1f) * lifted
+    translate(top = LiftHeight.toPx() * lifted / raised) {
+        scale(grown, pivot) { drawOutline(outline, colour, alpha = lifted) }
+    }
+}
 
 private fun HomeInput.badgeAtStart(
     key: String,
     side: State<Boolean>,
 ): Float = Snapshot.withoutReadObservation { if (carried.value == key && side.value) 1f else 0f }
 
-/** A move arrow's disc centred on [center], at [alpha]. */
+/** A move arrow's disc centred on [center], in [colour] at [alpha]. */
 internal fun DrawScope.drawArrowDisc(
     center: Offset,
+    colour: Color,
     alpha: Float,
-) = drawCircle(ArrowDiscColor, radius = ArrowDisc.toPx() / 2f, center = center, alpha = alpha)
+) = drawCircle(colour, radius = ArrowDisc.toPx() / 2f, center = center, alpha = alpha)
 
 /**
  * A move arrow's chevron on the [drawArrowDisc] centred on [discCentre], pointing left or right, at [alpha]: it stands in the
@@ -190,6 +227,7 @@ internal fun DrawScope.drawArrowDisc(
  */
 internal fun DrawScope.drawChevron(
     discCentre: Offset,
+    colour: Color,
     pointsLeft: Boolean,
     alpha: Float,
 ) {
@@ -203,7 +241,7 @@ internal fun DrawScope.drawChevron(
             lineTo(x + tip, discCentre.y)
             lineTo(x - tip, discCentre.y + half)
         }
-    drawPath(path, ChevronColor, alpha = alpha, style = Stroke(ChevronStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+    drawPath(path, colour, alpha = alpha, style = Stroke(ChevronStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
 }
 
 /**

@@ -85,6 +85,26 @@ internal class BandGeometry(
     val holdMeasure: PathMeasure,
 )
 
+/** The outline of the cinch's cushion round a [width] by [height] tile, [offset] pixels out; see [cushion]. */
+internal fun cushionPath(
+    width: Float,
+    height: Float,
+    offset: Float,
+    dip: Float,
+    corner: Float,
+    waist: Float,
+): Path = cushion(width, height, offset, dip, corner, waist).path()
+
+/** The wave's outline round a [width] by [height] tile; see [wave]. */
+internal fun wavePath(
+    width: Float,
+    height: Float,
+    radius: Float,
+    peak: Float,
+    waist: Float,
+    lobes: Int,
+): Path = wave(width, height, radius, peak, waist, lobes).path()
+
 /** The vertices of a closed outline, x and y in turn, and the rounding of each. */
 private class Vertices(
     val points: FloatArray,

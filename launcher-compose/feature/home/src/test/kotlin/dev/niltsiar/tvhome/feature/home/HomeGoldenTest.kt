@@ -139,6 +139,27 @@ class HomeGoldenTestContent :
                     golden("${prefix}reorder")
                 }
 
+                if (look == Look.Expressive) {
+                    for (tile in listOf(ExpressiveTile.Wave, ExpressiveTile.Cinch)) {
+                        val variant = tile.name.lowercase()
+                        test("a tile menu open, in Expressive with the $variant tile") {
+                            showHome(x.copy(expressiveTile = tile))
+                            press(Key.Menu)
+                            compose.onNodeWithTag("menu").assertExists()
+                            golden("expressive-tile-menu-$variant")
+                        }
+
+                        test("reorder mode, in Expressive with the $variant tile") {
+                            showHome(x.copy(expressiveTile = tile))
+                            press(Key.Menu)
+                            press(Key.DirectionDown)
+                            press(Key.DirectionCenter)
+                            compose.onNodeWithTag("reorder:hint").assertExists()
+                            golden("expressive-reorder-$variant")
+                        }
+                    }
+                }
+
                 test("an input tile in the dock$named") {
                     showHome(
                         x.copy(inputTiles = true),

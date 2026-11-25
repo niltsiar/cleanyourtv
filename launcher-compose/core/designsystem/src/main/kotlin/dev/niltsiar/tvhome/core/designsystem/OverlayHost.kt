@@ -16,6 +16,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
@@ -118,6 +119,12 @@ private fun DrawScope.drawSpotlit(
             translate(-at.left, -at.top) { drawRect(scrim, alpha = alpha) }
         }
         val ring = SpotRingWidth.toPx()
-        drawOutline(outline.grownBy(ring / 2f), spot.ring, alpha = spot.ringAlpha * ringShown, style = Stroke(ring))
+        val ringAlpha = spot.ringAlpha * ringShown
+        if (outline is Outline.Generic) {
+            // A path cannot be grown, so the ring is the outer half of a stroke twice as wide on the outline itself.
+            clipPath(hole, ClipOp.Difference) { drawPath(hole, spot.ring, alpha = ringAlpha, style = Stroke(ring * 2f)) }
+        } else {
+            drawOutline(outline.grownBy(ring / 2f), spot.ring, alpha = ringAlpha, style = Stroke(ring))
+        }
     }
 }

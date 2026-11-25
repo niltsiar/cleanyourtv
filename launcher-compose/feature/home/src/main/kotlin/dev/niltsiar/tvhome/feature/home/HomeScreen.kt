@@ -153,6 +153,7 @@ import dev.niltsiar.tvhome.core.designsystem.clipsHalo
 import dev.niltsiar.tvhome.core.designsystem.holdOk
 import dev.niltsiar.tvhome.core.designsystem.popsOver
 import dev.niltsiar.tvhome.core.designsystem.pressDip
+import dev.niltsiar.tvhome.core.designsystem.rememberFocusedShape
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import dev.niltsiar.tvhome.core.designsystem.ringBlendsWith
 import dev.niltsiar.tvhome.core.model.AppEntry
@@ -381,7 +382,6 @@ private const val HERO_MENU_MS = 120
 
 /** The row the dock is in; rows count from 0 at the first grid row. */
 private const val DOCK_ROW = -1
-private val ReorderRing = Color(0xFFFF6B4A)
 
 /** The grid items before the first grid tile: the shelf spacer and the dock. */
 internal const val GRID_ITEMS_BEFORE = 2
@@ -477,6 +477,9 @@ public fun HomeScreen(
                 inputTiles = derivedStateOf { currentState.value().inputTiles },
             ).also { it.anchor.value = menuAnchor }
         }
+    val lookColours = TvTheme.lookColors
+    val focusedShape = rememberFocusedShape()
+    val focusedTileShape = remember(focusedShape) { focusedShape.of(TileShape) }
     val menu by remember { derivedStateOf { currentState.value().menu } }
     val inputsOpen by remember { derivedStateOf { currentState.value().inputsOpen } }
     val sleepStep by remember { derivedStateOf { currentState.value().sleepStep } }
@@ -706,7 +709,7 @@ public fun HomeScreen(
                         val inDock = shown.dock.firstOrNull { it.key == key }
                         val tile = inDock ?: shown.grid.firstOrNull { it.key == key }
                         val ring = tile?.let { shelfLayout.ringColour(it.accent, inDock = inDock != null, edge = it.edge) } ?: Color.White
-                        Spotlight(input.anchor.value, TileShape, ring)
+                        Spotlight(input.anchor.value, focusedTileShape, lookColours.focusBand(ring, shelfLayout.whiteFocus))
                     }
 
                     shown.menu != null -> {
@@ -2377,7 +2380,15 @@ private fun AppTile(
     val ringBlends = remember(ring, app.accent) { ringBlendsWith(ring, app.accent) }
     val ringColour =
         remember(input, key, ring, colours, neutralRing) {
-            ColorProducer { if (input.carried.value == key) ReorderRing else travel.colourFor(key, colours.focusBand(ring, neutralRing)) }
+            ColorProducer {
+                if (input.carried.value ==
+                    key
+                ) {
+                    colours.carriedRing()
+                } else {
+                    travel.colourFor(key, colours.focusBand(ring, neutralRing))
+                }
+            }
         }
     val press = if (pressFeedback) remember { Animatable(0f) } else null
     FocusSurface(
