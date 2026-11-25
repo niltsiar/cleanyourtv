@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
@@ -22,6 +23,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import dev.niltsiar.tvhome.core.config.Look
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 
@@ -34,13 +36,16 @@ public class FocusInk internal constructor(
     public val secondary: ColorProducer,
     /** How far the pill has filled, from 0 to 1, for content that changes with it. */
     public val progress: () -> Float,
+    /** Labels and icons on a full fill: the look's colour for text on its pill fill. */
+    internal val filled: ColorProducer,
 )
 
 /**
  * A D-pad target for rows and buttons: while focused it fills with [TvSurfaces.pillFill] over [background], and the
  * [FocusInk] its content gets turns from the theme's text colours to the pill's. It grows to [focusedScale] and casts a
  * shadow of [shadowElevation] in [TvElementColors.pillShadow] while idle too, about [transformOrigin]. As with [FocusSurface], the animation starts in the focus callback and is
- * read in the layer and draw lambdas only, so a focus change neither recomposes nor relays out.
+ * read in the layer and draw lambdas only, so a focus change neither recomposes nor relays out. In [Look.Expressive] the
+ * fill is the house primary, its text the house on-primary, and it casts no shadow; the look is read in the draw phase.
  */
 @Composable
 public fun FocusPill(
@@ -59,15 +64,21 @@ public fun FocusPill(
     val surfaces = TvTheme.surfaces
     val colors = TvTheme.colors
     val shadow = TvTheme.elementColors.pillShadow
+    val lookState = TvTheme.lookState
     val focus = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val grownScale = motion.focusScale(focusedScale)
     val ink =
-        remember(surfaces, colors) {
+        remember(surfaces, colors, lookState) {
+            val filled = ColorProducer { lookState.pillContent(surfaces) }
             FocusInk(
-                content = { lerp(colors.onSurface, surfaces.pillContent, focus.value.coerceIn(0f, 1f)) },
-                secondary = { lerp(colors.onSurfaceMuted, surfaces.pillSecondary, focus.value.coerceIn(0f, 1f)) },
+                content = { lerp(colors.onSurface, filled(), focus.value.coerceIn(0f, 1f)) },
+                secondary = {
+                    val expressive = lookState.look == Look.Expressive
+                    lerp(colors.onSurfaceMuted, if (expressive) filled() else surfaces.pillSecondary, focus.value.coerceIn(0f, 1f))
+                },
                 progress = { focus.value.coerceIn(0f, 1f) },
+                filled = filled,
             )
         }
     Box(
@@ -78,7 +89,7 @@ public fun FocusPill(
                     scaleX = scale
                     scaleY = scale
                     this.transformOrigin = transformOrigin
-                    if (shadowElevation > 0.dp) {
+                    if (shadowElevation > 0.dp && lookState.look != Look.Expressive) {
                         this.shadowElevation = shadowElevation.toPx()
                         this.shape = shape
                         ambientShadowColor = shadow
@@ -97,9 +108,20 @@ public fun FocusPill(
         Spacer(
             Modifier.matchParentSize().drawBehind {
                 val shown = focus.value.coerceIn(0f, 1f)
-                if (shown > 0f) drawRect(surfaces.pillFill, alpha = shown)
+                if (shown > 0f) drawRect(lookState.pillFill(surfaces), alpha = shown)
             },
         )
         content(ink)
     }
 }
+
+/** The fill of a focused [FocusPill] on [surfaces]: Glass's, or the house primary in [Look.Expressive]. Read it in draw. */
+internal fun LookState.pillFill(surfaces: TvSurfaces): Color =
+    if (look == Look.Expressive) scheme(surfaces.dark).primary else surfaces.pillFill
+
+/** The text on [pillFill]. Read it in draw. */
+internal fun LookState.pillContent(surfaces: TvSurfaces): Color =
+    if (look == Look.Expressive) scheme(surfaces.dark).onPrimary else surfaces.pillContent
+
+/** A warning's text on [surfaces]: Glass's, or the house error in [Look.Expressive]. Read it in draw. */
+internal fun LookState.warnInk(surfaces: TvSurfaces): Color = if (look == Look.Expressive) scheme(surfaces.dark).error else surfaces.warnInk

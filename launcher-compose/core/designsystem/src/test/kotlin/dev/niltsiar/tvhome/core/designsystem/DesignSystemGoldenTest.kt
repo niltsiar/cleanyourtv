@@ -77,6 +77,12 @@ val DesignSystemGoldenTest by testSuite {
 
 class DesignSystemGoldenTestContent :
     RobolectricTestSuiteContent({
+        // Local, as a top-level function of this file would register the suite again while it is being configured.
+        // A scene's test title and golden name in a look: Glass's as they are, Expressive's marked.
+        fun Look.titled(title: String): String = if (this == Look.Glass) title else "$title, in Expressive"
+
+        fun Look.tagged(scene: String): String = if (this == Look.Glass) scene else "expressive-$scene"
+
         testFixture { DesignSystemGoldenFixture() } asContextForEach {
             for (style in FocusStyle.entries) {
                 test("a focused surface in ${style.name}") {
@@ -98,19 +104,25 @@ class DesignSystemGoldenTestContent :
                 golden("focus-surface-glass-held")
             }
 
-            test("a focused pill") {
-                show(focused = true) { focus -> Pill(focus) }
-                golden("focus-pill-focused")
+            for (look in Look.entries) {
+                test(look.titled("a focused pill")) {
+                    show(look = look, focused = true) { focus -> Pill(focus) }
+                    golden(look.tagged("focus-pill-focused"))
+                }
             }
 
-            test("an open menu") {
-                show(size = 520) { Menu() }
-                golden("glass-menu-open")
+            for (look in Look.entries) {
+                test(look.titled("an open menu")) {
+                    show(look = look, size = 520) { Menu() }
+                    golden(look.tagged("glass-menu-open"))
+                }
             }
 
-            test("an open menu with night mode off") {
-                show(size = 520, dark = false) { Menu() }
-                golden("glass-menu-open-light")
+            for (look in Look.entries) {
+                test(look.titled("an open menu with night mode off")) {
+                    show(look = look, size = 520, dark = false) { Menu() }
+                    golden(look.tagged("glass-menu-open-light"))
+                }
             }
 
             test("a menu 64 ms into its rise") {
@@ -139,14 +151,16 @@ class DesignSystemGoldenTestContent :
                 golden("dock-surface-edge-light")
             }
 
-            test("key chips over the wallpaper and in a panel") {
-                show {
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        KeyChip("OK", "Open")
-                        KeyChip(listOf("MENU", "OK"), "Options", look = KeyChipLook.inPanel(TvTheme.colors.onSurface))
+            for (look in Look.entries) {
+                test(look.titled("key chips over the wallpaper and in a panel")) {
+                    show(look = look) {
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            KeyChip("OK", "Open")
+                            KeyChip(listOf("MENU", "OK"), "Options", look = KeyChipLook.inPanel(TvTheme.colors.onSurface))
+                        }
                     }
+                    golden(look.tagged("key-chip"))
                 }
-                golden("key-chip")
             }
 
             test("the scroll cue") {
@@ -162,23 +176,25 @@ class DesignSystemGoldenTestContent :
                 golden("scroll-cue")
             }
 
-            test("the light overlay card and pill with night mode off") {
-                show(dark = false, focused = true) { focus ->
-                    OverlaySurface(Modifier.size(320.dp, 200.dp)) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            Box(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(64.dp)
-                                    .background(TvTheme.surfaces.card, RoundedCornerShape(16.dp)),
-                            ) {
-                                BasicText("Card", style = TvTheme.typography.pillLabel, modifier = Modifier.align(Alignment.Center))
+            for (look in Look.entries) {
+                test(look.titled("the light overlay card and pill with night mode off")) {
+                    show(look = look, dark = false, focused = true) { focus ->
+                        OverlaySurface(Modifier.size(320.dp, 200.dp)) {
+                            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                Box(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(64.dp)
+                                        .background(TvTheme.surfaces.card, RoundedCornerShape(16.dp)),
+                                ) {
+                                    BasicText("Card", style = TvTheme.typography.pillLabel, modifier = Modifier.align(Alignment.Center))
+                                }
+                                Pill(focus)
                             }
-                            Pill(focus)
                         }
                     }
+                    golden(look.tagged("light-surfaces"))
                 }
-                golden("light-surfaces")
             }
             for (style in FocusStyle.entries) {
                 test("a focus move in ${style.name} at 0, 48, 80 and 160 ms") {
@@ -220,48 +236,52 @@ class DesignSystemGoldenTestContent :
                 golden("focus-pill-64ms")
             }
 
-            test("chrome buttons 64, 304 and 704 ms after taking focus, opening a panel and offering a label, and settled") {
-                val glass =
-                    GlassState().apply {
-                        frost = frost()
-                        topBarLightness = 95f
-                    }
-                val inputs = FocusRequester()
-                var active by mutableStateOf(false)
-                var offer by mutableIntStateOf(0)
-                show(size = 480) {
-                    Column(verticalArrangement = Arrangement.spacedBy(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        GlassSurface(glass, Modifier.size(160.dp, 56.dp), shadow = ChromeShadow.Pill) {
-                            BasicText("12:34", style = TvTheme.typography.clock, modifier = Modifier.align(Alignment.Center))
+            for (look in Look.entries) {
+                test(
+                    look.titled("chrome buttons 64, 304 and 704 ms after taking focus, opening a panel and offering a label, and settled"),
+                ) {
+                    val glass =
+                        GlassState().apply {
+                            frost = frost()
+                            topBarLightness = 95f
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                            GlassIconButton(glass, "Settings", {}) { focus, ink -> BarIcon(focus, ink) }
-                            GlassIconButton(
-                                glass,
-                                "Apps",
-                                {},
-                                label = { ink -> BasicText("Apps", style = TvTheme.typography.pillLabel, color = ink.content) },
-                            ) { focus, ink -> BarIcon(focus, ink) }
-                            GlassIconButton(glass, "Inputs", {}, Modifier.focusRequester(inputs), focusLabel = "Inputs") { focus, ink ->
-                                BarIcon(focus, ink)
+                    val inputs = FocusRequester()
+                    var active by mutableStateOf(false)
+                    var offer by mutableIntStateOf(0)
+                    show(look = look, size = 480) {
+                        Column(verticalArrangement = Arrangement.spacedBy(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            GlassSurface(glass, Modifier.size(160.dp, 56.dp), shadow = ChromeShadow.Pill) {
+                                BasicText("12:34", style = TvTheme.typography.clock, modifier = Modifier.align(Alignment.Center))
                             }
-                            GlassIconButton(glass, "Wallpaper", {}, active = active) { focus, ink -> BarIcon(focus, ink) }
-                            GlassIconButton(
-                                glass,
-                                "Sleep",
-                                {},
-                                focusLabel = "Sleep",
-                                offerToken = offer,
-                            ) { focus, ink -> BarIcon(focus, ink) }
+                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                GlassIconButton(glass, "Settings", {}) { focus, ink -> BarIcon(focus, ink) }
+                                GlassIconButton(
+                                    glass,
+                                    "Apps",
+                                    {},
+                                    label = { ink -> BasicText("Apps", style = TvTheme.typography.pillLabel, color = ink.content) },
+                                ) { focus, ink -> BarIcon(focus, ink) }
+                                GlassIconButton(glass, "Inputs", {}, Modifier.focusRequester(inputs), focusLabel = "Inputs") { focus, ink ->
+                                    BarIcon(focus, ink)
+                                }
+                                GlassIconButton(glass, "Wallpaper", {}, active = active) { focus, ink -> BarIcon(focus, ink) }
+                                GlassIconButton(
+                                    glass,
+                                    "Sleep",
+                                    {},
+                                    focusLabel = "Sleep",
+                                    offerToken = offer,
+                                ) { focus, ink -> BarIcon(focus, ink) }
+                            }
                         }
                     }
+                    compose.runOnUiThread {
+                        inputs.requestFocus()
+                        active = true
+                        offer = 1
+                    }
+                    steps(64, 304, 704, 2_000) { golden(look.tagged("chrome-buttons-${it}ms")) }
                 }
-                compose.runOnUiThread {
-                    inputs.requestFocus()
-                    active = true
-                    offer = 1
-                }
-                steps(64, 304, 704, 2_000) { golden("chrome-buttons-${it}ms") }
             }
 
             test("a dock panel with an outer hairline, half gloss and shade, as its light fades in, settles and follows a move") {
@@ -296,15 +316,17 @@ class DesignSystemGoldenTestContent :
                 steps(48) { golden("dock-surface-light-following-48ms") }
             }
 
-            test("the scrim round a spotlight 80 ms into opening, open, and 64 ms into closing") {
-                var open by mutableStateOf(false)
-                show {
-                    OverlayHost(open = { open }, spotlight = { Spotlight(Rect(240f, 110f, 560f, 340f), RoundedCornerShape(16.dp)) }) {}
+            for (look in Look.entries) {
+                test(look.titled("the scrim round a spotlight 80 ms into opening, open, and 64 ms into closing")) {
+                    var open by mutableStateOf(false)
+                    show(look = look) {
+                        OverlayHost(open = { open }, spotlight = { Spotlight(Rect(240f, 110f, 560f, 340f), RoundedCornerShape(16.dp)) }) {}
+                    }
+                    compose.runOnUiThread { open = true }
+                    steps(80, 2_000) { golden(look.tagged(if (it == 80L) "scrim-opening-80ms" else "scrim-open")) }
+                    compose.runOnUiThread { open = false }
+                    steps(64) { golden(look.tagged("scrim-closing-64ms")) }
                 }
-                compose.runOnUiThread { open = true }
-                steps(80, 2_000) { golden(if (it == 80L) "scrim-opening-80ms" else "scrim-open") }
-                compose.runOnUiThread { open = false }
-                steps(64) { golden("scrim-closing-64ms") }
             }
 
             test("a scrolling line 496 ms into its first pass") {

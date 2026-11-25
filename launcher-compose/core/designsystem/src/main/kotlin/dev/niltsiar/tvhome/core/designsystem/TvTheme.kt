@@ -13,6 +13,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
+import androidx.compose.ui.node.currentValueOf
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -389,6 +391,9 @@ private val LocalFocusStyle = staticCompositionLocalOf { FocusStyle.Glass }
 
 @Suppress("CompositionLocalAllowlist")
 private val LocalLookState = staticCompositionLocalOf { LookState(Look.Glass) { DefaultSeed } }
+
+/** The theme's [LookState], for a modifier node that reads the look in its draw. */
+internal fun CompositionLocalConsumerModifierNode.currentLookState(): LookState = currentValueOf(LocalLookState)
 
 private val DarkTypography by lazy {
     ByLook(typographyFor(DarkColors, DarkElementColors), typographyFor(DarkColors, DarkExpressiveElementColors, round = true))

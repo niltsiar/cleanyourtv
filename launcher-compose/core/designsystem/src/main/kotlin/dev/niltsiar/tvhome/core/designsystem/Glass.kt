@@ -13,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
 import androidx.compose.ui.node.DrawModifierNode
 import androidx.compose.ui.node.GlobalPositionAwareModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
@@ -32,6 +34,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import dev.niltsiar.tvhome.core.config.Look
 import kotlin.math.roundToInt
 
 /** What the chrome surfaces draw from: the [frost] behind them, stretched over the whole screen; with none they draw their tint alone. */
@@ -71,7 +74,8 @@ public enum class ChromeShadow(
 
 /**
  * A chrome panel (the clock pill, the top-bar buttons, the library pill): the [GlassState.frost] under a tint, a
- * sheen and, with [rim], a rim, in [TvTheme.elementColors]. It casts [shadow].
+ * sheen and, with [rim], a rim, in [TvTheme.elementColors]. It casts [shadow]. In [Look.Expressive] it is an opaque house
+ * container, with no frost, sheen, rim or shadow.
  */
 @Composable
 public fun GlassSurface(
@@ -83,6 +87,8 @@ public fun GlassSurface(
     content: @Composable BoxScope.() -> Unit,
 ) {
     val colours = TvTheme.elementColors
+    val surfaces = TvTheme.surfaces
+    val lookState = TvTheme.lookState
     val rimBrush = remember(colours) { chromeRim(colours) }
     val sheen = remember(colours) { Brush.verticalGradient(listOf(colours.chromeSheenTop, colours.chromeSheenBottom)) }
     val shadowColor = colours.chromeShadow
@@ -92,7 +98,7 @@ public fun GlassSurface(
             shadowed
                 .clip(shape)
                 .glassFrost(glass)
-                .background(TvTheme.surfaces.chromeTint)
+                .lookFill(lookState) { if (it) scheme(surfaces.dark).surfaceContainerHigh else surfaces.chromeTint }
                 .background(sheen)
                 .then(if (rim) Modifier.border(1.dp, rimBrush, shape) else Modifier),
     ) {
@@ -102,7 +108,8 @@ public fun GlassSurface(
 
 /**
  * The surface of an overlay: a menu, the Inputs list, the App library. Opaque, so nothing behind it shows through; a
- * sheen over its top and the rim keep the glass look. Its text turns dark on the light one.
+ * sheen over its top and the rim keep the glass look. Its text turns dark on the light one. In [Look.Expressive] it is
+ * the house's high container, flat, with no shadow.
  */
 @Composable
 public fun OverlaySurface(
@@ -111,6 +118,8 @@ public fun OverlaySurface(
     content: @Composable BoxScope.() -> Unit,
 ) {
     val colours = TvTheme.elementColors
+    val surfaces = TvTheme.surfaces
+    val lookState = TvTheme.lookState
     val rimBrush = remember(colours) { chromeRim(colours) }
     val sheen = remember(colours) { Brush.verticalGradient(0f to colours.overlaySheen, 0.4f to Color.Transparent) }
     Box(
@@ -118,7 +127,7 @@ public fun OverlaySurface(
             modifier
                 .shadow(OverlayElevation, shape, false, colours.overlayShadow, colours.overlayShadow)
                 .clip(shape)
-                .background(TvTheme.surfaces.overlay)
+                .lookFill(lookState) { if (it) scheme(surfaces.dark).surfaceContainerHigh else surfaces.overlay }
                 .background(sheen)
                 .border(1.dp, rimBrush, shape),
     ) {
@@ -130,7 +139,7 @@ private fun chromeRim(colours: TvElementColors): Brush = Brush.verticalGradient(
 
 /**
  * Draws the state's frost as it lies behind this node on screen, or with [dock] its [GlassState.dockFrost] when it has
- * one; a move of the node redraws it, nothing recomposes.
+ * one; a move of the node redraws it, nothing recomposes. [Look.Expressive] has no frost: it draws nothing there.
  */
 public fun Modifier.glassFrost(
     glass: GlassState,
@@ -155,7 +164,8 @@ private class FrostNode(
     var dock: Boolean,
 ) : Modifier.Node(),
     DrawModifierNode,
-    GlobalPositionAwareModifierNode {
+    GlobalPositionAwareModifierNode,
+    CompositionLocalConsumerModifierNode {
     private var origin = Offset.Zero
     private var screen = IntSize.Zero
 
@@ -171,7 +181,7 @@ private class FrostNode(
 
     override fun ContentDrawScope.draw() {
         val frost = (if (dock) glass.dockFrost else null) ?: glass.frost
-        if (frost != null && screen != IntSize.Zero) {
+        if (frost != null && screen != IntSize.Zero && currentLookState().look != Look.Expressive) {
             drawImage(
                 image = frost,
                 srcOffset = IntOffset.Zero,
@@ -184,3 +194,12 @@ private class FrostNode(
         drawContent()
     }
 }
+
+/**
+ * Fills the node with the colour [colour] gives for the look, true in [Look.Expressive], read in the draw phase from
+ * [look], so a look or seed change redraws it and recomposes nothing.
+ */
+internal fun Modifier.lookFill(
+    look: LookState,
+    colour: LookState.(expressive: Boolean) -> Color,
+): Modifier = drawBehind { drawRect(look.colour(look.look == Look.Expressive)) }

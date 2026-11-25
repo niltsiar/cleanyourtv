@@ -427,6 +427,7 @@ private fun MenuItem(
     value: String? = null,
 ) {
     val surfaces = TvTheme.surfaces
+    val lookState = TvTheme.lookState
     FocusPill(onClick = onClick, modifier = modifier.fillMaxWidth().height(height).testTag(tag), shape = shape) { ink ->
         Row(
             modifier = Modifier.align(Alignment.CenterStart).fillMaxWidth().padding(horizontal = 16.dp),
@@ -436,7 +437,7 @@ private fun MenuItem(
                 text = stringResource(label),
                 style = TvTheme.typography.menuRow,
                 maxLines = 1,
-                color = if (warn) ColorProducer { lerp(surfaces.warnInk, surfaces.pillContent, ink.progress()) } else ink.content,
+                color = if (warn) ColorProducer { lerp(lookState.warnInk(surfaces), ink.filled(), ink.progress()) } else ink.content,
                 modifier = Modifier.weight(1f),
             )
             if (value != null) BasicText(value, style = TvTheme.typography.menuRow, maxLines = 1, color = ink.content)

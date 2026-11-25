@@ -34,12 +34,14 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
+import dev.niltsiar.tvhome.core.config.Look
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import kotlin.math.PI
@@ -68,7 +70,8 @@ private val PulseStroke = 2.dp
  * A button with a [label] has no rim. Over a wallpaper brighter than L* 70 under the top bar
  * ([GlassState.topBarLightness]) its tint thickens, up to a total alpha of [TvElementColors.brightBarFill] from L* 90. While
  * [active] (a panel it opened is open) it looks as it does focused, with the pill fill at [TvElementColors.buttonActiveFill]
- * and the pill's glyph colour, so the panel reads as hanging from it. It grows about [transformOrigin].
+ * and the pill's glyph colour, so the panel reads as hanging from it. It grows about [transformOrigin]. In
+ * [Look.Expressive] the fill and the offer pulse are the house primary.
  *
  * With a [focusLabel], a nonzero [offerToken] grows the button into its pill without focus and lights its rim once
  * ([Motion.offerPulseSpec]) in [TvElementColors.offerPulse]; a new token pulses again, 0 takes the offer back. With animations off or reduced motion the pill
@@ -99,6 +102,7 @@ public fun GlassIconButton(
     val surfaces = TvTheme.surfaces
     val colours = TvTheme.elementColors
     val shape = TvTheme.shapes.chromeButton
+    val lookState = TvTheme.lookState
     val held = remember { Animatable(0f) }
     LaunchedEffect(active, motion) { held.animateTo(if (active) 1f else 0f, motion.buttonActiveSpec()) }
     val follow =
@@ -155,20 +159,29 @@ public fun GlassIconButton(
                 }
                 Spacer(
                     Modifier.matchParentSize().drawBehind {
-                        if (held.value > 0f) drawRect(surfaces.pillFill, alpha = colours.buttonActiveFill * held.value)
+                        if (held.value > 0f) drawRect(lookState.pillFill(surfaces), alpha = colours.buttonActiveFill * held.value)
                     },
                 )
                 if (offerToken != 0) {
-                    Spacer(Modifier.matchParentSize().drawBehind { drawPulse(pulse.value, colours.offerPulse, colours.offerPulsePeak) })
+                    Spacer(
+                        Modifier.matchParentSize().drawBehind {
+                            val rim = colours.offerPulse.takeOrElse { lookState.pillFill(surfaces) }
+                            drawPulse(pulse.value, rim, colours.offerPulsePeak)
+                        },
+                    )
                 }
             },
         ) { focusInk ->
             val ink =
-                remember(focusInk, surfaces) {
+                remember(focusInk, surfaces, lookState) {
                     FocusInk(
-                        content = { lerpColor(focusInk.content(), surfaces.pillContent, held.value) },
-                        secondary = { lerpColor(focusInk.secondary(), surfaces.pillSecondary, held.value) },
+                        content = { lerpColor(focusInk.content(), focusInk.filled(), held.value) },
+                        secondary = {
+                            val full = if (lookState.look == Look.Expressive) focusInk.filled() else surfaces.pillSecondary
+                            lerpColor(focusInk.secondary(), full, held.value)
+                        },
                         progress = { maxOf(focusInk.progress(), held.value) },
+                        filled = focusInk.filled,
                     )
                 }
             val focus = { progress.value }
