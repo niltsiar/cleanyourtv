@@ -96,6 +96,11 @@ class HomeGoldenTestContent :
                     golden("${prefix}cinematic-no-art")
                 }
 
+                test("cinematic home over a bright picture$named") {
+                    showHome(x.copy(cinematicHome = true), wallpaper = brightPicture)
+                    golden("${prefix}cinematic-bright")
+                }
+
                 test("the app highlights shelf$named") {
                     showHome(x.copy(cinematicHome = true, appShelf = true, appShelfSources = listOf("pkg.1")), heroArt = { art(it) })
                     compose.onNodeWithTag("shelf:card:0").assertExists()
@@ -251,6 +256,9 @@ private class HomeGoldenFixture : JUnit4RulesContext() {
 
     val picture = bands(64, 36, listOf(Color(0xFF1B2F4A), Color(0xFF345C7A), Color(0xFF7A8F6A), Color(0xFFC09060)))
 
+    /** A wallpaper bright enough behind the title that the hero scrim and the subtitle pill come on. */
+    val brightPicture = bands(64, 36, listOf(Color(0xFFF4F1E8), Color(0xFFE6EEF4), Color(0xFFF2E4D0), Color(0xFFE0ECDC)))
+
     fun showHome(
         config: TvConfig = TvConfig(),
         dark: Boolean = true,
@@ -260,13 +268,14 @@ private class HomeGoldenFixture : JUnit4RulesContext() {
         sleepMinutesLeft: Int? = null,
         network: NetworkState = NetworkState(NetworkLink.Wifi, ssid = "Home", validated = true),
         heroArt: suspend (String) -> ImageBitmap? = { null },
+        wallpaper: ImageBitmap = picture,
     ) {
         val poster = ShelfPoster(bands(18, 27, listOf(Color(0xFF5A2E6E), Color(0xFFD08A3A))))
         val sources =
             sources(
                 apps = flowOf(AppList(apps)),
                 network = flowOf(network),
-                wallpaper = flowOf(Wallpaper(picture = picture, thumbnail = picture)),
+                wallpaper = flowOf(Wallpaper(picture = wallpaper, thumbnail = wallpaper)),
                 inputs = flowOf(inputs),
                 libraryCount = flowOf(apps.size),
                 habit = { habit },

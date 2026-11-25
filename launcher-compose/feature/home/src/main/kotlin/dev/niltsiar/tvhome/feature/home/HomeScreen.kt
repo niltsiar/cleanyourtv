@@ -142,6 +142,7 @@ import dev.niltsiar.tvhome.core.designsystem.GlassIconButton
 import dev.niltsiar.tvhome.core.designsystem.GlassState
 import dev.niltsiar.tvhome.core.designsystem.KeyChip
 import dev.niltsiar.tvhome.core.designsystem.KeyChipHeight
+import dev.niltsiar.tvhome.core.designsystem.LookColors
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.ScrollsClearOfEdge
@@ -1854,6 +1855,7 @@ private fun HeroTitle(
     val titleStyle = TvTheme.typography.heroTitle.withTitleShadow(pill())
     val chromeTitleStyle = TvTheme.typography.chromeTitle.withTitleShadow(pill())
     val metaStyle = TvTheme.typography.cinematicMeta.withSubtitleShadow()
+    val colours = TvTheme.lookColors
     val detail = (if (cinematic) ShelfDetailHeight else MetaGap + ChipHeight) - MetaGap
     Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.BottomStart) {
         TitleSlots(
@@ -1871,6 +1873,7 @@ private fun HeroTitle(
                     style = if (shown.chrome) chromeTitleStyle else titleStyle,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    color = colours.text,
                     modifier =
                         Modifier
                             .testTag(if (live) "shelf:title" else "")
@@ -1898,16 +1901,17 @@ private fun HeroTitle(
                                 meta,
                                 style = metaStyle,
                                 maxLines = 1,
+                                color = colours.heroMeta,
                                 modifier =
                                     Modifier
                                         .testTag(if (live) "shelf:title-meta" else "")
                                         .height(MetaSlot)
-                                        .subtitlePill { pill() && meta.isNotBlank() },
+                                        .subtitlePill(colours) { pill() && meta.isNotBlank() },
                             )
                         }
 
                         ReorderHint.DockChooseApp -> {
-                            SlotChips(shown.slot, metaStyle, pill)
+                            SlotChips(shown.slot, metaStyle, pill, colours)
                         }
 
                         ReorderHint.DockChoosePlace, ReorderHint.DockPlaceForApp -> {
@@ -1917,7 +1921,8 @@ private fun HeroTitle(
                                 style = metaStyle,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.testTag("reorder:hint").subtitlePill(pill),
+                                color = colours.heroMeta,
+                                modifier = Modifier.testTag("reorder:hint").subtitlePill(colours, pill),
                             )
                         }
                     }
@@ -2009,6 +2014,7 @@ private fun SlotChips(
     slot: DockSlot?,
     style: TextStyle,
     pill: () -> Boolean,
+    colours: LookColors,
 ) {
     Row(
         Modifier.testTag("reorder:hint"),
@@ -2021,7 +2027,8 @@ private fun SlotChips(
                 style = style,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false).testTag("reorder:slot").subtitlePill(pill),
+                color = colours.heroMeta,
+                modifier = Modifier.weight(1f, fill = false).testTag("reorder:slot").subtitlePill(colours, pill),
             )
         }
         KeyChip(stringResource(R.string.reorder_key_ok), stringResource(R.string.dock_edit_put_here), Modifier.testTag("reorder:chip:put"))

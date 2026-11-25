@@ -36,7 +36,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
@@ -55,6 +57,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.niltsiar.tvhome.core.config.Look
+import dev.niltsiar.tvhome.core.designsystem.LookColors
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.OpenedAt
 import dev.niltsiar.tvhome.core.model.ShelfItem
@@ -96,14 +100,15 @@ internal val CinematicTitleLine = 66.dp
 internal val CinematicTextHeight = CinematicTitleLine + ShelfDetailHeight
 private val TitleShadow = Color.Black.copy(alpha = 0.55f)
 private val SubtitleShadow = Color.Black.copy(alpha = 0.75f)
-private val SubtitlePillColor = Color.Black.copy(alpha = 0.45f)
-private val SubtitlePillStroke = Color.White.copy(alpha = 0.12f)
 private val SubtitlePillStrokeWidth = 1.dp
 private val SubtitlePillAcross = 10.dp
 private val SubtitlePillDown = 3.dp
 private val DotWide = 18.dp
 private val DotSpacing = 8.dp
-private val DotRest = Color(0x80FFFFFF)
+
+/** Expressive's position capsule: the gap between two of its segments, and the corner where two meet. */
+private val SegmentGap = 2.dp
+private val SegmentJoin = 2.dp
 private const val SHOW_MS = 260
 private const val HIDE_MS = 160
 
@@ -160,6 +165,7 @@ internal fun CinematicShelf(
     val rise = with(LocalDensity.current) { TitleRise.roundToPx() }
     val titleStyle = TvTheme.typography.cinematicTitle.withTitleShadow(pill())
     val metaStyle = TvTheme.typography.cinematicMeta.withSubtitleShadow()
+    val colours = TvTheme.lookColors
     Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.BottomStart) {
         Column(
             modifier =
@@ -181,6 +187,7 @@ internal fun CinematicShelf(
                         style = titleStyle,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        color = colours.text,
                         modifier =
                             Modifier
                                 .testTag(if (live) "shelf:name" else "")
@@ -200,13 +207,14 @@ internal fun CinematicShelf(
                         text = meta,
                         style = metaStyle,
                         maxLines = 1,
+                        color = colours.heroMeta,
                         modifier =
                             Modifier
                                 .padding(start = MetaIndent, top = MetaGap)
                                 .testTag(if (live) "shelf:meta" else "")
                                 .height(MetaSlot)
                                 .drawnAt(detailAlpha)
-                                .subtitlePill { pill() && meta.isNotBlank() },
+                                .subtitlePill(colours) { pill() && meta.isNotBlank() },
                     )
                 }
             }
@@ -215,6 +223,7 @@ internal fun CinematicShelf(
                     position = shown.position,
                     count = shown.count,
                     animated = layout.animated,
+                    band = { colours.focusBand(layout.ringColour(shown.accent, inDock = true), layout.whiteFocus) },
                     modifier = Modifier.padding(top = DotsGap).drawnAt { detailAlpha() * (1f - cardsShown()) },
                 )
             } else {
@@ -387,19 +396,24 @@ internal fun TextStyle.withSubtitleShadow(): TextStyle {
 }
 
 /**
- * Draws a pill 10 dp wider and 3 dp taller than this on each side, while [on], for a subtitle over a bright picture: black
- * 0.45 with a white 0.12 stroke 1 dp wide inside its edge, ended by half circles.
+ * Draws a pill 10 dp wider and 3 dp taller than this on each side, while [on], for a subtitle over a bright picture: the
+ * [colours]' subtitle pill with its edge, a stroke 1 dp wide inside it, ended by half circles.
  */
-internal fun Modifier.subtitlePill(on: () -> Boolean): Modifier =
+internal fun Modifier.subtitlePill(
+    colours: LookColors,
+    on: () -> Boolean,
+): Modifier =
     drawBehind {
         if (!on()) return@drawBehind
         val topLeft = Offset(-SubtitlePillAcross.toPx(), -SubtitlePillDown.toPx())
         val pill = Size(size.width + 2 * SubtitlePillAcross.toPx(), size.height + 2 * SubtitlePillDown.toPx())
         val radius = pill.height / 2f
-        drawRoundRect(SubtitlePillColor, topLeft, pill, CornerRadius(radius))
+        drawRoundRect(colours.subtitlePill(), topLeft, pill, CornerRadius(radius))
+        val edge = colours.subtitlePillEdge()
+        if (edge.alpha == 0f) return@drawBehind
         val width = SubtitlePillStrokeWidth.toPx()
         drawRoundRect(
-            SubtitlePillStroke,
+            edge,
             topLeft = topLeft + Offset(width / 2f, width / 2f),
             size = Size(pill.width - width, pill.height - width),
             cornerRadius = CornerRadius(radius - width / 2f),
@@ -438,14 +452,20 @@ internal fun lastOpenedLine(
     }
 }
 
-/** One dot per dock app; the focused one is long and white. The long dot slides to a new focus, taking width from its neighbours. */
+/**
+ * One dot per dock app; the focused one is long and white. The long dot slides to a new focus, taking width from its neighbours.
+ * In Expressive the dots are the segments of one capsule as wide, the focused one wider and in the [band] colour.
+ */
 @Composable
 private fun PositionDots(
     position: Int,
     count: Int,
     animated: Boolean,
+    band: () -> Color,
     modifier: Modifier = Modifier,
 ) {
+    val colours = TvTheme.lookColors
+    val look = TvTheme.lookState
     val focus = remember { Animatable(position.toFloat()) }
     LaunchedEffect(position, animated) {
         if (animated) focus.animateTo(position.toFloat(), cinematicTween()) else focus.snapTo(position.toFloat())
@@ -457,17 +477,57 @@ private fun PositionDots(
                 if (count < 2) return@drawBehind
                 val dot = DotSize.toPx()
                 val wide = DotWide.toPx()
+                val rest = colours.positionRest()
+                if (look.look == Look.Expressive) {
+                    drawCapsule(count, focus.value, wide - dot, rest, band())
+                    return@drawBehind
+                }
                 val spacing = DotSpacing.toPx()
                 val radius = CornerRadius(dot / 2f)
                 var x = 0f
                 for (i in 0 until count) {
                     val near = (1f - abs(i - focus.value)).coerceIn(0f, 1f)
                     val dotWidth = dot + (wide - dot) * near
-                    drawRoundRect(lerp(DotRest, Color.White, near), Offset(x, 0f), Size(dotWidth, dot), radius)
+                    drawRoundRect(lerp(rest, Color.White, near), Offset(x, 0f), Size(dotWidth, dot), radius)
                     x += dotWidth + spacing
                 }
             },
     )
+}
+
+/**
+ * The position capsule across this scope: [count] segments [SegmentGap] apart, the one at [focus] [extra] wider and in
+ * [band], the rest in [rest]. The capsule's ends are round and its inner joins nearly square; a segment with two corner
+ * kinds draws each half clipped, so no pixel is drawn twice under a fading layer.
+ */
+private fun DrawScope.drawCapsule(
+    count: Int,
+    focus: Float,
+    extra: Float,
+    rest: Color,
+    band: Color,
+) {
+    val height = size.height
+    val gap = SegmentGap.toPx()
+    val end = CornerRadius(height / 2f)
+    val join = CornerRadius(SegmentJoin.toPx())
+    val base = (size.width - extra - gap * (count - 1)) / count
+    var x = 0f
+    for (i in 0 until count) {
+        val near = (1f - abs(i - focus)).coerceIn(0f, 1f)
+        val width = base + extra * near
+        val colour = lerp(rest, band, near)
+        val start = if (i == 0) end else join
+        val stop = if (i == count - 1) end else join
+        if (start == stop) {
+            drawRoundRect(colour, Offset(x, 0f), Size(width, height), start)
+        } else {
+            val middle = x + width / 2f
+            clipRect(right = middle) { drawRoundRect(colour, Offset(x, 0f), Size(width, height), start) }
+            clipRect(left = middle) { drawRoundRect(colour, Offset(x, 0f), Size(width, height), stop) }
+        }
+        x += width + gap
+    }
 }
 
 /**

@@ -20,6 +20,9 @@ private val HabitMarkEdge = Color.Black.copy(alpha = 0.35f)
 private val GlassCueChevron = Color.White.copy(alpha = 0.95f)
 private val GlassCuePill = Color.Black.copy(alpha = 0.60f)
 private val GlassIdle = Color(0xFF8E8E93)
+private val GlassSubtitlePill = Color.Black.copy(alpha = 0.45f)
+private val GlassSubtitlePillEdge = Color.White.copy(alpha = 0.12f)
+private val GlassPositionRest = Color(0x80FFFFFF)
 private val GlassSuccess = Color(0xFF34C759)
 private val GlassWarning = Color(0xFFFF9F0A)
 private val GlassError = Color(0xFFFF453A)
@@ -81,6 +84,16 @@ public class LookColors internal constructor(
             ring == Color.White -> look.scheme(dark = true).primary
             else -> ring
         }
+
+    /** The line under a hero title: when the app was last opened, a status, a hint. */
+    public val heroMeta: ColorProducer = ColorProducer { if (expressive) scheme.onSurfaceVariant else colors.onSurface }
+
+    /** The pill under that line over a bright picture, and its edge; Expressive has no edge. */
+    public val subtitlePill: ColorProducer = ColorProducer { if (expressive) scheme.surfaceContainer else GlassSubtitlePill }
+    public val subtitlePillEdge: ColorProducer = ColorProducer { if (expressive) Color.Transparent else GlassSubtitlePillEdge }
+
+    /** The marks of the dock places the focus is not on, under the hero title. */
+    public val positionRest: ColorProducer = ColorProducer { if (expressive) scheme.outline else GlassPositionRest }
 
     /** The fill of a tile with no art, under its name. */
     public val tileFill: ColorProducer = ColorProducer { if (expressive) scheme.surfaceContainerHigh else colors.surface }

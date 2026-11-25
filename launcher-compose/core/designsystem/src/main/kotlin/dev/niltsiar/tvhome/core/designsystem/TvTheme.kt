@@ -213,6 +213,7 @@ private fun typographyFor(
     val screensaverClockSize = 160.sp
     val screensaverAmPmSize = 26.sp
     val screensaverDateSize = 20.sp
+
     val pillLabel =
         TextStyle(
             color = colors.onSurface,
