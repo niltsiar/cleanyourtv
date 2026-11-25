@@ -13,7 +13,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
@@ -22,8 +21,6 @@ import dev.niltsiar.tvhome.core.designsystem.TvTheme
 internal val HabitMarkWidth = 20.dp
 internal val HabitMarkHeight = 3.dp
 private val HabitMarkEdgeWidth = 0.5.dp
-internal val HabitMarkFill = Color(0xFFF2F4F8)
-private val HabitMarkEdge = Color.Black.copy(alpha = 0.35f)
 private const val HABIT_FADE_MS = 400
 
 /**
@@ -39,6 +36,7 @@ internal fun Modifier.habitMark(
 ): Modifier {
     if (habit == null) return this
     val animated = TvTheme.motion.animated
+    val colours = TvTheme.lookColors
     val fade = remember(packageName) { Animatable(if (Snapshot.withoutReadObservation { habit.value } == packageName) 1f else 0f) }
     LaunchedEffect(habit, packageName, animated) {
         snapshotFlow { habit.value == packageName }.collect { usual ->
@@ -51,11 +49,11 @@ internal fun Modifier.habitMark(
         if (alpha <= 0f) return@drawBehind
         val size = Size(HabitMarkWidth.toPx(), HabitMarkHeight.toPx())
         val at = Offset((this.size.width - size.width) / 2f, this.size.height + (TileGap.toPx() - size.height) / 2f)
-        drawRoundRect(HabitMarkFill, at, size, CornerRadius(size.height / 2f), alpha = alpha)
+        drawRoundRect(colours.habitMark(), at, size, CornerRadius(size.height / 2f), alpha = alpha)
         val edge = HabitMarkEdgeWidth.toPx()
         val inner = Size(size.width - edge, size.height - edge)
         drawRoundRect(
-            HabitMarkEdge,
+            colours.habitMarkEdge(),
             Offset(at.x + edge / 2f, at.y + edge / 2f),
             inner,
             CornerRadius(inner.height / 2f),

@@ -89,6 +89,7 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
@@ -267,10 +268,6 @@ internal val TileNameRoom = TileNameGap + NameLine + NamePillDown * 2
 /** How far the name of another launcher's banner stands from the banner's bottom and left edges. */
 private val NameOnBannerInset = 8.dp
 
-/** The ink and pill of a name under a tile, focused or not: the hero title already names the focused app. */
-private val NameInk = Color.White.copy(alpha = 0.85f)
-private val NamePill = Color.Black.copy(alpha = 0.55f)
-
 internal val TopBarTop = 20.dp
 internal val TopBarHeight = 56.dp
 internal val ContentTop = TopBarTop + TopBarHeight + 20.dp
@@ -278,11 +275,9 @@ private val CaptionTop = TopBarTop + TopBarHeight + 8.dp
 private val TileCorner = 12.dp
 private val TileShape = RoundedCornerShape(TileCorner)
 private val LightTileEdgeWidth = 1.dp
-private val LightTileEdge = Color.Black.copy(alpha = 0.75f)
 
 /** The edge of a dock tile on the light glass dock (dock_glass), 1.5 px wide, so a white tile holds on it. */
 private const val GLASS_TILE_EDGE_PX = 1.5f
-private val GlassTileEdge = Color.Black.copy(alpha = 0.18f)
 
 private val DockShape = RoundedCornerShape(32.dp)
 private val GridBottom = 48.dp
@@ -884,6 +879,7 @@ private fun HomeContent(
                                 (grid.size + layout.columns - 1) / layout.columns,
                                 layout.showNames,
                                 dockPadding.underPanel,
+                                TvTheme.lookColors,
                             )
                         } else {
                             Modifier
@@ -951,6 +947,7 @@ private fun HomeContent(
                     app = app,
                     accent = shelfLayout.focusAccent(app.accent, inDock = false),
                     ring = shelfLayout.ringColour(app.accent, inDock = false, edge = app.edge),
+                    neutralRing = shelfLayout.whiteFocus,
                     onFocus = onFocus,
                     onClick = onClick,
                     input = input,
@@ -2111,6 +2108,7 @@ private fun Dock(
                             app = app,
                             accent = shelfLayout.focusAccent(app.accent, inDock = true),
                             ring = shelfLayout.ringColour(app.accent, inDock = true, edge = app.edge),
+                            neutralRing = shelfLayout.whiteFocus,
                             onFocus = onFocus,
                             onClick = onClick,
                             input = input,
@@ -2171,6 +2169,7 @@ private fun Dock(
                             app = app,
                             accent = shelfLayout.focusAccent(app.accent, inDock = true),
                             ring = shelfLayout.ringColour(app.accent, inDock = true, edge = app.edge),
+                            neutralRing = shelfLayout.whiteFocus,
                             onFocus = onFocus,
                             onClick = onClick,
                             input = input,
@@ -2324,6 +2323,7 @@ private fun AppTile(
     bannerName: Boolean = true,
     growthPivot: ((Float) -> Float)? = null,
     pressFeedback: Boolean = false,
+    neutralRing: Boolean = false,
     focus: Animatable<Float, AnimationVector1D> = remember { Animatable(0f) },
 ) {
     val marked = (if (habitMark) modifier.habitMark(input.habit, app.packageName) else modifier).popsOver(focus)
@@ -2352,6 +2352,7 @@ private fun AppTile(
                 bannerName = false,
                 growthPivot = pivot,
                 pressFeedback = pressFeedback,
+                neutralRing = neutralRing,
                 focus = focus,
             )
         }
@@ -2364,10 +2365,11 @@ private fun AppTile(
     val scope = rememberCoroutineScope()
     val placed = remember { Placed() }
     val currentRing by rememberUpdatedState(ring)
+    val colours = TvTheme.lookColors
     val ringBlends = remember(ring, app.accent) { ringBlendsWith(ring, app.accent) }
     val ringColour =
-        remember(input, key, ring) {
-            ColorProducer { if (input.carried.value == key) ReorderRing else travel.colourFor(key, ring) }
+        remember(input, key, ring, colours, neutralRing) {
+            ColorProducer { if (input.carried.value == key) ReorderRing else travel.colourFor(key, colours.focusBand(ring, neutralRing)) }
         }
     val press = if (pressFeedback) remember { Animatable(0f) } else null
     FocusSurface(
@@ -2377,10 +2379,10 @@ private fun AppTile(
         },
         onFocused = {
             onFocus(key)
-            travel.arrive(key, ring, motion, scope)
+            travel.arrive(key, colours.focusBand(ring, neutralRing), motion, scope)
             val laidOut = placed.tile?.takeIf { it.isAttached }
             if (edge != null && laidOut != null) {
-                edge.focus(laidOut.centreX()) { travel.colourFor(key, currentRing) }
+                edge.focus(laidOut.centreX()) { travel.colourFor(key, colours.focusBand(currentRing, neutralRing)) }
             }
         },
         shape = TileShape,
@@ -2426,20 +2428,19 @@ private fun AppTile(
     ) {
         // An image tile is one semantics node, which the benchmark reads as "art has landed"; a text tile adds its label.
         // The surface clips this box, so its fill is drawn: a shaped background would add a node.
-        val surface = TvTheme.colors.surface
         Box(
             Modifier
                 .fillMaxSize()
-                .drawBehind { drawRect(surface) }
+                .drawBehind { drawRect(colours.tileFill()) }
                 .then(
                     if (app.lightArt || glassEdge) {
                         Modifier.drawWithContent {
                             drawContent()
                             // The light tile's edge is darker and covers the glass dock's.
                             if (app.lightArt) {
-                                drawTileEdge(LightTileEdge, LightTileEdgeWidth.toPx())
+                                drawTileEdge(colours.lightTileEdge(), LightTileEdgeWidth.toPx())
                             } else {
-                                drawTileEdge(GlassTileEdge, GLASS_TILE_EDGE_PX)
+                                drawTileEdge(colours.glassTileEdge(), GLASS_TILE_EDGE_PX)
                             }
                         }
                     } else {
@@ -2459,7 +2460,7 @@ private fun AppTile(
                     NameChip(app.label, app.key, Modifier.align(Alignment.BottomStart).padding(NameOnBannerInset))
                 }
             } else {
-                TrimmedEllipsisText(app.label, TvTheme.typography.tileLabel, maxLines = 2)
+                TrimmedEllipsisText(app.label, TvTheme.typography.tileLabel, maxLines = 2, color = colours.tileLabel)
             }
         }
     }
@@ -2524,10 +2525,10 @@ private fun NameChip(
 ) {
     val density = LocalDensity.current
     val tileLabel = TvTheme.typography.tileLabel
+    val colours = TvTheme.lookColors
     val style =
         remember(density, tileLabel) {
             tileLabel.copy(
-                color = NameInk,
                 textAlign = TextAlign.Center,
                 lineHeight = with(density) { NameLine.toSp() },
                 lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
@@ -2535,7 +2536,7 @@ private fun NameChip(
         }
     Box(
         modifier
-            .drawBehind { drawRoundRect(NamePill, cornerRadius = CornerRadius(NamePillRadius.toPx())) }
+            .drawBehind { drawRoundRect(colours.tileNamePill(), cornerRadius = CornerRadius(NamePillRadius.toPx())) }
             .padding(horizontal = NamePillAcross, vertical = NamePillDown),
     ) {
         TrimmedEllipsisText(
@@ -2544,6 +2545,7 @@ private fun NameChip(
             maxLines = 1,
             modifier = Modifier.testTag("name:$key").clearAndSetSemantics {},
             scrolling = scrolling,
+            color = colours.tileName,
         )
     }
 }
@@ -2565,19 +2567,41 @@ private fun ContentDrawScope.drawTileEdge(
 /** The name over the bottom of a tile whose art is the app's icon, which names nothing; the tile's description says it already. */
 @Composable
 private fun BoxScope.IconTileLabel(label: String) {
+    val colours = TvTheme.lookColors
+    val shade = remember { ShadeBrush() }
     Box(
         modifier =
             Modifier
                 .matchParentSize()
-                .drawBehind { drawRect(IconTileShade) }
+                .drawBehind { drawRect(shade.of(colours.tileShade())) }
                 .clearAndSetSemantics {},
         contentAlignment = Alignment.BottomStart,
     ) {
-        TrimmedEllipsisText(label, TvTheme.typography.tileCaption, maxLines = 1, modifier = Modifier.padding(10.dp))
+        TrimmedEllipsisText(
+            label,
+            TvTheme.typography.tileCaption,
+            maxLines = 1,
+            modifier = Modifier.padding(10.dp),
+            color = colours.tileCaption,
+        )
     }
 }
 
-private val IconTileShade = Brush.verticalGradient(0.4f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.8f))
+/** The shade under an icon tile's name: clear down to 40 % of the tile, then to its colour at the bottom; built again only when the colour changes. */
+private class ShadeBrush {
+    private var colour = Color.Unspecified
+    private var brush: Brush = SolidColor(Color.Transparent)
+
+    fun of(colour: Color): Brush {
+        if (colour != this.colour) {
+            this.colour = colour
+            brush = Brush.verticalGradient(SHADE_FROM to Color.Transparent, 1f to colour)
+        }
+        return brush
+    }
+}
+
+private const val SHADE_FROM = 0.4f
 
 @Preview(name = "Home 1080p glass", device = "spec:width=1920px,height=1080px,dpi=320", showBackground = true)
 @Composable

@@ -22,6 +22,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.ExpressiveTile
 import dev.niltsiar.tvhome.core.config.GlassStyle
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
@@ -32,6 +33,7 @@ import dev.niltsiar.tvhome.core.designsystem.golden.bands
 import dev.niltsiar.tvhome.core.designsystem.motion
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
+import dev.niltsiar.tvhome.core.model.InputConnection
 import dev.niltsiar.tvhome.core.model.InputsMenu
 import dev.niltsiar.tvhome.core.model.NetworkLink
 import dev.niltsiar.tvhome.core.model.NetworkState
@@ -66,6 +68,15 @@ class HomeGoldenTestContent :
                 test("home with focus on the dock$named") {
                     showHome(x)
                     golden("${prefix}dock-focus")
+                }
+
+                if (look == Look.Expressive) {
+                    for (tile in listOf(ExpressiveTile.Wave, ExpressiveTile.Cinch)) {
+                        test("home with focus on the dock, in Expressive with the ${tile.name.lowercase()} tile") {
+                            showHome(x.copy(expressiveTile = tile))
+                            golden("expressive-dock-focus-${tile.name.lowercase()}")
+                        }
+                    }
                 }
 
                 test("home with focus in the grid$named") {
@@ -122,6 +133,15 @@ class HomeGoldenTestContent :
                         inputs = playStationInputs(),
                     )
                     golden("${prefix}input-tiles")
+                }
+
+                test("tile faces with names under them on a glass dock$named") {
+                    showHome(
+                        x.copy(alwaysShowNames = true, dockGlass = true, inputTiles = true),
+                        apps = faces,
+                        inputs = playStationInputs(InputConnection.Standby),
+                    )
+                    golden("${prefix}tile-faces")
                 }
 
                 test("the habit mark$named") {
@@ -200,6 +220,34 @@ private class HomeGoldenFixture : JUnit4RulesContext() {
     var inputsRequests by mutableIntStateOf(0)
 
     val eighteenApps = apps(18)
+
+    /** A plain banner, a light one, an icon, a text tile, an input tile asleep and a banner with its own name, then more apps. */
+    val faces =
+        listOf(
+            AppEntry("pkg.1", "pkg.1", "Text App"),
+            AppEntry(
+                "pkg.light",
+                "pkg.light",
+                "Light App",
+                image = bands(32, 18, listOf(Color(0xFFF4F1E8), Color(0xFFE0E6EE))),
+                lightArt = true,
+            ),
+            AppEntry(
+                "pkg.icon",
+                "pkg.icon",
+                "Icon App",
+                image = bands(32, 18, listOf(Color(0xFF2E7D6B), Color(0xFF7FD1B9))),
+                iconArt = true,
+            ),
+            PlayStationTile,
+            AppEntry(
+                "pkg.home",
+                "pkg.home",
+                "Home App",
+                image = bands(32, 18, listOf(Color(0xFF3A2A6E), Color(0xFF8A5AC8))),
+                homeLauncher = true,
+            ),
+        ) + eighteenApps.drop(5)
 
     val picture = bands(64, 36, listOf(Color(0xFF1B2F4A), Color(0xFF345C7A), Color(0xFF7A8F6A), Color(0xFFC09060)))
 

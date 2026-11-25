@@ -7,12 +7,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import dev.niltsiar.tvhome.core.designsystem.LookColors
 import dev.niltsiar.tvhome.core.designsystem.ScrollCuePillHeight
 import dev.niltsiar.tvhome.core.designsystem.drawScrollDownCue
-
-/** The cue that more apps lie below the grid: the reorder arrow's colours, which read on any wallpaper. */
-private val MoreCueChevron = ChevronColor
-private val MoreCuePill = ArrowDiscColor
 
 /** The room the cue keeps over its pill: 2 dp above it and 2 dp under it. */
 private val MoreCueClear = 4.dp
@@ -30,6 +27,7 @@ internal fun Modifier.moreCue(
     rows: Int,
     names: Boolean,
     dockBelow: Dp,
+    colours: LookColors,
 ): Modifier =
     drawWithContent {
         drawContent()
@@ -48,11 +46,9 @@ internal fun Modifier.moreCue(
                 dockBelow.toPx(),
             )
         if (cue != null && cue.alpha > 0f) {
-            drawScrollDownCue(
-                cue.centre,
-                MoreCueChevron.copy(alpha = MoreCueChevron.alpha * cue.alpha),
-                MoreCuePill.copy(alpha = MoreCuePill.alpha * cue.alpha),
-            )
+            val chevron = colours.cueChevron()
+            val pill = colours.cuePill()
+            drawScrollDownCue(cue.centre, chevron.copy(alpha = chevron.alpha * cue.alpha), pill.copy(alpha = pill.alpha * cue.alpha))
         }
     }
 
