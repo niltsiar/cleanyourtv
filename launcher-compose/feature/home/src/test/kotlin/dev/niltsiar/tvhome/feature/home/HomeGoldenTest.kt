@@ -18,6 +18,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
@@ -148,6 +149,17 @@ class HomeGoldenTestContent :
                 }
 
                 if (look == Look.Expressive) {
+                    test("a tile menu 0, 80 and 160 ms after a held ok opens it, in Expressive") {
+                        showHome(x)
+                        compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
+                        while (compose.onAllNodesWithTag("menu").fetchSemanticsNodes().isEmpty()) compose.mainClock.advanceTimeByFrame()
+                        val opened = compose.mainClock.currentTime
+                        for (ms in listOf(0L, 80L, 160L)) {
+                            while (compose.mainClock.currentTime - opened < ms) compose.mainClock.advanceTimeByFrame()
+                            golden("expressive-tile-menu-burst-${ms}ms")
+                        }
+                    }
+
                     for (tile in listOf(ExpressiveTile.Wave, ExpressiveTile.Cinch)) {
                         val variant = tile.name.lowercase()
                         test("a tile menu open, in Expressive with the $variant tile") {

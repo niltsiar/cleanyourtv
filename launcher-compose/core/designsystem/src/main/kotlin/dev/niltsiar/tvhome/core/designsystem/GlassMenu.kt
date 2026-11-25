@@ -25,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -37,6 +38,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.Layout
@@ -49,12 +51,16 @@ import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.roundToIntRect
+import dev.niltsiar.tvhome.core.config.Look
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 private val MenuGap = 10.dp
 private val MenuRise = 14.dp
 private const val MENU_START_SCALE = 0.94f
+
+/** The scale an Expressive panel grows from, out of the element that opened it. */
+private const val MENU_GROW_SCALE = 0.9f
 private val PanelPadding = 8.dp
 
 /** The space between two rows of a [GlassMenu] or a [GlassDropdown]. */
@@ -158,6 +164,10 @@ public fun <T> GlassMenu(
  * the gaps between them, and starts at the anchor's left edge, or ends at the anchor's right edge when it would pass
  * [edgeMargin] from the screen's right side; [beside] it, [BesideAnchor.gap] should be [columnGap] so that the
  * panel starts on the next column and ends on the one before.
+ *
+ * In [Look.Expressive], while springs run, the panel grows out of its anchor instead of rising: from [MENU_GROW_SCALE]
+ * about the point of its edge nearest the anchor ([growOrigin]), so a menu a held OK opened reads as one move with the
+ * charge. With reduced motion it only fades in there; with animations off it shows at once, in both looks.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -184,6 +194,9 @@ public fun GlassDropdown(
     val scroll = rememberScrollState()
     val columnWidth by remember(anchor) { derivedStateOf { anchor.value.width } }
     val reveal = remember { Animatable(if (motion.animations) 0f else 1f) }
+    val expressive = motion.look == Look.Expressive
+    val grows = expressive && motion.animated
+    val origin = remember { mutableStateOf(TransformOrigin.Center) }
     LaunchedEffect(Unit) {
         withFrameNanos { }
         firstFocus.requestFocus()
@@ -196,6 +209,13 @@ public fun GlassDropdown(
                     Modifier.testTag("menu").graphicsLayer {
                         compositingStrategy = CompositingStrategy.ModulateAlpha
                         alpha = reveal.value.coerceIn(0f, 1f)
+                        if (expressive) {
+                            val scale = if (grows) MENU_GROW_SCALE + (1f - MENU_GROW_SCALE) * reveal.value else 1f
+                            scaleX = scale
+                            scaleY = scale
+                            transformOrigin = origin.value
+                            return@graphicsLayer
+                        }
                         translationY = (1f - reveal.value) * MenuRise.toPx()
                         val scale = MENU_START_SCALE + (1f - MENU_START_SCALE) * reveal.value
                         scaleX = scale
@@ -243,28 +263,62 @@ public fun GlassDropdown(
         val panel = measurable.measure(limits.copy(maxHeight = minOf(limits.maxHeight, maxOf(height, 0))))
         layout(constraints.maxWidth, constraints.maxHeight) {
             val at = anchor.value
-            if (beside != null) {
-                val bottom = constraints.maxHeight - beside.bottomMargin.roundToPx()
-                val gap = beside.gap.roundToPx()
-                panel.place(
+            val place =
+                if (beside != null) {
                     besideAnchor(
                         at.roundToIntRect(),
                         panel.width,
                         panel.height,
                         constraints.maxWidth,
-                        gap,
+                        beside.gap.roundToPx(),
                         beside.top.roundToPx(),
                         beside.fallbackTop.roundToPx(),
-                        bottom,
-                    ),
-                )
-                return@layout
+                        constraints.maxHeight - beside.bottomMargin.roundToPx(),
+                    )
+                } else {
+                    IntOffset(
+                        dropdownLeft(
+                            at.left.toInt(),
+                            at.right.toInt(),
+                            panel.width,
+                            constraints.maxWidth,
+                            edgeMargin.roundToPx(),
+                            alignEnd,
+                        ),
+                        dropdownTop(
+                            at.top.toInt(),
+                            at.bottom.toInt(),
+                            panel.height,
+                            constraints.maxHeight,
+                            gap,
+                            topLimit.roundToPx(),
+                            above,
+                        ),
+                    )
+                }
+            if (grows) {
+                val grown = growOrigin(at, place, panel.width, panel.height)
+                if (origin.value != grown) origin.value = grown
             }
-            val x = dropdownLeft(at.left.toInt(), at.right.toInt(), panel.width, constraints.maxWidth, edgeMargin.roundToPx(), alignEnd)
-            val y = dropdownTop(at.top.toInt(), at.bottom.toInt(), panel.height, constraints.maxHeight, gap, topLimit.roundToPx(), above)
-            panel.place(x, y)
+            panel.place(place)
         }
     }
+}
+
+/**
+ * Where a panel [width] by [height] placed at [at] grows from: the point of the panel nearest the [anchor]'s centre, on the
+ * edge that faces the anchor, or the anchor's centre itself when the panel covers it.
+ */
+internal fun growOrigin(
+    anchor: Rect,
+    at: IntOffset,
+    width: Int,
+    height: Int,
+): TransformOrigin {
+    if (width <= 0 || height <= 0) return TransformOrigin.Center
+    val x = anchor.center.x.coerceIn(at.x.toFloat(), (at.x + width).toFloat())
+    val y = anchor.center.y.coerceIn(at.y.toFloat(), (at.y + height).toFloat())
+    return TransformOrigin((x - at.x) / width, (y - at.y) / height)
 }
 
 /**
