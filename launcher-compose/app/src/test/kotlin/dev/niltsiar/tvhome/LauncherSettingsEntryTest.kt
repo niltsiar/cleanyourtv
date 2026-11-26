@@ -23,6 +23,7 @@ import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.Choice
 import dev.niltsiar.tvhome.core.config.Choices
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.model.LauncherIntents
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.nulls.shouldBeNull
@@ -182,6 +183,22 @@ class LauncherSettingsEntryTestContent :
 
                 compose.waitUntil(30_000) { exists("reorder:hint") }
                 settingsButtonFocused().shouldBeFalse()
+            }
+
+            test("a look picked on the page is the look of the first frame home draws when the page closes") {
+                compose.roundness("shelf:title-meta") shouldBe 0f
+
+                try {
+                    closeThePageAfter(whileOpen = { compose.mainClock.autoAdvance = false }) { choose(Choices.Look, Look.Expressive) }
+                    compose.mainClock.advanceTimeByFrame()
+
+                    compose.roundness("shelf:title-meta") shouldBe 100f
+                } finally {
+                    // Frames left paused here leave the next test's home with no apps.
+                    compose.mainClock.advanceTimeBy(1_000)
+                    compose.mainClock.autoAdvance = true
+                    compose.waitForIdle()
+                }
             }
 
             test("a home key that ends the page keeps the usual home focus") {

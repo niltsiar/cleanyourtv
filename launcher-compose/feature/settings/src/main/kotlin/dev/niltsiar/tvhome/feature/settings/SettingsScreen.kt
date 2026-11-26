@@ -412,89 +412,92 @@ public fun SettingsScreen(
                                 .padding(start = PanelSide, end = PanelSide, bottom = PanelSide),
                         ) {
                             for ((index, item) in items.withIndex()) {
-                                when (item) {
-                                    is ReorderItem -> {
-                                        ActionRow(
-                                            label = stringResource(R.string.settings_reorder),
-                                            selected = false,
-                                            onClick = onReorder,
-                                            tag = "settings:reorder",
-                                            stop = stops.getValue(item.stop),
-                                        )
-                                    }
+                                // By stop, so a row that comes or goes above a focused one leaves it composed and focused.
+                                key(if (item is Focusable) item.stop else item) {
+                                    when (item) {
+                                        is ReorderItem -> {
+                                            ActionRow(
+                                                label = stringResource(R.string.settings_reorder),
+                                                selected = false,
+                                                onClick = onReorder,
+                                                tag = "settings:reorder",
+                                                stop = stops.getValue(item.stop),
+                                            )
+                                        }
 
-                                    is PageItem.Heading -> {
-                                        Heading(item.id, divided = index > 0)
-                                    }
+                                        is PageItem.Heading -> {
+                                            Heading(item.id, divided = index > 0)
+                                        }
 
-                                    is SettingItem -> {
-                                        key(item.row.id) { SettingRow(item.row, actions.onPick, stops.getValue(item.stop)) }
-                                    }
+                                        is SettingItem -> {
+                                            SettingRow(item.row, actions.onPick, stops.getValue(item.stop))
+                                        }
 
-                                    is WallpaperItem -> {
-                                        ActionRow(
-                                            label = stringResource(R.string.wallpaper_label),
-                                            value = item.value.text(),
-                                            selected = false,
-                                            onClick = actions.onOpenWallpaperPicker,
-                                            tag = "settings:wallpaper",
-                                            modifier = Modifier.onPlaced { pickerRows[WALLPAPER_STOP] = it },
-                                            stop = stops.getValue(item.stop),
-                                        )
-                                    }
+                                        is WallpaperItem -> {
+                                            ActionRow(
+                                                label = stringResource(R.string.wallpaper_label),
+                                                value = item.value.text(),
+                                                selected = false,
+                                                onClick = actions.onOpenWallpaperPicker,
+                                                tag = "settings:wallpaper",
+                                                modifier = Modifier.onPlaced { pickerRows[WALLPAPER_STOP] = it },
+                                                stop = stops.getValue(item.stop),
+                                            )
+                                        }
 
-                                    is OpenOnStartItem -> {
-                                        ActionRow(
-                                            label = stringResource(R.string.open_on_start_label),
-                                            value = item.value.text(),
-                                            selected = false,
-                                            onClick = actions.onOpenPicker,
-                                            tag = "settings:open_on_start",
-                                            modifier = Modifier.onPlaced { pickerRows[OPEN_ON_START_STOP] = it },
-                                            stop = stops.getValue(item.stop),
-                                        )
-                                    }
+                                        is OpenOnStartItem -> {
+                                            ActionRow(
+                                                label = stringResource(R.string.open_on_start_label),
+                                                value = item.value.text(),
+                                                selected = false,
+                                                onClick = actions.onOpenPicker,
+                                                tag = "settings:open_on_start",
+                                                modifier = Modifier.onPlaced { pickerRows[OPEN_ON_START_STOP] = it },
+                                                stop = stops.getValue(item.stop),
+                                            )
+                                        }
 
-                                    is ShelfSourcesItem -> {
-                                        ActionRow(
-                                            label = stringResource(R.string.settings_shelf_sources),
-                                            value = item.value.text(),
-                                            selected = false,
-                                            onClick = actions.onOpenShelfPicker,
-                                            tag = "settings:shelf_sources",
-                                            modifier = Modifier.onPlaced { pickerRows[SHELF_SOURCES_STOP] = it },
-                                            stop = stops.getValue(item.stop),
-                                        )
-                                    }
+                                        is ShelfSourcesItem -> {
+                                            ActionRow(
+                                                label = stringResource(R.string.settings_shelf_sources),
+                                                value = item.value.text(),
+                                                selected = false,
+                                                onClick = actions.onOpenShelfPicker,
+                                                tag = "settings:shelf_sources",
+                                                modifier = Modifier.onPlaced { pickerRows[SHELF_SOURCES_STOP] = it },
+                                                stop = stops.getValue(item.stop),
+                                            )
+                                        }
 
-                                    is FollowThemeItem -> {
-                                        ActionRow(
-                                            label = stringResource(R.string.settings_follow_theme),
-                                            selected = ui.followsTheme,
-                                            onClick = actions.onFollowTheme,
-                                            tag = "settings:follow_theme",
-                                            stop = stops.getValue(item.stop),
-                                        )
-                                    }
+                                        is FollowThemeItem -> {
+                                            ActionRow(
+                                                label = stringResource(R.string.settings_follow_theme),
+                                                selected = ui.followsTheme,
+                                                onClick = actions.onFollowTheme,
+                                                tag = "settings:follow_theme",
+                                                stop = stops.getValue(item.stop),
+                                            )
+                                        }
 
-                                    is DefaultHomeItem -> {
-                                        ActionRow(
-                                            label = stringResource(R.string.home_settings),
-                                            selected = false,
-                                            onClick = onChooseDefaultHome,
-                                            tag = "settings:default_home",
-                                            stop = stops.getValue(item.stop),
-                                        )
-                                    }
+                                        is DefaultHomeItem -> {
+                                            ActionRow(
+                                                label = stringResource(R.string.home_settings),
+                                                selected = false,
+                                                onClick = onChooseDefaultHome,
+                                                tag = "settings:default_home",
+                                                stop = stops.getValue(item.stop),
+                                            )
+                                        }
 
-                                    is TvSettingsItem -> {
-                                        ActionRow(
-                                            label = stringResource(R.string.settings_tv_settings),
-                                            selected = false,
-                                            onClick = onOpenTvSettings,
-                                            tag = "settings:tv_settings",
-                                            stop = stops.getValue(item.stop),
-                                        )
+                                        is TvSettingsItem -> {
+                                            ActionRow(
+                                                label = stringResource(R.string.settings_tv_settings),
+                                                selected = false,
+                                                onClick = onOpenTvSettings,
+                                                tag = "settings:tv_settings",
+                                                stop = stops.getValue(item.stop),
+                                            )
+                                        }
                                     }
                                 }
                             }

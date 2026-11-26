@@ -10,8 +10,11 @@ import androidx.compose.ui.focus.FocusState
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
@@ -35,7 +38,10 @@ import org.robolectric.shadows.ShadowEnvironment
 import java.io.File
 import kotlin.coroutines.EmptyCoroutineContext
 
-/** [SettingsHost] over the real graph while the look changes under a focused chip: focus stays where it was. */
+/**
+ * [SettingsHost] over the real graph while the look changes under a focused chip, picked on the page or stored from
+ * elsewhere: focus stays where it was, and the page draws in the stored look.
+ */
 val LookSwitchTest by testSuite {
     robolectricTestSuite<LookSwitchTestContent>(
         "sdk 31, 960x540 dp",
@@ -69,9 +75,9 @@ class LookSwitchTestContent :
                     compose.waitForIdle()
                 }
 
-                fun show() {
+                fun show(theme: String = "{}") {
                     ShadowEnvironment.setExternalStorageState(Environment.MEDIA_MOUNTED)
-                    File(ThemeDirectory(compose.activity).dir!!, "config.json").writeText("{}")
+                    File(ThemeDirectory(compose.activity).dir!!, "config.json").writeText(theme)
                     // A TV has no touch screen; in touch mode nothing takes key focus.
                     compose.runOnUiThread {
                         compose.activity.window.decorView
@@ -101,11 +107,48 @@ class LookSwitchTestContent :
                     }
                     settle()
                 }
+
+                fun exists(tag: String) = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
             }
         } asContextForEach {
-            test("picking expressive keeps focus on the chip far down the page at the same place") {
+            for (from in Look.entries) {
+                val to = Look.entries.single { it != from }
+                test(
+                    "ok on ${to.name} in the style row of a page in ${from.name} switches the look under the chip, which keeps focus and its place",
+                ) {
+                    show("""{"look": "${from.name.lowercase()}"}""")
+                    repeat(12) { if (!compose.focusedTag().startsWith("option:Look:")) press(Key.DirectionDown) }
+                    compose.focusedTag() shouldBe "option:Look:${from.ordinal}"
+                    press(if (to.ordinal > from.ordinal) Key.DirectionRight else Key.DirectionLeft)
+                    val tag = compose.focusedTag()
+                    tag shouldBe "option:Look:${to.ordinal}"
+                    val bounds = compose.onNode(isFocused()).getBoundsInRoot()
+                    pageFocus.clear()
+
+                    press(Key.DirectionCenter)
+                    compose.waitUntil(30_000) { graph.configRepository.config.value.look == to }
+                    settle()
+
+                    compose.focusedTag() shouldBe tag
+                    compose.onNode(isFocused()).getBoundsInRoot() shouldBe bounds
+                    withClue("the page's focus events: $pageFocus") { pageFocus.map { it.hasFocus } shouldNotContain false }
+                    exists("setting:ExpressiveTile") shouldBe (to == Look.Expressive)
+                }
+            }
+
+            test("the page is drawn in the stored look") {
                 show()
-                repeat(16) { press(Key.DirectionDown) }
+                compose.roundness("settings:heading") shouldBe 0f
+
+                runBlocking { graph.configRepository.set(Choices.Look, Look.Expressive) }
+                settle()
+
+                compose.roundness("settings:heading") shouldBe 100f
+            }
+
+            test("a look stored from elsewhere keeps focus on a chip far down the page, which moves down by the new row") {
+                show()
+                repeat(17) { press(Key.DirectionDown) }
                 press(Key.DirectionRight)
                 val tag = compose.focusedTag()
                 tag shouldBe "option:ReducedMotion:1"
@@ -115,9 +158,11 @@ class LookSwitchTestContent :
                 runBlocking { graph.configRepository.set(Choices.Look, Look.Expressive) }
                 settle()
 
-                graph.configRepository.config.value.look shouldBe Look.Expressive
                 compose.focusedTag() shouldBe tag
-                compose.onNode(isFocused()).getBoundsInRoot() shouldBe bounds
+                val row = compose.onNodeWithTag("setting:ExpressiveTile").getUnclippedBoundsInRoot()
+                val moved = compose.onNode(isFocused()).getBoundsInRoot()
+                moved.left shouldBe bounds.left
+                moved.top - bounds.top shouldBe row.bottom - row.top
                 withClue("the page's focus events: $pageFocus") { pageFocus.map { it.hasFocus } shouldNotContain false }
             }
         }

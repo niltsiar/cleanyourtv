@@ -49,100 +49,109 @@ val SettingsRecompositionTest by testSuite {
 @OptIn(InternalComposeTracingApi::class, ExperimentalComposeRuntimeApi::class)
 class SettingsRecompositionTestContent :
     RobolectricTestSuiteContent({
-        testFixture {
-            object : JUnit4RulesContext() {
-                val compose = createAndroidComposeRule<ComponentActivity>()
+        for (look in Look.entries) {
+            testSuite(look.name) {
+                testFixture {
+                    object : JUnit4RulesContext() {
+                        val compose = createAndroidComposeRule<ComponentActivity>()
 
-                val app: Application = RuntimeEnvironment.getApplication()
-                lateinit var settings: SettingsHarness
+                        val app: Application = RuntimeEnvironment.getApplication()
+                        lateinit var settings: SettingsHarness
 
-                /** Counts the SettingRow bodies that run; the compiler calls it for each composable that does not skip. */
-                val rows =
-                    object : CompositionTracer {
-                        var count = 0
+                        /** Counts the SettingRow bodies that run; the compiler calls it for each composable that does not skip. */
+                        val rows =
+                            object : CompositionTracer {
+                                var count = 0
 
-                        override fun isTraceInProgress() = true
+                                override fun isTraceInProgress() = true
 
-                        override fun traceEventStart(
-                            key: Int,
-                            dirty1: Int,
-                            dirty2: Int,
-                            info: String,
-                        ) {
-                            if (info.startsWith("dev.niltsiar.tvhome.feature.settings.SettingRow ")) count++
+                                override fun traceEventStart(
+                                    key: Int,
+                                    dirty1: Int,
+                                    dirty2: Int,
+                                    info: String,
+                                ) {
+                                    if (info.startsWith("dev.niltsiar.tvhome.feature.settings.SettingRow ")) count++
+                                }
+
+                                override fun traceEventEnd() = Unit
+                            }
+
+                        val rules: RuleChain =
+                            rule(
+                                RuleChain
+                                    .outerRule(compose)
+                                    .around(
+                                        object : ExternalResource() {
+                                            override fun before() = showSettings()
+
+                                            override fun after() = stopCounting()
+                                        },
+                                    ),
+                            )
+
+                        fun showSettings() {
+                            Composer.setTracer(rows)
+                            settings = SettingsHarness(app, """{"columns": 6}""", uiThread = true)
+                            // A TV has no touch screen; the native graphics mode starts in touch mode, where nothing takes key focus.
+                            compose.runOnUiThread {
+                                compose.activity.window.decorView
+                                    .requestFocusFromTouch()
+                            }
+                            compose.setContent {
+                                TvTheme(look = look) {
+                                    val state = settings.viewModel.uiState.collectAsState()
+                                    SettingsScreen(
+                                        { state.value },
+                                        settings.viewModel.actions,
+                                        onChooseDefaultHome = {},
+                                        onOpenTvSettings = {},
+                                    )
+                                }
+                            }
+                            compose.waitForIdle()
+                            compose.onNodeWithTag("option:Columns:2").assertIsFocused()
+                            withClue("rows composed at first: ${rows.count}") {
+                                rows.count shouldBeGreaterThanOrEqualTo
+                                    (settings.state.sections.sumOf { it.rows.size })
+                            }
+                            rows.count = 0
                         }
 
-                        override fun traceEventEnd() = Unit
-                    }
+                        fun stopCounting() {
+                            Composer.setTracer(Idle)
+                            settings.stop()
+                        }
 
-                val rules: RuleChain =
-                    rule(
-                        RuleChain
-                            .outerRule(compose)
-                            .around(
-                                object : ExternalResource() {
-                                    override fun before() = showSettings()
-
-                                    override fun after() = stopCounting()
-                                },
-                            ),
-                    )
-
-                fun showSettings() {
-                    Composer.setTracer(rows)
-                    settings = SettingsHarness(app, """{"columns": 6}""", uiThread = true)
-                    // A TV has no touch screen; the native graphics mode starts in touch mode, where nothing takes key focus.
-                    compose.runOnUiThread {
-                        compose.activity.window.decorView
-                            .requestFocusFromTouch()
-                    }
-                    compose.setContent {
-                        TvTheme(look = Look.Glass) {
-                            val state = settings.viewModel.uiState.collectAsState()
-                            SettingsScreen({ state.value }, settings.viewModel.actions, onChooseDefaultHome = {}, onOpenTvSettings = {})
+                        fun press(key: Key) {
+                            compose.onRoot().performKeyInput { pressKey(key) }
+                            compose.waitForIdle()
                         }
                     }
-                    compose.waitForIdle()
-                    compose.onNodeWithTag("option:Columns:2").assertIsFocused()
-                    withClue("rows composed at first: ${rows.count}") {
-                        rows.count shouldBeGreaterThanOrEqualTo
-                            (settings.state.sections.sumOf { it.rows.size })
+                } asContextForEach {
+                    test("a focus move along a row and down the list recomposes no row") {
+                        press(Key.DirectionRight)
+                        press(Key.DirectionLeft)
+                        press(Key.DirectionDown)
+                        press(Key.DirectionDown)
+                        press(Key.DirectionUp)
+
+                        compose.onNodeWithTag("option:RowsBelowDock:0").assertIsFocused()
+                        rows.count shouldBe 0
                     }
-                    rows.count = 0
+
+                    test("a pick recomposes the row it changes alone") {
+                        press(Key.DirectionRight)
+                        press(Key.DirectionCenter)
+                        compose.waitUntil(30_000) {
+                            shadowOf(Looper.getMainLooper()).idle()
+                            settings.row(SettingsRowId.Columns).selected == 3
+                        }
+                        compose.waitForIdle()
+
+                        rows.count shouldBe 1
+                    }
                 }
-
-                fun stopCounting() {
-                    Composer.setTracer(Idle)
-                    settings.stop()
-                }
-
-                fun press(key: Key) {
-                    compose.onRoot().performKeyInput { pressKey(key) }
-                    compose.waitForIdle()
-                }
-            }
-        } asContextForEach {
-            test("a focus move along a row and down the list recomposes no row") {
-                press(Key.DirectionRight)
-                press(Key.DirectionLeft)
-                press(Key.DirectionDown)
-                press(Key.DirectionDown)
-                press(Key.DirectionUp)
-
-                compose.onNodeWithTag("option:RowsBelowDock:0").assertIsFocused()
-                rows.count shouldBe 0
-            }
-
-            test("a pick recomposes the row it changes alone") {
-                press(Key.DirectionRight)
-                press(Key.DirectionCenter)
-                compose.waitUntil(30_000) {
-                    shadowOf(Looper.getMainLooper()).idle()
-                    settings.row(SettingsRowId.Columns).selected == 3
-                }
-                compose.waitForIdle()
-
-                rows.count shouldBe 1
             }
         }
     })

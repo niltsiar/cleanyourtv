@@ -32,7 +32,9 @@ import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.Choice
 import dev.niltsiar.tvhome.core.config.Choices
+import dev.niltsiar.tvhome.core.config.Look
 import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
 import org.junit.rules.ExternalResource
 import org.junit.rules.RuleChain
@@ -144,6 +146,12 @@ class MainActivityConfigTestContent :
         } asContextForEach {
             test("a stored choice reaches what home shows with no restart") {
                 compose.waitUntil(30_000) { isFocused("tile:pkg.1/.Main") }
+                compose.roundness("shelf:title-meta") shouldBe 0f
+                choose(Choices.Look, Look.Expressive)
+                compose.waitUntil(30_000) { compose.roundness("shelf:title-meta") == 100f }
+                choose(Choices.Look, Look.Glass)
+                compose.waitUntil(30_000) { compose.roundness("shelf:title-meta") == 0f }
+
                 val before = tileWidth()!!
                 choose(Choices.Columns, 6)
                 compose.waitUntil(30_000) { tileWidth()?.let { it < before } == true }
