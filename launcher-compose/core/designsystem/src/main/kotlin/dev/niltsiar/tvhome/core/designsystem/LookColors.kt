@@ -104,8 +104,8 @@ public class LookColors internal constructor(
     /** The greeting beside the clock. */
     public val greeting: ColorProducer = ColorProducer { if (expressive) scheme.onSurface else elements.greeting }
 
-    /** The moon of the sleep timer. */
-    public val sleepIcon: ColorProducer = ColorProducer { if (expressive) scheme.tertiary else colors.onSurface }
+    /** The moon of the sleep timer, a mode that is on: in Expressive the house primary, as [active]. */
+    public val sleepIcon: ColorProducer = ColorProducer { if (expressive) scheme.primary else colors.onSurface }
 
     /** An icon whose mode is on, as the reorder button's while Move mode runs. */
     public val active: ColorProducer = ColorProducer { if (expressive) scheme.primary else colors.accent }
@@ -159,8 +159,8 @@ public class LookColors internal constructor(
     public val lightTileEdge: ColorProducer = ColorProducer { if (expressive) look.scheme(dark = false).onSurface else GlassLightTileEdge }
     public val glassTileEdge: ColorProducer = ColorProducer { if (expressive) Color.Transparent else GlassGlassTileEdge }
 
-    /** The mark under the app the household usually opens now, and its edge. */
-    public val habitMark: ColorProducer = ColorProducer { if (expressive) scheme.tertiary else GlassHabitMark }
+    /** The mark under the app the household usually opens now, and its edge. Expressive's is the house secondary, a hint quieter than the focus. */
+    public val habitMark: ColorProducer = ColorProducer { if (expressive) scheme.secondary else GlassHabitMark }
     public val habitMarkEdge: ColorProducer = ColorProducer { HabitMarkEdge }
 
     /** A cue that more lies beyond: its chevron, and the pill or disc under it. */

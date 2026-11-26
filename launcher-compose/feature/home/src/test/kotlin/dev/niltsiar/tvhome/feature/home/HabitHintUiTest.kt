@@ -145,15 +145,16 @@ class HabitHintUiTestContent :
                     viewModel.onStarted()
                     compose.mainClock.advanceTimeBy(100)
                     compose.waitForIdle()
-                    val fading = mutableListOf<Float>()
+                    val fading = mutableListOf<Color>()
                     repeat(10) {
                         compose.mainClock.advanceTimeBy(50)
-                        fading += screen()[newCentre, newTop + 3].red
+                        fading += screen()[newCentre, newTop + 3]
                     }
 
                     val shown = screen()[newCentre, newTop + 3]
                     withClue("full after 400 ms: $fading") { isFill(shown).shouldBeTrue() }
-                    val apart = fading.map { abs(it - shown.red) }
+                    // The largest channel difference: the house secondary can differ from the ground in one channel only.
+                    val apart = fading.map { maxOf(abs(it.red - shown.red), abs(it.green - shown.green), abs(it.blue - shown.blue)) }
                     withClue("not yet shown at 150 ms: $fading") { apart.first() shouldBeGreaterThan 0.05f }
                     withClue("fading in: $fading") { (apart.zipWithNext().all { (a, b) -> b <= a + 0.001f }).shouldBeTrue() }
                     barShownAt(screen(), oldCentre, oldTop).shouldBeFalse()
@@ -307,7 +308,7 @@ private class HabitHintUiTestFixture : JUnit4RulesContext() {
     lateinit var colours: LookColors
 
     /**
-     * Whether [pixel] is the mark's fill: Glass's light grey, or in Expressive the house tertiary, whose tone follows the
+     * Whether [pixel] is the mark's fill: Glass's light grey, or in Expressive the house secondary, whose tone follows the
      * ground the mark sits on while its hue stays.
      */
     fun isFill(pixel: Color): Boolean {
