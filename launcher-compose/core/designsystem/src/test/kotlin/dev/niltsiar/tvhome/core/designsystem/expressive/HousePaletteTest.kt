@@ -12,7 +12,6 @@ import io.kotest.assertions.withClue
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
-import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import kotlin.math.abs
@@ -144,7 +143,7 @@ val HousePaletteTest by testSuite {
         withClue("container ${scheme.surfaceContainer}") { (spread(scheme.surfaceContainer) < 0.05f) shouldBe true }
     }
 
-    test("a carried tile's ring is its app's band, and the plate it lifts off is the name pills' container whatever the app") {
+    test("a carried tile's ring is its app's band, and the bed it lifts off is the house's near-black whatever the app and the ground") {
         val red = Color(0xFFE0453A)
         val blue = Color(0xFF2F9FD8)
         for (seed in listOf(Ember, NightTeal)) {
@@ -155,76 +154,64 @@ val HousePaletteTest by testSuite {
                     val rings = listOf(red, blue).map { colours.carriedRing(it, neutral = false) }
                     rings shouldBe listOf(AppBands[red].band, AppBands[blue].band)
                     rings[0] shouldNotBe rings[1]
-                    colours.liftPlate() shouldBe look.scheme(dark).surfaceContainerHighest
+                    lightness(colours.liftPlate()) shouldBe (4.0 plusOrMinus 0.6)
                 }
             }
         }
     }
 
-    test("the lift plate stands off the dock under it by the bound of its ground, for every seed") {
-        val failures =
-            listOf(true to MIN_PLATE_CONTRAST_DARK, false to MIN_PLATE_CONTRAST_LIGHT).flatMap { (dark, bound) ->
-                seeds().mapNotNull { (name, seed) ->
-                    val look = LookState(Look.Expressive) { seed }
-                    val sets = lookColorSets(look)
-                    val plate = (if (dark) sets.dark else sets.light).liftPlate()
-                    contrast(plate, look.scheme(dark).surfaceContainer).takeIf { it < bound }?.let {
-                        "${if (dark) "dark" else "light"} $name: $it"
-                    }
-                }
-            }
-        failures.shouldBeEmpty()
-    }
-
-    test("over a swept ground the lift plate falls under its bound on the dock container at its least alpha no more often than measured") {
+    test("over a swept ground, bare or under the dock, the lift plate's bed or its line in the carried ring stands 3:1 off it") {
         val grounds =
             (0..255 step 3).map { Color(it, it, it) } +
                 (0 until 360 step 15).flatMap { hue -> listOf(0.25f, 0.5f, 0.75f).map { lightness -> hsl(hue.toFloat(), 1f, lightness) } }
+        val rings = (0 until 360 step 30).map { hsl(it.toFloat(), 1f, 0.5f) to false } + (Color.White to false) + (Color.White to true)
         var worst = Double.MAX_VALUE
         var where = ""
-        var cases = 0
-        var under = 0
+        val failures = mutableListOf<String>()
         for (dark in listOf(true, false)) {
             for ((name, seed) in seeds()) {
                 val look = LookState(Look.Expressive) { seed }
-                val plate = lookColorSets(look).let { if (dark) it.dark else it.light }.liftPlate()
-                val container = look.scheme(dark).surfaceContainer.copy(alpha = LEAST_DOCK_ALPHA)
-                for (ground in grounds) {
-                    val dock = composite(container, ground)
-                    val ratio = contrast(composite(plate, dock), dock)
-                    cases++
-                    if (ratio < (if (dark) MIN_PLATE_CONTRAST_DARK else MIN_PLATE_CONTRAST_LIGHT)) under++
-                    if (ratio < worst) {
-                        worst = ratio
-                        where = "${if (dark) "dark" else "light"} $name over $ground"
+                val colours = lookColorSets(look).let { if (dark) it.dark else it.light }
+                val bed = colours.liftPlate()
+                val lines = rings.map { (ring, neutral) -> colours.carriedRing(ring, neutral) }
+                val container = look.scheme(dark).surfaceContainer
+                val unders =
+                    listOf("the opaque dock" to container) +
+                        grounds.flatMap { ground ->
+                            listOf(
+                                "$ground" to ground,
+                                "the dock over $ground" to composite(container.copy(alpha = LEAST_DOCK_ALPHA), ground),
+                            )
+                        }
+                for ((underName, under) in unders) {
+                    val bedRatio = contrast(composite(bed, under), under)
+                    for (line in lines) {
+                        val ratio = max(bedRatio, contrast(line, under))
+                        if (ratio < worst) {
+                            worst = ratio
+                            where = "${if (dark) "dark" else "light"} $name, line $line, on $underName"
+                        }
+                        if (ratio < 3.0) failures += "${if (dark) "dark" else "light"} $name, line $line, on $underName: $ratio"
                     }
                 }
             }
         }
-        // A mid ground sinks the plate to about 1:1 (dark, over #800000); the dock's opacity decision sets what may pass.
-        withClue("worst $worst, $where") { under shouldBeLessThanOrEqual PLATE_UNDER_BOUND_CASES }
-        cases shouldBe PLATE_GROUND_CASES
+        withClue("worst $worst, $where; ${failures.size} under 3:1") { failures.take(5).shouldBeEmpty() }
     }
 
-    test(
-        "on the dock container at its least alpha over black and over white a name reads at 45 to 1 on its pill and the lift plate stands off it",
-    ) {
+    test("on the dock container at its least alpha over black and over white a name reads at 45 to 1 on its pill") {
         val failures =
-            listOf(true to MIN_PLATE_CONTRAST_DARK, false to MIN_PLATE_CONTRAST_LIGHT).flatMap { (dark, plateBound) ->
+            listOf(true, false).flatMap { dark ->
                 seeds().flatMap { (name, seed) ->
                     val look = LookState(Look.Expressive) { seed }
                     val colours = lookColorSets(look).let { if (dark) it.dark else it.light }
-                    listOf("black" to Color.Black, "white" to Color.White).flatMap { (groundName, ground) ->
+                    listOf("black" to Color.Black, "white" to Color.White).mapNotNull { (groundName, ground) ->
                         val dock = composite(look.scheme(dark).surfaceContainer.copy(alpha = LEAST_DOCK_ALPHA), ground)
                         val pill = composite(colours.tileNamePill(), dock)
                         val ink = composite(colours.tileName(), pill)
-                        val which = "${if (dark) "dark" else "light"} $name over $groundName"
-                        listOfNotNull(
-                            contrast(ink, pill).takeIf { it < 4.5 }?.let { "$which, the name on its pill: $it" },
-                            contrast(composite(colours.liftPlate(), dock), dock).takeIf { it < plateBound }?.let {
-                                "$which, the lift plate: $it"
-                            },
-                        )
+                        contrast(ink, pill).takeIf { it < 4.5 }?.let {
+                            "${if (dark) "dark" else "light"} $name over $groundName, the name on its pill: $it"
+                        }
                     }
                 }
             }
@@ -240,18 +227,6 @@ private const val LEAST_DOCK_ALPHA = 0.16f
 
 private val Ember = Color(0xFFFF6A3D)
 private val NightTeal = Color(0xFF1F8A8A)
-
-/**
- * The least contrast of the lift plate against the dock: the step from the dock's container (tone 12 dark, 94 light) to
- * the name pills' (22 dark, 90 light) that the house tones give, 1.33:1 dark and 1.11:1 light, less the 0.6 L* the tone
- * solver may miss by. The plate only marks the place a carried tile left: the tile itself shows by its band at 3:1.
- */
-private const val MIN_PLATE_CONTRAST_DARK = 1.3
-private const val MIN_PLATE_CONTRAST_LIGHT = 1.09
-
-/** The seed and ground pairs of the lift plate's ground sweep, and how many fell under the bound when it was measured. */
-private const val PLATE_GROUND_CASES = 156_736
-private const val PLATE_UNDER_BOUND_CASES = 24_008
 
 /**
  * The least CIE76 distance between the error and the primary roles. At the same tone two roles differ only in hue and

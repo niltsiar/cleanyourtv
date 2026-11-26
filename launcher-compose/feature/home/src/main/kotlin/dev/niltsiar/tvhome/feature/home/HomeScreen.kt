@@ -1514,7 +1514,10 @@ private fun FocusDimEffects(
     }
 }
 
-/** Shows [edge] while focus is on a dock tile, and hides it for anything else: the top bar, a menu, the grid, the library. */
+/**
+ * Shows [edge] while focus is on a dock tile, and hides it for anything else: the top bar, a menu, the grid, the library. In
+ * Expressive it also hides while a tile is carried, so that nothing but the lift plate lies under the carried tile.
+ */
 @Composable
 private fun DockEdgeEffect(
     edge: DockEdgeLight,
@@ -1524,10 +1527,12 @@ private fun DockEdgeEffect(
     libraryOpen: () -> Boolean,
 ) {
     val currentLibraryOpen = rememberUpdatedState(libraryOpen)
-    LaunchedEffect(edge, state, input, layout) {
+    val look = TvTheme.lookState
+    LaunchedEffect(edge, state, input, layout, look) {
         snapshotFlow {
             val shown = state.value()
-            input.gridFocused &&
+            !(look.look == Look.Expressive && input.carried.value != null) &&
+                input.gridFocused &&
                 !input.pillFocused &&
                 shown.menu == null &&
                 !shown.inputsOpen &&
@@ -2422,7 +2427,7 @@ private fun AppTile(
         keepsShape = menuOpen,
         modifier =
             (if (fadeUnused) marked.unusedFade(input.faded, key) else marked)
-                .then(if (reordering) Modifier.reorderLook(key, input, TileShape, growthPivot) else Modifier)
+                .then(if (reordering) Modifier.reorderLook(key, input, TileShape, ringColour, growthPivot) else Modifier)
                 .aspectRatio(TILE_ASPECT)
                 .then(
                     if (edge != null) {

@@ -175,8 +175,12 @@ public class LookColors internal constructor(
         neutral: Boolean,
     ): Color = if (expressive) focusBand(ring, neutral) else GlassCarriedRing
 
-    /** The plate a carried tile lifts off: the container of the name pills on the dock; Glass lifts on a shadow instead. */
-    public val liftPlate: ColorProducer = ColorProducer { if (expressive) scheme.surfaceContainerHighest else Color.Transparent }
+    /**
+     * The bed a carried tile lifts off: the house's near-black on any ground, edged with a line in the carried ring, so that
+     * one of the two stands off whatever lies under it. Glass lifts on a shadow instead.
+     */
+    public val liftPlate: ColorProducer =
+        ColorProducer { if (expressive) look.scheme(dark = true).surfaceContainerLowest else Color.Transparent }
 
     /** A medallion behind a glyph, and the glyph on it; Glass has no medallion. */
     public val medallion: ColorProducer = ColorProducer { if (expressive) scheme.secondaryContainer else Color.Transparent }

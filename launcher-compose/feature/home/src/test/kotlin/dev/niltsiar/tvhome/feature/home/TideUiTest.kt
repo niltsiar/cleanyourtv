@@ -25,6 +25,8 @@ import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.designsystem.FocusRingReach
+import dev.niltsiar.tvhome.core.designsystem.TILE_FOCUSED_SCALE
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.motion
 import dev.niltsiar.tvhome.core.model.AppEntry
@@ -93,6 +95,18 @@ class TideUiTestContent :
                     (first.red > first.blue && segment.red > segment.blue) shouldBe true
                 }
                 withClue("settled segment") { mostColoured(bounds("shelf:dots")).let { it.blue > it.red } shouldBe true }
+            }
+
+            test("while a tile is carried the dock light draws no crest and no cushion, and after the drop it draws both again") {
+                showHome(SixColumnsExpressive.copy(columns = 10))
+                withClue("focused") { dockLightShows(1) shouldBe true }
+
+                for (key in listOf(Key.Menu, Key.DirectionDown, Key.DirectionCenter)) press(key)
+                compose.onNodeWithTag("reorder:hint").assertExists()
+                withClue("carried") { dockLightShows(1) shouldBe false }
+
+                press(Key.DirectionCenter)
+                withClue("dropped") { dockLightShows(1) shouldBe true }
             }
 
             test("with reduced motion the band has the new colour on the first frame") {
@@ -171,6 +185,37 @@ private class TideUiTestFixture : JUnit4RulesContext() {
         val dock = bounds("dock")
         val centre = (box.left + box.right) / 2
         return DpRect(centre - 120.dp, dock.top - 2.dp, centre + 120.dp, dock.bottom)
+    }
+
+    fun press(key: Key) {
+        compose.onRoot().performKeyInput { pressKey(key) }
+        settle()
+    }
+
+    /**
+     * Whether the dock's light shows round tile [n], at rest in the dock: some pixel differs from the dock's lip in the middle
+     * of the screen, on the crest's row within 20 dp of the tile's centre, or in the strip of the cushion, 120 dp wide, that
+     * lies past the left edge of the tile's grown band at the dock's middle height. The dock is one colour over the black
+     * wallpaper.
+     */
+    fun dockLightShows(n: Int): Boolean {
+        val pixels = screen()
+        val box = tile(n)
+        val centre = (box.left + box.right) / 2
+        val dock = bounds("dock")
+        val bandHalf = (box.right - box.left) * TILE_FOCUSED_SCALE / 2 + FocusRingReach
+        val strip = (centre - 60.dp + 1.dp).value..(centre - bandHalf - 2.dp).value
+        withClue("the cushion reaches past the band") { (strip.endInclusive - strip.start > 1f) shouldBe true }
+        val middle = ((dock.top + dock.bottom) / 2).value
+        val crest = (dock.top + 0.5.dp).value
+        val plain = pixels[(480 * density).toInt(), (crest * density).toInt()]
+
+        fun differs(
+            x: Float,
+            y: Float,
+        ) = distance(pixels[(x * density).toInt(), (y * density).toInt()], plain) > 8f
+        return ((centre - 20.dp).value.toInt()..(centre + 20.dp).value.toInt()).any { differs(it.toFloat(), crest) } ||
+            (strip.start.toInt()..strip.endInclusive.toInt()).any { x -> (-10..10).any { differs(x.toFloat(), middle + it) } }
     }
 
     fun DpRect.grown(by: Dp) = DpRect(left - by, top - by, right + by, bottom + by)

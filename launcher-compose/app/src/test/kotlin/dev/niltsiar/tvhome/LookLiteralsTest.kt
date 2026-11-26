@@ -165,7 +165,7 @@ private val PINNED =
         LookForm.CutCornerShape to 0,
         LookForm.CornerRadius to 0,
         LookForm.Brush to 18,
-        LookForm.Alpha to 76,
+        LookForm.Alpha to 75,
         LookForm.CopyAlpha to 26,
     )
 
@@ -237,7 +237,7 @@ private val ALLOWED =
         Allowed("${HOME}MoreCue.kt", LookForm.CopyAlpha, 2, FADE),
         Allowed("${HOME}ReorderLook.kt", LookForm.NamedColor, 1, "the lifted tile's shadow, black in both looks"),
         Allowed("${HOME}ReorderLook.kt", LookForm.Alpha, 1, "the lifted tile's shadow, black in both looks"),
-        Allowed("${HOME}ReorderLook.kt", LookForm.Alpha, 8, FADE),
+        Allowed("${HOME}ReorderLook.kt", LookForm.Alpha, 7, FADE),
         Allowed("${HOME}ReorderLook.kt", LookForm.CopyAlpha, 1, "the lifted tile's shadow, black in both looks"),
         Allowed(
             "${HOME}RingTravel.kt",

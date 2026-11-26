@@ -6,10 +6,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import dev.niltsiar.tvhome.core.config.ExpressiveTile
@@ -124,6 +128,23 @@ public class FocusedShape internal constructor(
         builtSize = size
         builtDensity = density.density
     }
+}
+
+/**
+ * The outer edge of the focus band a focused tile of [base] shape has in [focused], filled in [bed] and edged with [line]
+ * in [edge], at [alpha]: the plate a carried tile lifts off in Expressive.
+ */
+public fun DrawScope.drawBandPlate(
+    focused: FocusedShape,
+    base: Shape,
+    bed: Color,
+    edge: Color,
+    line: Stroke,
+    alpha: Float,
+) {
+    val outline = focused.bandOutline(base, size, layoutDirection, this)
+    drawOutline(outline, bed, alpha = alpha)
+    drawOutline(outline, edge, alpha = alpha, style = line)
 }
 
 /** Remembers a [FocusedShape] that follows [TvTheme.lookState]. */

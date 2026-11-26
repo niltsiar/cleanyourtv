@@ -18,13 +18,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
@@ -37,8 +36,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.FocusRingReach
+import dev.niltsiar.tvhome.core.designsystem.FocusedShape
 import dev.niltsiar.tvhome.core.designsystem.TILE_FOCUSED_SCALE
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.designsystem.drawBandPlate
 import dev.niltsiar.tvhome.core.designsystem.rememberFocusedShape
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.coroutineScope
@@ -54,6 +55,7 @@ private const val DIM_MS = 140
 private val TrayRimClear = 8.dp
 private val LiftShadow = 20.dp
 private val LiftShadowColor = Color.Black.copy(alpha = 0.55f)
+private val LiftLine = 2.dp
 
 /**
  * How far a carried tile lifts: its ring, [FocusRingReach] past the tile, stays [TrayRimClear] under the tray's rim, a
@@ -77,14 +79,16 @@ private val ChevronStroke = 2.5.dp
  * A tile's look in reorder and edit-dock modes: dimmed unless it is the carried one, which lifts, is drawn at its rest size
  * (a focused tile is grown), casts a shadow in its [shape], wiggles a little and shows a move arrow on its ring beside each
  * edge it can still move towards; it settles back with a spring when it is put down. No other tile moves. In Expressive the
- * carried tile is a sticker: it lifts off a plate in its focused shape, left where the tile was, with no shadow and no wiggle,
- * and its arrows stand on the outer edge of that shape's band. The animated values are read in the layer and draw lambdas only.
+ * carried tile is a sticker: it lifts off a plate in its focused shape, left where the tile was and edged in its [ring], with
+ * no shadow and no wiggle, and its arrows stand on the outer edge of that shape's band. The animated values are read in the
+ * layer and draw lambdas only.
  */
 @Composable
 internal fun Modifier.reorderLook(
     key: String,
     input: HomeInput,
     shape: Shape,
+    ring: ColorProducer,
     growthPivot: ((Float) -> Float)? = null,
 ): Modifier {
     val motion = TvTheme.motion
@@ -143,6 +147,7 @@ internal fun Modifier.reorderLook(
         ambientShadowColor = LiftShadowColor
         spotShadowColor = LiftShadowColor
     }.drawWithCache {
+        val line = Stroke(LiftLine.toPx())
         onDrawWithContent {
             val lifted = lift.value.coerceIn(0f, 1f)
             val onLeft = lifted * left.value.coerceIn(0f, 1f)
@@ -150,10 +155,7 @@ internal fun Modifier.reorderLook(
             // The layer is scaled by the lift: draw in the tile's own measures by undoing that.
             val raised = 1f + (1f / grown - 1f) * lift.value
             val plate = colours.liftPlate()
-            if (lifted > 0f && plate.alpha > 0f) {
-                val outline = focused.bandOutline(shape, size, layoutDirection, this)
-                drawLiftPlate(outline, plate, lifted, grown, raised, growthPivot)
-            }
+            if (lifted > 0f && plate.alpha > 0f) drawLiftPlate(focused, shape, plate, ring(), line, lifted, grown, raised, growthPivot)
             if (onLeft == 0f && onRight == 0f) {
                 drawContent()
                 return@onDrawWithContent
@@ -190,13 +192,16 @@ internal fun Density.ringReach(
 ): Float = width * (scale - 1f) / 2f + reach * scale
 
 /**
- * The plate a carried tile lifts off in Expressive: [outline], the outer edge of its focus band, in [colour] at [lifted],
- * grown by [grown] about the tile's growth pivot as the focused tile is, and left [LiftHeight] lower in a layer [raised]
- * times the tile's size: the place the focused tile filled before it lifted.
+ * The plate a carried tile of [shape] lifts off in Expressive: the outer edge of its [focused] band, filled in [colour] and
+ * edged with [line] in [edge], at [lifted], grown by [grown] about the tile's growth pivot as the focused tile is, and left
+ * [LiftHeight] lower in a layer [raised] times the tile's size: the place the focused tile filled before it lifted.
  */
 private fun DrawScope.drawLiftPlate(
-    outline: Outline,
+    focused: FocusedShape,
+    shape: Shape,
     colour: Color,
+    edge: Color,
+    line: Stroke,
     lifted: Float,
     grown: Float,
     raised: Float,
@@ -204,7 +209,7 @@ private fun DrawScope.drawLiftPlate(
 ) {
     val pivot = Offset(size.width / 2f, growthPivot?.invoke(size.height) ?: (size.height / 2f))
     translate(top = LiftHeight.toPx() * lifted / raised) {
-        scale(grown, pivot) { drawOutline(outline, colour, alpha = lifted) }
+        scale(grown, pivot) { drawBandPlate(focused, shape, colour, edge, line, lifted) }
     }
 }
 
