@@ -21,8 +21,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -42,11 +44,13 @@ private const val BREATH_MS = 1_800
 /**
  * The clock screensaver, for the activity and the system dream alike: a large clock and date on black that drift to a
  * new spot every minute, over a slow glow, or over [picture] (Home's wallpaper, already darkened) in place of the glow.
+ * In Expressive the glow is a large shape that changes with each move and holds the [picture] where there is one.
  * [glow] false leaves plain black behind the clock, e.g. for an OLED. A null [face] shows nothing until the TV knows the
  * time.
  *
  * It runs for hours, so what moves is read in the layout and draw phases only: the clock's opacity and the colon's breath
- * through colour producers, its spot in the placement, the glow in one drawn radial gradient. No recomposition, no layers.
+ * through colour producers, its spot in the placement, the glow in one drawn radial gradient, Expressive's shape in one
+ * cached path ([MinuteShapes]). No recomposition, no layers.
  */
 @Composable
 public fun ClockScene(
@@ -57,52 +61,78 @@ public fun ClockScene(
     random: Random = Random.Default,
 ) {
     val state = remember(random) { ClockSceneState(random) }
-    val glowing = glow && picture == null
-    // The Expressive glow is one house colour, so it has no colours to turn through.
-    val cycles = glowing && TvTheme.lookState.look == Look.Glass
-    LaunchedEffect(state, cycles) { state.run(cycleGlow = cycles) }
-    ClockSceneContent(face, state, glowing, picture, modifier)
+    val expressive = TvTheme.lookState.look == Look.Expressive
+    // The Expressive glow is one house colour, so it has no colours to turn through; its shape turns instead.
+    val cycles = glow && picture == null && !expressive
+    val shapes = if (glow && expressive) TvTheme.motion.shapeChange else null
+    LaunchedEffect(state, cycles, shapes) { state.run(cycleGlow = cycles, shapes = shapes) }
+    ClockSceneContent(face, state, glow, picture, modifier)
 }
 
+/**
+ * The scene of [state]. With [glow], Glass draws a radial glow behind the clock where no [picture] shows, and Expressive a
+ * large shape, filled with the [picture] when there is one and black round it.
+ */
 @Composable
 internal fun ClockSceneContent(
     face: ClockFace?,
     state: ClockSceneState,
-    glowing: Boolean,
+    glow: Boolean,
     picture: ImageBitmap?,
     modifier: Modifier = Modifier,
 ) {
     val colours = TvTheme.lookColors
+    val shaped = glow && TvTheme.lookState.look == Look.Expressive
     Box(modifier.fillMaxSize().drawBehind { drawRect(colours.screensaverGround()) }) {
-        if (picture != null) {
+        if (picture != null && !shaped) {
             Image(bitmap = picture, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         }
-        SpotLayout(state, glowing) {
+        val behind =
+            when {
+                shaped -> Behind.Shape
+                glow && picture == null -> Behind.Glow
+                else -> Behind.Nothing
+            }
+        SpotLayout(state, behind, picture) {
             if (face != null) ClockText(face, state)
         }
     }
 }
 
-/** Places its one child at the state's spot, with the glow centred behind it. */
+/** What the scene draws behind the clock. */
+private enum class Behind { Nothing, Glow, Shape }
+
+/** Places its one child at the state's spot, with the glow or the shape centred behind it. */
 @Composable
 private fun SpotLayout(
     state: ClockSceneState,
-    glowing: Boolean,
+    behind: Behind,
+    picture: ImageBitmap?,
     content: @Composable () -> Unit,
 ) {
     // Written while placing, read while drawing: the glow needs the clock's size, and layout always runs before draw.
     val clockSize = remember { IntArray(2) }
     val colours = TvTheme.lookColors
-    val glowModifier =
-        if (glowing) {
-            Modifier.drawBehind {
-                val center = IntSize(size.width.toInt(), size.height.toInt()).centerOf(IntSize(clockSize[0], clockSize[1]), state.spot)
-                drawRect(glowBrush(colours.screensaverGlow(state.glow), center, size.width))
+    val shapes = remember { MinuteShapes() }
+    val behindModifier =
+        when (behind) {
+            Behind.Nothing -> {
+                Modifier
             }
-        } else {
-            Modifier
+
+            Behind.Glow -> {
+                Modifier.drawBehind {
+                    drawRect(glowBrush(colours.screensaverGlow(state.glow), clockCenter(clockSize, state.spot), size.width))
+                }
+            }
+
+            Behind.Shape -> {
+                Modifier.drawBehind {
+                    with(shapes) { drawShape(state.turn, state.change.value, clockCenter(clockSize, state.spot), colours, picture) }
+                }
+            }
         }
-    Layout(content = content, modifier = Modifier.fillMaxSize().then(glowModifier)) { measurables, constraints ->
+    Layout(content = content, modifier = Modifier.fillMaxSize().then(behindModifier)) { measurables, constraints ->
         val placeable = measurables.firstOrNull()?.measure(constraints.copy(minWidth = 0, minHeight = 0))
         layout(constraints.maxWidth, constraints.maxHeight) {
             if (placeable != null) {
@@ -115,6 +145,12 @@ private fun SpotLayout(
         }
     }
 }
+
+/** The centre of a clock of [clockSize], width then height, placed at [spot] in this scope. */
+private fun DrawScope.clockCenter(
+    clockSize: IntArray,
+    spot: Spot,
+): Offset = IntSize(size.width.toInt(), size.height.toInt()).centerOf(IntSize(clockSize[0], clockSize[1]), spot)
 
 /** The time over the date. The hours, colon and minutes read left to right in a right-to-left layout too; the rest mirrors. */
 @Composable

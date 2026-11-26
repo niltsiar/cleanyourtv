@@ -17,6 +17,9 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
+import dev.niltsiar.tvhome.core.designsystem.Motion
+import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import io.kotest.assertions.withClue
 import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
 import io.kotest.matchers.shouldBe
@@ -77,6 +80,24 @@ class ClockSceneTestContent :
                     }
                 }
                 baseline("PM") shouldBe baseline("41")
+            }
+
+            test("in Expressive with reduced motion the screensaver asks for no frame at rest and goes idle through a shape change") {
+                compose.setContent {
+                    TvTheme(look = Look.Expressive, motion = Motion(reducedMotion = true)) {
+                        ClockScene(face, glow = true, picture = null, random = Random(2))
+                    }
+                }
+                compose.waitForIdle()
+                val rest = compose.mainClock.currentTime
+                compose.waitForIdle()
+                withClue("an idle wait at rest ran no frames") { compose.mainClock.currentTime shouldBe rest }
+
+                compose.mainClock.autoAdvance = false
+                compose.mainClock.advanceTimeBy(FADE_IN_MS + MOVE_MS + SHAPE_STEP_MS * 2)
+                compose.mainClock.autoAdvance = true
+                compose.waitForIdle()
+                compose.onNodeWithText("41").assertExists()
             }
 
             test("a scene without a time yet draws no text") {

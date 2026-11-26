@@ -32,10 +32,14 @@ class ClockSceneStateTestContent :
                 fun play(
                     state: ClockSceneState,
                     cycleGlow: Boolean = true,
+                    shapes: ShapeChange? = null,
                 ) {
                     compose.mainClock.autoAdvance = false
-                    compose.setContent { LaunchedEffect(state) { state.run(cycleGlow) } }
+                    compose.setContent { LaunchedEffect(state) { state.run(cycleGlow, shapes) } }
                 }
+
+                /** The clock's minute move starts [MOVE_MS] after its fade-in, and its fade-out ends where it moves. */
+                val minute = FADE_IN_MS + MOVE_MS
 
                 fun advance(ms: Long) = compose.mainClock.advanceTimeBy(ms)
             }
@@ -90,6 +94,72 @@ class ClockSceneStateTestContent :
 
                 advance(GLOW_STEP_MS * GLOW_STEPS)
                 state.glow shouldBe next
+            }
+
+            test("the shape takes its next turn over the clock's fade-out and fade-in and then rests") {
+                val state = ClockSceneState(Random(3))
+                val first = state.turn
+                play(state, cycleGlow = false, shapes = ShapeChange.Animate)
+                advance(minute - 100)
+                state.turn shouldBe first
+                state.change.value shouldBe (1f plusOrMinus 0f)
+
+                advance(100L + FADE_OUT_MS / 2)
+                state.turn shouldBe first + 1
+                withClue("leaving") { state.change.value shouldBeIn 0.01f..0.42f }
+                advance(FADE_OUT_MS.toLong())
+                withClue("arriving") { state.change.value shouldBeIn 0.44f..0.99f }
+
+                advance(FADE_IN_MS.toLong())
+                state.change.value shouldBe (1f plusOrMinus 0f)
+                advance(MOVE_MS - 1_000)
+                withClue("at rest until the next minute") {
+                    state.turn shouldBe first + 1
+                    state.change.value shouldBe (1f plusOrMinus 0f)
+                }
+            }
+
+            test("with reduced motion the shape changes in seven steps of 300 ms and holds between them") {
+                val state = ClockSceneState(Random(3))
+                play(state, cycleGlow = false, shapes = ShapeChange.Step)
+                // The frame clock rounds each advance up to a whole frame, so each sample is taken at a time from the start.
+                val start = compose.mainClock.currentTime + minute
+
+                fun at(ms: Long) = compose.mainClock.advanceTimeBy(start + ms - compose.mainClock.currentTime, ignoreFrameDuration = true)
+                val seen = mutableListOf<Float>()
+                for (step in 1..SHAPE_STEPS) {
+                    at(SHAPE_STEP_MS * (step - 1) + 100)
+                    val before = state.change.value
+                    at(SHAPE_STEP_MS * step - 50)
+                    withClue("held inside step $step") { state.change.value shouldBe before }
+                    at(SHAPE_STEP_MS * step + 50)
+                    seen += state.change.value
+                }
+                seen shouldBe (1..SHAPE_STEPS).map { it / SHAPE_STEPS.toFloat() }
+            }
+
+            test("with animations off the shape takes its next turn at once where the clock moves") {
+                val state = ClockSceneState(Random(3))
+                val first = state.turn
+                play(state, cycleGlow = false, shapes = ShapeChange.Cut)
+                advance(FADE_IN_MS + 100L)
+                val spot = state.spot
+                advance(MOVE_MS - 100 + FADE_OUT_MS / 2L)
+                withClue("not before the clock moves") { state.turn shouldBe first }
+                advance(FADE_OUT_MS.toLong())
+                state.spot shouldNotBe spot
+                state.turn shouldBe first + 1
+                withClue("never part way") { state.change.value shouldBe (1f plusOrMinus 0f) }
+            }
+
+            test("without a shape the turn never changes") {
+                val state = ClockSceneState(Random(3))
+                val first = state.turn
+                play(state, cycleGlow = false)
+
+                advance(MOVE_MS * 3)
+
+                state.turn shouldBe first
             }
 
             test("without the glow the colour never changes") {

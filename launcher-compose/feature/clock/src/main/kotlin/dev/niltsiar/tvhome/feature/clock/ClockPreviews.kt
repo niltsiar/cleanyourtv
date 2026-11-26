@@ -21,7 +21,7 @@ private fun ClockPreview() {
     ClockSceneContent(
         PreviewFace,
         ClockSceneState(Random(7), initialFade = 1f, initialSpot = Spot(0.3f, 0.4f)),
-        glowing = true,
+        glow = true,
         picture = null,
     )
 }
@@ -32,7 +32,7 @@ private fun ClockWallpaperPreview() {
     ClockSceneContent(
         PreviewFace,
         ClockSceneState(Random(7), initialFade = 1f, initialSpot = Spot(0.55f, 0.5f)),
-        glowing = false,
+        glow = false,
         picture = previewPicture(),
     )
 }
