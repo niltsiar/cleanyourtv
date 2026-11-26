@@ -168,6 +168,34 @@ val DockLookTest by testSuite {
         DockLook(glass = true).tint(true, lightness = 100f).red shouldBeLessThan light.red - 0.05f
     }
 
+    test("the Expressive container takes the tint's alpha for its own shade, dark in night mode and light without, dock glass or not") {
+        for (glass in listOf(false, true)) {
+            withClue("dock glass $glass") {
+                DockLook(glass = glass).containerAlpha(darkSurfaces = true, lightness = 60f) shouldBe (0.16f plusOrMinus 0.0001f)
+                DockLook(glass = glass).containerAlpha(darkSurfaces = true, lightness = 75f) shouldBe (0.22f plusOrMinus 0.0001f)
+                DockLook(glass = glass).containerAlpha(darkSurfaces = false, lightness = 60f) shouldBe (0.20f plusOrMinus 0.0001f)
+                DockLook(glass = glass).containerAlpha(darkSurfaces = false, lightness = 90f) shouldBe (0.26f plusOrMinus 0.0001f)
+                DockLook(opacity = 30, glass = glass).containerAlpha(darkSurfaces = true, lightness = 90f) shouldBe
+                    (0.85f * 0.30f plusOrMinus 0.0001f)
+                DockLook(opacity = 100, glass = glass).containerAlpha(darkSurfaces = false, lightness = 10f) shouldBe
+                    (0.85f plusOrMinus 0.0001f)
+            }
+        }
+    }
+
+    test("the Expressive container is never under 016 opaque, the least the house contrast test reads names on") {
+        val least =
+            (listOf<Int?>(null) + (30..100)).minOf { opacity ->
+                listOf(true, false).minOf { dark ->
+                    listOf(true, false).minOf { glass ->
+                        (0..100).minOf { lightness -> DockLook(opacity = opacity, glass = glass).containerAlpha(dark, lightness.toFloat()) }
+                    }
+                }
+            }
+
+        least shouldBe (0.16f plusOrMinus 0.0001f)
+    }
+
     test("the edge light needs the dock panel and motion") {
         TvConfig().dockLook().edgeLight.shouldBeTrue()
         TvConfig(dockBand = false).dockLook().edgeLight.shouldBeFalse()

@@ -174,7 +174,38 @@ val HousePaletteTest by testSuite {
             }
         failures.shouldBeEmpty()
     }
+
+    test(
+        "on the dock container at its least alpha over black and over white a name reads at 45 to 1 on its pill and the lift plate stands off it",
+    ) {
+        val failures =
+            listOf(true to MIN_PLATE_CONTRAST_DARK, false to MIN_PLATE_CONTRAST_LIGHT).flatMap { (dark, plateBound) ->
+                seeds().flatMap { (name, seed) ->
+                    val look = LookState(Look.Expressive) { seed }
+                    val colours = lookColorSets(look).let { if (dark) it.dark else it.light }
+                    listOf("black" to Color.Black, "white" to Color.White).flatMap { (groundName, ground) ->
+                        val dock = composite(look.scheme(dark).surfaceContainer.copy(alpha = LEAST_DOCK_ALPHA), ground)
+                        val pill = composite(colours.tileNamePill(), dock)
+                        val ink = composite(colours.tileName(), pill)
+                        val which = "${if (dark) "dark" else "light"} $name over $groundName"
+                        listOfNotNull(
+                            contrast(ink, pill).takeIf { it < 4.5 }?.let { "$which, the name on its pill: $it" },
+                            contrast(composite(colours.liftPlate(), dock), dock).takeIf { it < plateBound }?.let {
+                                "$which, the lift plate: $it"
+                            },
+                        )
+                    }
+                }
+            }
+        failures.shouldBeEmpty()
+    }
 }
+
+/**
+ * The least alpha of the Expressive dock container: the Auto alpha of a dark one over a dim wallpaper, which is under every
+ * other alpha `DockLook.containerAlpha` gives (feature/home's `DockLookTest` holds it there).
+ */
+private const val LEAST_DOCK_ALPHA = 0.16f
 
 private val Ember = Color(0xFFFF6A3D)
 private val NightTeal = Color(0xFF1F8A8A)
@@ -264,6 +295,17 @@ private fun bandPairs(s: ColorScheme): List<Triple<String, Color, Color>> =
         Triple("primary band beside the lowest container", s.primary, s.surfaceContainerLowest),
         Triple("primary band beside the scrim keyline", s.primary, s.scrim),
         Triple("tertiary band beside the surface gap", s.tertiary, s.surface),
+    )
+
+/** [top] at its alpha over the opaque [under], mixed on the encoded channels as the screen mixes them. */
+private fun composite(
+    top: Color,
+    under: Color,
+): Color =
+    Color(
+        under.red * (1f - top.alpha) + top.red * top.alpha,
+        under.green * (1f - top.alpha) + top.green * top.alpha,
+        under.blue * (1f - top.alpha) + top.blue * top.alpha,
     )
 
 /** WCAG 2 contrast ratio, from the 8-bit sRGB channels. */

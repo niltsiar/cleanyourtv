@@ -2233,6 +2233,7 @@ private fun DockPanel(
         val dark = TvTheme.surfaces.dark
         val tint = remember(look, dark, glass) { { look.tint(dark, glass.dockLightness) } }
         val gloss = remember(look, dark, glass) { { look.gloss(dark, glass.dockLightness) } }
+        val containerAlpha = remember(look, dark, glass) { { look.containerAlpha(dark, glass.dockLightness) } }
         DockSurface(
             glass,
             tint,
@@ -2241,6 +2242,7 @@ private fun DockPanel(
             edge,
             outerHairline = look.light(dark),
             gloss = gloss,
+            containerAlpha = containerAlpha,
             shade = shade,
             content = content,
         )

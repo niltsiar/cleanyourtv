@@ -96,6 +96,18 @@ class HomeGoldenTestContent :
                         showHome(x.copy(expressiveTile = ExpressiveTile.Cinch))
                         golden("expressive-dock-focus-cinch")
                     }
+
+                    test("home with dock glass, in Expressive") {
+                        showHome(x.copy(dockGlass = true))
+                        golden("expressive-dock-glass")
+                    }
+
+                    for (opacity in listOf(30, 100)) {
+                        test("home with dock opacity $opacity, in Expressive") {
+                            showHome(x.copy(dockOpacity = opacity))
+                            golden("expressive-dock-opacity-$opacity")
+                        }
+                    }
                 }
 
                 test("home with focus in the grid$named") {

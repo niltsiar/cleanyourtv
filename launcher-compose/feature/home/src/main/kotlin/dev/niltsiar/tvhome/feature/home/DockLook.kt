@@ -7,8 +7,9 @@ import kotlin.math.pow
 
 /**
  * The dock panel's look, from the theme: whether it is drawn at all ([band]), the percent [opacity] that sets its tint
- * (null: a tint that lightens on a bright wallpaper), [glass] for the light tint whatever the TV's night mode, and the
- * [edgeLight] of the focused tile on its rim and floor. With [evenPadding] the panel pads its tiles the same on all four sides.
+ * (null: a tint that lightens on a bright wallpaper), [glass] for the dock's own glass (the light tint whatever the TV's night
+ * mode, and in the Expressive look the frost under its container), and the [edgeLight] of the focused tile on its rim and
+ * floor. With [evenPadding] the panel pads its tiles the same on all four sides.
  */
 @Immutable
 public data class DockLook(
@@ -86,15 +87,30 @@ internal fun DockLook.tint(
     lightness: Float,
 ): Color {
     val light = light(darkSurfaces)
-    val alpha =
-        opacity?.let { OPACITY_SCALE * it / PERCENT }
-            ?: (
-                (if (light) LIGHT_ALPHA else DARK_ALPHA) +
-                    BRIGHT_BOOST * ((lightness - DIM_LIGHTNESS) / (BRIGHT_LIGHTNESS - DIM_LIGHTNESS)).coerceIn(0f, 1f)
-            )
+    val alpha = alpha(light, lightness)
     if (!light) return DarkTint.copy(alpha = alpha)
     return (if (opacity == null) LightTint.scaledToKeepTray(lightness, alpha) else LightTint).copy(alpha = alpha)
 }
+
+/**
+ * The alpha of the dock's container in the Expressive look, which is light without night mode ([darkSurfaces] false) and dark
+ * with it, with [DockLook.glass] or without: the [tint]'s alpha for a tray of that shade over a frost of L* [lightness].
+ */
+internal fun DockLook.containerAlpha(
+    darkSurfaces: Boolean,
+    lightness: Float,
+): Float = alpha(light = !darkSurfaces, lightness)
+
+/** The alpha of a [light] or dark tray: 0.85 times the [DockLook.opacity] percent, or without one 0.16 or 0.20 and up to 0.06 more. */
+private fun DockLook.alpha(
+    light: Boolean,
+    lightness: Float,
+): Float =
+    opacity?.let { OPACITY_SCALE * it / PERCENT }
+        ?: (
+            (if (light) LIGHT_ALPHA else DARK_ALPHA) +
+                BRIGHT_BOOST * ((lightness - DIM_LIGHTNESS) / (BRIGHT_LIGHTNESS - DIM_LIGHTNESS)).coerceIn(0f, 1f)
+        )
 
 /**
  * This tint's colour dimmed so that a tray of the frost at L* [lightness] under it at [alpha] has a mean relative

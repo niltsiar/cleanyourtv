@@ -146,7 +146,7 @@ private fun chromeRim(colours: TvElementColors): Brush = Brush.verticalGradient(
 
 /**
  * Draws the state's frost as it lies behind this node on screen, or with [dock] its [GlassState.dockFrost] when it has
- * one; a move of the node redraws it, nothing recomposes. [Look.Expressive] has no frost: it draws nothing there.
+ * one; a move of the node redraws it, nothing recomposes. [Look.Expressive] draws only the dock's [GlassState.dockFrost].
  */
 public fun Modifier.glassFrost(
     glass: GlassState,
@@ -187,8 +187,9 @@ private class FrostNode(
     }
 
     override fun ContentDrawScope.draw() {
-        val frost = (if (dock) glass.dockFrost else null) ?: glass.frost
-        if (frost != null && screen != IntSize.Zero && currentLookState().look != Look.Expressive) {
+        val dockFrost = if (dock) glass.dockFrost else null
+        val frost = if (currentLookState().look == Look.Expressive) dockFrost else dockFrost ?: glass.frost
+        if (frost != null && screen != IntSize.Zero) {
             drawImage(
                 image = frost,
                 srcOffset = IntOffset.Zero,

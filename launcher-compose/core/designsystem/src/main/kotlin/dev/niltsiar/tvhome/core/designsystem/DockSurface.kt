@@ -27,7 +27,6 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.node.DrawModifierNode
@@ -62,8 +61,9 @@ private val DockShadowDrop = 6.dp
  * as it fades. [shade] (read in the draw phase, 0 to 1) is the alpha of the shade layer over the whole panel, content included. The panel clips its content to [shape]
  * and marks itself [clipsHalo], so a focused tile's halo inside it ends before that edge.
  *
- * In [Look.Expressive] the panel is the house container, of the dark scheme under a dark [tint] and of the light one under a
- * light tint, opaque, with no frost, sheen, rim, edge or shadow; the [edgeLight] is the only colour of the focused app.
+ * In [Look.Expressive] the panel is the house container of the [TvTheme.surfaces]' scheme, dark or light, at [containerAlpha]
+ * (read in the draw phase), over the frost only when [GlassState.dockFrost] holds the dock's glass, with no sheen, rim, edge or
+ * shadow; the [edgeLight] is the only colour of the focused app.
  */
 @Composable
 public fun DockSurface(
@@ -74,11 +74,13 @@ public fun DockSurface(
     edgeLight: DockEdgeLight? = null,
     outerHairline: Boolean = false,
     gloss: () -> Float = { 1f },
+    containerAlpha: () -> Float = { 1f },
     shade: () -> Float = { 0f },
     content: @Composable BoxScope.() -> Unit,
 ) {
     val colours = TvTheme.elementColors
     val lookState = TvTheme.lookState
+    val dark = TvTheme.surfaces.dark
     val rimBrush = remember(colours) { Brush.verticalGradient(listOf(colours.dockRimTop, colours.dockRimBottom)) }
     val sheen = remember(colours) { Brush.verticalGradient(0f to colours.dockSheen, 0.35f to Color.Transparent) }
     val bottomEdge = remember(colours) { Brush.verticalGradient(0.5f to Color.Transparent, 1f to colours.dockBottomEdge) }
@@ -94,8 +96,7 @@ public fun DockSurface(
                     val expressive = lookState.look == Look.Expressive
                     edgeLight?.look = lookState.look
                     if (expressive) {
-                        val tinted = tint()
-                        drawRect(lookState.scheme(dark = tinted.luminance() < LIGHT_TINT).surfaceContainer)
+                        drawRect(lookState.scheme(dark).surfaceContainer, alpha = containerAlpha())
                     } else {
                         drawRect(tint())
                         drawRect(sheen, alpha = gloss())
@@ -192,9 +193,6 @@ private val LightHeight = 1.5.dp
 private val GlintWidth = 200.dp
 private val GlintHeight = 20.dp
 private const val SEEN = 0.01f
-
-/** A tint lighter than this luminance takes the light house scheme. */
-private const val LIGHT_TINT = 0.5f
 
 /**
  * The Expressive light: a cushion [CushionInset] inside the panel's top and bottom, [LightWidth] wide with [CushionCorner]

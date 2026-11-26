@@ -3,6 +3,9 @@ package dev.niltsiar.tvhome.feature.home
 import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
@@ -135,6 +138,83 @@ class DockGlassUiTestContent :
                         val at = gap()
 
                         assertSame(over(dark, 0.85f * 0.5f, frostAt(white, at)), screenAt(at))
+                    }
+                }
+
+                if (theme == Look.Expressive) {
+                    test(
+                        "dock opacity sets the container's opacity, so 30 draws another dock than 100 over the same wallpaper, in Expressive",
+                    ) {
+                        testLook = theme
+
+                        showHome(white, darkTheme = false)
+                        val at = gap()
+                        val (container, ground) = containerAndGround(at)
+                        val full = over(container, 0.85f, ground)
+                        dockOverride = DockLook(opacity = 30)
+                        settle()
+                        val thirty = screenAt(at)
+
+                        withClue("100 draws $full and 30 draws $thirty") { distance(full, thirty) shouldBeGreaterThan 0.3f }
+                        assertSame(over(container, 0.85f * 0.30f, ground), thirty)
+                    }
+                }
+
+                if (theme == Look.Expressive) {
+                    for (dark in listOf(true, false)) {
+                        val mode = if (dark) "night mode" else "no night mode"
+                        test("with $mode the container keeps its shade over a mid, a white and a near black glass dock, in Expressive") {
+                            testLook = theme
+
+                            val wallpaper = MutableStateFlow(Wallpaper(thumbnail = uniform))
+                            showHome(uniform, darkTheme = dark, wallpaper = wallpaper)
+                            val at = gap()
+                            val (container, _) = containerAndGround(at)
+                            withClue("the container is $container") {
+                                if (dark) {
+                                    container.luminance() shouldBeLessThan 0.05f
+                                } else {
+                                    container.luminance() shouldBeGreaterThan 0.75f
+                                }
+                            }
+                            dockOverride = DockLook(glass = true)
+                            awaitBake { glass.dockFrost != null }
+                            for (picture in listOf(uniform, white, night)) {
+                                val before = glass.dockLightness
+                                wallpaper.value = Wallpaper(thumbnail = picture)
+                                if (picture !== uniform) awaitBake { glass.dockLightness != before }
+                                settle()
+
+                                val alpha = DockLook(glass = true).containerAlpha(dark, glass.dockLightness)
+                                withClue("L* ${glass.dockLightness}") {
+                                    assertSame(over(container, alpha, frostAt(picture, at, glass = true)), screenAt(at))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (theme == Look.Expressive) {
+                    test(
+                        "dock glass draws the glass frost under the container and without it the container lies on the wallpaper, in Expressive",
+                    ) {
+                        testLook = theme
+
+                        showHome(uniform)
+                        val at = gap()
+                        val (_, ground) = containerAndGround(at)
+                        dockOverride = DockLook(opacity = 30)
+                        settle()
+                        val without = screenAt(at)
+                        dockOverride = DockLook(opacity = 30, glass = true)
+                        awaitBake { glass.dockFrost != null }
+                        settle()
+                        val withGlass = screenAt(at)
+
+                        // The container adds the same to both: the difference is the frost over the ground, through the container.
+                        val added = channels(withGlass, without) { a, b -> a - b }
+                        val frost = channels(frostAt(uniform, at, glass = true), ground) { a, b -> a - b }
+                        assertSame(over(Color.Black, 0.85f * 0.30f, frost), added)
                     }
                 }
 
@@ -617,6 +697,9 @@ private class DockGlassUiTestFixture : JUnit4RulesContext() {
     /** The look the test runs in. */
     var testLook = Look.Glass
 
+    /** The dock look Home takes in place of the config's, set while Home shows. */
+    var dockOverride: DockLook? by mutableStateOf(null)
+
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
     lateinit var glass: GlassState
@@ -693,7 +776,7 @@ private class DockGlassUiTestFixture : JUnit4RulesContext() {
                     onClick = {},
                     topBar = config.topBarLayout(),
                     shelfLayout = config.shelfLayout().copy(scrimAlpha = 0f),
-                    dockLook = config.dockLook(),
+                    dockLook = dockOverride ?: config.dockLook(),
                     actions = viewModel.actions,
                     glass = glass,
                 )
@@ -786,6 +869,37 @@ private class DockGlassUiTestFixture : JUnit4RulesContext() {
         val gap = listOf(expected.red - actual.red, expected.green - actual.green, expected.blue - actual.blue).maxOf { abs(it) * 255 }
         withClue("expected $expected, got $actual") { gap shouldBeLessThanOrEqualTo tolerance.toFloat() }
     }
+
+    /**
+     * The Expressive dock's container and the ground under it at [at], solved from the screen there at dock opacity 100 and
+     * 50 without dock glass, where the container lies over the ground at 0.85 and 0.425.
+     */
+    fun containerAndGround(at: Offset): Pair<Color, Color> {
+        dockOverride = DockLook(opacity = 100)
+        settle()
+        val full = screenAt(at)
+        dockOverride = DockLook(opacity = 50)
+        settle()
+        val half = screenAt(at)
+        val ground = channels(half, full) { h, f -> 2f * h - f }
+        return channels(full, half) { f, h -> 2f * h - f + (f - h) / 0.425f } to ground
+    }
+
+    /** Waits for the frost bake, which runs off the main thread, to give what [done] looks for. */
+    fun awaitBake(done: () -> Boolean) = compose.waitUntil(timeoutMillis = 5_000) { done() }
+
+    /** The largest difference of one channel of [a] and [b]. */
+    fun distance(
+        a: Color,
+        b: Color,
+    ) = maxOf(abs(a.red - b.red), abs(a.green - b.green), abs(a.blue - b.blue))
+
+    /** [f] of each channel of [a] and [b], held to 0 to 1. */
+    fun channels(
+        a: Color,
+        b: Color,
+        f: (Float, Float) -> Float,
+    ) = Color(f(a.red, b.red).coerceIn(0f, 1f), f(a.green, b.green).coerceIn(0f, 1f), f(a.blue, b.blue).coerceIn(0f, 1f))
 
     val dark = Color(0xFF0B0D12)
 
