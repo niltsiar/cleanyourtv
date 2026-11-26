@@ -134,27 +134,13 @@ internal fun appBand(accent: Color): AppBand {
 /** The tone of the dark scheme's primary role, which the focus band takes. */
 private const val BAND_TONE = 80
 
-/**
- * The [AppBand]s of the last [KEEP] colours asked for, so a band read in every frame builds nothing once its colour was
- * seen: a lookup scans the keys, and a new colour takes the oldest slot.
- */
+/** The [AppBand]s of the last 64 colours asked for, so a band read in every frame builds nothing once its colour was seen. */
 internal object AppBands {
-    private const val KEEP = 64
-    private val keys = LongArray(KEEP)
-    private val bands = arrayOfNulls<AppBand>(KEEP)
-    private var next = 0
+    private val bands = RecentSlots(arrayOfNulls<AppBand>(64))
 
     operator fun get(accent: Color): AppBand {
         val key = accent.value.toLong()
-        for (i in 0 until KEEP) {
-            val kept = bands[i]
-            if (kept != null && keys[i] == key) return kept
-        }
-        return appBand(accent).also {
-            keys[next] = key
-            bands[next] = it
-            next = (next + 1) % KEEP
-        }
+        return bands.find(key) ?: bands.keep(key, appBand(accent))
     }
 }
 

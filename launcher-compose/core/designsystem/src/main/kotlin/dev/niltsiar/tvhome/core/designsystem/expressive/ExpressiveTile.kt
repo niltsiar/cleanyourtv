@@ -78,6 +78,12 @@ internal fun Density.cinchArtRadius(
     return min(radius, full)
 }
 
+/** The top-left corner radius of [base] at [size], 0 for a shape without round corners: the tile's corner at rest. */
+internal fun Density.restRadius(
+    base: Shape,
+    size: Size,
+): Float = (base.createOutline(size, LayoutDirection.Ltr, this) as? Outline.Rounded)?.roundRect?.topLeftCornerRadius?.x ?: 0f
+
 /** Whether ([x], [y]) lies inside a [width] by [height] rectangle with corners of [radius], grown by [grow] on every side. */
 private fun insideRoundRect(
     x: Float,
@@ -100,14 +106,11 @@ private const val ART_CLEARANCE = 0.5f
 
 /**
  * The halo bands of cinch tiles, from the outer edge of the band, [reach] past the tile, out by a whole number of
- * [quantum]s on each side, kept for the last [KEEP] tile sizes and widths, so a frame that draws a halo already seen
- * builds nothing: a lookup scans the keys, and a new halo takes the oldest slot.
+ * [quantum]s on each side, kept for the last 16 tile sizes and widths, so a frame that draws a halo already seen builds
+ * nothing.
  */
 internal object CinchHalos {
-    private const val KEEP = 16
-    private val keys = LongArray(KEEP) { -1L }
-    private val halos = arrayOfNulls<Array<Path>>(KEEP)
-    private var next = 0
+    private val halos = RecentSlots(arrayOfNulls<Array<Path>>(16))
 
     /** The [steps] bands of the halo of a [width] by [height] tile, [left], [top], [right] and [bottom] quanta wide. */
     fun get(
@@ -130,10 +133,7 @@ internal object CinchHalos {
                 ((top.toLong() and 0xF) shl 48) or
                 ((right.toLong() and 0xF) shl 52) or
                 ((bottom.toLong() and 0xF) shl 56)
-        for (i in 0 until KEEP) {
-            val kept = halos[i]
-            if (kept != null && keys[i] == key) return kept
-        }
+        halos.find(key)?.let { return it }
         val built =
             with(density) {
                 cinchHalo(
@@ -150,10 +150,7 @@ internal object CinchHalos {
                     CinchWaist.toPx(),
                 )
             }
-        keys[next] = key
-        halos[next] = built
-        next = (next + 1) % KEEP
-        return built
+        return halos.keep(key, built)
     }
 }
 
@@ -239,7 +236,7 @@ internal class TilePainter {
     ): CornerSteps {
         val kept = steps
         if (kept != null && kept.size == size && stepsBase == base && stepsTile == tile) return kept
-        val rest = (base.createOutline(size, LayoutDirection.Ltr, density) as? Outline.Rounded)?.roundRect?.topLeftCornerRadius?.x ?: 0f
+        val rest = density.restRadius(base, size)
         val steps =
             when (tile) {
                 ExpressiveTile.Capsule -> CornerSteps(size, rest)
@@ -280,9 +277,9 @@ internal class TilePainter {
         density: Density,
     ): BandGeometry {
         val rest = steps(base, tile, size, density).rest
-        val key = BandKey(tile, rim, size.width, size.height, rest, density.density)
         val kept = band
-        if (kept != null && bandKey == key) return kept
+        if (kept != null && bandKey?.matches(tile, rim, size, rest, density.density) == true) return kept
+        val key = BandKey(tile, rim, size.width, size.height, rest, density.density)
         return BandCache.get(key) { buildBand(key, density) }.also {
             band = it
             bandKey = key
@@ -320,7 +317,18 @@ internal data class BandKey(
     val height: Float,
     val rest: Float,
     val density: Float,
-)
+) {
+    /** Whether this key is the one these values make, without building it. */
+    fun matches(
+        tile: ExpressiveTile,
+        rim: Boolean,
+        size: Size,
+        rest: Float,
+        density: Float,
+    ): Boolean =
+        tile == this.tile && rim == this.rim && size.width == width && size.height == height && rest == this.rest &&
+            density == this.density
+}
 
 /** The band geometry of the last few tile sizes, shared by every tile of a size, so a grid of equal tiles builds it once. */
 internal object BandCache {

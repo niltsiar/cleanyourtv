@@ -16,6 +16,7 @@ import dev.niltsiar.tvhome.core.config.ExpressiveTile
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.expressive.cinchArtRadius
 import dev.niltsiar.tvhome.core.designsystem.expressive.cinchOutline
+import dev.niltsiar.tvhome.core.designsystem.expressive.restRadius
 import kotlin.math.abs
 import kotlin.math.min
 
@@ -110,9 +111,7 @@ public class FocusedShape internal constructor(
             }
 
             ExpressiveTile.Cinch -> {
-                val rest =
-                    (base.createOutline(size, LayoutDirection.Ltr, density) as? Outline.Rounded)?.roundRect?.topLeftCornerRadius?.x ?: 0f
-                val art = density.cinchArtRadius(size.width, size.height, rest)
+                val art = density.cinchArtRadius(size.width, size.height, density.restRadius(base, size))
                 val edge = density.cinchOutline(size.width, size.height, ringReach)
                 outline = Outline.Rounded(RoundRect(0f, 0f, size.width, size.height, CornerRadius(art)))
                 band = Outline.Generic(edge)

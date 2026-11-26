@@ -4,7 +4,6 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PixelMap
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
@@ -56,9 +55,6 @@ val HabitHintUiTest by testSuite {
             },
     )
 }
-
-/** [colour]'s hue in degrees, saturation and value. */
-private fun hsv(colour: Color): FloatArray = FloatArray(3).also { android.graphics.Color.colorToHSV(colour.toArgb(), it) }
 
 class HabitHintUiTestContent :
     RobolectricTestSuiteContent({

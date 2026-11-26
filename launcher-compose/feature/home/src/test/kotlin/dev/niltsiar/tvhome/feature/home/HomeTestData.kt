@@ -4,7 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsNodeInteraction
@@ -42,6 +44,9 @@ internal val SixColumns = TvConfig(columns = 6)
 
 /** Six columns with input_tiles on: a held OK on an Inputs row can pin it. */
 internal val InputTilesOn = SixColumns.copy(inputTiles = true)
+
+/** [colour]'s hue in degrees, saturation and value. */
+internal fun hsv(colour: Color): FloatArray = FloatArray(3).also { android.graphics.Color.colorToHSV(colour.toArgb(), it) }
 
 internal fun homeApps(
     apps: List<AppEntry> = NineApps,

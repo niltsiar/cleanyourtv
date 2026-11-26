@@ -8,7 +8,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PixelMap
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
@@ -287,15 +286,11 @@ private class InputTileUiTestFixture : JUnit4RulesContext() {
     fun isGrey(pixel: Color) =
         if (testLook == Look.Glass) {
             colours.idle().let {
-                abs(
-                    pixel.red - it.red,
-                ) < 0.06f && abs(pixel.green - it.green) < 0.06f && abs(pixel.blue - it.blue) < 0.06f
+                abs(pixel.red - it.red) < 0.06f && abs(pixel.green - it.green) < 0.06f && abs(pixel.blue - it.blue) < 0.06f
             }
         } else {
             hsv(pixel).let { (_, saturation, value) -> saturation < 0.2f && value in 0.3f..0.75f }
         }
-
-    private fun hsv(colour: Color): FloatArray = FloatArray(3).also { android.graphics.Color.colorToHSV(colour.toArgb(), it) }
 
     @OptIn(InternalComposeTracingApi::class)
     fun startCounting(counter: Recompositions) {
