@@ -36,10 +36,11 @@ class ColonBreathTestContent :
                 fun breathAfter(
                     motion: Motion,
                     millis: Long,
+                    look: Look = Look.Glass,
                 ): Float {
                     lateinit var breath: State<Float>
                     compose.mainClock.autoAdvance = false
-                    compose.setContent { TvTheme(look = Look.Glass, motion = motion) { breath = rememberColonBreath() } }
+                    compose.setContent { TvTheme(look = look, motion = motion) { breath = rememberColonBreath() } }
                     compose.mainClock.advanceTimeBy(millis)
                     return breath.value
                 }
@@ -55,6 +56,10 @@ class ColonBreathTestContent :
 
             test("the colon stays at full opacity with animations off") {
                 breathAfter(Motion(animations = false), millis = 1_800) shouldBe (1f plusOrMinus 0f)
+            }
+
+            test("the colon stays at full opacity in Expressive, which has no endless loop") {
+                breathAfter(Motion(), millis = 1_800, look = Look.Expressive) shouldBe (1f plusOrMinus 0f)
             }
         }
     })

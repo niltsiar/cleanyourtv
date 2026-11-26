@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import dev.niltsiar.tvhome.core.designsystem.ScreensaverGlows
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -15,7 +16,7 @@ import kotlin.random.Random
 /**
  * What moves in the screensaver, kept in state that only the layout and draw phases read, so nothing recomposes while it
  * runs for hours. Every [MOVE_MS] the clock fades out, jumps to another [spot] and fades back in, and the glow takes the
- * next colour of [GlowPalette].
+ * next colour of [ScreensaverGlows].
  */
 @Stable
 internal class ClockSceneState(
@@ -29,9 +30,9 @@ internal class ClockSceneState(
     var spot by mutableStateOf(initialSpot)
         private set
 
-    private var paletteIndex = random.nextInt(GlowPalette.size)
+    private var paletteIndex = random.nextInt(ScreensaverGlows.size)
 
-    var glow by mutableStateOf(GlowPalette[paletteIndex])
+    var glow by mutableStateOf(ScreensaverGlows[paletteIndex])
         private set
 
     /** Plays the scene until cancelled. [cycleGlow] false keeps the glow colour. */
@@ -51,8 +52,8 @@ internal class ClockSceneState(
 
     private suspend fun shiftGlow() {
         val from = glow
-        paletteIndex = (paletteIndex + 1) % GlowPalette.size
-        val to = GlowPalette[paletteIndex]
+        paletteIndex = (paletteIndex + 1) % ScreensaverGlows.size
+        val to = ScreensaverGlows[paletteIndex]
         for (step in 1..GLOW_STEPS) {
             delay(GLOW_STEP_MS)
             glow = glowStep(from, to, step)

@@ -16,10 +16,6 @@ internal const val FADE_IN_MS: Int = 1_200
 internal const val GLOW_STEPS: Int = 16
 internal const val GLOW_STEP_MS: Long = 500
 
-/** Deep, low-brightness glow colours; the glow is drawn at partial alpha on black. */
-internal val GlowPalette: List<Color> =
-    listOf(Color(0xFF2B5CFF), Color(0xFF00A39A), Color(0xFF8A3FFC), Color(0xFFE0661B), Color(0xFFD6336C))
-
 /** Where the clock sits as fractions of the room it has left on screen: 0.1 to 0.9 on each axis, so it never touches an edge. */
 internal data class Spot(
     val x: Float,

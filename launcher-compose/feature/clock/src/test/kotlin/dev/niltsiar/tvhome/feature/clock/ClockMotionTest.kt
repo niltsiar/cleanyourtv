@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import de.infix.testBalloon.framework.core.testSuite
+import dev.niltsiar.tvhome.core.designsystem.ScreensaverGlows
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.ints.shouldBeLessThan
 import io.kotest.matchers.ranges.shouldBeIn
@@ -50,8 +51,8 @@ val ClockMotionTest by testSuite {
     }
 
     test("the glow takes 16 steps from one colour to the next") {
-        val from = GlowPalette[0]
-        val to = GlowPalette[1]
+        val from = ScreensaverGlows[0]
+        val to = ScreensaverGlows[1]
         glowStep(from, to, 0) shouldBe from
         glowStep(from, to, GLOW_STEPS) shouldBe to
         glowStep(from, to, GLOW_STEPS / 2) shouldNotBe from
@@ -59,6 +60,6 @@ val ClockMotionTest by testSuite {
     }
 
     test("the glow palette is the reference launchers five colours") {
-        GlowPalette shouldBe listOf(0xFF2B5CFF, 0xFF00A39A, 0xFF8A3FFC, 0xFFE0661B, 0xFFD6336C).map { Color(it) }
+        ScreensaverGlows shouldBe listOf(0xFF2B5CFF, 0xFF00A39A, 0xFF8A3FFC, 0xFFE0661B, 0xFFD6336C).map { Color(it) }
     }
 }

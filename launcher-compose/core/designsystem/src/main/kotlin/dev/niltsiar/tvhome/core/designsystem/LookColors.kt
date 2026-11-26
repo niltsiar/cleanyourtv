@@ -52,6 +52,10 @@ private const val CHIP_KEY_FILL_ALPHA = 0.16f
 private const val CHIP_KEY_FOCUSED_ON_LIGHT_ALPHA = 0.47f
 private const val CHIP_KEY_FOCUSED_ON_DARK_ALPHA = 0.39f
 private const val EXPRESSIVE_CHIP_KEY_FOCUSED_ALPHA = 0.24f
+
+/** The colours the Glass screensaver glow turns through, deep and low in brightness: it is drawn at partial alpha on black. */
+public val ScreensaverGlows: List<Color> =
+    listOf(Color(0xFF2B5CFF), Color(0xFF00A39A), Color(0xFF8A3FFC), Color(0xFFE0661B), Color(0xFFD6336C))
 private const val LABEL_IDLE_ALPHA = 0.78f
 private const val HEADING_ALPHA = 0.65f
 private const val DIVIDER_ALPHA = 0.12f
@@ -317,6 +321,12 @@ public class LookColors internal constructor(
     public val pickerArtSlot: ColorProducer =
         ColorProducer { if (expressive) scheme.surfaceContainerHighest else colors.onSurface.copy(alpha = ART_SLOT_ALPHA) }
     public val swatchOutline: ColorProducer = ColorProducer { if (expressive) scheme.outlineVariant else GlassSwatchOutline }
+
+    /** The screensaver's ground: black in both looks, as an OLED needs. */
+    public val screensaverGround: ColorProducer = ColorProducer { Color.Black }
+
+    /** The screensaver's glow, which is [glass] in Glass, one of [ScreensaverGlows]; in Expressive the house's container colour. */
+    public fun screensaverGlow(glass: Color): Color = if (expressive) look.scheme(dark = true).primaryContainer else glass
 
     /** A cue on a panel that more lies beyond: its chevron, and the pill under it. */
     public val panelCue: ColorProducer =

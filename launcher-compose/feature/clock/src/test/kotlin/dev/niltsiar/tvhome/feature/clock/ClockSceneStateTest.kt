@@ -9,6 +9,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.designsystem.ScreensaverGlows
 import io.kotest.assertions.withClue
 import io.kotest.matchers.floats.plusOrMinus
 import io.kotest.matchers.floats.shouldBeGreaterThan
@@ -77,7 +78,7 @@ class ClockSceneStateTestContent :
             test("the glow walks to the next palette colour in 16 steps of half a second") {
                 val state = ClockSceneState(Random(3))
                 val start = state.glow
-                val next = GlowPalette[(GlowPalette.indexOf(start) + 1) % GlowPalette.size]
+                val next = ScreensaverGlows[(ScreensaverGlows.indexOf(start) + 1) % ScreensaverGlows.size]
                 play(state)
                 advance(FADE_IN_MS + MOVE_MS)
                 withClue("steps are 500 ms apart: none before the first") { state.glow shouldBe start }

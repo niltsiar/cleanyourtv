@@ -7,7 +7,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,7 +21,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
@@ -31,6 +29,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import kotlin.random.Random
 
@@ -57,7 +56,9 @@ public fun ClockScene(
 ) {
     val state = remember(random) { ClockSceneState(random) }
     val glowing = glow && picture == null
-    LaunchedEffect(state, glowing) { state.run(cycleGlow = glowing) }
+    // The Expressive glow is one house colour, so it has no colours to turn through.
+    val cycles = glowing && TvTheme.lookState.look == Look.Glass
+    LaunchedEffect(state, cycles) { state.run(cycleGlow = cycles) }
     ClockSceneContent(face, state, glowing, picture, modifier)
 }
 
@@ -69,7 +70,8 @@ internal fun ClockSceneContent(
     picture: ImageBitmap?,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier.fillMaxSize().background(Color.Black)) {
+    val colours = TvTheme.lookColors
+    Box(modifier.fillMaxSize().drawBehind { drawRect(colours.screensaverGround()) }) {
         if (picture != null) {
             Image(bitmap = picture, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         }
@@ -88,11 +90,12 @@ private fun SpotLayout(
 ) {
     // Written while placing, read while drawing: the glow needs the clock's size, and layout always runs before draw.
     val clockSize = remember { IntArray(2) }
+    val colours = TvTheme.lookColors
     val glowModifier =
         if (glowing) {
             Modifier.drawBehind {
                 val center = IntSize(size.width.toInt(), size.height.toInt()).centerOf(IntSize(clockSize[0], clockSize[1]), state.spot)
-                drawRect(glowBrush(state.glow, center, size.width))
+                drawRect(glowBrush(colours.screensaverGlow(state.glow), center, size.width))
             }
         } else {
             Modifier
@@ -140,11 +143,12 @@ private fun ClockText(
 
 /**
  * The colon's opacity, from full to [COLON_LOW] and back, as a state that only draw lambdas read. It stays at full
- * when the theme's motion does not run endless loops.
+ * when the theme's motion does not run endless loops, and in Expressive, which has none.
  */
 @Composable
 internal fun rememberColonBreath(): State<Float> {
-    if (!TvTheme.motion.animated) return remember { mutableStateOf(1f) }
+    val motion = TvTheme.motion
+    if (!motion.animated || motion.look == Look.Expressive) return remember { mutableStateOf(1f) }
     return rememberInfiniteTransition(label = "colon").animateFloat(
         initialValue = 1f,
         targetValue = COLON_LOW,
