@@ -126,6 +126,23 @@ class HomeGoldenTestContent :
                     golden("${prefix}app-shelf")
                 }
 
+                if (look == Look.Expressive) {
+                    val watched = x.copy(cinematicHome = true, appShelf = true, appShelfSources = listOf("pkg.1"))
+
+                    test("app highlights with watched cards and one without, in Expressive") {
+                        showHome(watched, heroArt = { art(it) }, shelfItems = WatchedItems)
+                        compose.onNodeWithTag("shelf:card:2").assertExists()
+                        golden("expressive-app-shelf-watched")
+                    }
+
+                    test("a watched card with focus beside one without, in Expressive") {
+                        showHome(watched, heroArt = { art(it) }, shelfItems = WatchedItems)
+                        press(Key.DirectionUp)
+                        compose.onNodeWithTag("shelf:card:0").assertIsFocused()
+                        golden("expressive-app-shelf-watched-focus")
+                    }
+                }
+
                 test("a tile menu open$named") {
                     showHome(x)
                     press(Key.Menu)
@@ -413,6 +430,29 @@ private fun samePixels(
 /** The corner of Home's tiles at rest. */
 private val TileCorner = 12.dp
 
+/** The App highlights of the other scenes: three posters, none watched. */
+private val ShelfItems =
+    listOf(
+        ShelfItem(packageName = "pkg.1", title = "Severance", kind = ShelfKind.Continue, posterUri = "content://pkg.1/1"),
+        ShelfItem(packageName = "pkg.1", title = "Andor", kind = ShelfKind.Next, posterUri = "content://pkg.1/2"),
+        ShelfItem(packageName = "pkg.1", title = "Silo", kind = ShelfKind.Next, posterUri = "content://pkg.1/3"),
+    )
+
+/** Severance watched 40 %, Andor with no position, and Silo, a text card without a poster, watched 70 %. */
+private val WatchedItems =
+    listOf(
+        ShelfItem(
+            "pkg.1",
+            "Severance",
+            ShelfKind.Continue,
+            positionMs = 1_440_000,
+            durationMs = 3_600_000,
+            posterUri = "content://pkg.1/1",
+        ),
+        ShelfItem("pkg.1", "Andor", ShelfKind.Next, posterUri = "content://pkg.1/2"),
+        ShelfItem("pkg.1", "Silo", ShelfKind.Continue, positionMs = 2_520_000, durationMs = 3_600_000),
+    )
+
 /** The house seed of the Expressive scenes, the warm one the design-system goldens use. */
 private val Ember = Color(0xFFFF6A3D)
 
@@ -480,6 +520,7 @@ private class HomeGoldenFixture : JUnit4RulesContext() {
         network: NetworkState = NetworkState(NetworkLink.Wifi, ssid = "Home", validated = true),
         heroArt: suspend (String) -> ImageBitmap? = { null },
         wallpaper: ImageBitmap = picture,
+        shelfItems: List<ShelfItem> = ShelfItems,
         probe: @Composable () -> Unit = {},
     ) {
         val poster = ShelfPoster(bands(18, 27, listOf(Color(0xFF5A2E6E), Color(0xFFD08A3A))))
@@ -494,13 +535,7 @@ private class HomeGoldenFixture : JUnit4RulesContext() {
                 timeMillis = { Evening.toEpochSecond(ZoneOffset.UTC) * 1_000 },
                 sleepTimerAvailable = { sleepMinutesLeft != null },
                 sleepMinutesLeft = flowOf(sleepMinutesLeft),
-                shelfItems = {
-                    listOf(
-                        ShelfItem(packageName = "pkg.1", title = "Severance", kind = ShelfKind.Continue, posterUri = "content://pkg.1/1"),
-                        ShelfItem(packageName = "pkg.1", title = "Andor", kind = ShelfKind.Next, posterUri = "content://pkg.1/2"),
-                        ShelfItem(packageName = "pkg.1", title = "Silo", kind = ShelfKind.Next, posterUri = "content://pkg.1/3"),
-                    )
-                },
+                shelfItems = { shelfItems },
                 shelfPoster = { _, _, _ -> poster },
             )
         look = config.look

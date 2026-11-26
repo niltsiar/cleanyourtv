@@ -39,13 +39,19 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.layout.ContentScale
@@ -60,12 +66,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.FocusRingReach
 import dev.niltsiar.tvhome.core.designsystem.FocusSurface
+import dev.niltsiar.tvhome.core.designsystem.FocusedShape
+import dev.niltsiar.tvhome.core.designsystem.LookColors
+import dev.niltsiar.tvhome.core.designsystem.ProgressWave
+import dev.niltsiar.tvhome.core.designsystem.ProgressWaveReach
 import dev.niltsiar.tvhome.core.designsystem.ScrollsClearOfEdge
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.popsOver
 import dev.niltsiar.tvhome.core.designsystem.pressDip
+import dev.niltsiar.tvhome.core.designsystem.rememberFocusedShape
 import dev.niltsiar.tvhome.core.designsystem.ringBlendsWith
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.NowPlayingArt
@@ -76,6 +88,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlin.math.ceil
+import kotlin.math.max
+import kotlin.math.sqrt
 
 /** The tallest a shelf card is, 16:9 at 240 x 135 dp. */
 internal val ShelfCardHeight = 135.dp
@@ -318,6 +332,10 @@ private fun ShelfCard(
     val focus = remember { Animatable(0f) }
     val ringBlends = remember(ring, accent) { ringBlendsWith(ring, accent) }
     val colours = TvTheme.lookColors
+    val lookState = TvTheme.lookState
+    val watched = progressOf(item)
+    val wave = remember { ProgressWave() }
+    val focusedShape = rememberFocusedShape()
     FocusSurface(
         onClick = {
             if (press != null && !launching.value) scope.launch { press.pressDip(motion) }
@@ -332,7 +350,16 @@ private fun ShelfCard(
         press = press,
         modifier = modifier.popsOver(focus).size(band.cardWidth, band.cardHeight).semantics { contentDescription = item.title },
     ) {
-        Box(Modifier.fillMaxSize().drawBehind { drawRect(colours.tileFill()) }, contentAlignment = Alignment.BottomStart) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .drawBehind { drawRect(colours.tileFill()) }
+                .drawWithContent {
+                    drawContent()
+                    if (watched != null && lookState.look == Look.Expressive) drawWatched(wave, watched, colours, focusedShape)
+                },
+            contentAlignment = Alignment.BottomStart,
+        ) {
             val shown = carried ?: decoded
             if (shown != null) {
                 val fill = shown.fill
@@ -366,6 +393,37 @@ private fun ShelfCard(
 }
 
 /**
+ * The footer of a card [watched] of the way through, in Expressive: a strip in the card's fill as tall as a text card's
+ * inset, so its title stays clear, with a still progress wave across it. The line keeps inside the card's [focused]
+ * outline at rest too, so focus hides none of it and changes nothing about it.
+ */
+private fun DrawScope.drawWatched(
+    wave: ProgressWave,
+    watched: Float,
+    colours: LookColors,
+    focused: FocusedShape,
+) {
+    val footer = TextCardInset.toPx()
+    val middle = size.height - footer / 2f
+    val corner =
+        (focused.outline(ShelfCardShape, size, layoutDirection, this) as? Outline.Rounded)?.roundRect?.bottomLeftCornerRadius
+            ?: CornerRadius.Zero
+    val inset = max(TextCardInset.toPx(), cornerClearance(corner, footer / 2f - ProgressWaveReach.toPx()))
+    drawRect(colours.cardFooter(), topLeft = Offset(0f, size.height - footer), size = Size(size.width, footer))
+    with(wave) { drawProgressWave(inset, middle, size.width - 2f * inset, watched, colours.cardProgress(), colours.cardProgressTrack()) }
+}
+
+/** How far in from its side a bottom corner of [corner] radii lies at [height] over the bottom edge. */
+private fun cornerClearance(
+    corner: CornerRadius,
+    height: Float,
+): Float {
+    if (corner.x <= 0f || corner.y <= 0f || height >= corner.y) return 0f
+    val up = (corner.y - height) / corner.y
+    return corner.x * (1f - sqrt(1f - up * up))
+}
+
+/**
  * What the line under the title says for a focused shelf card: the item's title, then after a middle dot its season and
  * episode when the app gives them and the minutes left when it gives a position and a duration, split by a comma. A
  * now-playing card gives the title, then the artist when the session names one and Paused while it is paused.
@@ -393,6 +451,13 @@ private fun titleAndDetails(
     title: String,
     details: List<String>,
 ): String = if (details.isEmpty()) title else title + SHELF_LINE_SEPARATOR + details.joinToString(SHELF_DETAIL_SEPARATOR)
+
+/** How far [item] was watched, 0 to 1; null without a position and a duration. */
+internal fun progressOf(item: ShelfItem): Float? {
+    val position = item.positionMs ?: return null
+    val duration = item.durationMs ?: return null
+    return if (duration <= 0) null else (position.toFloat() / duration).coerceIn(0f, 1f)
+}
 
 /** The whole minutes left of [item], rounded up; null without a position and a duration, or with none left. */
 internal fun minutesLeft(item: ShelfItem): Int? {

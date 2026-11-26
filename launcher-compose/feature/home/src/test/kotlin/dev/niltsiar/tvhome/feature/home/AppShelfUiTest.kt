@@ -50,10 +50,14 @@ import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.comparables.shouldBeLessThan
+import io.kotest.matchers.floats.plusOrMinus
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.ranges.shouldBeIn
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 private const val DENSITY = 2
@@ -565,6 +569,41 @@ class AppShelfUiTestContent :
                     compose.onNodeWithContentDescription("Inputs").assertIsFocused()
                 }
             }
+
+            for ((position, duration) in listOf(600_000L to 600_000L + 31 * 60_000 + 1, 2_700_000L to 3_600_000L)) {
+                val watched = position.toFloat() / duration
+                test("in Expressive the wave on a card watched ${(watched * 100).roundToInt()} percent reaches as far along its footer") {
+                    testLook = Look.Expressive
+                    items[0] = items[0].copy(positionMs = position, durationMs = duration)
+
+                    showHome()
+                    hold()
+
+                    val reach = waveReach(card = 0)
+                    withClue("reach $reach for $watched") { reach.shouldNotBeNull() shouldBe (watched plusOrMinus 0.03f) }
+                }
+            }
+
+            test("in Expressive a card without a position and the now playing card draw no wave") {
+                testLook = Look.Expressive
+                session.value = NowPlayingItem("pkg.1", "The Sound of Silence", "Disturbed", paused = false, art = null)
+
+                showHome(Cinematic.copy(nowPlaying = true))
+                hold()
+
+                compose.onNodeWithContentDescription("The Sound of Silence").assertExists()
+                withClue("the now playing card") { waveReach(card = 0).shouldBeNull() }
+                withClue("Severance, watched") { waveReach(card = 1).shouldNotBeNull() }
+                withClue("Silo, with no position") { waveReach(card = 3).shouldBeNull() }
+            }
+
+            test("in Glass a card with a position keeps its poster to the bottom edge, with no footer") {
+                showHome()
+                hold()
+
+                waveReach(card = 0).shouldBeNull()
+                footerRedness(card = 0) shouldBe (1f plusOrMinus 0.02f)
+            }
         }
     })
 
@@ -747,6 +786,35 @@ private class AppShelfUiTestFixture : JUnit4RulesContext() {
             if (pixel.red > 0.8f && pixel.green < 0.25f && pixel.blue < 0.25f) width++
         }
         return width.toFloat()
+    }
+
+    /**
+     * How far along its line card [card]'s progress wave reaches, 0 to 1, read in the card's footer, its bottom 12 dp: the
+     * rightmost near-white pixel of the wave, against the line's ends on the footer's middle row, where the line differs
+     * from the strip. Null when the footer has no wave.
+     */
+    fun waveReach(card: Int): Float? {
+        val image = compose.onRoot().captureToImage().toPixelMap()
+        val bounds = compose.onNodeWithTag("shelf:card:$card").getBoundsInRoot()
+        val rows = ((bounds.bottom.value - 12f) * DENSITY).roundToInt() until (bounds.bottom.value * DENSITY).roundToInt()
+        val columns = ((bounds.left.value + 4f) * DENSITY).roundToInt() until ((bounds.right.value - 4f) * DENSITY).roundToInt()
+        val reach = columns.lastOrNull { x -> rows.any { y -> image[x, y].run { minOf(red, green, blue) > 0.6f } } } ?: return null
+        val middle = ((bounds.bottom.value - 6f) * DENSITY).roundToInt()
+        val strip = image[columns.first, middle]
+        val line =
+            columns.filter { x ->
+                image[x, middle].run { maxOf(abs(red - strip.red), abs(green - strip.green), abs(blue - strip.blue)) > 0.05f }
+            }
+        return (reach - line.first()).toFloat() / (line.last() - line.first())
+    }
+
+    /** How much of card [card]'s footer row, 4 dp over its bottom edge, its red poster still covers. */
+    fun footerRedness(card: Int): Float {
+        val image = compose.onRoot().captureToImage().toPixelMap()
+        val bounds = compose.onNodeWithTag("shelf:card:$card").getBoundsInRoot()
+        val row = ((bounds.bottom.value - 4f) * DENSITY).roundToInt()
+        val columns = ((bounds.left.value + 16f) * DENSITY).roundToInt() until ((bounds.right.value - 16f) * DENSITY).roundToInt()
+        return columns.count { x -> image[x, row].run { red > 0.8f && green < 0.25f && blue < 0.25f } } / columns.count().toFloat()
     }
 
     fun firstCardLeft(): Float =

@@ -25,9 +25,13 @@ import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.designsystem.golden.bands
 import dev.niltsiar.tvhome.core.designsystem.motion
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
+import dev.niltsiar.tvhome.core.model.ShelfItem
+import dev.niltsiar.tvhome.core.model.ShelfKind
+import dev.niltsiar.tvhome.core.model.ShelfPoster
 import io.kotest.assertions.withClue
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
@@ -36,7 +40,8 @@ import kotlinx.coroutines.flow.flowOf
 /**
  * What moves on Expressive Home during a dock move and a held OK, read frame by frame from the pixels: the focus band, its
  * colour and the charge round the two tiles, the light on the dock's rim, and the dock title's swap of names, which both
- * looks have. Nothing else on the screen changes.
+ * looks have. Nothing else on the screen changes, and at rest nothing moves, the still progress wave of a watched card
+ * included.
  */
 val MotionKindsUiTest by testSuite {
     robolectricTestSuite<MotionKindsUiTestContent>(
@@ -79,6 +84,19 @@ class MotionKindsUiTestContent :
                 moving shouldBe setOf("tile 1", "tile 2", "dock rim", "dock title")
                 compose.onAllNodesWithTag("menu").fetchSemanticsNodes().size shouldBe 0
             }
+
+            test("at rest with a watched card and its progress wave on screen nothing changes and no frame is asked for") {
+                showHome(shelf = true)
+                val rest = screen()
+
+                repeat(30) { compose.mainClock.advanceTimeByFrame() }
+                withClue("pixels that changed over 30 frames") { changes(rest, screen()).take(10).shouldBeEmpty() }
+
+                val now = compose.mainClock.currentTime
+                compose.mainClock.autoAdvance = true
+                compose.waitForIdle()
+                withClue("an idle wait ran no frames") { compose.mainClock.currentTime shouldBe now }
+            }
         }
     })
 
@@ -104,8 +122,27 @@ private class MotionKindsUiTestFixture : JUnit4RulesContext() {
     private lateinit var rim: DpRect
     private lateinit var title: DpRect
 
-    fun showHome() {
-        val sources = sources(apps = flowOf(AppList(apps)))
+    /** Home at rest on the first dock tile; with [shelf], its App highlights show a card watched a third of the way, over a poster. */
+    fun showHome(shelf: Boolean = false) {
+        val shown = if (shelf) config.copy(appShelf = true, appShelfSources = listOf("pkg.1")) else config
+        val sources =
+            sources(
+                apps = flowOf(AppList(apps)),
+                shelfItems = {
+                    listOf(
+                        ShelfItem(
+                            "pkg.1",
+                            "Severance",
+                            ShelfKind.Continue,
+                            positionMs = 1_200_000,
+                            durationMs = 3_600_000,
+                            posterUri = "content://1",
+                        ),
+                        ShelfItem("pkg.1", "Andor", ShelfKind.Next, posterUri = "content://2"),
+                    )
+                },
+                shelfPoster = { _, _, _ -> ShelfPoster(bands(18, 27, listOf(Color(0xFF5A2E6E), Color(0xFFD08A3A)))) },
+            )
         compose.mainClock.autoAdvance = false
         // A TV has no touch screen; the native graphics mode starts in touch mode, where nothing takes key focus.
         compose.runOnUiThread {
@@ -113,24 +150,38 @@ private class MotionKindsUiTestFixture : JUnit4RulesContext() {
                 .requestFocusFromTouch()
         }
         compose.setContent {
-            TvTheme(look = config.look, seed = { Color(0xFFFF6A3D) }, motion = config.motion()) {
-                val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
+            TvTheme(look = shown.look, seed = { Color(0xFFFF6A3D) }, motion = shown.motion()) {
+                val viewModel = rememberHomeViewModel(sources, shown, mutableListOf())
                 val state = viewModel.uiState.collectAsState()
                 HomeScreen(
                     state = { state.value },
-                    layout = config.homeLayout(),
+                    layout = shown.homeLayout(),
                     onFocus = viewModel::onFocus,
                     onClick = {},
-                    topBar = config.topBarLayout(),
+                    topBar = shown.topBarLayout(),
                     wallpaperLayout = WallpaperLayout(background = Color.Black),
-                    shelfLayout = config.shelfLayout(),
-                    dockLook = config.dockLook(),
+                    shelfLayout = shown.shelfLayout(),
+                    dockLook = shown.dockLook(),
                     actions = viewModel.actions,
+                    shelfPoster = sources.shelfPoster,
+                    onShelfRoom = viewModel::onShelfRoom,
                 )
             }
         }
         compose.mainClock.advanceTimeBy(2_000)
         compose.waitForIdle()
+        if (shelf) {
+            // The cards come once the shelf is read off the main thread, then fade in. The clock stays stopped: a test
+            // clock that advances by itself cancels endless animations, which would hide one that ran.
+            var frames = 0
+            while (compose.onAllNodesWithTag("shelf:card:0").fetchSemanticsNodes().isEmpty()) {
+                check(frames++ < 120) { "no cards in 120 frames" }
+                compose.mainClock.advanceTimeByFrame()
+                compose.waitForIdle()
+            }
+            compose.mainClock.advanceTimeBy(1_000)
+            compose.waitForIdle()
+        }
         compose.onNodeWithTag("tile:pkg.1").assertIsFocused()
         // Each tile's own box, out past its grown band and the charge round it.
         tiles =
@@ -150,6 +201,13 @@ private class MotionKindsUiTestFixture : JUnit4RulesContext() {
     }
 
     fun screen(): PixelMap = compose.onRoot().captureToImage().toPixelMap()
+
+    /** The pixels of [after] that differ from [before]. */
+    fun changes(
+        before: PixelMap,
+        after: PixelMap,
+    ): List<String> =
+        (0 until after.height).flatMap { y -> (0 until after.width).filter { x -> after[x, y] != before[x, y] }.map { x -> "($x, $y)" } }
 
     /** What may draw a pixel at [x], [y] dp: the dock's rim, a tile with its band and charge, the dock title, or nothing that moves. */
     fun sourceAt(

@@ -328,6 +328,14 @@ public class LookColors internal constructor(
         ColorProducer { if (expressive) scheme.surfaceContainerHighest else colors.onSurface.copy(alpha = ART_SLOT_ALPHA) }
     public val swatchOutline: ColorProducer = ColorProducer { if (expressive) scheme.outlineVariant else GlassSwatchOutline }
 
+    /**
+     * The footer of an App highlights card that knows how far it was watched, in Expressive: the strip in the card's fill,
+     * the progress wave in its ink and the track after it. Glass draws no footer.
+     */
+    public val cardFooter: ColorProducer = ColorProducer { if (expressive) scheme.surfaceContainerHigh else Color.Transparent }
+    public val cardProgress: ColorProducer = ColorProducer { if (expressive) scheme.onSurface else Color.Transparent }
+    public val cardProgressTrack: ColorProducer = ColorProducer { if (expressive) scheme.outlineVariant else Color.Transparent }
+
     /** The screensaver's ground: black in both looks, as an OLED needs. */
     public val screensaverGround: ColorProducer = ColorProducer { Color.Black }
 
