@@ -52,6 +52,14 @@ val LookFlipTest by testSuite {
                 qualifiers = "mdpi"
             },
     )
+    robolectricTestSuite<LookFlipBelowPieTestContent>(
+        "sdk 27, mdpi",
+        testConfig =
+            TestConfig.robolectric {
+                sdk = 27
+                qualifiers = "mdpi"
+            },
+    )
 }
 
 private val Old = Color(0xFF3050A0)
@@ -258,6 +266,48 @@ class LookFlipTestContent :
                     .hole.shaded
                     .shouldBeNull()
                 pixels[199, 99] shouldBe New
+            }
+        }
+    })
+
+/** Below Android 9 the modifier draws the page as it is, and a flip is a cut. */
+class LookFlipBelowPieTestContent :
+    RobolectricTestSuiteContent({
+        testFixture {
+            object : JUnit4RulesContext() {
+                val compose = rule(createAndroidComposeRule<ComponentActivity>())
+                lateinit var flip: LookFlip
+                var colour by mutableStateOf(Old)
+
+                fun pixels() = compose.onNodeWithTag("scene").captureToImage().toPixelMap()
+            }
+        } asContextForEach {
+            test("the page is not recorded for a flip, and a flip switches the look at once with no picture") {
+                compose.setContent {
+                    flip = rememberLookFlip()
+                    Box(
+                        Modifier
+                            .size(200.dp, 100.dp)
+                            .testTag("scene")
+                            .lookFlip(flip, enabled = true)
+                            .background(colour),
+                    )
+                }
+                pixels()
+                withClue("whether the node is on") { flip.node.shouldNotBeNull().enabled shouldBe false }
+
+                var changed = false
+                compose.runOnUiThread {
+                    flip.flip({
+                        changed = true
+                        colour = New
+                    }) { Motion().flipSpec(Look.Glass) }
+                }
+
+                changed shouldBe true
+                flip.captures shouldBe 0
+                flip.holdsPicture shouldBe false
+                pixels()[100, 50] shouldBe New
             }
         }
     })

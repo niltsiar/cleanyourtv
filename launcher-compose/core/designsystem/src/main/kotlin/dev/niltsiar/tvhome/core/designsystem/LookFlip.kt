@@ -71,7 +71,7 @@ public class LookFlip internal constructor(
         change: () -> Unit,
         arrival: suspend () -> FiniteAnimationSpec<Float>,
     ) {
-        val node = node?.takeIf { it.enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P }
+        val node = node?.takeIf { it.enabled }
         if (node == null) {
             change()
             return
@@ -125,13 +125,13 @@ public fun rememberLookFlip(): LookFlip {
 }
 
 /**
- * The page that [flip] takes pictures of and draws its flip over. While [enabled] is false and no flip runs, the page draws as
- * it would without the modifier and no picture is taken.
+ * The page that [flip] takes pictures of and draws its flip over. While [enabled] is false and no flip runs, and always below
+ * Android 9, the page draws as it would without the modifier and no picture is taken.
  */
 public fun Modifier.lookFlip(
     flip: LookFlip,
     enabled: Boolean,
-): Modifier = this then LookFlipElement(flip, enabled)
+): Modifier = this then LookFlipElement(flip, enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
 
 private data class LookFlipElement(
     val flip: LookFlip,
