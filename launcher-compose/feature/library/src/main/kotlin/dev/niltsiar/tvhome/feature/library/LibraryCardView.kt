@@ -7,7 +7,6 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -21,7 +20,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.runtime.Composable
@@ -34,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -42,6 +41,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -66,8 +66,11 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.FocusSurface
 import dev.niltsiar.tvhome.core.designsystem.MarqueeLine
+import dev.niltsiar.tvhome.core.designsystem.Medallion
+import dev.niltsiar.tvhome.core.designsystem.MedallionShape
 import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.holdOk
@@ -82,9 +85,6 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 internal val CardHeight = 109.dp
-private val CardRadius = 16.dp
-private val CardShape = RoundedCornerShape(CardRadius)
-private val ArtShape = RoundedCornerShape(8.dp)
 private const val ART_ASPECT = 16f / 9f
 private val CardSide = 6.dp
 
@@ -97,23 +97,15 @@ internal const val NAME_LINES = 2
 private val EnterRise = 28.dp
 private const val POP_SCALE = 0.12f
 internal const val FOCUSED_SCALE = 1.08f
-private const val RIM_ALPHA = 0.09f
-private val RecentGreen = Color(0xFF70D9A0)
 private val StatusHeight = 14.dp
 private val MarkGap = 4.dp
 private val CheckSize = 18.dp
 private val MarkOverhang = (CheckSize - StatusHeight) / 2
 private val NameToMark = 6.dp
 private val CheckStroke = 1.75.dp
-private const val CHECK_DISC_ALPHA = 0.90f
-private const val CHECK_REST_DISC_ALPHA = 0.85f
 private val RingStroke = 2.dp
-private const val RING_ALPHA = 0.40f
-private const val RING_FILL_ALPHA = 0.10f
-private val CheckInk = Color(0xFF07080C)
 private const val CHECK_PULSE_MS = 140
 private const val CHECK_PULSE_SCALE = 0.12f
-private const val NEVER_OPENED_ALPHA = 0.45f
 private const val OFF_HOME_ART_ALPHA = 0.45f
 private const val OFF_HOME_FOCUSED_ART_ALPHA = 0.75f
 private const val OFF_HOME_NAME_ALPHA = 0.60f
@@ -180,7 +172,8 @@ internal fun LibraryCardView(
     }
     val artwork by produceState<LibraryArt?>(null, key) { value = art(key) }
     val ink = TvTheme.colors.onSurface
-    val fill = TvTheme.surfaces.card
+    val colours = TvTheme.lookColors
+    val shapes = TvTheme.shapes
     val slab = TvTheme.focusStyle.slab
     val motion = TvTheme.motion
     val density = LocalDensity.current
@@ -211,10 +204,10 @@ internal fun LibraryCardView(
                 actions.onClick(key)
             },
             onFocused = { actions.onFocus(key) },
-            shape = CardShape,
+            shape = shapes.libraryCard,
             glow = false,
             focusedScale = FOCUSED_SCALE,
-            ring = { ring },
+            ring = { colours.focusBand(ring, layout.whiteFocus) },
             ringBlends = ringBlends,
             plate = ink,
             press = press,
@@ -246,14 +239,14 @@ internal fun LibraryCardView(
                     .drawBehind {
                         val shown = focusProgress()
                         if (shown > 0f) {
-                            if (!slab) drawRect(fill, alpha = shown)
+                            if (!slab) drawRect(colours.cardFill(), alpha = shown)
                             val rim = 1.dp.toPx()
                             drawRoundRect(
-                                ink,
+                                colours.cardRim(),
                                 topLeft = Offset(rim / 2f, rim / 2f),
                                 size = Size(size.width - rim, size.height - rim),
-                                cornerRadius = CornerRadius(CardRadius.toPx() - rim / 2f),
-                                alpha = RIM_ALPHA * shown,
+                                cornerRadius = CornerRadius(shapes.libraryCardCorner.toPx() - rim / 2f),
+                                alpha = shown,
                                 style = Stroke(rim),
                             )
                         }
@@ -328,6 +321,7 @@ private fun Art(
     opacity: () -> Float,
     modifier: Modifier = Modifier,
 ) {
+    val colours = TvTheme.lookColors
     Box(
         modifier =
             modifier
@@ -336,8 +330,8 @@ private fun Art(
                 .graphicsLayer {
                     compositingStrategy = CompositingStrategy.ModulateAlpha
                     alpha = opacity()
-                }.clip(ArtShape)
-                .background(TvTheme.colors.surface)
+                }.clip(TvTheme.shapes.libraryArt)
+                .drawBehind { drawRect(colours.tileFill()) }
                 .testTag("card:art:${card.app.key}"),
         contentAlignment = Alignment.Center,
     ) {
@@ -350,6 +344,7 @@ private fun Art(
                     .firstCodePoint()
                     .uppercase(),
                 style = TvTheme.typography.shelfTitle.copy(fontSize = 28.sp),
+                color = colours.text,
             )
         }
     }
@@ -375,6 +370,7 @@ private fun Name(
     val shown = remember(label, style, widthPx) { shownName(label, measurer, style, widthPx) }
     val fit = remember(style) { WholeWords(style.fontSize) }
     val scroll = scrolling.takeIf { shown != label && TvTheme.motion.animated }
+    val ink = TvTheme.lookColors.text
     Box(
         Modifier.fillMaxWidth().heightIn(max = NameHeight).graphicsLayer {
             compositingStrategy = CompositingStrategy.ModulateAlpha
@@ -387,6 +383,7 @@ private fun Name(
             maxLines = NAME_LINES,
             overflow = TextOverflow.Ellipsis,
             autoSize = if (shown == label) fit else null,
+            color = ink,
             modifier =
                 Modifier.fillMaxWidth().then(
                     if (scroll !=
@@ -398,7 +395,7 @@ private fun Name(
                     },
                 ),
         )
-        if (scroll != null) MarqueeLine(label, style, scroll, Modifier.matchParentSize())
+        if (scroll != null) MarqueeLine(label, style, scroll, Modifier.matchParentSize(), ink)
     }
 }
 
@@ -453,7 +450,7 @@ private fun Status(
     val opened = card.opened
     val text = if (opened == null && !card.onHome && !layout.okOpens && card.recent) stringResource(R.string.library_recent) else null
     val never = opened != null && opened.at == null
-    val shown = if (never) style.copy(color = style.color.copy(alpha = style.color.alpha * NEVER_OPENED_ALPHA)) else style
+    val colours = TvTheme.lookColors
     Row(
         modifier = modifier.fillMaxWidth().height(StatusHeight),
         horizontalArrangement = Arrangement.Center,
@@ -465,18 +462,19 @@ private fun Status(
             if (opened != null) Spacer(Modifier.width(MarkGap))
         }
         if (opened != null) {
-            Opened(card.app.key, opened, shown, line)
+            Opened(card.app.key, opened, style, if (never) colours.neverOpened else colours.textMuted, line)
         } else if (layout.selection && !card.onHome) {
             OffHomeRing(card.app.key, checkScale)
         } else if (text != null) {
-            BasicText(text, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = line)
+            BasicText(text, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, color = colours.textMuted, modifier = line)
         }
     }
 }
 
 /**
- * A white disc with a dark check, [CheckSize] across, which may overhang the slot a little above and below:
- * a little less white at rest than on the focused card ([focus] is 1). It draws at [scale].
+ * A disc with a check, [CheckSize] across, which may overhang the slot a little above and below, in
+ * [dev.niltsiar.tvhome.core.designsystem.LookColors.onHomeMark] for [focus] (1 on the focused card); in
+ * [Look.Expressive] a nine-sided seal instead of the disc. It draws at [scale].
  */
 @Composable
 private fun OnHomeCheck(
@@ -485,15 +483,16 @@ private fun OnHomeCheck(
     scale: () -> Float,
 ) {
     val onHome = stringResource(R.string.library_on_home)
+    val colours = TvTheme.lookColors
+    val look = TvTheme.lookState
+    val seal = remember { Medallion(MedallionShape.Seal) }
     Box(
         Modifier
             .requiredSize(CheckSize)
             .testTag("card:check:$key")
             .semantics { contentDescription = onHome }
             .scaled(scale)
-            .drawBehind {
-                val focused = focus()
-                drawCircle(Color.White.copy(alpha = lerp(CHECK_REST_DISC_ALPHA, CHECK_DISC_ALPHA, focused)))
+            .drawWithCache {
                 val side = size.width
                 val check =
                     Path().apply {
@@ -501,7 +500,12 @@ private fun OnHomeCheck(
                         lineTo(0.44f * side, 0.67f * side)
                         lineTo(0.72f * side, 0.35f * side)
                     }
-                drawPath(check, CheckInk, style = Stroke(CheckStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+                val stroke = Stroke(CheckStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+                onDrawBehind {
+                    val mark = colours.onHomeMark(focus())
+                    if (look.look == Look.Expressive) drawPath(seal.path(side), mark) else drawCircle(mark)
+                    drawPath(check, colours.onHomeCheck(), style = stroke)
+                }
             },
     )
 }
@@ -512,6 +516,7 @@ private fun OffHomeRing(
     key: String,
     scale: () -> Float,
 ) {
+    val colours = TvTheme.lookColors
     Box(
         Modifier
             .requiredSize(CheckSize)
@@ -519,8 +524,8 @@ private fun OffHomeRing(
             .scaled(scale)
             .drawBehind {
                 val stroke = RingStroke.toPx()
-                drawCircle(Color.White.copy(alpha = RING_FILL_ALPHA), radius = (size.width - 2f * stroke) / 2f)
-                drawCircle(Color.White.copy(alpha = RING_ALPHA), radius = (size.width - stroke) / 2f, style = Stroke(stroke))
+                drawCircle(colours.offHomeRingFill(), radius = (size.width - 2f * stroke) / 2f)
+                drawCircle(colours.offHomeRing(), radius = (size.width - stroke) / 2f, style = Stroke(stroke))
             },
     )
 }
@@ -537,6 +542,7 @@ private fun Opened(
     key: String,
     opened: CardOpened,
     style: TextStyle,
+    color: ColorProducer,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -548,6 +554,7 @@ private fun Opened(
         style = style,
         maxLines = 1,
         autoSize = TextAutoSize.StepBased(minFontSize = OPENED_MIN_SIZE, maxFontSize = style.fontSize),
+        color = color,
         modifier = modifier.testTag("card:opened:$key"),
     )
 }
@@ -567,8 +574,9 @@ private fun Modifier.holdingStill(
         translationY = -fromCentre * (grownScale - 1f) * focus.value
     }
 
-/** A small green dot for a recent install that is not on Home. */
+/** A small dot for a recent install that is not on Home. */
 @Composable
 private fun RecentDot(modifier: Modifier = Modifier) {
-    Box(modifier = modifier.size(8.dp).drawBehind { drawCircle(RecentGreen) })
+    val colours = TvTheme.lookColors
+    Box(modifier = modifier.size(8.dp).drawBehind { drawCircle(colours.recentMark()) })
 }

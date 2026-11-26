@@ -13,6 +13,9 @@ public enum class MedallionShape {
     Pentagon,
     Clover,
     Cookie,
+
+    /** A nine-sided seal, the mark of a chosen item. */
+    Seal,
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -21,6 +24,7 @@ private fun MedallionShape.polygon(): RoundedPolygon =
         MedallionShape.Pentagon -> MaterialShapes.Pentagon
         MedallionShape.Clover -> MaterialShapes.Clover4Leaf
         MedallionShape.Cookie -> MaterialShapes.Cookie4Sided
+        MedallionShape.Seal -> MaterialShapes.Cookie9Sided
     }
 
 /**

@@ -391,6 +391,7 @@ public fun SettingsScreen(
             contentAlignment = Alignment.Center,
         ) {
             OverlaySurface(
+                page = true,
                 modifier =
                     Modifier
                         .padding(horizontal = PanelMargin, vertical = PanelEdge)

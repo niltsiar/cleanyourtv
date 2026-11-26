@@ -7,7 +7,6 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.BringIntoViewSpec
@@ -33,7 +32,6 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -61,6 +59,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -68,7 +67,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
@@ -90,25 +89,25 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.util.lerp
 import dev.niltsiar.tvhome.core.designsystem.BesideAnchor
 import dev.niltsiar.tvhome.core.designsystem.FocusPill
 import dev.niltsiar.tvhome.core.designsystem.FocusRingReach
 import dev.niltsiar.tvhome.core.designsystem.GlassMenu
 import dev.niltsiar.tvhome.core.designsystem.KeyChip
 import dev.niltsiar.tvhome.core.designsystem.KeyChipHeight
+import dev.niltsiar.tvhome.core.designsystem.KeyChipInPanel
 import dev.niltsiar.tvhome.core.designsystem.KeyChipLook
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.OverlaySurface
-import dev.niltsiar.tvhome.core.designsystem.SCROLL_CUE_ALPHA
-import dev.niltsiar.tvhome.core.designsystem.SCROLL_CUE_PILL_ALPHA
 import dev.niltsiar.tvhome.core.designsystem.ScrollCuePillHeight
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.drawCueChevron
 import dev.niltsiar.tvhome.core.designsystem.drawScrollDownCue
 import dev.niltsiar.tvhome.core.designsystem.eatsOkUp
 import dev.niltsiar.tvhome.core.designsystem.menuReleased
+import dev.niltsiar.tvhome.core.designsystem.tokenBackground
+import dev.niltsiar.tvhome.core.designsystem.tokenBorder
 import dev.niltsiar.tvhome.core.model.LibraryArt
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -207,6 +206,7 @@ internal fun LibraryScreen(
         contentAlignment = Alignment.Center,
     ) {
         OverlaySurface(
+            page = true,
             modifier =
                 Modifier
                     .padding(horizontal = PanelMargin, vertical = PanelEdge)
@@ -285,9 +285,9 @@ private fun Header(
     val typography = TvTheme.typography
     val title = remember(typography) { typography.shelfTitle.copy(fontSize = 26.sp) }
     val countStyle = remember(typography) { typography.date.copy(fontSize = 18.sp) }
-    val ink = TvTheme.colors.onSurface
-    val look = remember(ink) { KeyChipLook.inPanel(ink) }
-    val status = remember(typography, look) { typography.chipLabel.copy(color = look.action) }
+    val colours = TvTheme.lookColors
+    val look = KeyChipInPanel
+    val status = remember(look) { ColorProducer { if (look.action.isSpecified) look.action else colours.textMuted() } }
     Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
         Row(Modifier.height(HeaderTitleHeight), verticalAlignment = Alignment.CenterVertically) {
             BasicText(
@@ -295,12 +295,13 @@ private fun Header(
                 style = title,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                color = colours.text,
                 modifier = Modifier.weight(1f).testTag("library:title"),
             )
             if (layout.leastUsed) {
                 val end = Modifier.padding(end = ChipEnd)
                 if (empty) {
-                    BasicText(stringResource(order.label()), style = countStyle, maxLines = 1, modifier = end)
+                    BasicText(stringResource(order.label()), style = countStyle, maxLines = 1, color = colours.textMuted, modifier = end)
                 } else {
                     OrderChip(stringResource(order.label()), actions.onOrder, chip, onChipDown, end)
                 }
@@ -313,6 +314,7 @@ private fun Header(
                 },
                 style = countStyle,
                 maxLines = 1,
+                color = colours.textMuted,
                 modifier = Modifier.testTag("library:count"),
             )
         }
@@ -322,8 +324,9 @@ private fun Header(
                 if (noUsage) {
                     BasicText(
                         stringResource(R.string.library_no_usage_yet),
-                        style = status,
+                        style = typography.chipLabel,
                         maxLines = 1,
+                        color = status,
                         modifier = Modifier.padding(start = 12.dp).testTag("library:status"),
                     )
                 }
@@ -385,19 +388,12 @@ private fun OrderChip(
     modifier: Modifier = Modifier,
 ) {
     val typography = TvTheme.typography
-    val rest = TvTheme.colors.onSurface
+    val colours = TvTheme.lookColors
+    val shape = TvTheme.shapes.pill
     val key = remember(typography) { typography.chipKey.copy(fontSize = 12.sp) }
-    val keyFocusedAlpha =
-        if (TvTheme.surfaces.pillFill.luminance() >
-            0.5f
-        ) {
-            CHIP_KEY_FOCUSED_ON_LIGHT_ALPHA
-        } else {
-            CHIP_KEY_FOCUSED_ON_DARK_ALPHA
-        }
     FocusPill(
         onClick = onClick,
-        shape = CircleShape,
+        shape = shape,
         modifier =
             modifier
                 .height(ChipHeight)
@@ -413,14 +409,7 @@ private fun OrderChip(
                     if (it.type == KeyEventType.KeyDown) onDown()
                     true
                 },
-        background = {
-            Box(
-                Modifier
-                    .matchParentSize()
-                    .background(rest.copy(alpha = CHIP_FILL_ALPHA), CircleShape)
-                    .border(1.dp, rest.copy(alpha = CHIP_RIM_ALPHA), CircleShape),
-            )
-        },
+        background = { Box(Modifier.matchParentSize().tokenBackground(colours.chipFill, shape).tokenBorder(1.dp, colours.chipRim, shape)) },
     ) { ink ->
         Row(Modifier.align(Alignment.Center).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(ChipGlyph).testTag("library:order:glyph").drawBehind { drawSortArrows(ink.content(), size.width) })
@@ -431,11 +420,7 @@ private fun OrderChip(
                 Modifier
                     .clearAndSetSemantics { testTag = "library:order:key" }
                     .drawBehind {
-                        drawRoundRect(
-                            ink.content().copy(alpha = lerp(CHIP_KEY_FILL_ALPHA, keyFocusedAlpha, ink.progress())),
-                            cornerRadius =
-                                CornerRadius(size.height / 2f),
-                        )
+                        drawRoundRect(colours.chipKey(ink.content(), ink.progress()), cornerRadius = CornerRadius(size.height / 2f))
                     }.padding(horizontal = 6.dp, vertical = 1.dp),
             ) {
                 BasicText(stringResource(R.string.library_key_menu), style = key, maxLines = 1, color = ink.content)
@@ -470,11 +455,6 @@ private val ChipGlyph = 14.dp
 private val ChipGlyphGap = 6.dp
 private val ChipKeyGap = 8.dp
 private val ChipGlyphStroke = 1.5.dp
-private const val CHIP_FILL_ALPHA = 0.10f
-private const val CHIP_RIM_ALPHA = 0.24f
-private const val CHIP_KEY_FILL_ALPHA = 0.16f
-private const val CHIP_KEY_FOCUSED_ON_LIGHT_ALPHA = 0.47f
-private const val CHIP_KEY_FOCUSED_ON_DARK_ALPHA = 0.39f
 
 @StringRes
 private fun LibraryOrder.label(): Int =
@@ -497,6 +477,7 @@ private fun Empty() {
         BasicText(
             stringResource(R.string.library_empty),
             style = TvTheme.typography.pillLabel,
+            color = TvTheme.lookColors.text,
             modifier = Modifier.testTag("library:empty"),
         )
     }
@@ -608,19 +589,13 @@ private fun ScrollCue(
     grid: LazyGridState,
     topPadding: Dp,
 ) {
-    val ink = TvTheme.colors.onSurface
+    val colours = TvTheme.lookColors
     Box(
         Modifier.fillMaxSize().drawBehind {
             if (grid.canScrollBackward) {
-                drawCueChevron(ink.copy(alpha = SCROLL_CUE_ALPHA), topPadding.toPx() / 2f, CueWidth.toPx(), CueHeight.toPx(), down = false)
+                drawCueChevron(colours.panelCue(), topPadding.toPx() / 2f, CueWidth.toPx(), CueHeight.toPx(), down = false)
             }
-            if (grid.canScrollForward) {
-                drawScrollDownCue(
-                    size.height + CuePillDrop.toPx(),
-                    ink.copy(alpha = SCROLL_CUE_ALPHA),
-                    ink.copy(alpha = SCROLL_CUE_PILL_ALPHA),
-                )
-            }
+            if (grid.canScrollForward) drawScrollDownCue(size.height + CuePillDrop.toPx(), colours.panelCue(), colours.panelCuePill())
         },
     )
 }

@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import dev.niltsiar.tvhome.core.config.Look
 
 public val KeyChipHeight: Dp = 32.dp
 
@@ -33,9 +34,30 @@ public val KeyChipOverWallpaper: KeyChipLook
         }
 
 /**
+ * The look of a chip inside a panel that has a surface of its own: [KeyChipLook.inPanel] in the text colour in Glass; in
+ * [Look.Expressive] the key on the house secondary container of the panel's ground and the action in the label style.
+ */
+public val KeyChipInPanel: KeyChipLook
+    @Composable
+    @ReadOnlyComposable
+    get() =
+        if (TvTheme.lookState.look == Look.Expressive) {
+            KeyChipLook(
+                backing = Color.Transparent,
+                rim = Color.Transparent,
+                keyFill = Color.Unspecified,
+                pill = false,
+                dark = TvTheme.surfaces.dark,
+            )
+        } else {
+            KeyChipLook.inPanel(TvTheme.colors.onSurface)
+        }
+
+/**
  * What a [KeyChip] draws: the [backing], [rim] and [keyFill] colours, and the [action] text colour when it is not the
  * theme's. Without a [pill] only the key keeps its fill: no backing, no rim, no padding round the chip. An unspecified
- * [backing] or [keyFill] is the house scheme's high container or secondary container, read in the draw phase.
+ * [backing] or [keyFill] is the house scheme's high container or secondary container, of its [dark] or light scheme, read in
+ * the draw phase.
  */
 public data class KeyChipLook(
     val backing: Color,
@@ -43,6 +65,7 @@ public data class KeyChipLook(
     val keyFill: Color,
     val action: Color = Color.Unspecified,
     val pill: Boolean = true,
+    val dark: Boolean = true,
 ) {
     public companion object {
         /** A chip inside a panel that has a surface of its own: the key on its fill and the action as plain text in [ink]. */
@@ -89,7 +112,7 @@ public fun KeyChip(
     val outline =
         if (look.pill) {
             Modifier
-                .chipFill(look.backing, shapes.chip, lookState) { surfaceContainerHigh }
+                .chipFill(look.backing, shapes.chip, lookState, look.dark) { surfaceContainerHigh }
                 .border(1.dp, look.rim, shapes.chip)
                 .padding(horizontal = 12.dp)
         } else {
@@ -107,7 +130,7 @@ public fun KeyChip(
                 maxLines = 1,
                 modifier =
                     Modifier
-                        .chipFill(look.keyFill, shapes.chipKey, lookState) { secondaryContainer }
+                        .chipFill(look.keyFill, shapes.chipKey, lookState, look.dark) { secondaryContainer }
                         .padding(horizontal = 8.dp, vertical = 2.dp),
             )
         }
@@ -115,11 +138,12 @@ public fun KeyChip(
     }
 }
 
-/** [colour] behind [shape], or with it unspecified the [house] colour of the look's dark scheme, read in the draw phase. */
+/** [colour] behind [shape], or with it unspecified the [house] colour of the look's [dark] or light scheme, read in the draw phase. */
 private fun Modifier.chipFill(
     colour: Color,
     shape: Shape,
     look: LookState,
+    dark: Boolean,
     house: ColorScheme.() -> Color,
 ): Modifier =
     if (colour.isSpecified) {
@@ -127,6 +151,6 @@ private fun Modifier.chipFill(
     } else {
         drawWithCache {
             val outline = shape.createOutline(size, layoutDirection, this)
-            onDrawBehind { drawOutline(outline, look.scheme(dark = true).house()) }
+            onDrawBehind { drawOutline(outline, look.scheme(dark).house()) }
         }
     }

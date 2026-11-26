@@ -29,7 +29,14 @@ public class TvShapes internal constructor(
     public val chip: Shape,
     /** The fill under each key of a [KeyChip]. */
     public val chipKey: Shape,
+    /** The corner of a card in the App library's grid. */
+    public val libraryCardCorner: Dp,
+    /** The art on a library card. */
+    public val libraryArt: Shape,
 ) {
+    /** A card in the App library's grid. */
+    public val libraryCard: Shape = RoundedCornerShape(libraryCardCorner)
+
     /** An overlay panel: [OverlaySurface] when its caller gives no shape. */
     public val overlay: Shape = RoundedCornerShape(overlayCorner)
 
@@ -47,4 +54,6 @@ internal val GlassShapes: TvShapes =
         overlayCorner = 28.dp,
         chip = CircleShape,
         chipKey = CircleShape,
+        libraryCardCorner = 16.dp,
+        libraryArt = RoundedCornerShape(8.dp),
     )

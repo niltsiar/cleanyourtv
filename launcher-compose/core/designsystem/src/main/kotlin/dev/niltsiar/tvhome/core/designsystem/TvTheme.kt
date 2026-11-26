@@ -400,7 +400,11 @@ private val LocalLookColorSets = staticCompositionLocalOf { lookColorSets(LookSt
 private val LocalLookColors = staticCompositionLocalOf { lookColorSets(LookState(Look.Glass) { DefaultSeed }).dark }
 
 internal fun lookColorSets(look: LookState) =
-    LookColorSets(look, dark = DarkColors to DarkElementColors, light = OnLightColors to OnLightElementColors)
+    LookColorSets(
+        look,
+        dark = Triple(DarkColors, DarkElementColors, DarkSurfaces),
+        light = Triple(OnLightColors, OnLightElementColors, LightSurfaces),
+    )
 
 /** The theme's [LookState], for a modifier node that reads the look in its draw. */
 internal fun CompositionLocalConsumerModifierNode.currentLookState(): LookState = currentValueOf(LocalLookState)

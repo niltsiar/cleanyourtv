@@ -5,10 +5,12 @@ import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.expressive.AppBands
 import dev.niltsiar.tvhome.core.designsystem.expressive.HouseStatus
 import dev.niltsiar.tvhome.core.designsystem.expressive.houseStatus
+import androidx.compose.ui.util.lerp as lerpFloat
 
 private const val CLOCK_DATE_ALPHA = 0.88f
 private const val CLOCK_DIVIDER_ALPHA = 0.2f
@@ -36,6 +38,20 @@ private val GlassConnectedSolid = Color(0xFF146C2E)
 private val GlassSuccess = Color(0xFF34C759)
 private val GlassWarning = Color(0xFFFF9F0A)
 private val GlassError = Color(0xFFFF453A)
+private const val CARD_RIM_ALPHA = 0.09f
+private val GlassRecentMark = Color(0xFF70D9A0)
+private const val ON_HOME_CHECK_REST_ALPHA = 0.85f
+private const val ON_HOME_CHECK_FOCUSED_ALPHA = 0.90f
+private val GlassOnHomeCheckInk = Color(0xFF07080C)
+private val GlassOffHomeRing = Color.White.copy(alpha = 0.40f)
+private val GlassOffHomeRingFill = Color.White.copy(alpha = 0.10f)
+private const val NEVER_OPENED_ALPHA = 0.45f
+private const val CHIP_FILL_ALPHA = 0.10f
+private const val CHIP_RIM_ALPHA = 0.24f
+private const val CHIP_KEY_FILL_ALPHA = 0.16f
+private const val CHIP_KEY_FOCUSED_ON_LIGHT_ALPHA = 0.47f
+private const val CHIP_KEY_FOCUSED_ON_DARK_ALPHA = 0.39f
+private const val EXPRESSIVE_CHIP_KEY_FOCUSED_ALPHA = 0.24f
 private val DarkStatus by lazy { houseStatus(dark = true) }
 private val LightStatus by lazy { houseStatus(dark = false) }
 
@@ -51,6 +67,7 @@ public class LookColors internal constructor(
     private val dark: Boolean,
     private val colors: TvColors,
     private val elements: TvElementColors,
+    private val surfaces: TvSurfaces,
 ) {
     private val expressive: Boolean get() = look.look == Look.Expressive
     private val scheme: ColorScheme get() = look.scheme(dark)
@@ -199,14 +216,70 @@ public class LookColors internal constructor(
 
     /** A state that does not work: offline, a VPN down. */
     public val error: ColorProducer = ColorProducer { if (expressive) scheme.error else GlassError }
+
+    /** The fill of a focused library card in a focus style with no plate. */
+    public val cardFill: ColorProducer = ColorProducer { if (expressive) scheme.surfaceContainerHighest else surfaces.card }
+
+    /** The rim round a focused library card; Expressive has none, its band is the card's one edge. */
+    public val cardRim: ColorProducer =
+        ColorProducer { if (expressive) Color.Transparent else colors.onSurface.copy(alpha = CARD_RIM_ALPHA) }
+
+    /** The dot of an app installed lately and not on Home. */
+    public val recentMark: ColorProducer = ColorProducer { if (expressive) status.success else GlassRecentMark }
+
+    /** The mark of an app on Home, its card [focus] of the way to focused, and the check on it. */
+    public fun onHomeMark(focus: Float): Color =
+        if (expressive) {
+            scheme.primary
+        } else {
+            Color.White.copy(alpha = lerpFloat(ON_HOME_CHECK_REST_ALPHA, ON_HOME_CHECK_FOCUSED_ALPHA, focus))
+        }
+
+    public val onHomeCheck: ColorProducer = ColorProducer { if (expressive) scheme.onPrimary else GlassOnHomeCheckInk }
+
+    /** The ring where an app not on Home would have its mark, in the chooser, and its fill. */
+    public val offHomeRing: ColorProducer = ColorProducer { if (expressive) scheme.outline else GlassOffHomeRing }
+    public val offHomeRingFill: ColorProducer = ColorProducer { if (expressive) Color.Transparent else GlassOffHomeRingFill }
+
+    /** The line of an app Home never opened. */
+    public val neverOpened: ColorProducer =
+        ColorProducer {
+            if (expressive) scheme.outline else colors.onSurfaceMuted.copy(alpha = colors.onSurfaceMuted.alpha * NEVER_OPENED_ALPHA)
+        }
+
+    /** The fill and rim of a chip on a panel, as the library's order chip, at rest. */
+    public val chipFill: ColorProducer =
+        ColorProducer { if (expressive) Color.Transparent else colors.onSurface.copy(alpha = CHIP_FILL_ALPHA) }
+    public val chipRim: ColorProducer =
+        ColorProducer { if (expressive) scheme.outlineVariant else colors.onSurface.copy(alpha = CHIP_RIM_ALPHA) }
+
+    /** The cap of a key inside a chip, under a key name in [ink], the chip [focus] of the way to focused. */
+    public fun chipKey(
+        ink: Color,
+        focus: Float,
+    ): Color {
+        val focused =
+            when {
+                expressive -> EXPRESSIVE_CHIP_KEY_FOCUSED_ALPHA
+                surfaces.pillFill.luminance() > 0.5f -> CHIP_KEY_FOCUSED_ON_LIGHT_ALPHA
+                else -> CHIP_KEY_FOCUSED_ON_DARK_ALPHA
+            }
+        return ink.copy(alpha = lerpFloat(CHIP_KEY_FILL_ALPHA, focused, focus))
+    }
+
+    /** A cue on a panel that more lies beyond: its chevron, and the pill under it. */
+    public val panelCue: ColorProducer =
+        ColorProducer { if (expressive) scheme.onSecondaryContainer else colors.onSurface.copy(alpha = SCROLL_CUE_ALPHA) }
+    public val panelCuePill: ColorProducer =
+        ColorProducer { if (expressive) scheme.secondaryContainer else colors.onSurface.copy(alpha = SCROLL_CUE_PILL_ALPHA) }
 }
 
 /** The [LookColors] of each ground of one [TvTheme]. */
 internal class LookColorSets(
     look: LookState,
-    dark: Pair<TvColors, TvElementColors>,
-    light: Pair<TvColors, TvElementColors>,
+    dark: Triple<TvColors, TvElementColors, TvSurfaces>,
+    light: Triple<TvColors, TvElementColors, TvSurfaces>,
 ) {
-    val dark: LookColors = LookColors(look, dark = true, colors = dark.first, elements = dark.second)
-    val light: LookColors = LookColors(look, dark = false, colors = light.first, elements = light.second)
+    val dark: LookColors = LookColors(look, dark = true, colors = dark.first, elements = dark.second, surfaces = dark.third)
+    val light: LookColors = LookColors(look, dark = false, colors = light.first, elements = light.second, surfaces = light.third)
 }

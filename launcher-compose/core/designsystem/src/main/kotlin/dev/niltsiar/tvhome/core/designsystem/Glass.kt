@@ -109,12 +109,14 @@ public fun GlassSurface(
 /**
  * The surface of an overlay: a menu, the Inputs list, the App library. Opaque, so nothing behind it shows through; a
  * sheen over its top and the rim keep the glass look. Its text turns dark on the light one. In [Look.Expressive] it is
- * the house's high container, flat, with no shadow.
+ * the house's high container, flat, with no shadow; a [page] (the App library, Settings) is one container lower, so a
+ * menu or picker over it stands apart without a rim.
  */
 @Composable
 public fun OverlaySurface(
     modifier: Modifier = Modifier,
     shape: Shape = TvTheme.shapes.overlay,
+    page: Boolean = false,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val colours = TvTheme.elementColors
@@ -127,8 +129,13 @@ public fun OverlaySurface(
             modifier
                 .shadow(OverlayElevation, shape, false, colours.overlayShadow, colours.overlayShadow)
                 .clip(shape)
-                .lookFill(lookState) { if (it) scheme(surfaces.dark).surfaceContainerHigh else surfaces.overlay }
-                .background(sheen)
+                .lookFill(lookState) {
+                    when {
+                        !it -> surfaces.overlay
+                        page -> scheme(surfaces.dark).surfaceContainer
+                        else -> scheme(surfaces.dark).surfaceContainerHigh
+                    }
+                }.background(sheen)
                 .border(1.dp, rimBrush, shape),
     ) {
         SurfaceContent { content() }
