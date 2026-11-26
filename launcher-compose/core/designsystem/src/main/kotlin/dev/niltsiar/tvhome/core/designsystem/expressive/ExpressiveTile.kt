@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.config.ExpressiveTile
 import dev.niltsiar.tvhome.core.designsystem.FocusStyle
 import dev.niltsiar.tvhome.core.designsystem.addFromTopCentre
+import kotlin.math.ceil
+import kotlin.math.min
 
 /** The gap, band and keyline of the focus band, which fill [dev.niltsiar.tvhome.core.designsystem.FocusRingReach] between them. */
 private val Gap = 2.dp
@@ -35,6 +37,9 @@ private val Keyline = 2.dp
 /** With glass_style rim: no fill in the gap, and a band as wide as Glass's heavy ring. */
 private val RimGap = 3.dp
 private val RimBand = 4.dp
+
+/** How far past the tile the band's outer edge lies, inside its keyline, which lets what is under it show; the same in rim. */
+internal val BandReach = Gap + Band
 
 /** The cinch: how far each side dips in, and the rounding of its corners and waists. */
 private val CinchDip = 6.dp
@@ -49,14 +54,119 @@ internal fun Density.cinchOutline(
 ): Path = cushionPath(width, height, offset, CinchDip.toPx(), CinchCorner.toPx(), CinchWaist.toPx())
 
 /**
+ * The corner radius of a focused cinch tile's art, [width] by [height] with corners of [rest] at rest: the first whole pixel
+ * from [rest] up at which the art, half a pixel grown, stays inside [BandReach], so no art shows past the band or through
+ * its keyline. The band's sides dip into the art; its corners round more than the art's.
+ */
+internal fun Density.cinchArtRadius(
+    width: Float,
+    height: Float,
+    rest: Float,
+): Float {
+    val measure = PathMeasure().apply { setPath(cinchOutline(width, height, BandReach.toPx()), true) }
+    val count = ceil(measure.length).toInt()
+    val xs = FloatArray(count)
+    val ys = FloatArray(count)
+    for (i in 0 until count) {
+        val at = measure.getPosition(measure.length * i / count)
+        xs[i] = at.x
+        ys[i] = at.y
+    }
+    val full = min(width, height) / 2f
+    var radius = ceil(rest)
+    while (radius < full && (0 until count).any { insideRoundRect(xs[it], ys[it], width, height, radius, ART_CLEARANCE) }) radius++
+    return min(radius, full)
+}
+
+/** Whether ([x], [y]) lies inside a [width] by [height] rectangle with corners of [radius], grown by [grow] on every side. */
+private fun insideRoundRect(
+    x: Float,
+    y: Float,
+    width: Float,
+    height: Float,
+    radius: Float,
+    grow: Float,
+): Boolean {
+    if (x <= -grow || y <= -grow || x >= width + grow || y >= height + grow) return false
+    val cx = x.coerceIn(radius, width - radius)
+    val cy = y.coerceIn(radius, height - radius)
+    val dx = x - cx
+    val dy = y - cy
+    return dx * dx + dy * dy < (radius + grow) * (radius + grow)
+}
+
+/** How far, in pixels, the cinch's art keeps inside its band's outer edge. */
+private const val ART_CLEARANCE = 0.5f
+
+/**
+ * The halo bands of cinch tiles, from the outer edge of the band, [reach] past the tile, out by a whole number of
+ * [quantum]s on each side, kept for the last [KEEP] tile sizes and widths, so a frame that draws a halo already seen
+ * builds nothing: a lookup scans the keys, and a new halo takes the oldest slot.
+ */
+internal object CinchHalos {
+    private const val KEEP = 16
+    private val keys = LongArray(KEEP) { -1L }
+    private val halos = arrayOfNulls<Array<Path>>(KEEP)
+    private var next = 0
+
+    /** The [steps] bands of the halo of a [width] by [height] tile, [left], [top], [right] and [bottom] quanta wide. */
+    fun get(
+        density: Density,
+        width: Float,
+        height: Float,
+        reach: Float,
+        quantum: Float,
+        left: Int,
+        top: Int,
+        right: Int,
+        bottom: Int,
+        steps: Int,
+    ): Array<Path> {
+        val key =
+            (width.toLong() and 0xFFFF) or
+                ((height.toLong() and 0xFFFF) shl 16) or
+                (((density.density * 100f).toLong() and 0xFFF) shl 32) or
+                ((left.toLong() and 0xF) shl 44) or
+                ((top.toLong() and 0xF) shl 48) or
+                ((right.toLong() and 0xF) shl 52) or
+                ((bottom.toLong() and 0xF) shl 56)
+        for (i in 0 until KEEP) {
+            val kept = halos[i]
+            if (kept != null && keys[i] == key) return kept
+        }
+        val built =
+            with(density) {
+                cinchHalo(
+                    width,
+                    height,
+                    reach,
+                    left * quantum,
+                    top * quantum,
+                    right * quantum,
+                    bottom * quantum,
+                    steps,
+                    CinchDip.toPx(),
+                    CinchCorner.toPx(),
+                    CinchWaist.toPx(),
+                )
+            }
+        keys[next] = key
+        halos[next] = built
+        next = (next + 1) % KEEP
+        return built
+    }
+}
+
+/**
  * What one [dev.niltsiar.tvhome.core.designsystem.FocusSurface] keeps to draw its focus in
- * [dev.niltsiar.tvhome.core.config.Look.Expressive]: the capsule's clip steps for its size, the band geometry of the
- * cinch for its size and style, taken from [BandCache], and the strokes and tints it draws with. Each is built when
+ * [dev.niltsiar.tvhome.core.config.Look.Expressive]: the art's clip steps for its size and tile, the band geometry of the
+ * cinch for its size and style, taken from [BandCache], and the strokes it draws with. Each is built when
  * the size, style or colour changes, never on a frame that only moves the focus.
  */
 internal class TilePainter {
-    private var steps: CapsuleSteps? = null
+    private var steps: CornerSteps? = null
     private var stepsBase: Shape? = null
+    private var stepsTile: ExpressiveTile? = null
     private var band: BandGeometry? = null
     private var bandKey: BandKey? = null
     private val strokeWidths = FloatArray(STROKES)
@@ -102,7 +212,7 @@ internal class TilePainter {
 
     /** The line through the middle of a capsule band [middle] past the tile's edge, from the top centre clockwise. */
     fun capsuleHold(
-        steps: CapsuleSteps,
+        steps: CornerSteps,
         radius: Float,
         middle: Float,
     ): PathMeasure {
@@ -120,32 +230,45 @@ internal class TilePainter {
         return capsuleMeasure
     }
 
-    /** The capsule steps for [base] at [size]. */
+    /** The corner steps of a [tile] of [base] at [size]. */
     fun steps(
         base: Shape,
+        tile: ExpressiveTile,
         size: Size,
         density: Density,
-    ): CapsuleSteps {
+    ): CornerSteps {
         val kept = steps
-        if (kept != null && kept.size == size && stepsBase == base) return kept
+        if (kept != null && kept.size == size && stepsBase == base && stepsTile == tile) return kept
         val rest = (base.createOutline(size, LayoutDirection.Ltr, density) as? Outline.Rounded)?.roundRect?.topLeftCornerRadius?.x ?: 0f
-        return CapsuleSteps(size, rest).also {
-            steps = it
+        val steps =
+            when (tile) {
+                ExpressiveTile.Capsule -> CornerSteps(size, rest)
+                ExpressiveTile.Cinch -> CornerSteps(size, rest, density.cinchArtRadius(size.width, size.height, rest))
+            }
+        return steps.also {
+            this.steps = it
             stepsBase = base
+            stepsTile = tile
         }
     }
 
-    /** The clip of the tile's content: [base], or with the capsule at [morph] its rounded step. */
+    /** The corner of a [tile]'s art at focus [progress]: the capsule's [morph], the cinch's progress. */
+    fun corner(
+        tile: ExpressiveTile,
+        progress: Float,
+    ): Float = if (tile == ExpressiveTile.Capsule) morph(progress) else progress
+
+    /** The clip of the tile's content: [base] at rest, or at focus [progress] its rounded step toward the focused art. */
     fun clip(
         base: Shape,
         tile: ExpressiveTile,
-        morph: Float,
+        progress: Float,
         size: Size,
         density: Density,
     ): Shape {
-        if (tile != ExpressiveTile.Capsule || morph <= 0f) return base
-        val steps = steps(base, size, density)
-        return steps.shape(steps.radius(morph))
+        if (progress <= 0f) return base
+        val steps = steps(base, tile, size, density)
+        return steps.shape(steps.radius(corner(tile, progress)))
     }
 
     /** The band geometry of the cinch for this tile, built or found once per size and style. */
@@ -156,7 +279,7 @@ internal class TilePainter {
         size: Size,
         density: Density,
     ): BandGeometry {
-        val rest = steps(base, size, density).rest
+        val rest = steps(base, tile, size, density).rest
         val key = BandKey(tile, rim, size.width, size.height, rest, density.density)
         val kept = band
         if (kept != null && bandKey == key) return kept
@@ -256,9 +379,7 @@ internal fun ContentDrawScope.drawExpressiveTile(
 ) {
     val rim = style == FocusStyle.Rim
     painter.lastRim = rim
-    val capsule = tile == ExpressiveTile.Capsule
-    val steps = painter.steps(base, size, this)
-    val radius = if (capsule) steps.radius(painter.morph(progress)) else steps.rest
+    val radius = painter.steps(base, tile, size, this).radius(painter.corner(tile, progress))
     if (plate.isSpecified && style.slab && progress > 0f) {
         val grow = Gap.toPx()
         drawRoundRect(
@@ -340,7 +461,7 @@ internal fun DrawScope.drawExpressiveHold(
 ) {
     val measure =
         if (tile == ExpressiveTile.Capsule) {
-            val steps = painter.steps(base, size, this)
+            val steps = painter.steps(base, tile, size, this)
             val rim = painter.lastRim
             val middle = if (rim) RimGap.toPx() + RimBand.toPx() / 2f else Gap.toPx() + Band.toPx() / 2f
             painter.capsuleHold(steps, steps.radius(progress), middle)
@@ -368,7 +489,7 @@ internal fun DrawScope.drawTileCharge(
 ) {
     val line =
         if (tile == ExpressiveTile.Capsule) {
-            val steps = painter.steps(base, size, this)
+            val steps = painter.steps(base, tile, size, this)
             val edge = bandEdge(painter.lastRim).toPx()
             val radius = steps.radius(progress * pinchOf(charge))
             painter.capsuleCharge().apply { sampleRoundRect(-edge, -edge, size.width + edge, size.height + edge, radius + edge) }

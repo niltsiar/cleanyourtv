@@ -1,6 +1,8 @@
 package dev.niltsiar.tvhome.feature.home
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -10,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.PixelMap
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
@@ -23,6 +26,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import de.infix.testBalloon.framework.core.JUnit4RulesContext
 import de.infix.testBalloon.framework.core.TestConfig
 import de.infix.testBalloon.framework.core.testSuite
@@ -33,11 +38,13 @@ import dev.niltsiar.tvhome.core.config.ExpressiveTile
 import dev.niltsiar.tvhome.core.config.GlassStyle
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.designsystem.FocusedShape
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.focusStyle
 import dev.niltsiar.tvhome.core.designsystem.golden.assertMatchesGolden
 import dev.niltsiar.tvhome.core.designsystem.golden.bands
 import dev.niltsiar.tvhome.core.designsystem.motion
+import dev.niltsiar.tvhome.core.designsystem.rememberFocusedShape
 import dev.niltsiar.tvhome.core.model.AppEntry
 import dev.niltsiar.tvhome.core.model.AppList
 import dev.niltsiar.tvhome.core.model.InputConnection
@@ -49,10 +56,14 @@ import dev.niltsiar.tvhome.core.model.ShelfKind
 import dev.niltsiar.tvhome.core.model.ShelfPoster
 import dev.niltsiar.tvhome.core.model.Wallpaper
 import io.kotest.assertions.withClue
+import io.kotest.matchers.floats.shouldBeLessThan
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
 import java.time.ZoneOffset
+import kotlin.math.abs
+import kotlin.math.sqrt
 
 /** Golden images of Home in each look on the real presenter and screen (docs/testing.md, "Golden tests"). */
 val HomeGoldenTest by testSuite {
@@ -169,6 +180,38 @@ class HomeGoldenTestContent :
                         golden("expressive-tide-110ms")
                         settle()
                         golden("expressive-tide-settled")
+                    }
+
+                    for (tile in ExpressiveTile.entries) {
+                        val variant = tile.name.lowercase()
+                        test(
+                            "a tile menu open, in Expressive with the $variant tile, leaves no art outside the shape the spotlight rings",
+                        ) {
+                            lateinit var focused: FocusedShape
+                            showHome(x.copy(expressiveTile = tile), probe = { focused = rememberFocusedShape() })
+                            press(Key.Menu)
+                            compose.onNodeWithTag("menu").assertExists()
+                            val bounds = compose.onNodeWithTag("tile:pkg.1").fetchSemanticsNode().boundsInRoot
+                            val rest = with(compose.density) { TileCorner.toPx() }
+                            val outline = focused.outline(RoundedCornerShape(TileCorner), bounds.size, LayoutDirection.Ltr, compose.density)
+                            val radius =
+                                outline
+                                    .shouldBeInstanceOf<Outline.Rounded>()
+                                    .roundRect.topLeftCornerRadius.x
+                            // Half way across the spotlight's ring, past the shape: on the corner's diagonal, and beside the tile.
+                            val across = with(compose.density) { 1.dp.toPx() }
+                            val inset = radius - (radius + across) / sqrt(2f)
+                            val shot = compose.onRoot().captureToImage().toPixelMap()
+                            val corner = shot[(bounds.left + inset).toInt(), (bounds.top + inset).toInt()]
+                            val beside = shot[(bounds.left - across).toInt(), bounds.center.y.toInt()]
+
+                            withClue("the sampled corner lies inside the art's rest corner") {
+                                (rest - inset) * sqrt(2f) shouldBeLessThan rest - 1f
+                            }
+                            val apart =
+                                maxOf(abs(corner.red - beside.red), abs(corner.green - beside.green), abs(corner.blue - beside.blue))
+                            withClue("corner $corner, beside $beside") { apart shouldBeLessThan 0.02f }
+                        }
                     }
 
                     test("a tile menu open, in Expressive with the cinch tile") {
@@ -353,6 +396,9 @@ private fun samePixels(
     return true
 }
 
+/** The corner of Home's tiles at rest. */
+private val TileCorner = 12.dp
+
 /** The house seed of the Expressive scenes, the warm one the design-system goldens use. */
 private val Ember = Color(0xFFFF6A3D)
 
@@ -420,6 +466,7 @@ private class HomeGoldenFixture : JUnit4RulesContext() {
         network: NetworkState = NetworkState(NetworkLink.Wifi, ssid = "Home", validated = true),
         heroArt: suspend (String) -> ImageBitmap? = { null },
         wallpaper: ImageBitmap = picture,
+        probe: @Composable () -> Unit = {},
     ) {
         val poster = ShelfPoster(bands(18, 27, listOf(Color(0xFF5A2E6E), Color(0xFFD08A3A))))
         val sources =
@@ -459,6 +506,7 @@ private class HomeGoldenFixture : JUnit4RulesContext() {
                     expressiveTile = config.expressiveTile,
                     darkTheme = dark,
                 ) {
+                    probe()
                     val viewModel = rememberHomeViewModel(sources, config, mutableListOf())
                     val state = viewModel.uiState.collectAsState()
                     HomeScreen(

@@ -43,6 +43,8 @@ internal class HomeInput(
     val launching: State<Boolean> = mutableStateOf(false),
     /** What each input tile shows now, by key. Read it through [rememberInputTileLive] in a tile's face and draw lambdas only. */
     val inputTiles: State<Map<String, InputTileLive>> = mutableStateOf(emptyMap()),
+    /** The key of the tile whose menu is open; null with none open. Read it in effects and layer lambdas only. */
+    val menuTile: State<String?> = mutableStateOf(null),
     val hold: OkHold = OkHold(),
 ) {
     /** The colour of the focus ring as it moves from tile to tile. */

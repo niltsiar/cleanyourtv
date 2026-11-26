@@ -14,13 +14,14 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import dev.niltsiar.tvhome.core.config.ExpressiveTile
 import dev.niltsiar.tvhome.core.config.Look
+import dev.niltsiar.tvhome.core.designsystem.expressive.cinchArtRadius
 import dev.niltsiar.tvhome.core.designsystem.expressive.cinchOutline
 import kotlin.math.abs
 import kotlin.math.min
 
 /**
- * The outline of a focused tile, for what is drawn round it: in Glass the tile's own shape; for the capsule a full
- * capsule, for the cinch its cushion. [bandOutline] is the outer
+ * The outline of a focused tile's art, for what is drawn round it: in Glass the tile's own shape; for the capsule a full
+ * capsule, for the cinch a rounded rectangle whose corners stay inside its band. [bandOutline] is the outer
  * edge of its focus band, and [sideReach] how far past the tile's left and right edges, at mid height, that edge lies.
  * Each is built once per size and tile and kept, so reading them in draw allocates nothing after the first frame.
  */
@@ -109,8 +110,11 @@ public class FocusedShape internal constructor(
             }
 
             ExpressiveTile.Cinch -> {
+                val rest =
+                    (base.createOutline(size, LayoutDirection.Ltr, density) as? Outline.Rounded)?.roundRect?.topLeftCornerRadius?.x ?: 0f
+                val art = density.cinchArtRadius(size.width, size.height, rest)
                 val edge = density.cinchOutline(size.width, size.height, ringReach)
-                outline = Outline.Generic(density.cinchOutline(size.width, size.height, 0f))
+                outline = Outline.Rounded(RoundRect(0f, 0f, size.width, size.height, CornerRadius(art)))
                 band = Outline.Generic(edge)
                 reach = -leftAtMiddle(edge, size)
             }

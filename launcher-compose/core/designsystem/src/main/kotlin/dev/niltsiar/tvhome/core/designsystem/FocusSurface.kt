@@ -7,9 +7,11 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.onFocusChanged
@@ -107,7 +109,8 @@ public val FocusRingReach: Dp = RingGap + RingWidth + HairlineWidth + OuterStrok
  * where it was. While OK is held on a surface whose [modifier] has [holdOk], an arc in the ring's colour fills the gap and
  * the ring clockwise from the top centre, whole as the menu opens ([HoldArcElement]), with [Motion.animations] only; in
  * [Look.Expressive], while springs run, the held tile charges instead: it tightens, its capsule corner pinches and a wave
- * runs round its band.
+ * runs round its band. While [keepsShape] says so, as while its menu is open, an Expressive surface without focus keeps its
+ * content clipped to its focused shape, and lets go of it with the focus fade once it no longer says so.
  *
  * In [Look.Expressive] focus shows as a band of the ring's colour, or the house primary without one, between a gap in the
  * house surface colour and a dark keyline, all inside [FocusRingReach], with no glow; a press moves the band toward
@@ -130,6 +133,7 @@ public fun FocusSurface(
     growthPivot: ((Float) -> Float)? = null,
     focus: Animatable<Float, AnimationVector1D> = remember { Animatable(0f) },
     press: Animatable<Float, AnimationVector1D>? = null,
+    keepsShape: (() -> Boolean)? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val motion = TvTheme.motion
@@ -156,6 +160,7 @@ public fun FocusSurface(
     val lookState = TvTheme.lookState
     val painter = remember { TilePainter() }
     val tileOutline = remember(shape, lookState, painter, focus) { TileOutline(shape, lookState, painter, focus) }
+    val kept = if (keepsShape != null) keptShape(keepsShape, motion) else null
     val band =
         remember(ring, lookState, colours) {
             ring ?: ColorProducer { if (lookState.look == Look.Expressive) lookState.scheme(dark = true).primary else colours.ring }
@@ -275,7 +280,7 @@ public fun FocusSurface(
                 }.graphicsLayer {
                     this.shape =
                         if (lookState.look == Look.Expressive) {
-                            painter.clip(shape, lookState.tile, painter.morph(focus.value), size, this)
+                            painter.clip(shape, lookState.tile, maxOf(focus.value, kept?.value ?: 0f), size, this)
                         } else {
                             shape
                         }
@@ -291,6 +296,21 @@ public fun FocusSurface(
                 }.clickable(interactionSource = interactionSource, indication = null, role = Role.Button, onClick = onClick),
         content = content,
     )
+}
+
+/** 1 while [keeps] says so, falling to 0 with the focus fade of [motion] once it no longer does. */
+@Composable
+private fun keptShape(
+    keeps: () -> Boolean,
+    motion: Motion,
+): Animatable<Float, AnimationVector1D> {
+    val kept = remember { Animatable(0f) }
+    LaunchedEffect(keeps, motion) {
+        snapshotFlow { keeps() }.collect {
+            if (it || !motion.animations) kept.snapTo(if (it) 1f else 0f) else kept.animateTo(0f, motion.focusSpec(false, kept.value))
+        }
+    }
+    return kept
 }
 
 /** The share of its size a surface draws at for [press]: under 1 while it dips, which only it does when it [dips]. */
@@ -428,7 +448,7 @@ internal class TileOutline(
         density: Density,
     ): Outline =
         if (look.look == Look.Expressive) {
-            painter.clip(base, look.tile, painter.morph(focus.value), size, density).createOutline(size, layoutDirection, density)
+            painter.clip(base, look.tile, focus.value, size, density).createOutline(size, layoutDirection, density)
         } else {
             base.createOutline(size, layoutDirection, density)
         }

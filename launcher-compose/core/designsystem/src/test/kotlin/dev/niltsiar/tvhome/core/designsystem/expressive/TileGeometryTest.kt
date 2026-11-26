@@ -80,7 +80,7 @@ class TileGeometryTestContent :
         }
 
         test("a capsule's corner steps from its rest radius to half its height on whole pixels") {
-            val steps = CapsuleSteps(TileSize, rest = 24f)
+            val steps = CornerSteps(TileSize, rest = 24f)
 
             steps.radius(0f) shouldBe 24f
             steps.radius(1f) shouldBe 135f

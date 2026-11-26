@@ -475,6 +475,7 @@ public fun HomeScreen(
                 faded = if (layout.unusedFade) derivedStateOf { currentState.value().faded } else null,
                 launching = derivedStateOf { currentState.value().opening != null },
                 inputTiles = derivedStateOf { currentState.value().inputTiles },
+                menuTile = derivedStateOf { currentState.value().menu?.tileKey },
             ).also { it.anchor.value = menuAnchor }
         }
     val lookColours = TvTheme.lookColors
@@ -2392,6 +2393,7 @@ private fun AppTile(
             }
         }
     val press = if (pressFeedback) remember { Animatable(0f) } else null
+    val menuOpen = remember(input, key) { { input.menuTile.value == key } }
     FocusSurface(
         onClick = {
             if (press != null && !input.launching.value) scope.launch { press.pressDip(motion) }
@@ -2412,6 +2414,7 @@ private fun AppTile(
         growthPivot = growthPivot,
         focus = focus,
         press = press,
+        keepsShape = menuOpen,
         modifier =
             (if (fadeUnused) marked.unusedFade(input.faded, key) else marked)
                 .then(if (reordering) Modifier.reorderLook(key, input, TileShape, growthPivot) else Modifier)

@@ -25,7 +25,9 @@ import androidx.compose.ui.node.requireLayoutCoordinates
 import androidx.compose.ui.node.traverseAncestors
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.dp
+import dev.niltsiar.tvhome.core.config.ExpressiveTile
 import dev.niltsiar.tvhome.core.config.Look
+import dev.niltsiar.tvhome.core.designsystem.expressive.CinchHalos
 import dev.niltsiar.tvhome.core.designsystem.expressive.TilePainter
 import dev.niltsiar.tvhome.core.designsystem.expressive.chargedScale
 import kotlin.math.pow
@@ -70,7 +72,8 @@ private class HaloClipNode :
  * as the surface is: [scale] when [focus] is 1, less while a [press] [dips] it or, in [look]'s Expressive, while a held OK
  * charges the surface's [painter] ([chargedScale]), about [pivot]'s height or the middle. It runs up to
  * [HaloWidth] past the ring's keyline, at [TvElementColors.haloUnderAlpha] under the surface and [TvElementColors.haloSideAlpha] at
- * its sides and top, in [HALO_STEPS] bands that fade out. On a side where a [clipsHalo]
+ * its sides and top, in [HALO_STEPS] bands that fade out; round a cinch tile the bands follow its cushion from the band's
+ * outer edge. On a side where a [clipsHalo]
  * container leaves less room, the glow on that side is narrowed to end before the container's edge, so the clip never cuts it.
  */
 internal data class FocusHaloElement(
@@ -164,6 +167,25 @@ internal class FocusHaloNode(
                 startY = size.height,
                 endY = size.height + reach,
             )
+        if (spec.look.look == Look.Expressive && spec.look.tile == ExpressiveTile.Cinch) {
+            // Whole quanta, rounded down, so the cushions stay inside the room the rectangle above leaves.
+            val quantum = most / HALO_STEPS
+            val cinch =
+                CinchHalos.get(
+                    this,
+                    size.width,
+                    size.height,
+                    reach,
+                    quantum,
+                    (left / quantum).toInt(),
+                    (top / quantum).toInt(),
+                    (right / quantum).toInt(),
+                    (bottom / quantum).toInt(),
+                    HALO_STEPS,
+                )
+            for (step in 0 until HALO_STEPS) drawPath(cinch[step], light, alpha = progress * HaloFade[step])
+            return
+        }
         val paths = bands ?: Array(HALO_STEPS) { Path() }.also { bands = it }
         for (step in 0 until HALO_STEPS) {
             val inner = step / HALO_STEPS.toFloat()
