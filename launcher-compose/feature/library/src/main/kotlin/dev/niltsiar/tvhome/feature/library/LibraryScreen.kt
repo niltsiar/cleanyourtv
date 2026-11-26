@@ -83,6 +83,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -200,6 +201,7 @@ internal fun LibraryScreen(
             modifier
                 .fillMaxSize()
                 .testTag("library")
+                .semantics { testTagsAsResourceId = true }
                 .onPreviewKeyEvent { hold.eatsOkUp(it) || (layout.leastUsed && it.switchesOrder(actions)) }
                 .focusProperties { exit = { FocusRequester.Cancel } }
                 .focusGroup(),

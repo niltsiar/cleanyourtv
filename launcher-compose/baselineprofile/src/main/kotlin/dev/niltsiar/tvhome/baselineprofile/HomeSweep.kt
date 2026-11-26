@@ -6,6 +6,7 @@ import android.os.SystemClock
 import android.view.InputDevice
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
+import android.view.ViewConfiguration
 import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
@@ -53,6 +54,19 @@ private const val DOCK_STEPS = 5
 private const val GRID_ROWS = 4
 private const val GRID_COLUMNS_SWEPT = 3
 private const val TOP_BAR_STEPS = 2
+private const val PAGE_TIMEOUT_MS = 5_000L
+
+/** Three seconds of repeats at the usual 50 ms repeat delay, enough to take focus through a library of several dozen rows. */
+private const val LIBRARY_HOLD_REPEATS = 60
+
+/** More stops than the Settings page lists, every optional row shown. */
+private const val SETTINGS_STOPS_MAX = 60
+
+/** Longer than a look flip takes: it waits up to LookFlip.ARRIVAL_MS (1 s) for the new look, then runs its spec. */
+private const val FLIP_SETTLE_MS = 2_000L
+
+/** MainActivity opens the App library on this action, which the "library" word of app_keys sends. */
+private const val APP_LIBRARY_ACTION = "dev.niltsiar.tvhome.action.APP_LIBRARY"
 
 /** Every app tile, in the dock and in the grid: HomeScreen tags each one `tile:<component key>`. */
 private val TILE_TAG = Pattern.compile("tile:.+")
@@ -60,10 +74,17 @@ private val TILE_TAG = Pattern.compile("tile:.+")
 /** An image tile describes itself with the app's label; a tile still waiting for its art shows the label as text only. */
 private val ANY_DESCRIPTION = Pattern.compile(".+")
 
+/** A card of the App library: LibraryCardView tags each one `card:<component key>`, and its parts carry a second colon. */
+private val CARD_TAG = Pattern.compile("card:[^:]+")
+
+/** An option of the Settings page's Look row: SettingsScreen tags each one `option:Look:<index>`, Glass first. */
+private val LOOK_OPTION_TAG = Pattern.compile("option:Look:\\d+")
+
+/** The Settings page's Follow theme row, selected while no choice is stored: OK on it removes every stored choice. */
+private val FOLLOW_THEME_TAG = Pattern.compile("settings:follow_theme")
+
 /** BySelector is a mutable builder, so each use needs a new one. */
 private fun anyTile() = By.res(TILE_TAG)
-
-private fun focusedTile() = anyTile().focused(true)
 
 /** Launches Home and waits until at least one app tile is on screen. */
 internal fun MacrobenchmarkScope.launchHome() {
@@ -103,11 +124,11 @@ internal fun MacrobenchmarkScope.dpadSweep() {
     check(dockTiles.isNotEmpty()) { "Dock has no tiles" }
     val dockTags = dockTiles.map { it.resourceName }.toSet()
     val firstDockTile = dockTiles.minBy { it.visibleBounds.left }.resourceName
-    awaitFocusedTile("the first dock tile at the start") { it == firstDockTile }
+    awaitFocused(TILE_TAG, "the first dock tile at the start") { it == firstDockTile }
 
     repeat(DOCK_STEPS) { device.pressDPadRight() }
     repeat(GRID_ROWS) { device.pressDPadDown() }
-    awaitFocusedTile("a grid tile after the descent") { it !in dockTags }
+    awaitFocused(TILE_TAG, "a grid tile after the descent") { it !in dockTags }
     repeat(GRID_COLUMNS_SWEPT) { device.pressDPadRight() }
     repeat(GRID_COLUMNS_SWEPT) { device.pressDPadLeft() }
     repeat(GRID_ROWS) { device.pressDPadUp() }
@@ -121,27 +142,115 @@ internal fun MacrobenchmarkScope.dpadSweep() {
     device.pressDPadDown()
 }
 
-private fun MacrobenchmarkScope.awaitFocusedTile(
+/** Waits until the focused node tagged to match [tag] passes [accept], and returns its tag. */
+private fun MacrobenchmarkScope.awaitFocused(
+    tag: Pattern,
     description: String,
-    accept: (String) -> Boolean,
-) {
+    accept: (String) -> Boolean = { true },
+): String {
     // Accessibility queries run on the app's main thread, so wait until the focus and scroll animations end.
     device.waitForIdle()
     val found =
         device.wait(
             Condition<UiDevice, String?> {
-                // Home recomposes while images land and can replace the node between the find and the read.
+                // Home and the library recompose while images land and can replace the node between the find and the read.
                 try {
-                    it.findObject(focusedTile())?.resourceName?.takeIf(accept)
+                    it.findObject(By.res(tag).focused(true))?.resourceName?.takeIf(accept)
                 } catch (_: StaleObjectException) {
                     null
                 }
             },
             FOCUS_TIMEOUT_MS,
         )
-    checkNotNull(found) {
-        "Focus is not on $description; focused tile: ${device.findObject(focusedTile())?.resourceName}"
+    return checkNotNull(found) {
+        "Focus is not on $description; focused node: ${device.findObject(By.focused(true))?.resourceName}"
     }
+}
+
+/** Sends [action] to MainActivity, which is single-task, so a running Home gets it as a new intent. */
+private fun MacrobenchmarkScope.sendToHome(action: String) {
+    val output = device.executeShellCommand("am start -a $action -n $targetPackage/$MAIN_ACTIVITY")
+    check("Error" !in output) { "am start -a $action failed: $output" }
+}
+
+/** From Home, opens the App library the way a remote key bound to it does, and waits for focus on its first card. */
+internal fun MacrobenchmarkScope.openLibrary() {
+    sendToHome(APP_LIBRARY_ACTION)
+    check(device.wait(Until.hasObject(By.res("library")), PAGE_TIMEOUT_MS)) {
+        "The App library did not open: the theme needs app_library on"
+    }
+    awaitFocused(CARD_TAG, "a library card after the library opened")
+}
+
+/**
+ * Holds Down in the open App library, as a held remote key sends it: one press, then repeats at the system's rate, so focus
+ * runs down the grid and scrolls it through. Back then closes the library, which forgets the focused card, so the next open
+ * starts on the first one again.
+ */
+internal fun MacrobenchmarkScope.libraryHoldDown() {
+    val first = awaitFocused(CARD_TAG, "a library card before the hold")
+    holdKey(KeyEvent.KEYCODE_DPAD_DOWN, LIBRARY_HOLD_REPEATS)
+    awaitFocused(CARD_TAG, "a card further down after the hold") { it != first }
+    device.pressBack()
+    check(device.wait(Until.gone(By.res("library")), PAGE_TIMEOUT_MS)) { "Back did not close the App library" }
+}
+
+/**
+ * Opens the Launcher settings page through the action MainActivity answers, which works whatever the theme puts in the top
+ * bar, and moves down until a stop tagged to match [tag] has focus. Which rows come first depends on the config, so it moves
+ * one stop at a time. A page already open closes first, so the checks below cannot read it while it goes.
+ */
+private fun MacrobenchmarkScope.openSettingsAt(tag: Pattern) {
+    if (device.hasObject(By.res("settings"))) {
+        device.pressBack()
+        check(device.wait(Until.gone(By.res("settings")), PAGE_TIMEOUT_MS)) { "Back did not close the Launcher settings page" }
+    }
+    sendToHome("$targetPackage.action.LAUNCHER_SETTINGS")
+    check(device.wait(Until.hasObject(By.res("settings")), PAGE_TIMEOUT_MS)) { "The Launcher settings page did not open" }
+    // The page focuses its first row a frame after it shows; a Down before that would land elsewhere.
+    check(device.wait(Until.hasObject(By.res("settings").hasDescendant(By.focused(true))), FOCUS_TIMEOUT_MS)) {
+        "Nothing on the Launcher settings page has focus"
+    }
+    repeat(SETTINGS_STOPS_MAX) {
+        device.waitForIdle()
+        if (device.hasObject(By.res(tag).focused(true))) return
+        device.pressDPadDown()
+    }
+    error("Nothing matching $tag had focus after $SETTINGS_STOPS_MAX steps down the Settings page")
+}
+
+/** Opens the Launcher settings page on its Look row, where focus lands on the selected Style. */
+internal fun MacrobenchmarkScope.openLookRow() = openSettingsAt(LOOK_OPTION_TAG)
+
+/** Whether no Settings choice is stored, so the config is the theme's alone, as the Follow theme row shows it. */
+internal fun MacrobenchmarkScope.followsTheme(): Boolean {
+    openSettingsAt(FOLLOW_THEME_TAG)
+    return device.hasObject(By.res(FOLLOW_THEME_TAG).selected(true))
+}
+
+/** Picks Follow theme, which removes every stored Settings choice: the config is the theme's alone again. */
+internal fun MacrobenchmarkScope.followTheme() {
+    openSettingsAt(FOLLOW_THEME_TAG)
+    device.pressDPadCenter()
+    check(device.wait(Until.hasObject(By.res(FOLLOW_THEME_TAG).selected(true)), PAGE_TIMEOUT_MS)) {
+        "Follow theme did not take: a choice is still stored"
+    }
+}
+
+/**
+ * On the Look row, which has focus, picks the Style that is not selected, and waits until the flip to it has ended. Two calls
+ * bring back the look the row started with, but as a stored choice; [followTheme] removes it.
+ */
+internal fun MacrobenchmarkScope.flipLook() {
+    val from = awaitFocused(LOOK_OPTION_TAG, "the selected Look option")
+    val to = device.findObjects(By.res(LOOK_OPTION_TAG)).first { it.resourceName != from }
+    val target = to.resourceName
+    val fromBounds = checkNotNull(device.findObject(By.res(from))) { "$from left the screen" }.visibleBounds
+    if (to.visibleBounds.left > fromBounds.left) device.pressDPadRight() else device.pressDPadLeft()
+    awaitFocused(LOOK_OPTION_TAG, target) { it == target }
+    device.pressDPadCenter()
+    check(device.wait(Until.hasObject(By.res(target).selected(true)), PAGE_TIMEOUT_MS)) { "$target was not selected after OK" }
+    SystemClock.sleep(FLIP_SETTLE_MS)
 }
 
 /** UiDevice.pressDPad* waits for idle before each key, and pressKeyCodes sends one chord, so neither makes a burst. */
@@ -149,24 +258,50 @@ private fun pressWithoutWaiting(
     keyCode: Int,
     times: Int,
 ) {
-    val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
     repeat(times) {
         val downTime = SystemClock.uptimeMillis()
-        for (action in intArrayOf(KeyEvent.ACTION_DOWN, KeyEvent.ACTION_UP)) {
-            val event =
-                KeyEvent(
-                    downTime,
-                    SystemClock.uptimeMillis(),
-                    action,
-                    keyCode,
-                    0,
-                    0,
-                    KeyCharacterMap.VIRTUAL_KEYBOARD,
-                    0,
-                    0,
-                    InputDevice.SOURCE_KEYBOARD,
-                )
-            check(automation.injectInputEvent(event, true)) { "Could not inject key $keyCode" }
-        }
+        injectKey(downTime, KeyEvent.ACTION_DOWN, keyCode)
+        injectKey(downTime, KeyEvent.ACTION_UP, keyCode)
     }
+}
+
+/**
+ * Holds [keyCode] down as the input dispatcher repeats a held key: the press, then after the repeat timeout [repeats] repeats
+ * at the repeat delay, the first one flagged as a long press, then the release.
+ */
+private fun holdKey(
+    keyCode: Int,
+    repeats: Int,
+) {
+    val downTime = SystemClock.uptimeMillis()
+    injectKey(downTime, KeyEvent.ACTION_DOWN, keyCode)
+    SystemClock.sleep(ViewConfiguration.getKeyRepeatTimeout().toLong())
+    for (repeat in 1..repeats) {
+        injectKey(downTime, KeyEvent.ACTION_DOWN, keyCode, repeat, if (repeat == 1) KeyEvent.FLAG_LONG_PRESS else 0)
+        SystemClock.sleep(ViewConfiguration.getKeyRepeatDelay().toLong())
+    }
+    injectKey(downTime, KeyEvent.ACTION_UP, keyCode)
+}
+
+private fun injectKey(
+    downTime: Long,
+    action: Int,
+    keyCode: Int,
+    repeat: Int = 0,
+    flags: Int = 0,
+) {
+    val event =
+        KeyEvent(
+            downTime,
+            SystemClock.uptimeMillis(),
+            action,
+            keyCode,
+            repeat,
+            0,
+            KeyCharacterMap.VIRTUAL_KEYBOARD,
+            0,
+            flags,
+            InputDevice.SOURCE_KEYBOARD,
+        )
+    check(InstrumentationRegistry.getInstrumentation().uiAutomation.injectInputEvent(event, true)) { "Could not inject key $keyCode" }
 }
