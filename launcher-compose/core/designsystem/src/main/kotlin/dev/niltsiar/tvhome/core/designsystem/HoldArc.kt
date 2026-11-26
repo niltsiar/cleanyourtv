@@ -107,7 +107,8 @@ internal class HoldArcNode(
         val focus = spec.focus.value
         val held = source?.invoke() ?: 0f
         val charge = if (spec.charges && focus > 0f) chargeOf(held) else 0f
-        val grown = (1f + (spec.scale - 1f) * focus) * dipOf(spec.press, spec.dips)
+        val scale = if (painter.grows(spec.look.tile)) 1f else spec.scale
+        val grown = (1f + (scale - 1f) * focus) * dipOf(spec.press, spec.dips)
         val pivot = Offset(size.width / 2f, spec.pivot?.invoke(size.height) ?: (size.height / 2f))
         if (charge <= 0f) {
             drawContent()

@@ -73,6 +73,7 @@ import dev.niltsiar.tvhome.core.designsystem.Medallion
 import dev.niltsiar.tvhome.core.designsystem.MedallionShape
 import dev.niltsiar.tvhome.core.designsystem.OkHold
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.designsystem.growsByOutset
 import dev.niltsiar.tvhome.core.designsystem.holdOk
 import dev.niltsiar.tvhome.core.designsystem.popsOver
 import dev.niltsiar.tvhome.core.designsystem.pressDip
@@ -97,6 +98,9 @@ internal const val NAME_LINES = 2
 private val EnterRise = 28.dp
 private const val POP_SCALE = 0.12f
 internal const val FOCUSED_SCALE = 1.08f
+
+/** How far past the card an Expressive capsule grows when focused, so the art's corners, the name and the marks stay inside it. */
+private val FocusOutset = 8.dp
 private val StatusHeight = 14.dp
 private val MarkGap = 4.dp
 private val CheckSize = 18.dp
@@ -117,12 +121,13 @@ private const val OFF_HOME_MS = 150
  * ([LibraryLayout.selection]) an app that is not on Home has its art at 0.45 and its name at 0.60, or 0.75 and whole
  * while its card has focus, so OK on a focused card shows, and the status slot holds a ring for it. An idle card draws
  * no fill and no rim, so its art and name sit on the panel. A focused one takes a rim and lets the plate [FocusSurface]
- * draws behind it show, unless the focus style has no slab: then the card takes its fill. It rises in once per opening,
- * with the delay [CardEntrance] gives it, and when its Home shortcut changes pops a little, or in the chooser pulses
- * its mark. Both run in the layer lambda. The status slot keeps its place while the card grows, so it stays level with
- * the cards beside it. [widthPx] is the narrowest the card can be. When no card of the grid has a status line,
- * [statusFree] is true and the art and name take the whole card, centred. With [LibraryLayout.pressFeedback] OK dips
- * the card and lights its ring, unless an app is [launching].
+ * draws behind it show, unless the focus style has no slab: then the card takes its fill. In Expressive the fill is the
+ * focused shape's, and with the capsule that shape grows [FocusOutset] past the card while the card keeps its size. It
+ * rises in once per opening, with the delay [CardEntrance] gives it, and when its Home shortcut changes pops a little, or
+ * in the chooser pulses its mark. Both run in the layer lambda. The status slot keeps its place while the card grows, so
+ * it stays level with the cards beside it. [widthPx] is the narrowest the card can be. When no card of the grid has a
+ * status line, [statusFree] is true and the art and name take the whole card, centred. With [LibraryLayout.pressFeedback]
+ * OK dips the card and lights its ring, unless an app is [launching].
  */
 @Composable
 internal fun LibraryCardView(
@@ -176,6 +181,7 @@ internal fun LibraryCardView(
     val colours = TvTheme.lookColors
     val shapes = TvTheme.shapes
     val slab = TvTheme.focusStyle.slab
+    val lookState = TvTheme.lookState
     val motion = TvTheme.motion
     val density = LocalDensity.current
     val focus = remember { Animatable(0f) }
@@ -212,6 +218,8 @@ internal fun LibraryCardView(
             ringBlends = ringBlends,
             plate = ink,
             press = press,
+            focusedOutset = FocusOutset,
+            focusedFill = colours.cardFill,
             modifier =
                 Modifier
                     .fillMaxSize()
@@ -240,7 +248,7 @@ internal fun LibraryCardView(
                     .drawBehind {
                         val shown = focusProgress()
                         if (shown > 0f) {
-                            if (!slab) drawRect(colours.cardFill(), alpha = shown)
+                            if (!slab && lookState.look != Look.Expressive) drawRect(colours.cardFill(), alpha = shown)
                             val rim = 1.dp.toPx()
                             drawRoundRect(
                                 colours.cardRim(),
@@ -272,7 +280,7 @@ internal fun LibraryCardView(
                     Modifier
                         .align(Alignment.BottomCenter)
                         .padding(start = CardSide, end = CardSide, bottom = CardBottom)
-                        .holdingStill(focus, motion.focusScale(FOCUSED_SCALE)),
+                        .holdingStill(focus) { if (lookState.growsByOutset(FocusOutset)) 1f else motion.focusScale(FOCUSED_SCALE) },
                 )
                 if (card.recent && !card.onHome) RecentDot(Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp))
             }
@@ -568,11 +576,11 @@ private val OPENED_MIN_SIZE = 9.sp
  */
 private fun Modifier.holdingStill(
     focus: Animatable<Float, AnimationVector1D>,
-    grownScale: Float,
+    grownScale: () -> Float,
 ): Modifier =
     graphicsLayer {
         val fromCentre = CardHeight.toPx() / 2f - CardBottom.toPx() - size.height / 2f
-        translationY = -fromCentre * (grownScale - 1f) * focus.value
+        translationY = -fromCentre * (grownScale() - 1f) * focus.value
     }
 
 /** A small dot for a recent install that is not on Home. */

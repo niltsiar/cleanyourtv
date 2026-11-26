@@ -12,9 +12,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PixelMap
 import androidx.compose.ui.graphics.luminance
@@ -45,6 +47,7 @@ import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
@@ -61,6 +64,7 @@ import dev.niltsiar.tvhome.core.designsystem.FocusRingReach
 import dev.niltsiar.tvhome.core.designsystem.FocusStyle
 import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.OverlayHost
+import dev.niltsiar.tvhome.core.designsystem.TvShapes
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.model.LibraryApp
 import dev.niltsiar.tvhome.core.model.LibraryArt
@@ -68,6 +72,7 @@ import dev.niltsiar.tvhome.core.model.OpenedRecord
 import io.kotest.assertions.withClue
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
@@ -82,6 +87,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import java.util.Locale
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.math.abs
+import kotlin.math.hypot
 import kotlin.math.roundToInt
 
 /** The library in Home's overlay host, read from the rendered pixels and the laid-out cards. */
@@ -150,6 +156,21 @@ class LibraryOverlayLookUiTestContent :
 
                             val inside = insideFocusedCard("App 1")
                             withClue("inside $inside") { abs(inside - CARD_FILL_RED) shouldBeLessThanOrEqualTo 2 }
+                        }
+                    }
+
+                    if (look == Look.Expressive) {
+                        test("a focused card has its art, its two line name, its check and its new dot whole inside its focused shape") {
+                            val name = longNames.first()
+                            showLibrary(
+                                listOf(libraryApp(name, installedAt = NOW - DAY), libraryApp("Zulu", onHome = true)),
+                                art = LibraryArt(solid(ArtBlue), accent = ArtBlue),
+                            )
+                            withClue("$name wraps onto two lines") { nameLayout(name).lineCount shouldBe 2 }
+                            withClue(name) { contentOutsideFocusedShape(name).shouldBeEmpty() }
+
+                            press(Key.DirectionRight)
+                            withClue("Zulu") { contentOutsideFocusedShape("Zulu").shouldBeEmpty() }
                         }
                     }
 
@@ -598,6 +619,14 @@ class LibraryOverlayLookUiNightTestContent :
         for (look in Look.entries) {
             testSuite(look.name) {
                 testFixture { LibraryOverlayLookUiFixture(look) } asContextForEach {
+                    if (look == Look.Expressive) {
+                        test("the name of a focused card reads at 45 to 1 on its plate") {
+                            showLibrary(listOf(libraryApp("Zulu", onHome = true)))
+
+                            nameOnPlate("Zulu") shouldBeGreaterThanOrEqualTo 4.5f
+                        }
+                    }
+
                     test("the bottom chevron sits in a 36 dp wide 20 dp tall pill of 15 percent white centred under the grid") {
                         showLibrary(twentyThree)
                         val grid = bounds("library:cards")
@@ -1257,6 +1286,9 @@ private class LibraryOverlayLookUiFixture(
 
     var home by mutableStateOf(Color.Black)
 
+    /** The shapes of the look, as the library last composed with them. */
+    lateinit var shapes: TvShapes
+
     val white =
         ImageBitmap(16, 9).also { image ->
             Canvas(image).drawRect(Rect(0f, 0f, 16f, 9f), Paint().apply { color = Color.White })
@@ -1282,6 +1314,7 @@ private class LibraryOverlayLookUiFixture(
         lateinit var viewModel: MoleculeLibraryViewModel
         compose.setContent {
             TvTheme(look = look, motion = motion, focusStyle = focusStyle) {
+                shapes = TvTheme.shapes
                 val scope = rememberCoroutineScope()
                 viewModel =
                     remember {
@@ -1388,6 +1421,129 @@ private class LibraryOverlayLookUiFixture(
         val card = grownCard(name)
         return redAt(card.left + 5.dp, (card.top + card.bottom) / 2)
     }
+
+    /** A 16 by 9 image of one [colour]. */
+    fun solid(colour: Color) =
+        ImageBitmap(16, 9).also { image ->
+            Canvas(image).drawRect(Rect(0f, 0f, 16f, 9f), Paint().apply { color = colour })
+        }
+
+    /**
+     * What of the focused card [name] lies outside its focused shape on the screen, as a list of misses. The shape is read on
+     * the row through the middle of the art, [ArtBlue]: its edge is the first pixel of the dark gap outside the art, and the
+     * band ends where the light run after the gap does. The content's drawn scale is the art's width on that row over its
+     * laid-out width. The art's corners (the shape's rounding included), the boxes of the name's lines and the check must
+     * lie inside the edge; a new dot must show whole, inside the band's outer edge.
+     */
+    fun contentOutsideFocusedShape(name: String): List<String> {
+        val density = compose.activity.resources.displayMetrics.density
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+
+        fun px(dp: Dp) = dp.value * density
+        val card = focusedCard(name)
+        val cx = px((card.left + card.right) / 2)
+        val cy = px((card.top + card.bottom) / 2)
+        val art = art(name)
+        val row = px((art.top + art.bottom) / 2).toInt()
+
+        fun isArt(x: Int) =
+            pixels[x, row].let { maxOf(abs(it.red - ArtBlue.red), abs(it.green - ArtBlue.green), abs(it.blue - ArtBlue.blue)) } < 0.05f
+        var left = px((art.left + art.right) / 2).toInt()
+        while (isArt(left - 1)) left--
+        var right = px((art.left + art.right) / 2).toInt()
+        while (isArt(right + 1)) right++
+        val scale = (right - left + 1) / px(art.width)
+        var x = left - 1
+        while (pixels[x, row].luminance() >= DARK) x--
+        val edge = hypot(cx - x, cy - row)
+        while (pixels[x, row].luminance() < DARK) x--
+        while (pixels[x, row].luminance() >= DARK) x--
+        val bandOuter = hypot(cx - x, cy - row)
+
+        /** How far from the card's centre on the screen a round end of [radius] dp about ([centreX], [centreY]) dp reaches. */
+        fun reach(
+            centreX: Dp,
+            centreY: Dp,
+            radius: Dp,
+        ) = hypot((px(centreX) - cx) * scale, (px(centreY) - cy) * scale) + px(radius) * scale
+        val misses = mutableListOf<String>()
+
+        fun inside(
+            what: String,
+            at: Float,
+        ) {
+            if (at > edge) misses += "$what reaches $at px, the shape's edge is $edge px (scale $scale)"
+        }
+        val corner =
+            (
+                shapes.libraryArt.createOutline(
+                    Size(px(art.width), px(art.height)),
+                    LayoutDirection.Ltr,
+                    compose.density,
+                ) as Outline.Rounded
+            ).roundRect.topLeftCornerRadius.x /
+                density
+        for ((cornerX, cornerY) in listOf(art.left to art.top, art.right to art.top, art.left to art.bottom, art.right to art.bottom)) {
+            val inX = if (cornerX == art.left) corner.dp else -corner.dp
+            val inY = if (cornerY == art.top) corner.dp else -corner.dp
+            inside("the art's corner at $cornerX, $cornerY", reach(cornerX + inX, cornerY + inY, corner.dp))
+        }
+        val layout = nameLayout(name)
+        val box =
+            compose
+                .onNode(
+                    hasText(name.substringBefore(' ').take(8), substring = true) and hasAnyAncestor(hasTestTag("card:${key(name)}")),
+                    useUnmergedTree = true,
+                ).getBoundsInRoot()
+        for (line in 0 until layout.lineCount) {
+            val top = box.top + (layout.getLineTop(line) / density).dp
+            val bottom = box.top + (layout.getLineBottom(line) / density).dp
+            val start = box.left + (layout.getLineLeft(line) / density).dp
+            val end = box.left + (layout.getLineRight(line) / density).dp
+            for ((pointX, pointY) in listOf(start to top, end to top, start to bottom, end to bottom)) {
+                inside("name line $line at $pointX, $pointY", reach(pointX, pointY, 0.dp))
+            }
+        }
+        compose.onAllNodesWithTag("card:check:${key(name)}", useUnmergedTree = true).fetchSemanticsNodes().forEach {
+            val check =
+                DpRect(it.boundsInRoot.left.toDp(), it.boundsInRoot.top.toDp(), it.boundsInRoot.right.toDp(), it.boundsInRoot.bottom.toDp())
+            inside("the check", reach((check.left + check.right) / 2, (check.top + check.bottom) / 2, check.width / 2))
+        }
+        val dot =
+            (px(card.top - 8.dp).toInt() until px(card.top + 24.dp).toInt()).flatMap { y ->
+                (px(card.right - 24.dp).toInt() until px(card.right + 8.dp).toInt()).mapNotNull { at ->
+                    val pixel = pixels[at, y]
+                    if (pixel.green - maxOf(pixel.red, pixel.blue) > 0.15f) hypot(at - cx, y - cy) else null
+                }
+            }
+        if (compose.onAllNodesWithTag("card:check:${key(name)}", useUnmergedTree = true).fetchSemanticsNodes().isEmpty()) {
+            val whole = (Math.PI * px(4.dp) * px(4.dp)).toFloat() * 0.75f
+            if (dot.size < whole) misses += "the new dot shows ${dot.size} px of at least $whole"
+            if ((dot.maxOrNull() ?: 0f) > bandOuter) misses += "the new dot reaches ${dot.max()} px, the band ends at $bandOuter px"
+        }
+        return misses
+    }
+
+    /** The WCAG contrast of the name of the focused card [name] on its plate: its most distinct pixel against the plate beside it. */
+    fun nameOnPlate(name: String): Float {
+        val density = compose.activity.resources.displayMetrics.density
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+
+        fun px(dp: Dp) = (dp.value * density).toInt()
+        val card = focusedCard(name)
+        val plate = pixels[px(card.left + 4.dp), px((card.top + card.bottom) / 2)]
+        val box =
+            compose.onNode(hasText(name) and hasAnyAncestor(hasTestTag("card:${key(name)}")), useUnmergedTree = true).getBoundsInRoot()
+        return (px(box.top - 4.dp) until px(box.bottom + 4.dp)).maxOf { y ->
+            (px(box.left - 4.dp) until px(box.right + 4.dp)).maxOf { x ->
+                val l1 = pixels[x, y].luminance()
+                val l2 = plate.luminance()
+                (maxOf(l1, l2) + 0.05f) / (minOf(l1, l2) + 0.05f)
+            }
+        }
+    }
+
+    private fun Float.toDp(): Dp = (this / compose.activity.resources.displayMetrics.density).dp
 
     /** Two names too long for a card's two lines; the first sorts first and takes focus. */
     val cutNames =
@@ -1693,21 +1849,24 @@ private class LibraryOverlayLookUiFixture(
             .onNode(hasText("New") and hasAnyAncestor(hasTestTag("card:${key(name)}")), useUnmergedTree = true)
             .getBoundsInRoot()
 
-    /** The middle row, in pixels, of what is drawn like text in the card of [name] from [above] to [below] its status line. */
+    /**
+     * The middle row, in pixels, of what is drawn like text across the status line of the card of [name], from [above] to
+     * [below] it: over the line's own width, against the card 2 dp before it, so the edge of a focused card's shape is not
+     * taken for text.
+     */
     fun statusMiddle(
         name: String,
         above: Dp,
         below: Dp,
     ): Float {
-        val card = card(name)
         val line = status(name)
         val density = compose.activity.resources.displayMetrics.density
         val pixels = compose.onRoot().captureToImage().toPixelMap()
-        val left = ((card.left + 6.dp).value * density).toInt()
-        val right = ((card.right - 6.dp).value * density).toInt()
+        val left = (line.left.value * density).toInt()
+        val right = (line.right.value * density).toInt()
         val top = ((line.top - above).value * density).toInt()
         val bottom = ((line.bottom + below).value * density).toInt()
-        val ground = pixels[left, (top + bottom) / 2].red
+        val ground = pixels[((line.left - 2.dp).value * density).toInt(), (top + bottom) / 2].red
         val rows =
             (top until bottom).filter { y ->
                 (left until right).any { x ->
@@ -1715,7 +1874,7 @@ private class LibraryOverlayLookUiFixture(
                     (if (look == Look.Glass) over else abs(over)) * 255 > TEXT_OVER_GROUND
                 }
             }
-        withClue("no text in $card between $top and $bottom") { rows.shouldNotBeEmpty() }
+        withClue("no text in $line between $top and $bottom") { rows.shouldNotBeEmpty() }
         return (rows.first() + rows.last()) / 2f
     }
 
@@ -1872,6 +2031,10 @@ private const val RING_STRONG = 200
 private const val RING_CORE = 300
 private const val HALO_MIN = 4
 private const val FOCUSED_SCALE = 1.08f
+
+/** The art of the focused-shape test, and the luminance under which a pixel is the dark gap or keyline round a focused card. */
+private val ArtBlue = Color(0xFF2050E0)
+private const val DARK = 0.02f
 private const val WIDTH_ROUNDING = 1.5f
 private const val TEXT_OVER_GROUND = 60
 private val ELLIPSIS = Char(0x2026).toString()

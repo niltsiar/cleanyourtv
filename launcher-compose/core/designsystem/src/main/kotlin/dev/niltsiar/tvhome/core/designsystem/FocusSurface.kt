@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import dev.niltsiar.tvhome.core.config.ExpressiveTile
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.expressive.TilePainter
 import dev.niltsiar.tvhome.core.designsystem.expressive.drawExpressiveTile
@@ -117,7 +118,10 @@ public val FocusRingReach: Dp = RingGap + RingWidth + HairlineWidth + OuterStrok
  * In [Look.Expressive] focus shows as a band of the ring's colour, or the house primary without one, between a gap in the
  * house surface colour and a dark keyline, all inside [FocusRingReach], with no glow; a press moves the band toward
  * [TvElementColors.ringPressed] as it does the ring. [TvTheme] says the band's shape
- * ([dev.niltsiar.tvhome.core.config.ExpressiveTile]). The look and the shape are read in the draw phase.
+ * ([dev.niltsiar.tvhome.core.config.ExpressiveTile]). [focusedFill], when given, fills the focused shape behind the content
+ * in place of the plate, in every focus style. With [focusedOutset] and the capsule ([growsByOutset]), the surface and its
+ * content keep their rest size and clip while the capsule, its fill and its band grow that far past it, under the content.
+ * The look and the shape are read in the draw phase.
  */
 @Composable
 public fun FocusSurface(
@@ -136,6 +140,8 @@ public fun FocusSurface(
     focus: Animatable<Float, AnimationVector1D> = remember { Animatable(0f) },
     press: Animatable<Float, AnimationVector1D>? = null,
     keepsShape: (() -> Boolean)? = null,
+    focusedOutset: Dp = 0.dp,
+    focusedFill: ColorProducer? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val motion = TvTheme.motion
@@ -160,7 +166,7 @@ public fun FocusSurface(
         }
     val gloss = remember(colours) { Brush.verticalGradient(listOf(colours.tileGloss, Color.Transparent)) }
     val lookState = TvTheme.lookState
-    val painter = remember { TilePainter() }
+    val painter = remember(focusedOutset) { TilePainter(focusedOutset) }
     val tileOutline = remember(shape, lookState, painter, focus) { TileOutline(shape, lookState, painter, focus) }
     val kept = if (keepsShape != null) keptShape(keepsShape, motion) else null
     val band =
@@ -206,8 +212,9 @@ public fun FocusSurface(
                         Modifier
                     },
                 ).drawWithContent {
+                    val grown = if (lookState.growsByOutset(focusedOutset)) 1f else grownScale
                     scale(
-                        (1f + (grownScale - 1f) * focus.value) * dipOf(press, dips),
+                        (1f + (grown - 1f) * focus.value) * dipOf(press, dips),
                         Offset(
                             size.width / 2f,
                             growthPivot?.invoke(size.height) ?: (size.height / 2f),
@@ -231,6 +238,7 @@ public fun FocusSurface(
                                 keyline = colours.ringKeyline,
                                 plate = plateColor,
                                 plateAlpha = colours.plateTopAlpha,
+                                fill = focusedFill?.invoke() ?: Color.Unspecified,
                             )
                             return@scale
                         }
@@ -299,6 +307,13 @@ public fun FocusSurface(
         content = content,
     )
 }
+
+/**
+ * Whether a [FocusSurface] with [focusedOutset] grows its focused shape by it in place of growing with its focused scale: in
+ * [Look.Expressive] with the capsule. Read it in draw.
+ */
+public fun LookState.growsByOutset(focusedOutset: Dp): Boolean =
+    focusedOutset > 0.dp && look == Look.Expressive && tile == ExpressiveTile.Capsule
 
 /** 1 while [keeps] says so, falling to 0 with the focus fade of [motion] once it no longer does. */
 @Composable

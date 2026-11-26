@@ -17,10 +17,12 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.inset
 import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.config.ExpressiveTile
@@ -160,7 +162,10 @@ internal object CinchHalos {
  * cinch for its size and style, taken from [BandCache], and the strokes it draws with. Each is built when
  * the size, style or colour changes, never on a frame that only moves the focus.
  */
-internal class TilePainter {
+internal class TilePainter(
+    /** How far past the surface the capsule's focused shape grows, in place of the surface growing with it. */
+    private val outset: Dp = 0.dp,
+) {
     private var steps: CornerSteps? = null
     private var stepsBase: Shape? = null
     private var stepsTile: ExpressiveTile? = null
@@ -255,7 +260,20 @@ internal class TilePainter {
         progress: Float,
     ): Float = if (tile == ExpressiveTile.Capsule) morph(progress) else progress
 
-    /** The clip of the tile's content: [base] at rest, or at focus [progress] its rounded step toward the focused art. */
+    /** Whether a [tile]'s focused shape grows by the outset while the surface and its content keep their rest size. */
+    fun grows(tile: ExpressiveTile): Boolean = outset > 0.dp && tile == ExpressiveTile.Capsule
+
+    /** How far past the surface a [tile]'s focused shape reaches at focus [progress], in pixels. */
+    fun grow(
+        tile: ExpressiveTile,
+        progress: Float,
+        density: Density,
+    ): Float = if (grows(tile)) with(density) { outset.toPx() } * progress else 0f
+
+    /**
+     * The clip of the tile's content: [base] at rest, or at focus [progress] its rounded step toward the focused art; [base]
+     * while the focused shape [grows] round content that keeps its rest size.
+     */
     fun clip(
         base: Shape,
         tile: ExpressiveTile,
@@ -263,7 +281,7 @@ internal class TilePainter {
         size: Size,
         density: Density,
     ): Shape {
-        if (progress <= 0f) return base
+        if (progress <= 0f || grows(tile)) return base
         val steps = steps(base, tile, size, density)
         return steps.shape(steps.radius(corner(tile, progress)))
     }
@@ -367,10 +385,12 @@ private fun Density.bandWidths(rim: Boolean): BandWidths =
     }
 
 /**
- * Draws a focused tile in Expressive, already grown and dipped by the caller, with its content: in [style], a [plate] (when
- * specified, glass_style glass only) behind it, then the band in [band] round it as [tile] says, with the gap in [gap] and
- * the keyline in [keyline]. [progress] fades the plate and [ringAlpha] the band; a held OK's charge pinches the capsule's
- * corner ([TilePainter.morph]). Nothing here allocates once the painter has the geometry for this size and style.
+ * Draws a focused tile in Expressive, already grown and dipped by the caller, with its content: a [fill] (when specified,
+ * in every style) or else a [plate] (when specified, glass_style glass only) behind it, then the band in [band] round it as
+ * [tile] says, with the gap in [gap] and the keyline in [keyline]. [progress] fades the fill or plate and [ringAlpha] the
+ * band; a held OK's charge pinches the capsule's corner ([TilePainter.morph]). Where the painter's focused shape
+ * [TilePainter.grows], the fill and the band grow past the tile with [progress] and the content is drawn over them, at its
+ * rest size. Nothing here allocates once the painter has the geometry for this size and style.
  */
 internal fun ContentDrawScope.drawExpressiveTile(
     painter: TilePainter,
@@ -384,26 +404,48 @@ internal fun ContentDrawScope.drawExpressiveTile(
     keyline: Color,
     plate: Color,
     plateAlpha: Float,
+    fill: Color,
 ) {
     val rim = style == FocusStyle.Rim
     painter.lastRim = rim
     val radius = painter.steps(base, tile, size, this).radius(painter.corner(tile, progress))
-    if (plate.isSpecified && style.slab && progress > 0f) {
-        val grow = Gap.toPx()
-        drawRoundRect(
-            plate,
-            topLeft = Offset(-grow, -grow),
-            size = Size(size.width + 2f * grow, size.height + 2f * grow),
-            cornerRadius = CornerRadius(radius + grow),
-            alpha = progress * plateAlpha,
-        )
+    if (painter.grows(tile)) {
+        val grow = painter.grow(tile, progress, this)
+        inset(-grow) {
+            drawBehindTile(style, progress, radius + grow, plate, plateAlpha, fill)
+            if (ringAlpha > 0f) drawCapsuleBand(painter, radius + grow, rim, ringAlpha, band, gap, keyline)
+        }
+        drawContent()
+        return
     }
+    drawBehindTile(style, progress, radius, plate, plateAlpha, fill)
     drawContent()
     if (ringAlpha <= 0f) return
     when (tile) {
         ExpressiveTile.Capsule -> drawCapsuleBand(painter, radius, rim, ringAlpha, band, gap, keyline)
         ExpressiveTile.Cinch -> drawCinchBand(painter.band(tile, rim, base, size, this), ringAlpha, band, gap, keyline)
     }
+}
+
+/** The [fill], or else the [plate] of a style with a slab, out to the band's inner edge, corners concentric to [radius]. */
+private fun DrawScope.drawBehindTile(
+    style: FocusStyle,
+    progress: Float,
+    radius: Float,
+    plate: Color,
+    plateAlpha: Float,
+    fill: Color,
+) {
+    if (progress <= 0f) return
+    val colour = if (fill.isSpecified) fill else plate.takeIf { it.isSpecified && style.slab } ?: return
+    val grow = Gap.toPx()
+    drawRoundRect(
+        colour,
+        topLeft = Offset(-grow, -grow),
+        size = Size(size.width + 2f * grow, size.height + 2f * grow),
+        cornerRadius = CornerRadius(radius + grow),
+        alpha = if (fill.isSpecified) progress else progress * plateAlpha,
+    )
 }
 
 private fun DrawScope.drawCapsuleBand(
@@ -472,7 +514,7 @@ internal fun DrawScope.drawExpressiveHold(
             val steps = painter.steps(base, tile, size, this)
             val rim = painter.lastRim
             val middle = if (rim) RimGap.toPx() + RimBand.toPx() / 2f else Gap.toPx() + Band.toPx() / 2f
-            painter.capsuleHold(steps, steps.radius(progress), middle)
+            painter.capsuleHold(steps, steps.radius(progress), middle + painter.grow(tile, progress, this))
         } else {
             painter.lastBand()?.holdMeasure ?: return
         }
@@ -498,7 +540,7 @@ internal fun DrawScope.drawTileCharge(
     val line =
         if (tile == ExpressiveTile.Capsule) {
             val steps = painter.steps(base, tile, size, this)
-            val edge = bandEdge(painter.lastRim).toPx()
+            val edge = bandEdge(painter.lastRim).toPx() + painter.grow(tile, progress, this)
             val radius = steps.radius(progress * pinchOf(charge))
             painter.capsuleCharge().apply { sampleRoundRect(-edge, -edge, size.width + edge, size.height + edge, radius + edge) }
         } else {
