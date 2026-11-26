@@ -54,6 +54,13 @@ opacity, the clock format and animations, then Wallpaper and Open on start when 
 are TV Home's own. Every option in them stays off until a theme or the page turns it on. Greeting is the one exception:
 it starts on.
 
+Look:
+
+- **Style.** Glass is TV Home's own design, and the default. Expressive is a Material 3 Expressive design, with rounder
+  type and colours that grow from the wallpaper, the sky or the time of day. While Style is Expressive, the Focused tile
+  row picks the shape of the tile that has focus: Capsule rounds its corners to half its height, and Cinch is a band
+  whose sides dip in.
+
 Home layout:
 
 - **Names under every tile.** Each app's name shows under its tile, in the dock and in the grid.
