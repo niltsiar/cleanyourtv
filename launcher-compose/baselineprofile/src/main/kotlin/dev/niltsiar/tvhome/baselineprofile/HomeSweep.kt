@@ -80,7 +80,7 @@ private val CARD_TAG = Pattern.compile("card:[^:]+")
 /** An option of the Settings page's Look row: SettingsScreen tags each one `option:Look:<index>`, Glass first. */
 private val LOOK_OPTION_TAG = Pattern.compile("option:Look:\\d+")
 
-/** The Settings page's Follow theme row, selected while no choice is stored: OK on it removes every stored choice. */
+/** The Settings page's Follow theme row, checked while no choice is stored: OK on it removes every stored choice. */
 private val FOLLOW_THEME_TAG = Pattern.compile("settings:follow_theme")
 
 /** BySelector is a mutable builder, so each use needs a new one. */
@@ -219,37 +219,37 @@ private fun MacrobenchmarkScope.openSettingsAt(tag: Pattern) {
     error("Nothing matching $tag had focus after $SETTINGS_STOPS_MAX steps down the Settings page")
 }
 
-/** Opens the Launcher settings page on its Look row, where focus lands on the selected Style. */
+/** Opens the Launcher settings page on its Look row, where focus lands on the checked Style. */
 internal fun MacrobenchmarkScope.openLookRow() = openSettingsAt(LOOK_OPTION_TAG)
 
 /** Whether no Settings choice is stored, so the config is the theme's alone, as the Follow theme row shows it. */
 internal fun MacrobenchmarkScope.followsTheme(): Boolean {
     openSettingsAt(FOLLOW_THEME_TAG)
-    return device.hasObject(By.res(FOLLOW_THEME_TAG).selected(true))
+    return device.hasObject(By.res(FOLLOW_THEME_TAG).checked(true))
 }
 
 /** Picks Follow theme, which removes every stored Settings choice: the config is the theme's alone again. */
 internal fun MacrobenchmarkScope.followTheme() {
     openSettingsAt(FOLLOW_THEME_TAG)
     device.pressDPadCenter()
-    check(device.wait(Until.hasObject(By.res(FOLLOW_THEME_TAG).selected(true)), PAGE_TIMEOUT_MS)) {
+    check(device.wait(Until.hasObject(By.res(FOLLOW_THEME_TAG).checked(true)), PAGE_TIMEOUT_MS)) {
         "Follow theme did not take: a choice is still stored"
     }
 }
 
 /**
- * On the Look row, which has focus, picks the Style that is not selected, and waits until the flip to it has ended. Two calls
+ * On the Look row, which has focus, picks the Style that is not checked, and waits until the flip to it has ended. Two calls
  * bring back the look the row started with, but as a stored choice; [followTheme] removes it.
  */
 internal fun MacrobenchmarkScope.flipLook() {
-    val from = awaitFocused(LOOK_OPTION_TAG, "the selected Look option")
+    val from = awaitFocused(LOOK_OPTION_TAG, "the checked Look option")
     val to = device.findObjects(By.res(LOOK_OPTION_TAG)).first { it.resourceName != from }
     val target = to.resourceName
     val fromBounds = checkNotNull(device.findObject(By.res(from))) { "$from left the screen" }.visibleBounds
     if (to.visibleBounds.left > fromBounds.left) device.pressDPadRight() else device.pressDPadLeft()
     awaitFocused(LOOK_OPTION_TAG, target) { it == target }
     device.pressDPadCenter()
-    check(device.wait(Until.hasObject(By.res(target).selected(true)), PAGE_TIMEOUT_MS)) { "$target was not selected after OK" }
+    check(device.wait(Until.hasObject(By.res(target).checked(true)), PAGE_TIMEOUT_MS)) { "$target was not checked after OK" }
     SystemClock.sleep(FLIP_SETTLE_MS)
 }
 
