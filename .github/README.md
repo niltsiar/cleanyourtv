@@ -172,11 +172,15 @@ Build and install TV Home, push a theme to it, then make it Home:
 cd launcher-compose
 ./gradlew :app:assembleRelease
 adb -s <tv ip>:5555 install -r app/build/outputs/apk/release/app-release.apk
+adb -s <tv ip>:5555 shell cmd package compile -m speed -f dev.niltsiar.tvhome
 cd ..
 TV_PACKAGE=dev.niltsiar.tvhome TV_HOST=<tv ip> tools/theme.sh themes/aurora
 cd launcher-compose
 TV_SERIAL=<tv ip>:5555 scripts/switch-home.sh new
 ```
+
+The `cmd package compile` line compiles TV Home at once: a sideloaded app runs uncompiled until Android's idle
+maintenance compiles it, and until then its first scrolls and look switches stutter.
 
 `switch-home.sh new` changes nothing until TV Home has a theme, because the theme holds the remote's key remaps.
 It makes TV Home the TV's Home, and grants the permissions that the Wi-Fi name and App highlights need.
