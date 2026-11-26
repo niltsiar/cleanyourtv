@@ -42,9 +42,10 @@ import dev.niltsiar.tvhome.core.designsystem.expressive.drawTileCharge
  * menu. It reads the progress from the [holdOk] earlier in the chain and is drawn grown as the ring is: [scale] when
  * [focus] is 1, less while a [press] [dips] it, about [pivot]'s height or the middle. In [Look.Expressive] with [charges]
  * (springs run) it is the charge: after a dead zone the tile tightens toward [chargedScale], the capsule's corner pinches
- * ([TilePainter.morph]) and a wave runs round the band's outer edge ([drawTileCharge]); the [painter] gets the press
- * ([TilePainter.held]) so the clip, the band and the halo follow it. Without [charges] it is a thin line in black or
- * white, whichever reads on the band, along the middle of the band [painter] drew.
+ * ([TilePainter.morph]) and a wave runs round the band's outer edge ([drawTileCharge]); the [painter] holds the press
+ * ([TilePainter.held]) so the clip, the band and the halo follow it, until the cue stops charging or leaves the chain.
+ * Without [charges] it is a thin line in black or white, whichever reads on the band, along the middle of the band
+ * [painter] drew.
  */
 internal data class HoldArcElement(
     val focus: Animatable<Float, AnimationVector1D>,
@@ -63,6 +64,7 @@ internal data class HoldArcElement(
 
     override fun update(node: HoldArcNode) {
         node.spec = this
+        if (!charges) painter.held = null
         node.invalidateDraw()
     }
 
@@ -79,6 +81,10 @@ internal class HoldArcNode(
     private val outline = Path()
     private val arc = Path()
     private val measure = PathMeasure()
+
+    override fun onDetach() {
+        spec.painter.held = null
+    }
 
     override fun ContentDrawScope.draw() {
         if (spec.look.look == Look.Expressive) {

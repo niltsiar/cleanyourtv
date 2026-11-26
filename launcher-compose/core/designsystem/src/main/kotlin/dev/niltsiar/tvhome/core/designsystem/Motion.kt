@@ -166,17 +166,19 @@ public data class Motion internal constructor(
     public fun flipSpec(reveals: Look): FiniteAnimationSpec<Float> =
         if (reveals == Look.Expressive && animated) MotionScheme.expressive().slowSpatialSpec() else tweenSpec(FLIP_MS)
 
-    public companion object {
-        /**
-         * How the dock's edge light catches up with a newly focused tile ([DockEdgeLight]) in [look], whatever the motion
-         * keys: in [Look.Expressive] on the default spatial spring, which overshoots.
-         */
-        public fun dockLightFollowSpec(look: Look = Look.Glass): FiniteAnimationSpec<Float> =
-            when (look) {
-                Look.Glass -> spring(DOCK_LIGHT_DAMPING, DOCK_LIGHT_STIFFNESS)
-                Look.Expressive -> MotionScheme.expressive().defaultSpatialSpec()
-            }
+    /**
+     * How the dock's edge light catches up with a newly focused tile ([DockEdgeLight]): in [Look.Glass] a critically damped
+     * spring whatever the motion keys; in [Look.Expressive] the default spatial spring, which overshoots, while [animated],
+     * else a jump.
+     */
+    public fun dockLightFollowSpec(): FiniteAnimationSpec<Float> =
+        when {
+            look == Look.Glass -> spring(DOCK_LIGHT_DAMPING, DOCK_LIGHT_STIFFNESS)
+            animated -> MotionScheme.expressive().defaultSpatialSpec()
+            else -> snap()
+        }
 
+    public companion object {
         /** How the dock's edge light fades in and out ([DockEdgeLight.show]), whatever the motion keys. */
         public fun dockLightFadeSpec(): FiniteAnimationSpec<Float> = tween(DOCK_LIGHT_FADE_MS)
 

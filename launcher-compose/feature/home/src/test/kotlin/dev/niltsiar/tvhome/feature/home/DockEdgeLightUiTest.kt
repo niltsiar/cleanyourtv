@@ -24,6 +24,7 @@ import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.DockEdgeLight
 import dev.niltsiar.tvhome.core.designsystem.DockSurface
+import dev.niltsiar.tvhome.core.designsystem.Motion
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.rememberGlassState
 import io.kotest.assertions.withClue
@@ -83,6 +84,26 @@ class DockEdgeLightUiTestContent :
 
                 assertChannels(listOf(0, 0, 0), at(200f, 110f), tolerance = 2)
             }
+
+            for ((name, motion) in listOf(
+                "reduced motion" to Motion(reducedMotion = true),
+                "animations off" to Motion(animations = false),
+            )) {
+                test("in Expressive with $name the light jumps to a newly focused tile") {
+                    showDock(look = Look.Expressive, motion = motion)
+                    moveTo(300f)
+                    compose.mainClock.advanceTimeBy(1_000)
+                    val settled = compose.onRoot().captureToImage().toPixelMap()
+                    moveTo(200f)
+                    compose.mainClock.advanceTimeBy(1_000)
+
+                    moveTo(300f)
+                    compose.mainClock.advanceTimeByFrame()
+
+                    val next = compose.onRoot().captureToImage().toPixelMap()
+                    withClue("the frame after the move is the settled light") { next.buffer.contentEquals(settled.buffer).shouldBeTrue() }
+                }
+            }
         }
     })
 
@@ -93,11 +114,20 @@ private class DockEdgeLightUiTestFixture : JUnit4RulesContext() {
 
     val density get() = compose.activity.resources.displayMetrics.density
 
-    fun showDock(visible: Boolean = true) {
+    lateinit var edge: DockEdgeLight
+
+    fun showDock(
+        visible: Boolean = true,
+        look: Look = Look.Glass,
+        motion: Motion = Motion(),
+    ) {
+        compose.mainClock.autoAdvance = false
         compose.setContent {
-            TvTheme(look = Look.Glass) {
+            TvTheme(look = look, motion = motion) {
                 val scope = rememberCoroutineScope()
-                val edge = remember { DockEdgeLight(scope) }
+                val lookState = TvTheme.lookState
+                val motion = TvTheme.motion
+                val edge = remember { DockEdgeLight(scope, lookState) { motion }.also { this.edge = it } }
                 LaunchedEffect(edge) {
                     edge.focus(centreX = 200f * density) { green }
                     edge.show(visible)
@@ -116,6 +146,9 @@ private class DockEdgeLightUiTestFixture : JUnit4RulesContext() {
         compose.mainClock.advanceTimeBy(1_000)
         compose.waitForIdle()
     }
+
+    /** Focuses the tile centred at [x] dp. */
+    fun moveTo(x: Float) = compose.runOnUiThread { edge.focus(centreX = x * density) { green } }
 
     fun at(
         x: Float,

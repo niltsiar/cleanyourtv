@@ -140,7 +140,9 @@ class DesignSystemGoldenTestContent :
                 show {
                     val glass = remember { GlassState().apply { frost = frost() } }
                     val scope = rememberCoroutineScope()
-                    val edge = remember { DockEdgeLight(scope) }
+                    val lookState = TvTheme.lookState
+                    val motion = TvTheme.motion
+                    val edge = remember { DockEdgeLight(scope, lookState) { motion } }
                     val density = LocalDensity.current.density
                     LaunchedEffect(edge) {
                         edge.focus(centreX = 200f * density) { Color(0xFF80E0A0) }
@@ -297,7 +299,9 @@ class DesignSystemGoldenTestContent :
                 show {
                     val glass = remember { GlassState().apply { frost = frost() } }
                     val scope = rememberCoroutineScope()
-                    val light = remember { DockEdgeLight(scope) }
+                    val lookState = TvTheme.lookState
+                    val motion = TvTheme.motion
+                    val light = remember { DockEdgeLight(scope, lookState) { motion } }
                     edge = light
                     density = LocalDensity.current.density
                     LaunchedEffect(shown) { light.show(shown) }
@@ -329,7 +333,9 @@ class DesignSystemGoldenTestContent :
                 show(look = Look.Expressive) {
                     val glass = remember { GlassState().apply { frost = frost() } }
                     val scope = rememberCoroutineScope()
-                    val light = remember { DockEdgeLight(scope) }
+                    val lookState = TvTheme.lookState
+                    val motion = TvTheme.motion
+                    val light = remember { DockEdgeLight(scope, lookState) { motion } }
                     edge = light
                     density = LocalDensity.current.density
                     LaunchedEffect(shown) { light.show(shown) }

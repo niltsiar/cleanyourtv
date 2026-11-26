@@ -5,6 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -51,6 +54,7 @@ class ChargeTestContent :
                 val compose = rule(createAndroidComposeRule<ComponentActivity>())
                 val hold = OkHold { compose.mainClock.currentTime }
                 var opened = 0
+                var motionNow by mutableStateOf(Motion())
 
                 /** [content], given the modifier of the held item, focused and settled on a black 320 x 200 dp scene in Expressive. */
                 fun show(
@@ -68,8 +72,9 @@ class ChargeTestContent :
                             .requestFocusFromTouch()
                     }
                     val first = FocusRequester()
+                    motionNow = motion
                     compose.setContent {
-                        TvTheme(look = Look.Expressive, motion = motion, expressiveTile = tile) {
+                        TvTheme(look = Look.Expressive, motion = motionNow, expressiveTile = tile) {
                             Box(
                                 Modifier.size(320.dp, 200.dp).background(Color.Black).testTag("scene"),
                                 contentAlignment = Alignment.Center,
@@ -172,6 +177,28 @@ class ChargeTestContent :
                 scene().contentEquals(rest) shouldBe true
                 frames(260)
                 opened shouldBe 1
+            }
+
+            for ((name, off) in listOf("animations off" to Motion(animations = false), "reduced motion" to Motion(reducedMotion = true))) {
+                test("after a charge, a held ok with $name leaves the tile's shape alone") {
+                    show()
+                    okDown()
+                    frames(300, drawn = true)
+                    okUp()
+                    motionNow = off
+                    frames(2_000)
+                    val rest = scene()
+                    val edge = leftEdgeRow()
+
+                    okDown()
+                    frames(300)
+
+                    if (off.animations) {
+                        withClue("the tile's left edge at 300 ms") { leftEdgeRow().contentEquals(edge) shouldBe true }
+                    } else {
+                        withClue("the scene at 300 ms") { scene().contentEquals(rest) shouldBe true }
+                    }
+                }
             }
 
             test("a round button shows nothing 100 ms into a held ok, a wave by 300 ms, and the up clears it on the next frame") {

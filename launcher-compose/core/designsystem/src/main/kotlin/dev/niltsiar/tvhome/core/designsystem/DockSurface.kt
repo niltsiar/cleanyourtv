@@ -94,9 +94,7 @@ public fun DockSurface(
                 .clip(shape)
                 .glassFrost(glass, dock = true)
                 .drawBehind {
-                    val expressive = lookState.look == Look.Expressive
-                    edgeLight?.look = lookState.look
-                    if (expressive) {
+                    if (lookState.look == Look.Expressive) {
                         drawRect(lookState.scheme(dark).surfaceContainer, alpha = containerAlpha())
                     } else {
                         drawRect(tint())
@@ -210,12 +208,14 @@ private val CrestHeight = 3.dp
  * The light the focused dock tile casts on its panel: a [LightWidth] highlight on the top rim and a [GlintWidth] glint on
  * the floor, centred on the tile. It comes to a newly focused tile with a spring, stays on that tile as [follow] reports
  * it moving, takes [show] to fade in and out, and draws in the colour [focus] was given. Everything is read in the draw phase.
- * In [Look.Expressive] it is a tonal cushion behind the tile and a crest on the lip above it, both stretched towards the
- * tile while the light catches up, on the look's spring.
+ * In [look]'s [Look.Expressive] it is a tonal cushion behind the tile and a crest on the lip above it, both stretched towards
+ * the tile while the light catches up, on [Motion.dockLightFollowSpec] of the [motion] at that moment.
  */
 @Stable
 public class DockEdgeLight(
     private val scope: CoroutineScope,
+    private val look: LookState,
+    private val motion: () -> Motion,
 ) {
     private var tile by mutableFloatStateOf(0f)
     private val lag = Animatable(0f)
@@ -224,9 +224,6 @@ public class DockEdgeLight(
 
     /** The panel's left edge in the root, set by the panel when it is laid out. */
     internal var panelLeft = 0f
-
-    /** The panel's look, set by the panel as it draws. */
-    internal var look: Look = Look.Glass
 
     /** The tile centred at [centreX] (in the root) took focus; the light takes the colour [colour] gives. */
     public fun focus(
@@ -241,7 +238,7 @@ public class DockEdgeLight(
                 lag.snapTo(0f)
             } else {
                 lag.snapTo(drawn - centreX)
-                lag.animateTo(0f, Motion.dockLightFollowSpec(look))
+                lag.animateTo(0f, motion().dockLightFollowSpec())
             }
         }
     }
@@ -262,7 +259,7 @@ public class DockEdgeLight(
     internal fun DrawScope.drawRim(alpha: Float) {
         val seen = shown.value
         if (seen < SEEN) return
-        if (look == Look.Expressive) {
+        if (look.look == Look.Expressive) {
             val stretch = stretch()
             val width = LightWidth.toPx() + stretch
             val left = lightLeft(stretch, width)
@@ -295,7 +292,7 @@ public class DockEdgeLight(
     internal fun DrawScope.drawFloor(alpha: Float) {
         val seen = shown.value
         if (seen < SEEN) return
-        if (look == Look.Expressive) {
+        if (look.look == Look.Expressive) {
             val stretch = stretch()
             val width = LightWidth.toPx() + stretch
             val left = lightLeft(stretch, width)

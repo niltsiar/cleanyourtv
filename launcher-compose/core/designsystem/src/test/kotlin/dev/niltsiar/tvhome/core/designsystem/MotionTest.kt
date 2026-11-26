@@ -192,7 +192,7 @@ val MotionTest by testSuite {
             Factory("offer pulse", { it.offerPulseSpec() }, List(3) { linear(600) }),
             Factory("scrim in", { it.scrimSpec(shown = true) }, listOf(tween(160), tween(90), snap)),
             Factory("scrim out", { it.scrimSpec(shown = false) }, listOf(tween(120), tween(90), snap)),
-            Factory("dock light follow", { Motion.dockLightFollowSpec() }, List(3) { spring(1f, 500f) }),
+            Factory("dock light follow", { it.dockLightFollowSpec() }, List(3) { spring(1f, 500f) }),
             Factory("dock light fade", { Motion.dockLightFadeSpec() }, List(3) { tween(160) }),
             Factory("marquee pass", { Motion.marqueeSpec(1_000) }, List(3) { linear(1_000) }),
         )
@@ -227,7 +227,7 @@ val MotionTest by testSuite {
             Factory("offer pulse", { it.offerPulseSpec() }, List(3) { linear(600) }),
             Factory("scrim in", { it.scrimSpec(shown = true) }, listOf(spring(1f, 1600f), tween(90), snap)),
             Factory("scrim out", { it.scrimSpec(shown = false) }, listOf(spring(1f, 3800f), tween(90), snap)),
-            Factory("dock light follow", { Motion.dockLightFollowSpec(Look.Expressive) }, List(3) { spring(0.8f, 380f) }),
+            Factory("dock light follow", { it.dockLightFollowSpec() }, listOf(spring(0.8f, 380f), snap, snap)),
         )
 
     for (factory in expressiveFactories) {

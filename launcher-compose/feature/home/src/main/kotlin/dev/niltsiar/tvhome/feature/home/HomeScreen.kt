@@ -558,7 +558,12 @@ public fun HomeScreen(
         dockPadding.underPanel,
     )
     val scope = rememberCoroutineScope()
-    val edge = remember(dockLook.edgeLight) { if (dockLook.edgeLight) DockEdgeLight(scope) else null }
+    val lookState = TvTheme.lookState
+    val currentMotion = rememberUpdatedState(TvTheme.motion)
+    val edge =
+        remember(dockLook.edgeLight, lookState) {
+            if (dockLook.edgeLight) DockEdgeLight(scope, lookState) { currentMotion.value } else null
+        }
     if (edge != null) DockEdgeEffect(edge, currentState, input, layout, libraryOpen)
     Box(
         modifier =

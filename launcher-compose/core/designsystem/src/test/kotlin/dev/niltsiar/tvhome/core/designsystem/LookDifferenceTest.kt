@@ -125,7 +125,9 @@ private object Leaves {
             "a dock with its light" to
                 Leaf(false) { _ ->
                     val scope = rememberCoroutineScope()
-                    val light = remember { DockEdgeLight(scope) }
+                    val lookState = TvTheme.lookState
+                    val motion = TvTheme.motion
+                    val light = remember { DockEdgeLight(scope, lookState) { motion } }
                     LaunchedEffect(light) {
                         light.focus(light.panelLeft + 200f) { Color(0xFF80E0A0) }
                         light.show(true)
