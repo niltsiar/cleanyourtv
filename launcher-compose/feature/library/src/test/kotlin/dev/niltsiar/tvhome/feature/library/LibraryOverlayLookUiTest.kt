@@ -175,15 +175,14 @@ class LibraryOverlayLookUiTestContent :
                         }
                     }
 
-                    if (look == Look.Expressive) {
-                        test("a focused capsule and its band show whole past the grid's top and bottom edges as past its sides") {
-                            showLibrary(twentyThree)
+                    test("a focused card and its ring or band show whole past the grid's top and bottom edges as past its sides") {
+                        showLibrary(twentyThree)
 
-                            val reach = (FocusOutset + FocusRingReach).value
-                            val drawn = drawnPastEveryEdge()
-                            withClue("drawn past the edge in dp, wanted $reach: $drawn") {
-                                drawn.all { abs(it.second - reach) <= 0.5f }.shouldBeTrue()
-                            }
+                        val reach = focusReach().value
+                        val drawn = drawnPastEveryEdge()
+                        withClue("drawn past the edge in dp, wanted $reach at every edge: $drawn") {
+                            drawn.map { it.second }.distinct().size shouldBe 1
+                            drawn.all { abs(it.second - reach) <= 0.5f }.shouldBeTrue()
                         }
                     }
 
@@ -283,8 +282,8 @@ class LibraryOverlayLookUiTestContent :
                         (card("App 1").top - bounds("library:cards").top).value shouldBe (peakReach plusOrMinus 0.6f)
                     }
 
-                    // The Expressive capsule reaches past the grid's top edge.
-                    val ringRoom = if (look == Look.Expressive) 12.dp else 16.dp
+                    // A focused card draws past the grid's top edge, the Expressive capsule further than the Glass ring.
+                    val ringRoom = if (look == Look.Expressive) 12.dp else 16.9.dp
 
                     test("a focused top row card has its ring at least $ringRoom below the hint row key caps") {
                         showLibrary(nineApps)
@@ -1688,19 +1687,16 @@ private class LibraryOverlayLookUiFixture(
         return (lit.min() / density)..((lit.max() + 1) / density)
     }
 
-    /**
-     * The room between the hint row's key caps and the outer edge of the focused card's ring, as the grid shows it: in
-     * Expressive the capsule's, which the grid lets through whole.
-     */
-    fun ringRoomUnderKeyCaps(name: String): Dp {
-        val ringTop =
-            if (look == Look.Expressive) {
-                focusedCard(name).top - FocusOutset - FocusRingReach
-            } else {
-                maxOf(grownCard(name).top - FocusRingReach * FOCUSED_SCALE, bounds("library:cards").top)
-            }
-        return ringTop - hintPart("OK").getBoundsInRoot().bottom
-    }
+    /** How far a focused card draws past its top: Glass grows it with its ring round it, the capsule its shape and band past it. */
+    fun focusReach(): Dp =
+        if (look == Look.Expressive) {
+            FocusOutset + FocusRingReach
+        } else {
+            CardHeight * ((FOCUSED_SCALE - 1f) / 2f) + FocusRingReach * FOCUSED_SCALE
+        }
+
+    /** The room between the hint row's key caps and the outer edge of the focused card's ring, which the grid lets through whole. */
+    fun ringRoomUnderKeyCaps(name: String): Dp = focusedCard(name).top - focusReach() - hintPart("OK").getBoundsInRoot().bottom
 
     /** The dp from the panel's top edge to the title's first row of ink: a pixel of its box that differs from the panel beside it. */
     fun titleInkTop(): Dp {

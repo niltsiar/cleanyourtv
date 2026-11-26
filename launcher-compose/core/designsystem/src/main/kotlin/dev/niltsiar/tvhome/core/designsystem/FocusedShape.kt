@@ -28,9 +28,9 @@ import kotlin.math.min
 /**
  * The outline of a focused tile's art, for what is drawn round it: in Glass the tile's own shape; for the capsule a full
  * capsule, its corners no rounder than [corner]; for the cinch a rounded rectangle whose corners stay inside its band.
- * [bandOutline] is the outer edge of its focus band, and [sideReach] how far past the tile's left and right edges, at mid
- * height, that edge lies. Each is built once per base shape, size and tile and kept, so reading them in draw allocates
- * nothing after the first frame.
+ * [bandOutline] is the outer edge of its focus band, [sideReach] how far past the tile's left and right edges, at mid
+ * height, that edge lies, and [endReach] how far past its top and bottom at most. Each is built once per base shape, size
+ * and tile and kept, so reading them in draw allocates nothing after the first frame.
  */
 @Stable
 public class FocusedShape internal constructor(
@@ -44,6 +44,7 @@ public class FocusedShape internal constructor(
     private var outline: Outline? = null
     private var band: Outline? = null
     private var reach = 0f
+    private var ends = 0f
 
     /** [base] as a focused tile shows it; read its outline in draw. */
     public fun of(base: Shape): Shape =
@@ -93,6 +94,17 @@ public class FocusedShape internal constructor(
         return reach
     }
 
+    /** How far past the top and bottom edges of a focused tile of [base] shape and [size] its band ends, at most. */
+    public fun endReach(
+        base: Shape,
+        size: Size,
+        density: Density,
+    ): Float {
+        if (look.look != Look.Expressive) return with(density) { FocusRingReach.toPx() }
+        build(base, size, density)
+        return ends
+    }
+
     private fun build(
         base: Shape,
         size: Size,
@@ -116,6 +128,7 @@ public class FocusedShape internal constructor(
                         ),
                     )
                 reach = ringReach
+                ends = ringReach
             }
 
             ExpressiveTile.Cinch -> {
@@ -124,6 +137,7 @@ public class FocusedShape internal constructor(
                 outline = Outline.Rounded(RoundRect(0f, 0f, size.width, size.height, CornerRadius(art)))
                 band = Outline.Generic(edge)
                 reach = -leftAtMiddle(edge, size)
+                ends = endsPast(edge, size)
             }
         }
         builtTile = tile
@@ -159,6 +173,18 @@ public fun rememberFocusedShape(corner: Dp = Dp.Infinity): FocusedShape {
 
 /** The points an outline is sampled at, along its whole length, where a shape is measured from its path. */
 internal const val OUTLINE_SAMPLES = 720
+
+/** How far [path] reaches past the top or the bottom of a tile of [size], whichever is further, from samples along it. */
+private fun endsPast(
+    path: Path,
+    size: Size,
+): Float {
+    val measure = PathMeasure().apply { setPath(path, true) }
+    return (0..OUTLINE_SAMPLES).maxOf {
+        val y = measure.getPosition(measure.length * it / OUTLINE_SAMPLES).y
+        maxOf(-y, y - size.height)
+    }
+}
 
 /** The x of [path]'s left side where it crosses the middle height of a tile of [size], from samples along it. */
 private fun leftAtMiddle(

@@ -3,6 +3,8 @@ package dev.niltsiar.tvhome.feature.library
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -16,49 +18,66 @@ import androidx.compose.ui.node.requireLayoutCoordinates
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.offset
 import dev.niltsiar.tvhome.core.designsystem.FocusRingReach
+import dev.niltsiar.tvhome.core.designsystem.FocusedShape
 import dev.niltsiar.tvhome.core.designsystem.LookState
 import dev.niltsiar.tvhome.core.designsystem.growsByOutset
+import kotlin.math.ceil
 
 /**
- * The part of the grid the library shows, [edgeX] and [edgeY] around the cards. In Expressive a focused card's capsule grows
- * [FocusOutset] past the card and its band [FocusRingReach] past that, further than [edgeY]: the grid then lays out
- * [overhang] past the view at its top and bottom, so its clip lets that shape through, and a card without focus cuts itself
- * at the view's edge ([cutAtView]). The look is read in layout and draw.
+ * The part of the grid the library shows, [edgeX] and [edgeY] around the cards. A focused card of [card] size and [shape]
+ * can draw further than [edgeY] past its top and bottom: in Expressive with the capsule its shape grows [FocusOutset] past
+ * the card and its band [FocusRingReach] past that, otherwise it grows up to [focusScale] with its ring or band ([focused])
+ * round it. The grid then lays out [overhangPx] past the view at its top and bottom, so its clip lets that through, and a
+ * card without focus cuts itself at the view's edge ([cutAtView]). The look is read in layout and draw.
  */
 internal class GridView(
     private val look: LookState,
+    private val focused: FocusedShape,
+    private val shape: Shape,
+    private val card: Size,
+    private val focusScale: Float,
+    private val density: Density,
     private val edgeX: Dp,
     val edgeY: Dp,
 ) {
     /** The view's coordinates, set when the grid is placed. */
     lateinit var coordinates: LayoutCoordinates
 
-    /** How far the grid lays out past the view at its top and bottom: 0 unless a focused card's shape reaches past [edgeY]. */
-    fun overhang(): Dp = if (look.growsByOutset(FocusOutset)) (FocusOutset + FocusRingReach - edgeY).coerceAtLeast(0.dp) else 0.dp
+    /** How far, in pixels, a focused card draws past its top and bottom. */
+    private fun reach(): Float =
+        with(density) {
+            if (look.growsByOutset(FocusOutset)) {
+                (FocusOutset + FocusRingReach).toPx()
+            } else {
+                card.height * (focusScale - 1f) / 2f + focused.endReach(shape, card, this) * focusScale
+            }
+        }
 
-    /** The [overhang] in whole pixels, as the grid rounds its [padding], so the cards stay where they are in the view. */
-    fun overhangPx(density: Density): Int = with(density) { (edgeY + overhang()).roundToPx() - edgeY.roundToPx() }
+    /**
+     * How far, in whole pixels, the grid lays out past the view at its top and bottom: 0 unless a focused card draws past
+     * [edgeY], and then up to the last pixel it touches, as the cards stay where the grid's rounded [edgeY] puts them.
+     */
+    fun overhangPx(): Int = with(density) { (ceil(reach()).toInt() - edgeY.roundToPx()).coerceAtLeast(0) }
 
-    /** The grid's content padding: [edgeY] and the [overhang] at the top and bottom. */
+    /** The grid's content padding: [edgeY] and the overhang at the top and bottom. */
     val padding: PaddingValues =
         object : PaddingValues {
             override fun calculateLeftPadding(layoutDirection: LayoutDirection): Dp = edgeX
 
-            override fun calculateTopPadding(): Dp = edgeY + overhang()
+            override fun calculateTopPadding(): Dp = edgeY + with(density) { overhangPx().toDp() }
 
             override fun calculateRightPadding(layoutDirection: LayoutDirection): Dp = edgeX
 
-            override fun calculateBottomPadding(): Dp = edgeY + overhang()
+            override fun calculateBottomPadding(): Dp = edgeY + with(density) { overhangPx().toDp() }
         }
 }
 
-/** For the grid of [view]: lays it out [GridView.overhang] past the view at the top and bottom, with the view's size. */
+/** For the grid of [view]: lays it out [GridView.overhangPx] past the view at the top and bottom, with the view's size. */
 internal fun Modifier.overhanging(view: GridView): Modifier =
     onPlaced { view.coordinates = it }.layout { measurable, constraints ->
-        val overhang = view.overhangPx(this)
+        val overhang = view.overhangPx()
         val placeable = measurable.measure(constraints.offset(vertical = 2 * overhang))
         layout(placeable.width, placeable.height - 2 * overhang) { placeable.place(0, -overhang) }
     }
@@ -108,11 +127,11 @@ private class CutAtViewNode(
     }
 
     override fun onGloballyPositioned(coordinates: LayoutCoordinates) {
-        if (view.overhang() != 0.dp && measureCut(coordinates)) invalidateDraw()
+        if (view.overhangPx() != 0 && measureCut(coordinates)) invalidateDraw()
     }
 
     override fun ContentDrawScope.draw() {
-        if (view.overhang() == 0.dp || focused()) {
+        if (view.overhangPx() == 0 || focused()) {
             drawContent()
             return
         }

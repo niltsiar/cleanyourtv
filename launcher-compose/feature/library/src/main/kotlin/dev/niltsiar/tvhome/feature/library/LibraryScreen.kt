@@ -107,6 +107,7 @@ import dev.niltsiar.tvhome.core.designsystem.drawCueChevron
 import dev.niltsiar.tvhome.core.designsystem.drawScrollDownCue
 import dev.niltsiar.tvhome.core.designsystem.eatsOkUp
 import dev.niltsiar.tvhome.core.designsystem.menuReleased
+import dev.niltsiar.tvhome.core.designsystem.rememberFocusedShape
 import dev.niltsiar.tvhome.core.designsystem.tokenBackground
 import dev.niltsiar.tvhome.core.designsystem.tokenBorder
 import dev.niltsiar.tvhome.core.model.LibraryArt
@@ -127,8 +128,8 @@ private val HeaderTitleHeight = 37.5.dp
 private val HeaderHintHeight = KeyChipHeight
 
 /**
- * Under the hint row: a focused top-row card's ring starts at the grid's top edge, and this keeps the key caps 16 dp clear of
- * it; an Expressive capsule reaches [GridView.overhang] past that edge.
+ * Under the hint row: this keeps the key caps 16 dp clear of the grid's top edge, and a focused top-row card draws
+ * [GridView.overhangPx] past that edge.
  */
 private val HeaderGridGap = 11.5.dp
 private val PanelRise = 56.dp
@@ -140,7 +141,7 @@ private const val ROWS = 3
 private val CardGap = 20.dp
 private val RowGap = 19.dp
 
-/** A focused card's growth and ring reach 13 dp past its sides, and the grid clips at its edges, but for a [GridView.overhang]. */
+/** The room round the cards. The grid clips at its top and bottom edges, and lets a focused card through by [GridView.overhangPx]. */
 private val GridEdge = 13.dp
 
 /** The grid's top and bottom padding: [GridEdge], or with a pop the reach of a focused card's growth and ring at its peak. */
@@ -519,9 +520,17 @@ private fun Cards(
     val scope = rememberCoroutineScope()
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val pitch = with(density) { (CardHeight + RowGap).toPx() }
-    val gridEdgeY = TvTheme.motion.gridEdgeY()
+    val motion = TvTheme.motion
+    val gridEdgeY = motion.gridEdgeY()
     val lookState = TvTheme.lookState
-    val view = remember(lookState, gridEdgeY) { GridView(lookState, GridEdge, gridEdgeY) }
+    val focusedShape = rememberFocusedShape()
+    val cardShape = TvTheme.shapes.libraryCard
+    val focusScale = motion.focusPeakScale(FOCUSED_SCALE)
+    val view =
+        remember(lookState, focusedShape, cardShape, cardWidthPx, focusScale, density, gridEdgeY) {
+            val card = Size(cardWidthPx.toFloat(), with(density) { CardHeight.roundToPx().toFloat() })
+            GridView(lookState, focusedShape, cardShape, card, focusScale, density, GridEdge, gridEdgeY)
+        }
     val overhanging = remember(view) { Modifier.overhanging(view) }
     val bringIntoView = remember(gridState, density, view) { RowBringIntoViewSpec(gridState, density, view) }
     // Read here, not in the grid's content, so a focus move does not rebuild what the grid lists.
@@ -658,7 +667,7 @@ private class RowBringIntoViewSpec(
         size: Float,
         containerSize: Float,
     ): Float {
-        val margin = with(density) { view.edgeY.toPx() } + view.overhangPx(density)
+        val margin = with(density) { view.edgeY.toPx() } + view.overhangPx()
         // The offset comes with the focused card's growth in it, the size without; the card's slot in the grid has neither.
         val info = grid.layoutInfo
         val center = offset + size / 2f
