@@ -3,16 +3,20 @@ package dev.niltsiar.tvhome.core.designsystem
 import android.graphics.Bitmap
 import android.graphics.Rect
 import android.os.Build
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.TargetBasedAnimation
+import androidx.compose.animation.core.VectorConverter
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -35,6 +39,7 @@ import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -57,7 +62,8 @@ public class LookFlip internal constructor(
 
     internal var picture: ImageBitmap? by mutableStateOf(null)
         private set
-    internal val progress = Animatable(0f)
+    internal var progress by mutableFloatStateOf(0f)
+        private set
     internal var origin = Offset.Zero
         private set
     internal var node: LookFlipNode? = null
@@ -91,18 +97,31 @@ public class LookFlip internal constructor(
                     return@launch
                 }
                 captures++
-                // The new picture first: it shows what the screen shows, so the old hole over it changes nothing until the
-                // snap, which waits for the replaced flip to end.
+                // The new picture shows what the screen shows, so the hole that starts again from nothing changes nothing.
                 picture = shot
-                progress.snapTo(0f)
+                progress = 0f
                 origin = node.focusedCentre()
                 try {
-                    withTimeoutOrNull(ARRIVAL_MS) { arrival() }?.let { progress.animateTo(1f, it) }
+                    withTimeoutOrNull(ARRIVAL_MS) { arrival() }?.let { reveal(it) }
                 } finally {
                     // A flip that a newer one replaced leaves the newer picture alone.
                     if (picture === shot) picture = null
                 }
             }
+    }
+
+    /** Runs [progress] from 0 to 1 on [spec], each frame advancing it by the frame's time, at most [MAX_FRAME_MS]. */
+    private suspend fun reveal(spec: FiniteAnimationSpec<Float>) {
+        val reveal = TargetBasedAnimation(spec, Float.VectorConverter, 0f, 1f)
+        val scale = currentCoroutineContext()[MotionDurationScale]?.scaleFactor ?: 1f
+        var last = withFrameNanos { it }
+        var play = 0L
+        val step: (Long) -> Unit = { now ->
+            play = if (scale == 0f) reveal.durationNanos else play + (minOf(now - last, MAX_FRAME_MS * 1_000_000) / scale).toLong()
+            last = now
+            progress = reveal.getValueFromNanos(play)
+        }
+        while (!reveal.isFinishedFromNanos(play)) withFrameNanos(step)
     }
 
     /** Ends a running flip and lets go of the picture: the page shows as it is. */
@@ -115,6 +134,9 @@ public class LookFlip internal constructor(
     public companion object {
         /** How long a flip waits for the new look before it lets go of the picture, in milliseconds. */
         public const val ARRIVAL_MS: Long = 1_000
+
+        /** The most a flip moves per frame, in ms: frames at 31 Hz and up count in full, a stall delays the hole, not skips it. */
+        private const val MAX_FRAME_MS: Long = 32
     }
 }
 
@@ -185,7 +207,7 @@ internal class LookFlipNode(
         }
         page.record {
             this@draw.drawContent()
-            if (picture != null) with(hole) { drawFlip(picture, flip.origin, flip.progress.value) }
+            if (picture != null) with(hole) { drawFlip(picture, flip.origin, flip.progress) }
         }
         drawLayer(page)
     }

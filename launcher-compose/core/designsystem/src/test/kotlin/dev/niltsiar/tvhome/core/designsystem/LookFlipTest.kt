@@ -1,14 +1,19 @@
 package dev.niltsiar.tvhome.core.designsystem
 
 import androidx.activity.ComponentActivity
+import androidx.compose.animation.core.TargetBasedAnimation
+import androidx.compose.animation.core.VectorConverter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.BroadcastFrameClock
 import androidx.compose.runtime.Recomposer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
@@ -35,6 +40,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -77,7 +83,8 @@ class LookFlipTestContent :
                 var shown by mutableStateOf(true)
                 var changes = 0
 
-                fun show() {
+                /** Shows the page; with [frames], the flip runs on that clock instead of the page's. */
+                fun show(frames: BroadcastFrameClock? = null) {
                     compose.mainClock.autoAdvance = false
                     // The native graphics mode starts in touch mode, where nothing takes key focus.
                     compose.runOnUiThread {
@@ -86,7 +93,13 @@ class LookFlipTestContent :
                     }
                     val chip = FocusRequester()
                     compose.setContent {
-                        flip = rememberLookFlip()
+                        flip =
+                            if (frames == null) {
+                                rememberLookFlip()
+                            } else {
+                                val scope = rememberCoroutineScope()
+                                remember { LookFlip(CoroutineScope(scope.coroutineContext + frames)) }
+                            }
                         Box(Modifier.size(200.dp, 100.dp).testTag("scene")) {
                             if (shown) {
                                 Box(Modifier.size(200.dp, 100.dp).lookFlip(flip, enabled).background(colour)) {
@@ -129,6 +142,17 @@ class LookFlipTestContent :
                     while (compose.mainClock.currentTime - start < ms) compose.mainClock.advanceTimeByFrame()
                 }
 
+                /** Sends a frame at [nanos] on [frames] once the flip waits for one. */
+                fun frame(
+                    frames: BroadcastFrameClock,
+                    nanos: Long,
+                ) {
+                    compose.waitForIdle()
+                    withClue("the flip waits for a frame") { frames.hasAwaiters shouldBe true }
+                    compose.runOnUiThread { frames.sendFrame(nanos) }
+                    compose.waitForIdle()
+                }
+
                 fun picture(): ImageBitmap? = flip.picture
 
                 fun recomposersIdle(): Boolean =
@@ -147,6 +171,47 @@ class LookFlipTestContent :
                 withClue("the far top corner") { pixels[199, 0] shouldBe Old }
                 flip.captures shouldBe 1
                 changes shouldBe 1
+            }
+
+            for (look in listOf(Look.Glass, Look.Expressive)) {
+                val spec = Motion().flipSpec(look)
+                val reveal = TargetBasedAnimation(spec, Float.VectorConverter, 0f, 1f)
+
+                test("in $look a 150 ms frame moves the hole only as far as a 32 ms frame would") {
+                    val frames = BroadcastFrameClock()
+                    show(frames)
+                    pixels()
+                    compose.runOnUiThread { flip.flip({ colour = New }) { spec } }
+
+                    frame(frames, 0)
+                    frame(frames, 150_000_000)
+
+                    flip.progress shouldBe reveal.getValueFromNanos(32_000_000)
+                }
+
+                test("in $look a flip with no stall reaches 1 at the end of its spec") {
+                    val frames = BroadcastFrameClock()
+                    show(frames)
+                    pixels()
+                    compose.runOnUiThread { flip.flip({ colour = New }) { spec } }
+                    val frameNanos = 16_000_000L
+                    val lastFrame = (reveal.durationNanos + frameNanos - 1) / frameNanos * frameNanos
+
+                    var time = 0L
+                    while (time < lastFrame) {
+                        frame(frames, time)
+                        time += frameNanos
+                    }
+                    withClue("one frame before the end") {
+                        flip.holdsPicture shouldBe true
+                        flip.progress shouldBe reveal.getValueFromNanos(lastFrame - frameNanos)
+                    }
+
+                    frame(frames, lastFrame)
+                    flip.progress shouldBe 1f
+                    flip.holdsPicture shouldBe false
+                    frames.hasAwaiters shouldBe false
+                }
             }
 
             test("the picture is half the page's size") {
