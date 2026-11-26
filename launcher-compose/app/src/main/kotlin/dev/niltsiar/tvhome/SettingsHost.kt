@@ -3,6 +3,8 @@ package dev.niltsiar.tvhome
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -10,20 +12,28 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.designsystem.LookFlip
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.focusStyle
+import dev.niltsiar.tvhome.core.designsystem.lookFlip
 import dev.niltsiar.tvhome.core.designsystem.motion
+import dev.niltsiar.tvhome.core.designsystem.rememberLookFlip
 import dev.niltsiar.tvhome.data.shelf.READ_TV_LISTINGS
 import dev.niltsiar.tvhome.feature.settings.MoleculeSettingsViewModel
 import dev.niltsiar.tvhome.feature.settings.PageNotice
 import dev.niltsiar.tvhome.feature.settings.SettingsEffect
+import dev.niltsiar.tvhome.feature.settings.SettingsRowId
 import dev.niltsiar.tvhome.feature.settings.SettingsScreen
+import dev.niltsiar.tvhome.feature.settings.SettingsUiState
 import dev.niltsiar.tvhome.service.media.NowPlayingAccess
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import dev.niltsiar.tvhome.feature.settings.R as SettingsR
 
@@ -34,7 +44,8 @@ import dev.niltsiar.tvhome.feature.settings.R as SettingsR
  * asks about, the notice says where to allow it until a key or Back, and the launcher's App info opens. Whether Home holds it
  * is read again each time the page starts, and once it does, that notice goes. When Now playing needs notification access,
  * the Notification access list opens, or where the TV has none, the notice gives the adb line that allows it; whether the
- * listener has it is read again each time the page resumes.
+ * listener has it is read again each time the page resumes. A pick of the other look in the Style row is a [flip] while the
+ * motion is [animated][dev.niltsiar.tvhome.core.designsystem.Motion.animated].
  */
 @Composable
 internal fun SettingsHost(
@@ -43,6 +54,7 @@ internal fun SettingsHost(
     onChooseDefaultHome: () -> Unit,
     onOpenTvSettings: () -> Boolean,
     onReorder: () -> Unit,
+    flip: LookFlip = rememberLookFlip(),
 ) {
     val notice = remember { PageNotice() }
     val activity = checkNotNull(LocalActivity.current)
@@ -66,6 +78,7 @@ internal fun SettingsHost(
         viewModel.effects.collect { effect ->
             when (effect) {
                 SettingsEffect.SaveFailed -> {
+                    flip.release()
                     notice.showWarning(SettingsR.string.settings_save_failed)
                 }
 
@@ -100,15 +113,34 @@ internal fun SettingsHost(
     val expressiveTile by config.derived(TvConfig::expressiveTile)
     val seed = graph.houseSeed.collectAsStateWithLifecycle()
     val state = viewModel.uiState.collectAsStateWithLifecycle()
-    TvTheme(look = look, seed = { seed.value }, motion = motion, focusStyle = focusStyle, expressiveTile = expressiveTile) {
-        SettingsScreen(
-            state = { state.value },
-            actions = viewModel.actions,
-            onChooseDefaultHome = onChooseDefaultHome,
-            onOpenTvSettings = { if (!onOpenTvSettings()) notice.show(R.string.not_available) },
-            onReorder = onReorder,
-            notice = notice,
-            art = viewModel.art,
-        )
+    val pageActions = viewModel.actions
+    val actions =
+        remember(pageActions, flip) {
+            pageActions.copy(
+                onPick = { row, option ->
+                    val pick = { pageActions.onPick(row, option) }
+                    if (row != SettingsRowId.Look || option == state.value.lookSelected()) {
+                        pick()
+                    } else {
+                        val from = motion.look
+                        flip.flip(pick) { snapshotFlow { motion }.first { it.look != from }.flipSpec() }
+                    }
+                },
+            )
+        }
+    Box(Modifier.fillMaxSize().lookFlip(flip, enabled = motion.animated)) {
+        TvTheme(look = look, seed = { seed.value }, motion = motion, focusStyle = focusStyle, expressiveTile = expressiveTile) {
+            SettingsScreen(
+                state = { state.value },
+                actions = actions,
+                onChooseDefaultHome = onChooseDefaultHome,
+                onOpenTvSettings = { if (!onOpenTvSettings()) notice.show(R.string.not_available) },
+                onReorder = onReorder,
+                notice = notice,
+                art = viewModel.art,
+            )
+        }
     }
 }
+
+private fun SettingsUiState.lookSelected(): Int = sections.flatMap { it.rows }.first { it.id == SettingsRowId.Look }.selected

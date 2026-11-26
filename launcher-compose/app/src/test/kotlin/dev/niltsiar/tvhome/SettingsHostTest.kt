@@ -12,6 +12,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -33,6 +34,8 @@ import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.ThemeDirectory
+import dev.niltsiar.tvhome.core.designsystem.LookFlip
+import dev.niltsiar.tvhome.core.designsystem.rememberLookFlip
 import dev.niltsiar.tvhome.data.shelf.READ_TV_LISTINGS
 import dev.niltsiar.tvhome.feature.settings.MoleculeSettingsViewModel
 import dev.niltsiar.tvhome.feature.settings.OptionLabel
@@ -92,6 +95,7 @@ class SettingsHostTestContent :
 
                 private val graph get() = (compose.activity.application as TvHomeApplication).graph
                 lateinit var viewModel: MoleculeSettingsViewModel
+                lateinit var flip: LookFlip
 
                 fun exists(tag: String) = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
 
@@ -116,12 +120,14 @@ class SettingsHostTestContent :
                                     EmptyCoroutineContext,
                                 )
                             }
+                        flip = rememberLookFlip()
                         SettingsHost(
                             graph = graph,
                             viewModel = viewModel,
                             onChooseDefaultHome = {},
                             onOpenTvSettings = { false },
                             onReorder = {},
+                            flip = flip,
                         )
                     }
                     compose.waitUntil(30_000) { viewModel.uiState.value.wallpaper != null }
@@ -214,6 +220,33 @@ class SettingsHostTestContent :
                     exists("settings:notice").shouldBeFalse()
                 } finally {
                     folder.setWritable(true)
+                }
+            }
+
+            test("a look the store refuses lets go of the page's picture as the notice shows", testConfig = refusedWrite) {
+                show()
+                val folder = File(compose.activity.filesDir, "datastore")
+                compose.onNodeWithTag("option:Columns:0").performSemanticsAction(SemanticsActions.OnClick)
+                compose.waitUntil(30_000) { folder.list().orEmpty().isNotEmpty() }
+                compose.onRoot().captureToImage()
+                compose.mainClock.autoAdvance = false
+                folder.setWritable(false)
+                try {
+                    compose.onNodeWithTag("option:Look:1").performSemanticsAction(SemanticsActions.OnClick)
+                    flip.holdsPicture.shouldBeTrue()
+                    // Frame by frame, short of the wait for a look that never comes, with time for the refused write.
+                    var waited = 0L
+                    while (!exists("settings:notice") && waited < LookFlip.ARRIVAL_MS / 2) {
+                        Thread.sleep(20)
+                        compose.mainClock.advanceTimeByFrame()
+                        waited += 16
+                    }
+
+                    noticeSays("Could not save the setting")
+                    flip.holdsPicture.shouldBeFalse()
+                } finally {
+                    folder.setWritable(true)
+                    compose.mainClock.autoAdvance = true
                 }
             }
 

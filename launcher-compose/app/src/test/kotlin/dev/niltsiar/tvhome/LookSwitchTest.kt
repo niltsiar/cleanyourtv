@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusState
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.isFocused
@@ -28,7 +29,9 @@ import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.Choices
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.ThemeDirectory
+import dev.niltsiar.tvhome.core.designsystem.LookFlip
 import dev.niltsiar.tvhome.core.designsystem.focus.focusedTag
+import dev.niltsiar.tvhome.core.designsystem.rememberLookFlip
 import dev.niltsiar.tvhome.feature.settings.MoleculeSettingsViewModel
 import io.kotest.assertions.withClue
 import io.kotest.matchers.collections.shouldNotContain
@@ -61,6 +64,8 @@ class LookSwitchTestContent :
                 val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
                 val graph get() = (compose.activity.application as TvHomeApplication).graph
+
+                lateinit var flip: LookFlip
 
                 /** What the box around the page heard, in order. */
                 val pageFocus = mutableListOf<FocusState>()
@@ -95,6 +100,7 @@ class LookSwitchTestContent :
                                     EmptyCoroutineContext,
                                 )
                             }
+                        flip = rememberLookFlip()
                         Box(Modifier.onFocusChanged { pageFocus += it }) {
                             SettingsHost(
                                 graph = graph,
@@ -102,6 +108,7 @@ class LookSwitchTestContent :
                                 onChooseDefaultHome = {},
                                 onOpenTvSettings = { false },
                                 onReorder = {},
+                                flip = flip,
                             )
                         }
                     }
@@ -124,16 +131,76 @@ class LookSwitchTestContent :
                     tag shouldBe "option:Look:${to.ordinal}"
                     val bounds = compose.onNode(isFocused()).getBoundsInRoot()
                     pageFocus.clear()
+                    // The page draws, so the flip has a picture to take.
+                    compose.onRoot().captureToImage()
 
                     press(Key.DirectionCenter)
                     compose.waitUntil(30_000) { graph.configRepository.config.value.look == to }
                     settle()
+
+                    flip.captures shouldBe 1
+                    flip.holdsPicture shouldBe false
 
                     compose.focusedTag() shouldBe tag
                     compose.onNode(isFocused()).getBoundsInRoot() shouldBe bounds
                     withClue("the page's focus events: $pageFocus") { pageFocus.map { it.hasFocus } shouldNotContain false }
                     exists("setting:ExpressiveTile") shouldBe (to == Look.Expressive)
                 }
+            }
+
+            test("a key pressed during the flip moves focus on the page, under the picture") {
+                show()
+                repeat(12) { if (!compose.focusedTag().startsWith("option:Look:")) press(Key.DirectionDown) }
+                press(Key.DirectionRight)
+                compose.onRoot().captureToImage()
+                compose.mainClock.autoAdvance = false
+                try {
+                    compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+                    flip.holdsPicture shouldBe true
+
+                    compose.onRoot().performKeyInput { pressKey(Key.DirectionLeft) }
+                    compose.mainClock.advanceTimeByFrame()
+
+                    compose.focusedTag() shouldBe "option:Look:0"
+                    flip.holdsPicture shouldBe true
+                } finally {
+                    compose.mainClock.autoAdvance = true
+                }
+                compose.waitUntil(30_000) { graph.configRepository.config.value.look == Look.Expressive }
+                settle()
+                flip.holdsPicture shouldBe false
+                compose.focusedTag() shouldBe "option:Look:0"
+            }
+
+            for ((theme, key) in listOf(
+                """{"reduced_motion": true}""" to "reduced_motion on",
+                """{"animations": false}""" to "animations off",
+            )) {
+                test("with $key ok on Expressive switches the look as a cut, with no picture taken") {
+                    show(theme)
+                    repeat(12) { if (!compose.focusedTag().startsWith("option:Look:")) press(Key.DirectionDown) }
+                    press(Key.DirectionRight)
+                    compose.onRoot().captureToImage()
+
+                    press(Key.DirectionCenter)
+                    compose.waitUntil(30_000) { graph.configRepository.config.value.look == Look.Expressive }
+                    settle()
+
+                    flip.captures shouldBe 0
+                    compose.focusedTag() shouldBe "option:Look:1"
+                }
+            }
+
+            test("ok on the look the page already has takes no picture") {
+                show()
+                repeat(12) { if (!compose.focusedTag().startsWith("option:Look:")) press(Key.DirectionDown) }
+                compose.focusedTag() shouldBe "option:Look:0"
+                compose.onRoot().captureToImage()
+
+                press(Key.DirectionCenter)
+
+                flip.captures shouldBe 0
+                flip.holdsPicture shouldBe false
             }
 
             test("the page is drawn in the stored look") {

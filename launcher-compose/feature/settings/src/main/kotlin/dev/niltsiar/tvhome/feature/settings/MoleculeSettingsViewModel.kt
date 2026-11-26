@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlin.coroutines.CoroutineContext
 
 /** What the settings screen asks of its state. */
-public class SettingsActions(
+public data class SettingsActions(
     /** The option at an index of a row was picked. */
     public val onPick: (SettingsRowId, Int) -> Unit = { _, _ -> },
     public val onFollowTheme: () -> Unit = {},
