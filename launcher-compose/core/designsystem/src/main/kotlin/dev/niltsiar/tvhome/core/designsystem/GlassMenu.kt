@@ -60,7 +60,7 @@ private val MenuRise = 14.dp
 private const val MENU_START_SCALE = 0.94f
 
 /** The scale an Expressive panel grows from, out of the element that opened it. */
-private const val MENU_GROW_SCALE = 0.9f
+public const val PANEL_GROW_SCALE: Float = 0.9f
 private val PanelPadding = 8.dp
 
 /** The space between two rows of a [GlassMenu] or a [GlassDropdown]. */
@@ -165,7 +165,7 @@ public fun <T> GlassMenu(
  * [edgeMargin] from the screen's right side; [beside] it, [BesideAnchor.gap] should be [columnGap] so that the
  * panel starts on the next column and ends on the one before.
  *
- * In [Look.Expressive], while springs run, the panel grows out of its anchor instead of rising: from [MENU_GROW_SCALE]
+ * In [Look.Expressive], while springs run, the panel grows out of its anchor instead of rising: from [PANEL_GROW_SCALE]
  * about the point of its edge nearest the anchor ([growOrigin]), so a menu a held OK opened reads as one move with the
  * charge. With reduced motion it only fades in there; with animations off it shows at once, in both looks.
  */
@@ -210,7 +210,7 @@ public fun GlassDropdown(
                         compositingStrategy = CompositingStrategy.ModulateAlpha
                         alpha = reveal.value.coerceIn(0f, 1f)
                         if (expressive) {
-                            val scale = if (grows) MENU_GROW_SCALE + (1f - MENU_GROW_SCALE) * reveal.value else 1f
+                            val scale = if (grows) PANEL_GROW_SCALE + (1f - PANEL_GROW_SCALE) * reveal.value else 1f
                             scaleX = scale
                             scaleY = scale
                             transformOrigin = origin.value
@@ -309,7 +309,7 @@ public fun GlassDropdown(
  * Where a panel [width] by [height] placed at [at] grows from: the point of the panel nearest the [anchor]'s centre, on the
  * edge that faces the anchor, or the anchor's centre itself when the panel covers it.
  */
-internal fun growOrigin(
+public fun growOrigin(
     anchor: Rect,
     at: IntOffset,
     width: Int,

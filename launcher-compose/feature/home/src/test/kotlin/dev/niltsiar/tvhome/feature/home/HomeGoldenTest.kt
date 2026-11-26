@@ -22,6 +22,7 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
@@ -166,6 +167,19 @@ class HomeGoldenTestContent :
                         for (ms in listOf(0L, 80L, 160L)) {
                             while (compose.mainClock.currentTime - opened < ms) compose.mainClock.advanceTimeByFrame()
                             golden("expressive-tile-menu-burst-${ms}ms")
+                        }
+                    }
+
+                    test("the inputs list 0, 80 and 160 ms after ok on its button opens it, in Expressive") {
+                        showHome(x)
+                        press(Key.DirectionUp)
+                        compose.onNodeWithContentDescription("Inputs").assertIsFocused()
+                        compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+                        while (compose.onAllNodesWithTag("menu").fetchSemanticsNodes().isEmpty()) compose.mainClock.advanceTimeByFrame()
+                        val opened = compose.mainClock.currentTime
+                        for (ms in listOf(0L, 80L, 160L)) {
+                            while (compose.mainClock.currentTime - opened < ms) compose.mainClock.advanceTimeByFrame()
+                            golden("expressive-inputs-list-grow-${ms}ms")
                         }
                     }
 

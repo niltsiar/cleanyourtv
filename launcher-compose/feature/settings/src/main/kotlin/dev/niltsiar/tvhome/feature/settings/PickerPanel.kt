@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.withFrameNanos
@@ -34,20 +35,28 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.OverlaySurface
 import dev.niltsiar.tvhome.core.designsystem.SCROLL_CUE_ALPHA
 import dev.niltsiar.tvhome.core.designsystem.SCROLL_CUE_PILL_ALPHA
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.drawScrollDownCue
+import dev.niltsiar.tvhome.core.designsystem.growOrigin
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 private val PickerMaxWidth = 560.dp
 private val PickerMargin = 32.dp
@@ -99,7 +108,8 @@ private class ArtCache<K : Any>(
  * A picker over the page, titled [title], listing [entries], each with a 96 x 54 dp slot on its start side for its [art], which
  * loads at that size while the row is shown and draws when it arrives, or its swatch. Focus starts on the entry at [selected]
  * and cannot leave the panel; OK on an entry runs [onPick] with its index, and Back runs [onClose]. The entry at [selected] has
- * the check mark, or with [ticked] every entry at an index in it.
+ * the check mark, or with [ticked] every entry at an index in it. In [Look.Expressive] the panel grows out of the row that
+ * opened it, at [anchor] in the root's coordinates, as a menu grows out of its anchor.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -111,9 +121,13 @@ internal fun <K : Any> BoxScope.PickerPanel(
     onPick: (Int) -> Unit,
     onClose: () -> Unit,
     ticked: Set<Int>? = null,
+    anchor: () -> Rect? = { null },
 ) {
     BackHandler(onBack = onClose)
-    val reveal = rememberReveal()
+    val motion = TvTheme.motion
+    val expressive = motion.look == Look.Expressive
+    val reveal = rememberReveal(if (expressive) motion.menuEnterSpec() else null)
+    val origin = remember { mutableStateOf(TransformOrigin.Center) }
     val stop = remember { FocusStop(FocusRequester()) }
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -136,7 +150,11 @@ internal fun <K : Any> BoxScope.PickerPanel(
                 .widthIn(max = PickerMaxWidth)
                 .fillMaxWidth()
                 .testTag("settings:picker")
-                .revealed(reveal)
+                .onPlaced { panel ->
+                    val from = anchor() ?: return@onPlaced
+                    val at = panel.positionInRoot()
+                    origin.value = growOrigin(from, IntOffset(at.x.roundToInt(), at.y.roundToInt()), panel.size.width, panel.size.height)
+                }.revealed(reveal, origin = if (expressive) ({ origin.value }) else null, grows = motion.animated)
                 .focusProperties { exit = { FocusRequester.Cancel } }
                 .focusGroup(),
     ) {

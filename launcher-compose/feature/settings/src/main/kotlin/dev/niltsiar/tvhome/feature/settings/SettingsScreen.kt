@@ -5,6 +5,7 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -60,6 +61,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -70,6 +72,9 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -85,6 +90,7 @@ import androidx.compose.ui.unit.sp
 import dev.niltsiar.tvhome.core.designsystem.FocusPill
 import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.OverlaySurface
+import dev.niltsiar.tvhome.core.designsystem.PANEL_GROW_SCALE
 import dev.niltsiar.tvhome.core.designsystem.SCROLL_CUE_ALPHA
 import dev.niltsiar.tvhome.core.designsystem.SCROLL_CUE_PILL_ALPHA
 import dev.niltsiar.tvhome.core.designsystem.ScrollsClearOfEdge
@@ -326,6 +332,9 @@ public fun SettingsScreen(
         }
     var returnTo by remember { mutableStateOf<String?>(null) }
     var returnAt by remember { mutableIntStateOf(0) }
+    // The rows that open a picker, by stop, which an Expressive picker grows out of.
+    val pickerRows = remember { HashMap<String, LayoutCoordinates>() }
+    val pickerAnchor = { pickerStop?.let(pickerRows::get)?.takeIf { it.isAttached }?.boundsInRoot() }
 
     // A closing picker's row, or when that row has gone, the row now in its place, or the last row.
     fun returnEntry(): FocusRequester? {
@@ -440,6 +449,7 @@ public fun SettingsScreen(
                                             selected = false,
                                             onClick = actions.onOpenWallpaperPicker,
                                             tag = "settings:wallpaper",
+                                            modifier = Modifier.onPlaced { pickerRows[WALLPAPER_STOP] = it },
                                             stop = stops.getValue(item.stop),
                                         )
                                     }
@@ -451,6 +461,7 @@ public fun SettingsScreen(
                                             selected = false,
                                             onClick = actions.onOpenPicker,
                                             tag = "settings:open_on_start",
+                                            modifier = Modifier.onPlaced { pickerRows[OPEN_ON_START_STOP] = it },
                                             stop = stops.getValue(item.stop),
                                         )
                                     }
@@ -462,6 +473,7 @@ public fun SettingsScreen(
                                             selected = false,
                                             onClick = actions.onOpenShelfPicker,
                                             tag = "settings:shelf_sources",
+                                            modifier = Modifier.onPlaced { pickerRows[SHELF_SOURCES_STOP] = it },
                                             stop = stops.getValue(item.stop),
                                         )
                                     }
@@ -511,6 +523,7 @@ public fun SettingsScreen(
                         art.app,
                         actions.onPickStartApp,
                         actions.onClosePicker,
+                        anchor = pickerAnchor,
                     )
                 }
                 ui.wallpaperPicker?.let { picker ->
@@ -522,6 +535,7 @@ public fun SettingsScreen(
                         art.wallpaper,
                         actions.onPickWallpaper,
                         actions.onClosePicker,
+                        anchor = pickerAnchor,
                     )
                 }
                 ui.shelfPicker?.let { picker ->
@@ -535,6 +549,7 @@ public fun SettingsScreen(
                         actions.onToggleShelfSource,
                         actions.onClosePicker,
                         ticked,
+                        pickerAnchor,
                     )
                 }
             }
@@ -553,19 +568,36 @@ private fun shelfPickerEntries(entries: List<ShelfSourceEntry>): List<PickerEntr
         }
     }
 
-/** The settings panel's entrance: it rises, grows and fades in with a spring, at once with animations off. */
+/**
+ * The settings panel's entrance: it rises, grows and fades in with a spring, or with [spec], at once with animations off.
+ */
 @Composable
-internal fun rememberReveal(): Animatable<Float, AnimationVector1D> {
+internal fun rememberReveal(spec: FiniteAnimationSpec<Float>? = null): Animatable<Float, AnimationVector1D> {
     val motion = TvTheme.motion
     val reveal = remember { Animatable(if (motion.animations) 0f else 1f) }
-    LaunchedEffect(Unit) { reveal.animateTo(1f, motion.springSpec(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)) }
+    LaunchedEffect(Unit) { reveal.animateTo(1f, spec ?: motion.springSpec(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)) }
     return reveal
 }
 
-internal fun Modifier.revealed(reveal: Animatable<Float, AnimationVector1D>): Modifier =
+/**
+ * The entrance [reveal] drives: the panel rises, grows and fades in. With an [origin], as an Expressive panel has, it fades
+ * in and, while [grows], grows from [PANEL_GROW_SCALE] about that point instead.
+ */
+internal fun Modifier.revealed(
+    reveal: Animatable<Float, AnimationVector1D>,
+    origin: (() -> TransformOrigin)? = null,
+    grows: Boolean = false,
+): Modifier =
     graphicsLayer {
         compositingStrategy = CompositingStrategy.ModulateAlpha
         alpha = reveal.value.coerceIn(0f, 1f)
+        if (origin != null) {
+            val scale = if (grows) PANEL_GROW_SCALE + (1f - PANEL_GROW_SCALE) * reveal.value else 1f
+            scaleX = scale
+            scaleY = scale
+            transformOrigin = origin()
+            return@graphicsLayer
+        }
         translationY = (1f - reveal.value) * PanelRise.toPx()
         val scale = PANEL_START_SCALE + (1f - PANEL_START_SCALE) * reveal.value
         scaleX = scale

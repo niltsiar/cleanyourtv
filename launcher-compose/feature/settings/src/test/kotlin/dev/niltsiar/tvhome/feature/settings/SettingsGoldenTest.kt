@@ -4,12 +4,17 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.requestFocus
 import de.infix.testBalloon.framework.core.JUnit4RulesContext
 import de.infix.testBalloon.framework.core.TestConfig
 import de.infix.testBalloon.framework.core.testSuite
@@ -25,7 +30,7 @@ import dev.niltsiar.tvhome.core.designsystem.golden.bands
 import dev.niltsiar.tvhome.core.designsystem.motion
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
 
-/** Golden images of the settings page in the Glass look, over a fixed state (docs/testing.md, "Golden tests"). */
+/** Golden images of the settings page in each look, over a fixed state (docs/testing.md, "Golden tests"). */
 val SettingsGoldenTest by testSuite {
     robolectricTestSuite<SettingsGoldenTestContent>(
         "sdk 31, 960x540 dp",
@@ -46,14 +51,23 @@ class SettingsGoldenTestContent :
             }
 
             test("the open on start picker") {
-                show(
-                    OpenOnStartPicker(
-                        apps = (1..6).map { OpenOnStartApp(label = "App $it", packageName = "pkg.$it") },
-                        selected = 2,
-                    ),
-                )
+                picker = sixApps
+                show()
                 compose.onNodeWithTag("picker:0").assertExists()
                 golden("picker-open")
+            }
+
+            test("an open on start picker 0, 80 and 160 ms after ok on its row opens it, in Expressive") {
+                show(look = Look.Expressive)
+                compose.onNodeWithTag("settings:open_on_start").requestFocus()
+                compose.mainClock.advanceTimeBy(2_000)
+                picker = sixApps
+                while (compose.onAllNodesWithTag("settings:picker").fetchSemanticsNodes().isEmpty()) compose.mainClock.advanceTimeByFrame()
+                val opened = compose.mainClock.currentTime
+                for (ms in listOf(0L, 80L, 160L)) {
+                    while (compose.mainClock.currentTime - opened < ms) compose.mainClock.advanceTimeByFrame()
+                    golden("expressive-picker-grow-${ms}ms")
+                }
             }
 
             test("a failed save") {
@@ -68,10 +82,22 @@ class SettingsGoldenTestContent :
         }
     })
 
+/** The house seed of the Expressive scenes, the warm one the design-system goldens use. */
+private val Ember = Color(0xFFFF6A3D)
+
 private class SettingsGoldenFixture : JUnit4RulesContext() {
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
     val notice = PageNotice()
+
+    /** The open on start picker the page shows, or null. */
+    var picker by mutableStateOf<OpenOnStartPicker?>(null)
+
+    val sixApps =
+        OpenOnStartPicker(
+            apps = (1..6).map { OpenOnStartApp(label = "App $it", packageName = "pkg.$it") },
+            selected = 2,
+        )
 
     /** Each app's art: two bands in hues that follow its package number. */
     val art =
@@ -82,7 +108,7 @@ private class SettingsGoldenFixture : JUnit4RulesContext() {
             },
         )
 
-    fun show(picker: OpenOnStartPicker? = null) {
+    fun show(look: Look = Look.Glass) {
         val config = TvConfig()
         compose.mainClock.autoAdvance = false
         // A TV has no touch screen; the native graphics mode starts in touch mode, where nothing takes key focus.
@@ -91,7 +117,7 @@ private class SettingsGoldenFixture : JUnit4RulesContext() {
                 .requestFocusFromTouch()
         }
         compose.setContent {
-            TvTheme(look = Look.Glass, motion = config.motion(), focusStyle = config.focusStyle(), darkTheme = true) {
+            TvTheme(look = look, seed = { Ember }, motion = config.motion(), focusStyle = config.focusStyle(), darkTheme = true) {
                 // The settings activities have a black window.
                 Box(Modifier.fillMaxSize().background(Color.Black))
                 SettingsScreen(
