@@ -910,9 +910,7 @@ internal fun ActionRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     color =
-                        if (value ==
-                            null
-                        ) {
+                        if (value == null) {
                             ink.content
                         } else {
                             remember(ink) { ColorProducer { lerp(colours.labelIdle(), ink.filled(), ink.progress()) } }

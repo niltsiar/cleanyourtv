@@ -53,13 +53,14 @@ private val DockShadowDrop = 6.dp
 
 /**
  * The dock's panel: the frost under a [tint] (read in the draw phase), a sheen over its top, a 1.5 dp rim from
- * [TvElementColors.dockRimTop] at the top to [TvElementColors.dockRimBottom] at the bottom, a 1 dp edge that grows from nothing
- * at mid-height to [TvElementColors.dockBottomEdge] at the bottom (so the sides darken without a step), and a shadow that falls
- * 6 dp lower than the panel. With an [edgeLight] the focused tile lights the rim and the floor. With [outerHairline] a 1 dp
- * line runs round the outside of the panel, so a light panel keeps its edge on a bright picture. [gloss] (read in the draw
- * phase, 0 to 1) scales the sheen and the rim: at less than 1 the top line, [TopLineWidth] thick, takes over the rim's top edge
- * as it fades. [shade] (read in the draw phase, 0 to 1) is the alpha of the shade layer over the whole panel, content included. The panel clips its content to [shape]
- * and marks itself [clipsHalo], so a focused tile's halo inside it ends before that edge.
+ * [TvElementColors.dockRimTop] at the top to [TvElementColors.dockRimBottom] at the bottom, a 1 dp edge that grows from
+ * nothing at mid-height to [TvElementColors.dockBottomEdge] at the bottom (so the sides darken without a step), and a
+ * shadow that falls 6 dp lower than the panel. With an [edgeLight] the focused tile lights the rim and the floor. With
+ * [outerHairline] a 1 dp line runs round the outside of the panel, so a light panel keeps its edge on a bright picture.
+ * [gloss] (read in the draw phase, 0 to 1) scales the sheen and the rim: at less than 1 the top line, [TopLineWidth]
+ * thick, takes over the rim's top edge as it fades. [shade] (read in the draw phase, 0 to 1) is the alpha of the shade
+ * layer over the whole panel, content included. The panel clips its content to [shape] and marks itself [clipsHalo], so
+ * a focused tile's halo inside it ends before that edge.
  *
  * In [Look.Expressive] the panel is the house container of the [TvTheme.surfaces]' scheme, dark or light, at [containerAlpha]
  * (read in the draw phase), over the frost only when [GlassState.dockFrost] holds the dock's glass, with no sheen, rim, edge or

@@ -112,16 +112,17 @@ private const val OFF_HOME_NAME_ALPHA = 0.60f
 private const val OFF_HOME_MS = 150
 
 /**
- * One card of the grid: the app's art on a small tile and its name of up to [NAME_LINES] lines, in the room above the status
- * slot, which says in one line what is not the usual state. An app on Home has a check there; in the chooser
- * ([LibraryLayout.selection]) an app that is not on Home has its art at 0.45 and its name at 0.60, or 0.75 and whole while its
- * card has focus, so OK on a focused card shows, and the status slot holds a ring for it. An idle card draws no fill and no
- * rim, so its art and name sit on the panel. A focused one takes a rim and lets the plate [FocusSurface] draws behind it
- * show, unless the focus style has no slab: then the card takes its fill. It rises in once per opening, with the delay [CardEntrance] gives it, and when its
- * Home shortcut changes pops a little, or in the chooser pulses its mark. Both run in the layer lambda. The status slot keeps
- * its place while the card grows, so it stays level with the cards beside it. [widthPx] is the narrowest the card can be. When
- * no card of the grid has a status line, [statusFree] is true and the art and name take the whole card, centred. With
- * [LibraryLayout.pressFeedback] OK dips the card and lights its ring, unless an app is [launching].
+ * One card of the grid: the app's art on a small tile and its name of up to [NAME_LINES] lines, in the room above the
+ * status slot, which says in one line what is not the usual state. An app on Home has a check there; in the chooser
+ * ([LibraryLayout.selection]) an app that is not on Home has its art at 0.45 and its name at 0.60, or 0.75 and whole
+ * while its card has focus, so OK on a focused card shows, and the status slot holds a ring for it. An idle card draws
+ * no fill and no rim, so its art and name sit on the panel. A focused one takes a rim and lets the plate [FocusSurface]
+ * draws behind it show, unless the focus style has no slab: then the card takes its fill. It rises in once per opening,
+ * with the delay [CardEntrance] gives it, and when its Home shortcut changes pops a little, or in the chooser pulses
+ * its mark. Both run in the layer lambda. The status slot keeps its place while the card grows, so it stays level with
+ * the cards beside it. [widthPx] is the narrowest the card can be. When no card of the grid has a status line,
+ * [statusFree] is true and the art and name take the whole card, centred. With [LibraryLayout.pressFeedback] OK dips
+ * the card and lights its ring, unless an app is [launching].
  */
 @Composable
 internal fun LibraryCardView(

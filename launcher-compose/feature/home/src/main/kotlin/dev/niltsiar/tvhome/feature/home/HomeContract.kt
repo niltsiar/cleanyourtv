@@ -535,9 +535,7 @@ internal fun shelfFor(
     val position = apps.dock.indexOfFirst { it.key == app.key }
     if (position < 0) return null
     val input = inputTiles[app.key]
-    if (input !=
-        null
-    ) {
+    if (input != null) {
         return Shelf(app.key, input.label, app.accent, position, apps.dock.size, lastOpened = null, input = input, edge = app.edge)
     }
     return Shelf(

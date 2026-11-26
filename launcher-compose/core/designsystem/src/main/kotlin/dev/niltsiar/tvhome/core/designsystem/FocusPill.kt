@@ -43,11 +43,11 @@ public class FocusInk internal constructor(
 /**
  * A D-pad target for rows and buttons: while focused it fills with [TvSurfaces.pillFill] over [background], and the
  * [FocusInk] its content gets turns from the theme's text colours to the pill's. It grows to [focusedScale] and casts a
- * shadow of [shadowElevation] in [TvElementColors.pillShadow] while idle too, about [transformOrigin]. As with [FocusSurface], the animation starts in the focus callback and is
- * read in the layer and draw lambdas only, so a focus change neither recomposes nor relays out. In [Look.Expressive] the
- * fill is the house primary, its text the house on-primary, and it casts no shadow; the look is read in the draw phase.
- * There, while OK is held on a pill whose [modifier] has [holdOk], a wave runs round it ([PillChargeElement]), with
- * [Motion.animations] only.
+ * shadow of [shadowElevation] in [TvElementColors.pillShadow] while idle too, about [transformOrigin]. As with
+ * [FocusSurface], the animation starts in the focus callback and is read in the layer and draw lambdas only, so a focus
+ * change neither recomposes nor relays out. In [Look.Expressive] the fill is the house primary, its text the house
+ * on-primary, and it casts no shadow; the look is read in the draw phase. There, while OK is held on a pill whose
+ * [modifier] has [holdOk], a wave runs round it ([PillChargeElement]), with [Motion.animations] only.
  */
 @Composable
 public fun FocusPill(

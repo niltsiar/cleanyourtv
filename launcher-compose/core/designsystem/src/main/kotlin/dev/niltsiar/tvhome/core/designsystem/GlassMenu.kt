@@ -92,10 +92,10 @@ public class BesideAnchor(
  * row is [rowHeight] tall, shows the string [label] gives, with the text [value] gives at its end when not null, and
  * carries the test tag [rowTag]; the panel's own tag is `menu`, [padding] inside its edge, and the rows' corners are
  * concentric with the panel's. It rises and fades in with a spring and takes focus on the row at [focusRow], the first
- * by default, and never goes above [topLimit]; focus cannot leave it. A [title] is a header row over the rows, tagged `menu:title`. A row for which [dividerBefore] is true, and
- * that is not the first, has a [MenuDivider] above it. A row for which [warn] is true draws its text in [TvSurfaces.warnInk]
- * until it has focus, and the line above it is at [TvElementColors.menuWarnDividerAlpha]. [above], [anchorGap], [columnGap] and [edgeMargin] are
- * [GlassDropdown]'s.
+ * by default, and never goes above [topLimit]; focus cannot leave it. A [title] is a header row over the rows, tagged
+ * `menu:title`. A row for which [dividerBefore] is true, and that is not the first, has a [MenuDivider] above it. A row
+ * for which [warn] is true draws its text in [TvSurfaces.warnInk] until it has focus, and the line above it is at
+ * [TvElementColors.menuWarnDividerAlpha]. [above], [anchorGap], [columnGap] and [edgeMargin] are [GlassDropdown]'s.
  */
 @Composable
 public fun <T> GlassMenu(

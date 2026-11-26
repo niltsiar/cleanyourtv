@@ -507,12 +507,12 @@ public object TvTheme {
 
 /**
  * The TV theme. Text over the wallpaper is always light; the [TvTheme.surfaces] are light or dark with [darkTheme].
- * [look] is the design and [seed] gives the house colour of [Look.Expressive]; both reach [TvTheme.lookState]. [seed] is
- * read where the colour is drawn, so a seed held in a state changes the drawing without recomposing the caller. [motion]
- * says how anything moves, [focusStyle] how a focused tile is lit, and [expressiveTile] the shape it takes in
- * [Look.Expressive]. The [TvTheme.typography], [TvTheme.motion],
- * [TvTheme.elementColors] and [TvTheme.shapes] it gives are the look's, chosen as they are read: a change of [look] recomposes what reads them,
- * and leaves the composition's structure and its focus as they are.
+ * [look] is the design and [seed] gives the house colour of [Look.Expressive]; both reach [TvTheme.lookState]. [seed]
+ * is read where the colour is drawn, so a seed held in a state changes the drawing without recomposing the caller.
+ * [motion] says how anything moves, [focusStyle] how a focused tile is lit, and [expressiveTile] the shape it takes in
+ * [Look.Expressive]. The [TvTheme.typography], [TvTheme.motion], [TvTheme.elementColors] and [TvTheme.shapes] it gives
+ * are the look's, chosen as they are read: a change of [look] recomposes what reads them, and leaves the composition's
+ * structure and its focus as they are.
  */
 @Composable
 public fun TvTheme(

@@ -35,11 +35,11 @@ private const val SPOT_RING_ALPHA = 0.7f
 
 /**
  * Where a screen's overlays go: it draws over every other child of its parent, whatever their order, and under the
- * overlays it draws a scrim in [TvElementColors.scrim] that fades in while [open] is true, darkening by [strength]. A [spotlight] stays undimmed
- * inside a thin ring, so the thing an overlay acts on stays in view. Both are read while [open] and kept while the scrim
- * fades out, except [spotlightOffset], the distance in pixels a [Spotlight.followsOffset] spotlight sits below its
- * rectangle, which is read in every frame so that a spotlight on a moving thing keeps up with it. Put it in the screen's
- * outermost box.
+ * overlays it draws a scrim in [TvElementColors.scrim] that fades in while [open] is true, darkening by [strength]. A
+ * [spotlight] stays undimmed inside a thin ring, so the thing an overlay acts on stays in view. Both are read while
+ * [open] and kept while the scrim fades out, except [spotlightOffset], the distance in pixels a
+ * [Spotlight.followsOffset] spotlight sits below its rectangle, which is read in every frame so that a spotlight on a
+ * moving thing keeps up with it. Put it in the screen's outermost box.
  */
 @Composable
 public fun OverlayHost(

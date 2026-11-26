@@ -98,10 +98,9 @@ private class Vertices(
 }
 
 /**
- * The cinch-waist cushion round a [width] by [height] tile, pushed out by [left], [top], [right] and [bottom] pixels on
- * each side: eight vertices, the four corners of the tile's box and the middle of each side, which dips [dip] pixels in.
- * Its corners are rounded by [corner] plus the mean push of their two sides and its waists by [waist], so outlines pushed
- * out evenly run parallel. It starts at the middle of the top and runs clockwise.
+ * The cinch-waist cushion round a [width] by [height] tile, pushed out [left], [top], [right] and [bottom] pixels: eight
+ * vertices, the box's corners and side middles, each middle dipped [dip] in. Corners round by [corner] plus the mean push
+ * of their two sides, waists by [waist], so even pushes run parallel. It starts at the middle of the top, clockwise.
  */
 private fun cushion(
     width: Float,

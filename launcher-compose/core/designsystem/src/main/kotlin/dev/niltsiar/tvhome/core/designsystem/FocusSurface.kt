@@ -89,28 +89,30 @@ public enum class FocusStyle(
 public val FocusRingReach: Dp = RingGap + RingWidth + HairlineWidth + OuterStrokeWidth
 
 /**
- * A D-pad target, for tiles and cards: scales up and gets a lit top, a ring with a dark hairline outside it and a
- * glow while focused, and a 2 dp stroke outside the hairline, so the ring holds on a bright wallpaper; how it
- * moves is the theme's [Motion]. Only the content is clipped to [shape]; the ring floats outside it and its corners are
- * concentric to the shape's, so a parent must leave the grown surface plus 9dp times [focusedScale] free around it or it
- * clips the ring. [onFocused] fires on gaining focus. [interactionSource] receives
- * the press and focus events, for content that reacts to them. [accent] colours the glow; unspecified takes the
- * theme's. [TvTheme.focusStyle] says which of the lit top, plate and glow it gets, and how wide the ring is. [ring]
- * colours the ring, and a halo glow, instead of the theme's. [ringBlends] ([ringBlendsWith]) puts a light stroke across
- * the gap but its inner 1 dp, between the dark gap and the ring. [plate], when specified, is the colour of a plate behind the surface, out to the ring's inner edge with corners concentric to the shape's: it fades in and grows as focus arrives, and a
- * translucent surface shows it. [glow] turns the glow off, a halo glow too: the elevation shadow also
- * shows through a translucent surface, as a dark patch. The animation starts in the focus callback and is read in the layer and draw
- * lambdas, so a focus change neither recomposes nor relays out. [focusedScale] is the size it grows to. The growth is
- * drawn, not a layer scale, so the surface's bounds stay put while it grows and accessibility has nothing to update.
- * [growthPivot], given the surface's height in pixels, says how far under its top the growth is anchored, in the middle
- * of its width; without it the surface grows about its centre. [focus] is its focus progress, for a parent that orders
- * its children by it ([popsOver]). [press] is the progress of a press ([pressDip]), 0 at rest: the surface draws up to 4% under
- * its size, with [Motion.animated] only, and its ring moves toward [TvElementColors.ringPressed] and grows wider into the gap inside it, its outer edge
- * where it was. While OK is held on a surface whose [modifier] has [holdOk], an arc in the ring's colour fills the gap and
- * the ring clockwise from the top centre, whole as the menu opens ([HoldArcElement]), with [Motion.animations] only; in
- * [Look.Expressive], while springs run, the held tile charges instead: it tightens, its capsule corner pinches and a wave
- * runs round its band. While [keepsShape] says so, as while its menu is open, an Expressive surface without focus keeps its
- * content clipped to its focused shape, and lets go of it with the focus fade once it no longer says so.
+ * A D-pad target, for tiles and cards: scales up and gets a lit top, a ring with a dark hairline outside it and a glow
+ * while focused, and a 2 dp stroke outside the hairline, so the ring holds on a bright wallpaper; how it moves is the
+ * theme's [Motion]. Only the content is clipped to [shape]; the ring floats outside it and its corners are concentric
+ * to the shape's, so a parent must leave the grown surface plus 9dp times [focusedScale] free around it or it clips the
+ * ring. [onFocused] fires on gaining focus. [interactionSource] receives the press and focus events, for content that
+ * reacts to them. [accent] colours the glow; unspecified takes the theme's. [TvTheme.focusStyle] says which of the lit
+ * top, plate and glow it gets, and how wide the ring is. [ring] colours the ring, and a halo glow, instead of the
+ * theme's. [ringBlends] ([ringBlendsWith]) puts a light stroke across the gap but its inner 1 dp, between the dark gap
+ * and the ring. [plate], when specified, is the colour of a plate behind the surface, out to the ring's inner edge with
+ * corners concentric to the shape's: it fades in and grows as focus arrives, and a translucent surface shows it. [glow]
+ * turns the glow off, a halo glow too: the elevation shadow also shows through a translucent surface, as a dark patch.
+ * The animation starts in the focus callback and is read in the layer and draw lambdas, so a focus change neither
+ * recomposes nor relays out. [focusedScale] is the size it grows to. The growth is drawn, not a layer scale, so the
+ * surface's bounds stay put while it grows and accessibility has nothing to update. [growthPivot], given the surface's
+ * height in pixels, says how far under its top the growth is anchored, in the middle of its width; without it the
+ * surface grows about its centre. [focus] is its focus progress, for a parent that orders its children by it
+ * ([popsOver]). [press] is the progress of a press ([pressDip]), 0 at rest: the surface draws up to 4% under its size,
+ * with [Motion.animated] only, and its ring moves toward [TvElementColors.ringPressed] and grows wider into the gap
+ * inside it, its outer edge where it was. While OK is held on a surface whose [modifier] has [holdOk], an arc in the
+ * ring's colour fills the gap and the ring clockwise from the top centre, whole as the menu opens ([HoldArcElement]),
+ * with [Motion.animations] only; in [Look.Expressive], while springs run, the held tile charges instead: it tightens,
+ * its capsule corner pinches and a wave runs round its band. While [keepsShape] says so, as while its menu is open, an
+ * Expressive surface without focus keeps its content clipped to its focused shape, and lets go of it with the focus
+ * fade once it no longer says so.
  *
  * In [Look.Expressive] focus shows as a band of the ring's colour, or the house primary without one, between a gap in the
  * house surface colour and a dark keyline, all inside [FocusRingReach], with no glow; a press moves the band toward

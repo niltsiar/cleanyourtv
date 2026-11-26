@@ -68,13 +68,13 @@ private class HaloClipNode :
 }
 
 /**
- * The halo glow of a focused [FocusSurface] in [ring]'s colour, [TvElementColors.ring] of [colours] without one, drawn grown
- * as the surface is: [scale] when [focus] is 1, less while a [press] [dips] it or, in [look]'s Expressive, while a held OK
- * charges the surface's [painter] ([chargedScale]), about [pivot]'s height or the middle. It runs up to
- * [HaloWidth] past the ring's keyline, at [TvElementColors.haloUnderAlpha] under the surface and [TvElementColors.haloSideAlpha] at
- * its sides and top, in [HALO_STEPS] bands that fade out; round a cinch tile the bands follow its cushion from the band's
- * outer edge. On a side where a [clipsHalo]
- * container leaves less room, the glow on that side is narrowed to end before the container's edge, so the clip never cuts it.
+ * The halo glow of a focused [FocusSurface] in [ring]'s colour, [TvElementColors.ring] of [colours] without one, drawn
+ * grown as the surface is: [scale] when [focus] is 1, less while a [press] [dips] it or, in [look]'s Expressive, while
+ * a held OK charges the surface's [painter] ([chargedScale]), about [pivot]'s height or the middle. It runs up to
+ * [HaloWidth] past the ring's keyline, at [TvElementColors.haloUnderAlpha] under the surface and
+ * [TvElementColors.haloSideAlpha] at its sides and top, in [HALO_STEPS] bands that fade out; round a cinch tile the
+ * bands follow its cushion from the band's outer edge. On a side where a [clipsHalo] container leaves less room, the
+ * glow on that side is narrowed to end before the container's edge, so the clip never cuts it.
  */
 internal data class FocusHaloElement(
     val focus: Animatable<Float, AnimationVector1D>,

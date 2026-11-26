@@ -38,14 +38,13 @@ import dev.niltsiar.tvhome.core.designsystem.expressive.drawTileCharge
 
 /**
  * The hold cue of a [FocusSurface]: while OK is held on it, an arc in [ring]'s colour, [TvElementColors.ring] of [colours]
- * without one, covers the gap
- * and the ring ([RingBand]) from the top centre clockwise, as far round as the hold is to the menu. It reads the progress
- * from the [holdOk] earlier in the chain and is drawn grown as the ring is: [scale] when [focus] is 1, less while a
- * [press] [dips] it, about [pivot]'s height or the middle. In [Look.Expressive] with [charges] (springs run) it is the
- * charge: after a dead zone the tile tightens toward [chargedScale], the capsule's corner pinches ([TilePainter.morph]) and a wave runs
- * round the band's outer edge ([drawTileCharge]); the [painter] gets the press ([TilePainter.held]) so the clip, the band
- * and the halo follow it. Without [charges] it is a thin line in black or white, whichever reads on the band, along the
- * middle of the band [painter] drew.
+ * without one, covers the gap and the ring ([RingBand]) from the top centre clockwise, as far round as the hold is to the
+ * menu. It reads the progress from the [holdOk] earlier in the chain and is drawn grown as the ring is: [scale] when
+ * [focus] is 1, less while a [press] [dips] it, about [pivot]'s height or the middle. In [Look.Expressive] with [charges]
+ * (springs run) it is the charge: after a dead zone the tile tightens toward [chargedScale], the capsule's corner pinches
+ * ([TilePainter.morph]) and a wave runs round the band's outer edge ([drawTileCharge]); the [painter] gets the press
+ * ([TilePainter.held]) so the clip, the band and the halo follow it. Without [charges] it is a thin line in black or
+ * white, whichever reads on the band, along the middle of the band [painter] drew.
  */
 internal data class HoldArcElement(
     val focus: Animatable<Float, AnimationVector1D>,
@@ -190,7 +189,7 @@ internal class PillChargeNode(
     private var lineSize = Size.Unspecified
     private val path by lazy { Path() }
     private var stroke: Stroke? = null
-    private val scratch by lazy { FloatArray(4) }
+    private val scratch = FloatArray(4)
 
     override fun ContentDrawScope.draw() {
         drawContent()

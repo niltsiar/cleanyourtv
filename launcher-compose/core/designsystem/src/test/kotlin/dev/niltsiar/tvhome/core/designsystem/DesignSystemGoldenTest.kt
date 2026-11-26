@@ -354,15 +354,7 @@ class DesignSystemGoldenTestContent :
                 steps(2_000) { golden("expressive-dock-light-settled") }
                 compose.runOnUiThread { light.focus(light.panelLeft + 240f * density) { Mint } }
                 steps(48, 160, 2_000) {
-                    golden(
-                        if (it ==
-                            2_000L
-                        ) {
-                            "expressive-dock-light-moved"
-                        } else {
-                            "expressive-dock-light-moving-${it}ms"
-                        },
-                    )
+                    golden(if (it == 2_000L) "expressive-dock-light-moved" else "expressive-dock-light-moving-${it}ms")
                 }
             }
 

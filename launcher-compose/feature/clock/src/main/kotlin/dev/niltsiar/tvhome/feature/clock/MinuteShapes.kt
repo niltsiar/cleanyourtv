@@ -16,7 +16,7 @@ import dev.niltsiar.tvhome.core.designsystem.Medallion
 import dev.niltsiar.tvhome.core.designsystem.ScreensaverShape
 import kotlin.math.max
 
-private val SHAPE_SIDE = 440.dp
+private val ShapeSide = 440.dp
 
 /** The size a shape has shrunk to as it leaves, and grows from as it comes. */
 private const val SHAPE_SHRUNK = 0.6f
@@ -61,7 +61,7 @@ internal class MinuteShapes {
             }
         if (presence <= 0f) return
         val scale = lerp(SHAPE_SHRUNK, 1f, presence)
-        val side = SHAPE_SIDE.toPx()
+        val side = ShapeSide.toPx()
         val path = shapes[shown.mod(shapes.size)].path(side)
         val left = center.x - side * scale / 2f
         val top = center.y - side * scale / 2f

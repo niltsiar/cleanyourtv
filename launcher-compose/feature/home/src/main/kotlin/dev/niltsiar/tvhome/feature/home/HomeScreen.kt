@@ -2385,9 +2385,7 @@ private fun AppTile(
     val ringColour =
         remember(input, key, ring, colours, neutralRing) {
             ColorProducer {
-                if (input.carried.value ==
-                    key
-                ) {
+                if (input.carried.value == key) {
                     colours.carriedRing(ring, neutralRing)
                 } else {
                     travel.colourFor(key, colours.focusBand(ring, neutralRing))

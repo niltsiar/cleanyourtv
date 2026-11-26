@@ -74,8 +74,8 @@ private val PulseStroke = 2.dp
  * [Look.Expressive] the fill and the offer pulse are the house primary.
  *
  * With a [focusLabel], a nonzero [offerToken] grows the button into its pill without focus and lights its rim once
- * ([Motion.offerPulseSpec]) in [TvElementColors.offerPulse]; a new token pulses again, 0 takes the offer back. With animations off or reduced motion the pill
- * appears and goes without motion and the rim stays dark.
+ * ([Motion.offerPulseSpec]) in [TvElementColors.offerPulse]; a new token pulses again, 0 takes the offer back. With
+ * animations off or reduced motion the pill appears and goes without motion and the rim stays dark.
  */
 @Composable
 public fun GlassIconButton(
