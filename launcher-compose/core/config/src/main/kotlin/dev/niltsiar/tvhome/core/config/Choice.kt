@@ -40,6 +40,19 @@ private fun intChoice(
     }
 }
 
+/** A stored name that is none of [entries]' [name]s is ignored. */
+private fun <E> enumChoice(
+    key: String,
+    entries: List<E>,
+    name: (E) -> String,
+    apply: TvConfig.(E) -> TvConfig,
+): Choice<E> {
+    val stored = stringPreferencesKey(key)
+    return Choice(stored, { prefs, value -> prefs[stored] = name(value) }) { config, prefs ->
+        entries.firstOrNull { name(it) == prefs.stored(stored) }?.let { config.apply(it) } ?: config
+    }
+}
+
 private fun storedString(key: Preferences.Key<String>): Choice<String> =
     Choice(key, { prefs, value -> prefs[key] = value }) { config, _ -> config }
 
@@ -75,18 +88,12 @@ public object Choices {
         }
     public val Animations: Choice<Boolean> = boolChoice("animations") { copy(animations = it) }
 
-    public val Look: Choice<Look> =
-        stringPreferencesKey("look").let { key ->
-            Choice(key, { prefs, value -> prefs[key] = value.jsonValue }) { config, prefs ->
-                dev.niltsiar.tvhome.core.config.Look.entries
-                    .firstOrNull {
-                        it.jsonValue ==
-                            prefs.stored(
-                                key,
-                            )
-                    }?.let { config.copy(look = it) }
-                    ?: config
-            }
+    public val Look: Choice<Look> = enumChoice("look", dev.niltsiar.tvhome.core.config.Look.entries, { it.jsonValue }) { copy(look = it) }
+
+    /** Read only in the Expressive look; the page shows its row only then. */
+    public val ExpressiveTile: Choice<ExpressiveTile> =
+        enumChoice("expressive_tile", dev.niltsiar.tvhome.core.config.ExpressiveTile.entries, { it.jsonValue }) {
+            copy(expressiveTile = it)
         }
 
     /**
@@ -149,6 +156,7 @@ public object Choices {
             TimeFormat,
             Animations,
             Look,
+            ExpressiveTile,
             WallpaperChoice,
             OpenOnStart,
             AlwaysShowNames,

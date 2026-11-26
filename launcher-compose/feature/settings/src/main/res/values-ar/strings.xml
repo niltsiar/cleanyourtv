@@ -67,4 +67,9 @@
   <string name="settings_restart_press">إعادة تشغيل التلفاز من الرئيسية</string>
   <string name="settings_sleep_timer">مؤقت النوم</string>
   <string name="settings_quick_panel">اللوحة السريعة</string>
+  <string name="settings_group_look">المظهر</string>
+  <string name="settings_look">النمط</string>
+  <string name="settings_expressive_tile">التطبيق المحدد</string>
+  <string name="settings_tile_capsule">كبسولة</string>
+  <string name="settings_tile_cinch">خصر</string>
 </resources>

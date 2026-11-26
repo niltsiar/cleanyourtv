@@ -67,4 +67,9 @@
   <string name="settings_restart_press">รีสตาร์ททีวีจากหน้าหลัก</string>
   <string name="settings_sleep_timer">ตั้งเวลาปิด</string>
   <string name="settings_quick_panel">แผงด่วน</string>
+  <string name="settings_group_look">รูปลักษณ์</string>
+  <string name="settings_look">สไตล์</string>
+  <string name="settings_expressive_tile">แอปที่เลือก</string>
+  <string name="settings_tile_capsule">แคปซูล</string>
+  <string name="settings_tile_cinch">คอดเอว</string>
 </resources>

@@ -67,4 +67,9 @@
   <string name="settings_restart_press">Khởi động lại TV từ màn hình chính</string>
   <string name="settings_sleep_timer">Hẹn giờ tắt</string>
   <string name="settings_quick_panel">Bảng nhanh</string>
+  <string name="settings_group_look">Giao diện</string>
+  <string name="settings_look">Phong cách</string>
+  <string name="settings_expressive_tile">Ứng dụng đang chọn</string>
+  <string name="settings_tile_capsule">Viên nang</string>
+  <string name="settings_tile_cinch">Thắt eo</string>
 </resources>

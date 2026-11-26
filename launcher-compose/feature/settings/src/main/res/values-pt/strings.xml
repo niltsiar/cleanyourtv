@@ -67,4 +67,9 @@
   <string name="settings_restart_press">Reiniciar TV pela tela inicial</string>
   <string name="settings_sleep_timer">Timer de desligamento</string>
   <string name="settings_quick_panel">Painel rápido</string>
+  <string name="settings_group_look">Aparência</string>
+  <string name="settings_look">Estilo</string>
+  <string name="settings_expressive_tile">App selecionado</string>
+  <string name="settings_tile_capsule">Cápsula</string>
+  <string name="settings_tile_cinch">Cintura</string>
 </resources>

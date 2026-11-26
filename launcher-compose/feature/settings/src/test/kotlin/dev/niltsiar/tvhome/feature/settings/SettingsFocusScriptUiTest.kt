@@ -67,6 +67,44 @@ class SettingsFocusScriptUiTestContent :
                         "option:ClockFormat:0",
                     )
             }
+
+            test("the look group follows open on start, with the focused tile row under style only in expressive") {
+                val keys = List(9) { Key.DirectionDown } + List(2) { Key.DirectionUp }
+                val top =
+                    listOf(
+                        "option:Columns:0",
+                        "option:RowsBelowDock:0",
+                        "option:DockOpacity:0",
+                        "option:ClockFormat:0",
+                        "settings:wallpaper",
+                        "option:Animations:0",
+                        "settings:open_on_start",
+                    )
+
+                show()
+                compose.trace(keys.map { key -> { press(key) } }).tags shouldBe
+                    top +
+                    listOf(
+                        "option:Look:0",
+                        "option:AlwaysShowNames:1",
+                        "option:ShowGreeting:0",
+                        "option:AlwaysShowNames:1",
+                        "option:Look:0",
+                    )
+                look = Look.Expressive
+                config = TvConfig(look = Look.Expressive)
+                run++
+                settle()
+                compose.trace(keys.map { key -> { press(key) } }).tags shouldBe
+                    top +
+                    listOf(
+                        "option:Look:1",
+                        "option:ExpressiveTile:0",
+                        "option:AlwaysShowNames:1",
+                        "option:ExpressiveTile:0",
+                        "option:Look:1",
+                    )
+            }
         }
     })
 
@@ -74,6 +112,9 @@ private class SettingsFocusScriptUiTestFixture : JUnit4RulesContext() {
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
     var look by mutableStateOf(Look.Glass)
+
+    /** What the page lists: the same rows in both looks unless a test changes it. */
+    var config by mutableStateOf(TvConfig())
 
     /** A new value builds the page again from nothing. */
     var run by mutableIntStateOf(0)
@@ -100,7 +141,7 @@ private class SettingsFocusScriptUiTestFixture : JUnit4RulesContext() {
                     SettingsScreen(
                         state = {
                             SettingsUiState(
-                                settingsSections(TvConfig()),
+                                settingsSections(config),
                                 followsTheme = true,
                                 openOnStart = OptionLabel.Res(R.string.settings_off),
                                 wallpaper = OptionLabel.Res(R.string.wallpaper_theme_default),

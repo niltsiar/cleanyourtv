@@ -67,4 +67,9 @@
   <string name="settings_restart_press">Перезапуск ТВ з головного екрана</string>
   <string name="settings_sleep_timer">Таймер сну</string>
   <string name="settings_quick_panel">Швидка панель</string>
+  <string name="settings_group_look">Вигляд</string>
+  <string name="settings_look">Стиль</string>
+  <string name="settings_expressive_tile">Вибраний застосунок</string>
+  <string name="settings_tile_capsule">Капсула</string>
+  <string name="settings_tile_cinch">Талія</string>
 </resources>

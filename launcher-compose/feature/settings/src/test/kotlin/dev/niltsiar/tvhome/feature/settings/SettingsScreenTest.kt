@@ -422,7 +422,7 @@ class SettingsScreenTestContent :
                         startRow().assertIsFocused()
                         startRow().assertTextEquals("Open on start", "Off")
                         press(Key.DirectionDown)
-                        option(SettingsRowId.AlwaysShowNames, settings.row(SettingsRowId.AlwaysShowNames).selected).assertIsFocused()
+                        option(SettingsRowId.Look, settings.row(SettingsRowId.Look).selected).assertIsFocused()
                         press(Key.DirectionUp)
                         startRow().assertIsFocused()
                         press(Key.DirectionUp)

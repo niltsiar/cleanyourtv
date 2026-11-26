@@ -67,4 +67,11 @@
   <string name="settings_now_playing_needs_access">Needs access</string>
   <string name="settings_now_playing_unavailable">Not available on this TV</string>
   <string name="settings_now_playing_adb">Allow it with adb: %1$s</string>
+  <string name="settings_group_look">Look</string>
+  <string name="settings_look">Style</string>
+  <string name="settings_look_glass" translatable="false">Glass</string>
+  <string name="settings_look_expressive" translatable="false">Expressive</string>
+  <string name="settings_expressive_tile">Focused tile</string>
+  <string name="settings_tile_capsule">Capsule</string>
+  <string name="settings_tile_cinch">Cinch</string>
 </resources>

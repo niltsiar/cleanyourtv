@@ -111,6 +111,10 @@ private object SettingsScenes {
                 show(look)
                 focus("settings:wallpaper")
             },
+            Scene("look-rows", "the look group, with the focused tile row only in Expressive") { look ->
+                show(look)
+                focus(if (look == Look.Expressive) "option:ExpressiveTile:0" else "option:Look:0")
+            },
             Scene("picker-open", "the open on start picker") { look ->
                 picker = sixApps
                 show(look)
@@ -191,7 +195,7 @@ private class SettingsGoldenFixture : JUnit4RulesContext() {
         look: Look = Look.Glass,
         dark: Boolean = true,
     ) {
-        val config = TvConfig()
+        val config = TvConfig(look = look)
         this.look = look
         compose.mainClock.autoAdvance = false
         // A TV has no touch screen; the native graphics mode starts in touch mode, where nothing takes key focus.

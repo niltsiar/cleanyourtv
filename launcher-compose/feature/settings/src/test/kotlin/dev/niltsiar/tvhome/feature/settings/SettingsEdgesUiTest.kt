@@ -245,12 +245,12 @@ class SettingsEdgesUiTestContent :
 
                     test("the focused row stays out of the fade from the first row to the last and back") {
                         show()
-                        assertFocusClearOfTheFade(entries = 27)
+                        assertFocusClearOfTheFade(entries = 28)
                     }
 
                     test("the focused row stays out of the fade with the reorder row and a short list") {
                         show(reorder = true) { 190.dp }
-                        assertFocusClearOfTheFade(entries = 28)
+                        assertFocusClearOfTheFade(entries = 29)
                     }
 
                     test("a button row is one option row pitch from the rows around it and its pill keeps a margin") {
@@ -278,7 +278,7 @@ class SettingsEdgesUiTestContent :
                             headings.fetchSemanticsNodes().map { node ->
                                 node.config[SemanticsProperties.Text].joinToString { it.text }
                             }
-                        texts shouldBe listOf("General", "Home layout", "App library", "Clock screen", "Motion and hints", "System")
+                        texts shouldBe listOf("General", "Look", "Home layout", "App library", "Clock screen", "Motion and hints", "System")
                         val general = headings[0].getUnclippedBoundsInRoot()
                         val system = headings[texts.lastIndex].getUnclippedBoundsInRoot()
                         withClue(
@@ -337,7 +337,7 @@ class SettingsEdgesUiTestContent :
                         "a divider stays 38 dp or more over a focused first row with its heading between them and never meets a focused row",
                     ) {
                         show(reorder = true)
-                        val steps = List(28) { Key.DirectionDown } + List(28) { Key.DirectionUp }
+                        val steps = List(29) { Key.DirectionDown } + List(29) { Key.DirectionUp }
                         val firstsSeen = mutableSetOf<String>()
                         for ((index, key) in listOf<Key?>(null).plus(steps).withIndex()) {
                             if (key != null) press(key)
@@ -368,7 +368,7 @@ class SettingsEdgesUiTestContent :
                     test("no row heading or divider moves in the list while focus moves within and across groups") {
                         show(reorder = true)
                         val before = placesInList()
-                        val steps = List(28) { Key.DirectionDown } + List(28) { Key.DirectionUp }
+                        val steps = List(29) { Key.DirectionDown } + List(29) { Key.DirectionUp }
                         for ((index, key) in steps.withIndex()) {
                             press(key)
                             val now = placesInList()
@@ -706,6 +706,7 @@ private val PanelSideHalf = 14.dp
 private val groupFirstRows =
     listOf(
         "setting:Columns",
+        "setting:Look",
         "setting:AlwaysShowNames",
         "setting:AppLibrary",
         "setting:HomeIdleClockMinutes",

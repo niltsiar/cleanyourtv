@@ -67,4 +67,9 @@
   <string name="settings_restart_press">Tv herstarten vanuit Home</string>
   <string name="settings_sleep_timer">Slaaptimer</string>
   <string name="settings_quick_panel">Snelpaneel</string>
+  <string name="settings_group_look">Uiterlijk</string>
+  <string name="settings_look">Stijl</string>
+  <string name="settings_expressive_tile">Geselecteerde app</string>
+  <string name="settings_tile_capsule">Capsule</string>
+  <string name="settings_tile_cinch">Taille</string>
 </resources>

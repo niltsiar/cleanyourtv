@@ -67,4 +67,9 @@
   <string name="settings_restart_press">הפעלת הטלוויזיה מחדש ממסך הבית</string>
   <string name="settings_sleep_timer">טיימר שינה</string>
   <string name="settings_quick_panel">לוח מהיר</string>
+  <string name="settings_group_look">מראה</string>
+  <string name="settings_look">סגנון</string>
+  <string name="settings_expressive_tile">האפליקציה הנבחרת</string>
+  <string name="settings_tile_capsule">קפסולה</string>
+  <string name="settings_tile_cinch">מותן</string>
 </resources>

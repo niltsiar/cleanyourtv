@@ -67,4 +67,9 @@
   <string name="settings_restart_press">Reinicia la TV des de l’inici</string>
   <string name="settings_sleep_timer">Temporitzador d\'apagada</string>
   <string name="settings_quick_panel">Tauler ràpid</string>
+  <string name="settings_group_look">Aspecte</string>
+  <string name="settings_look">Estil</string>
+  <string name="settings_expressive_tile">Aplicació seleccionada</string>
+  <string name="settings_tile_capsule">Càpsula</string>
+  <string name="settings_tile_cinch">Cintura</string>
 </resources>

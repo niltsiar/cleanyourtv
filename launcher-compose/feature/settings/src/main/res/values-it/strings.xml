@@ -67,4 +67,9 @@
   <string name="settings_restart_press">Riavvia la TV da Home</string>
   <string name="settings_sleep_timer">Timer di spegnimento</string>
   <string name="settings_quick_panel">Pannello rapido</string>
+  <string name="settings_group_look">Aspetto</string>
+  <string name="settings_look">Stile</string>
+  <string name="settings_expressive_tile">App selezionata</string>
+  <string name="settings_tile_capsule">Capsula</string>
+  <string name="settings_tile_cinch">Vita</string>
 </resources>

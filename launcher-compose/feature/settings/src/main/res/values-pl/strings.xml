@@ -67,4 +67,9 @@
   <string name="settings_restart_press">Restart TV z ekranu głównego</string>
   <string name="settings_sleep_timer">Wyłącznik czasowy</string>
   <string name="settings_quick_panel">Szybki panel</string>
+  <string name="settings_group_look">Wygląd</string>
+  <string name="settings_look">Styl</string>
+  <string name="settings_expressive_tile">Wybrana aplikacja</string>
+  <string name="settings_tile_capsule">Kapsuła</string>
+  <string name="settings_tile_cinch">Talia</string>
 </resources>

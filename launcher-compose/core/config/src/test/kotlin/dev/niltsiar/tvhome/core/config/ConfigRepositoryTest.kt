@@ -203,9 +203,10 @@ class ConfigRepositoryTestContent :
                 repo.choose(Choices.SleepTimer, true)
                 repo.choose(Choices.QuickPanel, true)
                 repo.choose(Choices.Look, Look.Expressive)
+                repo.choose(Choices.ExpressiveTile, ExpressiveTile.Cinch)
                 awaitConfig(repo) {
                     it.inputArrival && it.inputTiles && it.restartPress && it.sleepTimer && it.quickPanel &&
-                        it.look == Look.Expressive
+                        it.look == Look.Expressive && it.expressiveTile == ExpressiveTile.Cinch
                 }
 
                 repo.config.value shouldBe
@@ -231,6 +232,7 @@ class ConfigRepositoryTestContent :
                         sleepTimer = true,
                         quickPanel = true,
                         look = Look.Expressive,
+                        expressiveTile = ExpressiveTile.Cinch,
                         appShelf = true,
                         appShelfSources = listOf("com.a", "com.b/7"),
                         appShelfWebPosters = true,

@@ -19,6 +19,8 @@ public enum class SettingsRowId {
     DockOpacity,
     ClockFormat,
     Animations,
+    Look,
+    ExpressiveTile,
     AlwaysShowNames,
     ShowGreeting,
     DateBelowClock,

@@ -67,4 +67,9 @@
   <string name="settings_restart_press">Redémarrer la TV depuis l’accueil</string>
   <string name="settings_sleep_timer">Minuterie de veille</string>
   <string name="settings_quick_panel">Panneau rapide</string>
+  <string name="settings_group_look">Apparence</string>
+  <string name="settings_look">Style</string>
+  <string name="settings_expressive_tile">Application sélectionnée</string>
+  <string name="settings_tile_capsule">Capsule</string>
+  <string name="settings_tile_cinch">Taille</string>
 </resources>

@@ -67,4 +67,9 @@
   <string name="settings_restart_press">Käynnistä TV uudelleen kotinäkymästä</string>
   <string name="settings_sleep_timer">Uniajastin</string>
   <string name="settings_quick_panel">Pikapaneeli</string>
+  <string name="settings_group_look">Ulkoasu</string>
+  <string name="settings_look">Tyyli</string>
+  <string name="settings_expressive_tile">Valittu sovellus</string>
+  <string name="settings_tile_capsule">Kapseli</string>
+  <string name="settings_tile_cinch">Vyötärö</string>
 </resources>

@@ -67,4 +67,9 @@
   <string name="settings_restart_press">Restartovat TV z domovské obrazovky</string>
   <string name="settings_sleep_timer">Časovač vypnutí</string>
   <string name="settings_quick_panel">Rychlý panel</string>
+  <string name="settings_group_look">Vzhled</string>
+  <string name="settings_look">Styl</string>
+  <string name="settings_expressive_tile">Vybraná aplikace</string>
+  <string name="settings_tile_capsule">Kapsle</string>
+  <string name="settings_tile_cinch">Pas</string>
 </resources>

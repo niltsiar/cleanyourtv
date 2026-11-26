@@ -67,4 +67,9 @@
   <string name="settings_restart_press">TV vom Startbildschirm neu starten</string>
   <string name="settings_sleep_timer">Sleep-Timer</string>
   <string name="settings_quick_panel">Schnellmenü</string>
+  <string name="settings_group_look">Aussehen</string>
+  <string name="settings_look">Stil</string>
+  <string name="settings_expressive_tile">Ausgewählte App</string>
+  <string name="settings_tile_capsule">Kapsel</string>
+  <string name="settings_tile_cinch">Taille</string>
 </resources>

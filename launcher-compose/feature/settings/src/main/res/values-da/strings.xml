@@ -67,4 +67,9 @@
   <string name="settings_restart_press">Genstart TV fra startskærmen</string>
   <string name="settings_sleep_timer">Slukketimer</string>
   <string name="settings_quick_panel">Hurtigpanel</string>
+  <string name="settings_group_look">Udseende</string>
+  <string name="settings_look">Stil</string>
+  <string name="settings_expressive_tile">Valgt app</string>
+  <string name="settings_tile_capsule">Kapsel</string>
+  <string name="settings_tile_cinch">Talje</string>
 </resources>

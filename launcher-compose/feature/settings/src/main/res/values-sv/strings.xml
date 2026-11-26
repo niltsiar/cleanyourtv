@@ -67,4 +67,9 @@
   <string name="settings_restart_press">Starta om TV:n från startskärmen</string>
   <string name="settings_sleep_timer">Insomningstimer</string>
   <string name="settings_quick_panel">Snabbpanel</string>
+  <string name="settings_group_look">Utseende</string>
+  <string name="settings_look">Stil</string>
+  <string name="settings_expressive_tile">Vald app</string>
+  <string name="settings_tile_capsule">Kapsel</string>
+  <string name="settings_tile_cinch">Midja</string>
 </resources>

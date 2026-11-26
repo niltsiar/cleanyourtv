@@ -67,4 +67,9 @@
   <string name="settings_restart_press">TV’yi ana ekrandan yeniden başlat</string>
   <string name="settings_sleep_timer">Uyku zamanlayıcısı</string>
   <string name="settings_quick_panel">Hızlı panel</string>
+  <string name="settings_group_look">Görünüm</string>
+  <string name="settings_look">Stil</string>
+  <string name="settings_expressive_tile">Seçili uygulama</string>
+  <string name="settings_tile_capsule">Kapsül</string>
+  <string name="settings_tile_cinch">Bel</string>
 </resources>

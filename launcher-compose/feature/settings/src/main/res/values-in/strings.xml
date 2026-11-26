@@ -67,4 +67,9 @@
   <string name="settings_restart_press">Mulai ulang TV dari Beranda</string>
   <string name="settings_sleep_timer">Timer tidur</string>
   <string name="settings_quick_panel">Panel cepat</string>
+  <string name="settings_group_look">Tampilan</string>
+  <string name="settings_look">Gaya</string>
+  <string name="settings_expressive_tile">App yang dipilih</string>
+  <string name="settings_tile_capsule">Kapsul</string>
+  <string name="settings_tile_cinch">Pinggang</string>
 </resources>

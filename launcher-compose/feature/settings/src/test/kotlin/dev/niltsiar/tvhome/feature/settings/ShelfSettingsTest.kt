@@ -74,7 +74,7 @@ class ShelfSettingsTestContent :
                     ).also { harness = it }
                 }
 
-                fun SettingsUiState.homeRows() = sections[1].rows.map { it.id }
+                fun SettingsUiState.homeRows() = sections.single { it.heading == R.string.settings_group_home }.rows.map { it.id }
 
                 fun SettingsHarness.openShelfPicker(): ShelfPicker {
                     viewModel.actions.onOpenShelfPicker()
@@ -154,9 +154,7 @@ class ShelfSettingsTestContent :
 
             test("the app highlights row follows the home layout rows and stores its choice") {
                 val settings = settings("{}")
-                settings.state.sections[1]
-                    .rows
-                    .map { it.id } shouldBe
+                settings.state.homeRows() shouldBe
                     listOf(
                         SettingsRowId.AlwaysShowNames,
                         SettingsRowId.ShowGreeting,

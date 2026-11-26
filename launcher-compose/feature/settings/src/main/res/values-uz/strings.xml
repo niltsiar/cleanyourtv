@@ -67,4 +67,9 @@
   <string name="settings_restart_press">TVni bosh ekrandan qayta yoqish</string>
   <string name="settings_sleep_timer">Uyqu taymeri</string>
   <string name="settings_quick_panel">Tezkor panel</string>
+  <string name="settings_group_look">Koʻrinish</string>
+  <string name="settings_look">Uslub</string>
+  <string name="settings_expressive_tile">Tanlangan ilova</string>
+  <string name="settings_tile_capsule">Kapsula</string>
+  <string name="settings_tile_cinch">Bel</string>
 </resources>

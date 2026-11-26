@@ -67,4 +67,9 @@
   <string name="settings_restart_press">从主屏幕重新启动电视</string>
   <string name="settings_sleep_timer">睡眠定时</string>
   <string name="settings_quick_panel">快捷面板</string>
+  <string name="settings_group_look">外观</string>
+  <string name="settings_look">风格</string>
+  <string name="settings_expressive_tile">选中的应用</string>
+  <string name="settings_tile_capsule">胶囊</string>
+  <string name="settings_tile_cinch">收腰</string>
 </resources>

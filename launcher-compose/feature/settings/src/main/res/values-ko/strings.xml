@@ -67,4 +67,9 @@
   <string name="settings_restart_press">홈에서 TV 다시 시작</string>
   <string name="settings_sleep_timer">취침 타이머</string>
   <string name="settings_quick_panel">빠른 패널</string>
+  <string name="settings_group_look">모양</string>
+  <string name="settings_look">스타일</string>
+  <string name="settings_expressive_tile">선택한 앱</string>
+  <string name="settings_tile_capsule">캡슐</string>
+  <string name="settings_tile_cinch">잘록한 모양</string>
 </resources>

@@ -10,6 +10,8 @@ import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.Choices
 import dev.niltsiar.tvhome.core.config.ClockFormat
+import dev.niltsiar.tvhome.core.config.ExpressiveTile
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.config.parseTvConfig
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
@@ -85,6 +87,8 @@ class SettingsPresenterTestContent :
                             listOf(ClockFormat.System, ClockFormat.Hour12, ClockFormat.Hour24),
                         ) { it.clockFormat },
                         RowSpec(SettingsRowId.Animations, onOff) { it.animations },
+                        RowSpec(SettingsRowId.Look, listOf(Look.Glass, Look.Expressive)) { it.look },
+                        RowSpec(SettingsRowId.ExpressiveTile, listOf(ExpressiveTile.Capsule, ExpressiveTile.Cinch)) { it.expressiveTile },
                         RowSpec(SettingsRowId.AlwaysShowNames, onOff) { it.alwaysShowNames },
                         RowSpec(SettingsRowId.ShowGreeting, onOff) { it.showGreeting },
                         RowSpec(SettingsRowId.DateBelowClock, onOff) { it.dateBelowClock },
@@ -154,6 +158,7 @@ class SettingsPresenterTestContent :
                 ) shouldBe
                     listOf(
                         R.string.settings_group_general,
+                        R.string.settings_group_look,
                         R.string.settings_group_home,
                         R.string.settings_group_library,
                         R.string.settings_group_clock,
@@ -169,6 +174,7 @@ class SettingsPresenterTestContent :
                             SettingsRowId.ClockFormat,
                             SettingsRowId.Animations,
                         ),
+                        listOf(SettingsRowId.Look),
                         listOf(
                             SettingsRowId.AlwaysShowNames,
                             SettingsRowId.ShowGreeting,
@@ -188,6 +194,32 @@ class SettingsPresenterTestContent :
                         ),
                         listOf(SettingsRowId.RestartPress, SettingsRowId.SleepTimer, SettingsRowId.QuickPanel),
                     )
+            }
+
+            test("the Style row stores look and the Focused tile row shows under it only in Expressive and stores expressive_tile") {
+                val settings = settings()
+
+                fun lookRows(state: SettingsUiState) =
+                    state.sections
+                        .single { it.heading == R.string.settings_group_look }
+                        .rows
+                        .map { it.id }
+                lookRows(settings.state) shouldBe listOf(SettingsRowId.Look)
+                settings.row(SettingsRowId.Look).selected shouldBe 0
+
+                settings.pick(SettingsRowId.Look, 1)
+                settings.awaitState { lookRows(it) == listOf(SettingsRowId.Look, SettingsRowId.ExpressiveTile) }
+                settings.config.look shouldBe Look.Expressive
+                settings.row(SettingsRowId.ExpressiveTile).selected shouldBe 0
+
+                settings.pick(SettingsRowId.ExpressiveTile, 1)
+                settings.awaitState { it.row(SettingsRowId.ExpressiveTile).selected == 1 }
+                settings.config.expressiveTile shouldBe ExpressiveTile.Cinch
+
+                settings.pick(SettingsRowId.Look, 0)
+                settings.awaitState { lookRows(it) == listOf(SettingsRowId.Look) }
+                settings.config.look shouldBe Look.Glass
+                settings.config.expressiveTile shouldBe ExpressiveTile.Cinch
             }
 
             test("the Input tiles row stores input_tiles") {
@@ -312,7 +344,7 @@ class SettingsPresenterTestContent :
             test("picking the option a row shows stores nothing in any row") {
                 val settings = settings("""{"columns": 5}""")
                 val shown = settings.selections()
-                (shown.values.count { it >= 0 }) shouldBe specs.size
+                (shown.values.count { it >= 0 }) shouldBe specs.count { it.id != SettingsRowId.ExpressiveTile }
 
                 for ((id, option) in shown) settings.pick(id, option)
 
@@ -680,7 +712,8 @@ private val pictures = listOf(WallpaperPicture("wallpaper.jpg", single = true), 
 
 /** Every key at the last option of its row, so the first pick of each row differs from what the theme holds. */
 private const val LAST_OPTIONS =
-    """{"columns": 7, "rows_below_dock": 3, "dock_opacity": 30, "clock_format": "24", "animations": false,
+    """{"columns": 7, "rows_below_dock": 3, "dock_opacity": 30, "clock_format": "24", "animations": false, "look": "expressive",
+    "expressive_tile": "cinch",
     "always_show_names": false, "show_greeting": false, "date_below_clock": false, "move_to_menu": false, "app_shelf": false,
     "app_library": false,
     "library_least_used": false, "unused_fade_days": 90, "home_idle_clock_minutes": 60, "back_opens_clock": false,

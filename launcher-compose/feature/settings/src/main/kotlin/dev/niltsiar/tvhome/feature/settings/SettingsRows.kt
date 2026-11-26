@@ -6,6 +6,8 @@ import dev.niltsiar.tvhome.core.config.Choice
 import dev.niltsiar.tvhome.core.config.Choices
 import dev.niltsiar.tvhome.core.config.ClockFormat
 import dev.niltsiar.tvhome.core.config.ConfigRepository
+import dev.niltsiar.tvhome.core.config.ExpressiveTile
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.SHELF_CARD_COUNTS
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
@@ -100,6 +102,31 @@ internal val settingsGroups: List<Group> =
                         ),
                     ) { it.clockFormat },
                     onOff(SettingsRowId.Animations, R.string.settings_animations, Choices.Animations) { it.animations },
+                ),
+        ),
+        Group(
+            heading = R.string.settings_group_look,
+            rows =
+                listOf(
+                    ChoiceRow(
+                        SettingsRowId.Look,
+                        R.string.settings_look,
+                        Choices.Look,
+                        listOf(
+                            Option(res(R.string.settings_look_glass), Look.Glass),
+                            Option(res(R.string.settings_look_expressive), Look.Expressive),
+                        ),
+                    ) { it.look },
+                    ChoiceRow(
+                        SettingsRowId.ExpressiveTile,
+                        R.string.settings_expressive_tile,
+                        Choices.ExpressiveTile,
+                        listOf(
+                            Option(res(R.string.settings_tile_capsule), ExpressiveTile.Capsule),
+                            Option(res(R.string.settings_tile_cinch), ExpressiveTile.Cinch),
+                        ),
+                        { it.look == Look.Expressive },
+                    ) { it.expressiveTile },
                 ),
         ),
         Group(

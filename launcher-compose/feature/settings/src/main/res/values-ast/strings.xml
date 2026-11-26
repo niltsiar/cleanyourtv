@@ -67,4 +67,9 @@
   <string name="settings_restart_press">Reaniciar la TV dende Aniciu</string>
   <string name="settings_sleep_timer">Temporizador d\'apagáu</string>
   <string name="settings_quick_panel">Panel rápidu</string>
+  <string name="settings_group_look">Aspeutu</string>
+  <string name="settings_look">Estilu</string>
+  <string name="settings_expressive_tile">Aplicación esbillada</string>
+  <string name="settings_tile_capsule">Cápsula</string>
+  <string name="settings_tile_cinch">Cintura</string>
 </resources>

@@ -67,4 +67,9 @@
   <string name="settings_restart_press">Ponovo pokreni TV sa početnog ekrana</string>
   <string name="settings_sleep_timer">Tajmer za isključivanje</string>
   <string name="settings_quick_panel">Brzi panel</string>
+  <string name="settings_group_look">Izgled</string>
+  <string name="settings_look">Stil</string>
+  <string name="settings_expressive_tile">Izabrana aplikacija</string>
+  <string name="settings_tile_capsule">Kapsula</string>
+  <string name="settings_tile_cinch">Struk</string>
 </resources>
