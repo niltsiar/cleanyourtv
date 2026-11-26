@@ -36,18 +36,16 @@ private fun band(
 
 class TileGeometryTestContent :
     RobolectricTestSuiteContent({
-        for (tile in listOf(ExpressiveTile.Wave, ExpressiveTile.Cinch)) {
-            for (rim in listOf(false, true)) {
-                test("the ${tile.name} band${if (rim) " in rim" else ""} stays inside the focus reach and reaches past the tile") {
-                    val outer = checkNotNull(band(tile, rim).rings[2]).getBounds()
+        for (rim in listOf(false, true)) {
+            test("the cinch band${if (rim) " in rim" else ""} stays inside the focus reach and reaches past the tile") {
+                val outer = checkNotNull(band(ExpressiveTile.Cinch, rim).rings[2]).getBounds()
 
-                    withClue("keyline bounds $outer") {
-                        outer.left shouldBeGreaterThanOrEqual -REACH
-                        outer.top shouldBeGreaterThanOrEqual -REACH
-                        outer.right shouldBeLessThanOrEqual TileSize.width + REACH
-                        outer.bottom shouldBeLessThanOrEqual TileSize.height + REACH
-                        outer.top shouldBeLessThan -REACH / 2f
-                    }
+                withClue("keyline bounds $outer") {
+                    outer.left shouldBeGreaterThanOrEqual -REACH
+                    outer.top shouldBeGreaterThanOrEqual -REACH
+                    outer.right shouldBeLessThanOrEqual TileSize.width + REACH
+                    outer.bottom shouldBeLessThanOrEqual TileSize.height + REACH
+                    outer.top shouldBeLessThan -REACH / 2f
                 }
             }
         }
@@ -62,24 +60,23 @@ class TileGeometryTestContent :
             withClue("middle $middle, highest $highest") { middle.y - highest.y shouldBeGreaterThan 8f }
         }
 
-        test("the wave band's hold line starts at the middle of the top") {
-            val start = band(ExpressiveTile.Wave, rim = false).holdMeasure.getPosition(0f)
+        test("the cinch band's hold line starts at the middle of the top") {
+            val start = band(ExpressiveTile.Cinch, rim = false).holdMeasure.getPosition(0f)
 
             withClue("start $start") { abs(start.x - TileSize.width / 2f) shouldBeLessThan 24f }
         }
 
         test("tiles of one size and style share one band, built once") {
-            val first = TilePainter().band(ExpressiveTile.Wave, rim = false, base = Base, size = Size(300f, 170f), density = Twice)
+            val first = TilePainter().band(ExpressiveTile.Cinch, rim = false, base = Base, size = Size(300f, 170f), density = Twice)
 
             TilePainter().band(
-                ExpressiveTile.Wave,
+                ExpressiveTile.Cinch,
                 rim = false,
                 base = Base,
                 size = Size(300f, 170f),
                 density = Twice,
             ) shouldBeSameInstanceAs
                 first
-            (first.masks?.count { it != null } ?: 0) shouldBe 2
         }
 
         test("a capsule's corner steps from its rest radius to half its height on whole pixels") {

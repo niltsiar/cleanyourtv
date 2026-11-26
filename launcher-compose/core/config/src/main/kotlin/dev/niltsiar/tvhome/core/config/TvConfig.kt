@@ -57,13 +57,12 @@ public enum class Look(
 
 /**
  * expressive_tile: the shape a focused tile takes in [Look.Expressive]. [Capsule] rounds its corners to half its height;
- * [Wave] keeps the tile's corners and draws a wavy band round it; [Cinch] draws a band whose sides dip in, over the tile.
+ * [Cinch] draws a band whose sides dip in, over the tile.
  */
 public enum class ExpressiveTile(
     internal val jsonValue: String,
 ) {
     Capsule("capsule"),
-    Wave("wave"),
     Cinch("cinch"),
 }
 
@@ -153,7 +152,7 @@ public data class TvConfig(
     val look: Look = Look.Glass,
     /** Opaque ARGB, the colour the [Look.Expressive] scheme grows from; null lets the wallpaper, the sky or the time of day pick it. */
     val expressiveSeed: Int? = null,
-    /** Read only with [look] [Look.Expressive]; a value that is not `capsule`, `wave` or `cinch` keeps [ExpressiveTile.Capsule]. */
+    /** Read only with [look] [Look.Expressive]; a value that is not `capsule` or `cinch` keeps [ExpressiveTile.Capsule]. */
     val expressiveTile: ExpressiveTile = ExpressiveTile.Capsule,
     /** Whether the theme may show a wallpaper at all. */
     val wallpaper: Boolean = true,

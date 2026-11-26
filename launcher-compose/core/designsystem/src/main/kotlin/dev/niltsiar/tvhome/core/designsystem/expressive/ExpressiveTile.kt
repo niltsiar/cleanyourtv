@@ -8,7 +8,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
@@ -22,19 +21,13 @@ import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.config.ExpressiveTile
-import dev.niltsiar.tvhome.core.designsystem.FocusRingReach
 import dev.niltsiar.tvhome.core.designsystem.FocusStyle
-import dev.niltsiar.tvhome.core.designsystem.TILE_FOCUSED_SCALE
 import dev.niltsiar.tvhome.core.designsystem.addFromTopCentre
-import kotlin.math.ceil
-import kotlin.math.roundToInt
 
-/** The gap, band and keyline of the focus band, which fill [FocusRingReach] between them. */
+/** The gap, band and keyline of the focus band, which fill [dev.niltsiar.tvhome.core.designsystem.FocusRingReach] between them. */
 private val Gap = 2.dp
 private val Band = 5.dp
 private val Keyline = 2.dp
@@ -42,13 +35,6 @@ private val Keyline = 2.dp
 /** With glass_style rim: no fill in the gap, and a band as wide as Glass's heavy ring. */
 private val RimGap = 3.dp
 private val RimBand = 4.dp
-
-/** The wave: its lobes and waists past the tile's edge, its keyline, and how far the rim band reaches in from the wave. */
-private val WavePeak = 7.5.dp
-private val WaveWaist = 2.dp
-private val WaveKeyline = 1.5.dp
-private val WaveRimBand = 4.dp
-private const val WAVE_LOBES = 12
 
 /** The cinch: how far each side dips in, and the rounding of its corners and waists. */
 private val CinchDip = 6.dp
@@ -62,20 +48,10 @@ internal fun Density.cinchOutline(
     offset: Float,
 ): Path = cushionPath(width, height, offset, CinchDip.toPx(), CinchCorner.toPx(), CinchWaist.toPx())
 
-/** The outer edge of the wave's keyline round a [width] by [height] tile with corners of [radius]. */
-internal fun Density.waveOutline(
-    width: Float,
-    height: Float,
-    radius: Float,
-): Path = wavePath(width, height, radius, WavePeak.toPx() + WaveKeyline.toPx(), WaveWaist.toPx() + WaveKeyline.toPx(), WAVE_LOBES)
-
-/** The widest a band ring reaches round the tile, for the masks; whole pixels so they land on the pixel grid. */
-private fun Density.maskReach(): Float = ceil(FocusRingReach.toPx())
-
 /**
  * What one [dev.niltsiar.tvhome.core.designsystem.FocusSurface] keeps to draw its focus in
- * [dev.niltsiar.tvhome.core.config.Look.Expressive]: the capsule's clip steps for its size, the band geometry of the wave
- * or the cinch for its size and style, taken from [BandCache], and the strokes and tints it draws with. Each is built when
+ * [dev.niltsiar.tvhome.core.config.Look.Expressive]: the capsule's clip steps for its size, the band geometry of the
+ * cinch for its size and style, taken from [BandCache], and the strokes and tints it draws with. Each is built when
  * the size, style or colour changes, never on a frame that only moves the focus.
  */
 internal class TilePainter {
@@ -85,8 +61,6 @@ internal class TilePainter {
     private var bandKey: BandKey? = null
     private val strokeWidths = FloatArray(STROKES)
     private val strokes = arrayOfNulls<Stroke>(STROKES)
-    private val tintColours = arrayOfNulls<Color>(2)
-    private val tints = arrayOfNulls<ColorFilter>(2)
 
     /** The arc of a hold cue, rewound and refilled each frame it shows. */
     internal val holdArc = Path()
@@ -174,7 +148,7 @@ internal class TilePainter {
         return steps.shape(steps.radius(morph))
     }
 
-    /** The band geometry of the wave or the cinch for this tile, built or found once per size and style. */
+    /** The band geometry of the cinch for this tile, built or found once per size and style. */
     fun band(
         tile: ExpressiveTile,
         rim: Boolean,
@@ -192,7 +166,7 @@ internal class TilePainter {
         }
     }
 
-    /** The band geometry this painter drew last, for the hold cue; null before it drew a wave or a cinch. */
+    /** The band geometry this painter drew last, for the hold cue; null before it drew a cinch. */
     fun lastBand(): BandGeometry? = band
 
     /** Whether the painter last drew the band of glass_style rim, for the capsule's hold cue. */
@@ -207,19 +181,6 @@ internal class TilePainter {
         return Stroke(width).also {
             strokes[slot] = it
             strokeWidths[slot] = width
-        }
-    }
-
-    /** A tint of an alpha mask in [colour], kept per [slot] while the colour stays. */
-    fun tint(
-        slot: Int,
-        colour: Color,
-    ): ColorFilter {
-        val kept = tints[slot]
-        if (kept != null && tintColours[slot] == colour) return kept
-        return ColorFilter.tint(colour).also {
-            tints[slot] = it
-            tintColours[slot] = colour
         }
     }
 
@@ -257,33 +218,14 @@ private fun buildBand(
     density: Density,
 ): BandGeometry =
     with(density) {
-        when (key.tile) {
-            ExpressiveTile.Wave -> {
-                waveGeometry(
-                    width = key.width,
-                    height = key.height,
-                    radius = key.rest,
-                    peak = WavePeak.toPx(),
-                    waist = WaveWaist.toPx(),
-                    keyline = WaveKeyline.toPx(),
-                    inset = if (key.rim) WaveRimBand.toPx() else null,
-                    lobes = WAVE_LOBES,
-                    reach = maskReach(),
-                    maskScale = TILE_FOCUSED_SCALE,
-                )
-            }
-
-            else -> {
-                cinchGeometry(
-                    width = key.width,
-                    height = key.height,
-                    widths = bandWidths(key.rim),
-                    dip = CinchDip.toPx(),
-                    corner = CinchCorner.toPx(),
-                    waist = CinchWaist.toPx(),
-                )
-            }
-        }
+        cinchGeometry(
+            width = key.width,
+            height = key.height,
+            widths = bandWidths(key.rim),
+            dip = CinchDip.toPx(),
+            corner = CinchCorner.toPx(),
+            waist = CinchWaist.toPx(),
+        )
     }
 
 private fun Density.bandWidths(rim: Boolean): BandWidths =
@@ -331,7 +273,6 @@ internal fun ContentDrawScope.drawExpressiveTile(
     if (ringAlpha <= 0f) return
     when (tile) {
         ExpressiveTile.Capsule -> drawCapsuleBand(painter, radius, rim, ringAlpha, band, gap, keyline)
-        ExpressiveTile.Wave -> drawWaveBand(painter.band(tile, rim, base, size, this), painter, ringAlpha, band, keyline)
         ExpressiveTile.Cinch -> drawCinchBand(painter.band(tile, rim, base, size, this), ringAlpha, band, gap, keyline)
     }
 }
@@ -372,29 +313,6 @@ private fun DrawScope.roundRing(
     )
 }
 
-private fun DrawScope.drawWaveBand(
-    geometry: BandGeometry,
-    painter: TilePainter,
-    alpha: Float,
-    band: Color,
-    keyline: Color,
-) {
-    val masks = geometry.masks ?: return
-    val reach = geometry.maskReach
-    val at = IntOffset(-reach.roundToInt(), -reach.roundToInt())
-    val drawn = IntSize((size.width + 2f * reach).roundToInt(), (size.height + 2f * reach).roundToInt())
-    masks[1]?.let { drawImage(it, dstOffset = at, dstSize = drawn, alpha = alpha, colorFilter = painter.tint(0, band.copy(alpha = 1f))) }
-    masks[2]?.let {
-        drawImage(
-            it,
-            dstOffset = at,
-            dstSize = drawn,
-            alpha = alpha * keyline.alpha,
-            colorFilter = painter.tint(1, keyline.copy(alpha = 1f)),
-        )
-    }
-}
-
 private fun DrawScope.drawCinchBand(
     geometry: BandGeometry,
     alpha: Float,
@@ -410,7 +328,7 @@ private fun DrawScope.drawCinchBand(
 /**
  * The hold cue: a thin line in black or white, whichever reads on [band], from the top centre clockwise, [held] of the way
  * round, through the middle of the band of [tile] at focus [progress]. It runs along the band the painter drew, so it
- * follows the capsule's corner, the wave and the cinch.
+ * follows the capsule's corner and the cinch.
  */
 internal fun DrawScope.drawExpressiveHold(
     painter: TilePainter,
@@ -438,7 +356,7 @@ internal fun DrawScope.drawExpressiveHold(
 /**
  * The charge of a held OK on a tile of [tile] at focus [progress]: a wave along the outer edge of the band the painter drew,
  * whose colour moves from the tertiary of [band]'s family to [band] as the [charge] closes the loop. The capsule's edge
- * follows its pinched corner; the wave's and the cinch's lines were sampled with their band.
+ * follows its pinched corner; the cinch's line was sampled with its band.
  */
 internal fun DrawScope.drawTileCharge(
     painter: TilePainter,

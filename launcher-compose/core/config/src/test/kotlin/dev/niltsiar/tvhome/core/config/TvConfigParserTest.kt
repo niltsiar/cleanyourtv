@@ -417,15 +417,14 @@ val TvConfigParserTest by testSuite {
         }
     }
 
-    test("expressive tile is capsule unless a theme says wave or cinch in any case, and any other value keeps capsule") {
+    test("expressive tile is capsule unless a theme says cinch in any case, and any other value, wave included, keeps capsule") {
         parseTvConfig("""{}""").config.expressiveTile shouldBe ExpressiveTile.Capsule
         parseTvConfig("""{"expressive_tile": "capsule"}""").config.expressiveTile shouldBe ExpressiveTile.Capsule
-        parseTvConfig("""{"expressive_tile": "wave"}""").config.expressiveTile shouldBe ExpressiveTile.Wave
         val cinch = parseTvConfig("""{"expressive_tile": " Cinch "}""")
         cinch.config.expressiveTile shouldBe ExpressiveTile.Cinch
         cinch.rejectedKeys + cinch.unknownKeys + cinch.unsupportedKeys shouldBe emptyList<String>()
 
-        for (bad in listOf("\"cookie\"", "\"\"", "1", "true")) {
+        for (bad in listOf("\"wave\"", "\"Wave\"", "\"cookie\"", "\"\"", "1", "true")) {
             val parsed = parseTvConfig("""{"expressive_tile": $bad}""")
             withClue(bad) { parsed.config.expressiveTile shouldBe ExpressiveTile.Capsule }
             withClue(bad) { parsed.rejectedKeys shouldBe listOf("expressive_tile") }
@@ -684,7 +683,7 @@ val TvConfigParserTest by testSuite {
             "glass_style" to (""""rim"""" to defaults.copy(glassStyle = GlassStyle.Rim)),
             "look" to (""""expressive"""" to defaults.copy(look = Look.Expressive)),
             "expressive_seed" to (""""#336699"""" to defaults.copy(expressiveSeed = 0xFF336699.toInt())),
-            "expressive_tile" to (""""wave"""" to defaults.copy(expressiveTile = ExpressiveTile.Wave)),
+            "expressive_tile" to (""""cinch"""" to defaults.copy(expressiveTile = ExpressiveTile.Cinch)),
             "wallpaper" to ("false" to defaults.copy(wallpaper = false)),
             "wallpaper_rotation_minutes" to ("30" to defaults.copy(wallpaperRotationMinutes = 30)),
             "wallpaper_dim" to ("40" to defaults.copy(wallpaperDim = 40)),

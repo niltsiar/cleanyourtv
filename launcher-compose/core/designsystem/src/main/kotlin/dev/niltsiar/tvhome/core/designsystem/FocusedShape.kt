@@ -15,13 +15,12 @@ import androidx.compose.ui.unit.LayoutDirection
 import dev.niltsiar.tvhome.core.config.ExpressiveTile
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.expressive.cinchOutline
-import dev.niltsiar.tvhome.core.designsystem.expressive.waveOutline
 import kotlin.math.abs
 import kotlin.math.min
 
 /**
- * The outline of a focused tile, for what is drawn round it: in Glass, and for the wave, whose art stays a rounded
- * rectangle, the tile's own shape; for the capsule a full capsule, for the cinch its cushion. [bandOutline] is the outer
+ * The outline of a focused tile, for what is drawn round it: in Glass the tile's own shape; for the capsule a full
+ * capsule, for the cinch its cushion. [bandOutline] is the outer
  * edge of its focus band, and [sideReach] how far past the tile's left and right edges, at mid height, that edge lies.
  * Each is built once per size and tile and kept, so reading them in draw allocates nothing after the first frame.
  */
@@ -53,7 +52,7 @@ public class FocusedShape internal constructor(
         layoutDirection: LayoutDirection,
         density: Density,
     ): Outline {
-        if (look.look != Look.Expressive || look.tile == ExpressiveTile.Wave) return base.createOutline(size, layoutDirection, density)
+        if (look.look != Look.Expressive) return base.createOutline(size, layoutDirection, density)
         build(base, size, density)
         return checkNotNull(outline)
     }
@@ -112,15 +111,6 @@ public class FocusedShape internal constructor(
             ExpressiveTile.Cinch -> {
                 val edge = density.cinchOutline(size.width, size.height, ringReach)
                 outline = Outline.Generic(density.cinchOutline(size.width, size.height, 0f))
-                band = Outline.Generic(edge)
-                reach = -leftAtMiddle(edge, size)
-            }
-
-            ExpressiveTile.Wave -> {
-                val rest =
-                    (base.createOutline(size, LayoutDirection.Ltr, density) as? Outline.Rounded)?.roundRect?.topLeftCornerRadius?.x ?: 0f
-                val edge = density.waveOutline(size.width, size.height, rest)
-                outline = null
                 band = Outline.Generic(edge)
                 reach = -leftAtMiddle(edge, size)
             }

@@ -80,11 +80,9 @@ class HomeGoldenTestContent :
                 }
 
                 if (look == Look.Expressive) {
-                    for (tile in listOf(ExpressiveTile.Wave, ExpressiveTile.Cinch)) {
-                        test("home with focus on the dock, in Expressive with the ${tile.name.lowercase()} tile") {
-                            showHome(x.copy(expressiveTile = tile))
-                            golden("expressive-dock-focus-${tile.name.lowercase()}")
-                        }
+                    test("home with focus on the dock, in Expressive with the cinch tile") {
+                        showHome(x.copy(expressiveTile = ExpressiveTile.Cinch))
+                        golden("expressive-dock-focus-cinch")
                     }
                 }
 
@@ -173,23 +171,20 @@ class HomeGoldenTestContent :
                         golden("expressive-tide-settled")
                     }
 
-                    for (tile in listOf(ExpressiveTile.Wave, ExpressiveTile.Cinch)) {
-                        val variant = tile.name.lowercase()
-                        test("a tile menu open, in Expressive with the $variant tile") {
-                            showHome(x.copy(expressiveTile = tile))
-                            press(Key.Menu)
-                            compose.onNodeWithTag("menu").assertExists()
-                            golden("expressive-tile-menu-$variant")
-                        }
+                    test("a tile menu open, in Expressive with the cinch tile") {
+                        showHome(x.copy(expressiveTile = ExpressiveTile.Cinch))
+                        press(Key.Menu)
+                        compose.onNodeWithTag("menu").assertExists()
+                        golden("expressive-tile-menu-cinch")
+                    }
 
-                        test("reorder mode, in Expressive with the $variant tile") {
-                            showHome(x.copy(expressiveTile = tile))
-                            press(Key.Menu)
-                            press(Key.DirectionDown)
-                            press(Key.DirectionCenter)
-                            compose.onNodeWithTag("reorder:hint").assertExists()
-                            golden("expressive-reorder-$variant")
-                        }
+                    test("reorder mode, in Expressive with the cinch tile") {
+                        showHome(x.copy(expressiveTile = ExpressiveTile.Cinch))
+                        press(Key.Menu)
+                        press(Key.DirectionDown)
+                        press(Key.DirectionCenter)
+                        compose.onNodeWithTag("reorder:hint").assertExists()
+                        golden("expressive-reorder-cinch")
                     }
                 }
 
