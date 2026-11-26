@@ -109,5 +109,3 @@ private fun cookieOutline(): Path {
     path.fillType = Path.FillType.INVERSE_WINDING
     return path
 }
-
-private const val OUTLINE_SAMPLES = 720

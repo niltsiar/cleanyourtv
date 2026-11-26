@@ -1,5 +1,6 @@
 package dev.niltsiar.tvhome.core.designsystem
 
+import android.graphics.Bitmap
 import android.graphics.Rect
 import android.os.Build
 import androidx.compose.animation.core.Animatable
@@ -14,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.layer.GraphicsLayer
@@ -30,7 +32,6 @@ import androidx.compose.ui.node.requireLayoutCoordinates
 import androidx.compose.ui.node.requireLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntSize
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
@@ -196,14 +197,10 @@ internal class LookFlipNode(
         shot.record(requireDensity(), requireLayoutDirection(), IntSize(size.width / 2, size.height / 2)) {
             scale(0.5f, pivot = Offset.Zero) { drawLayer(page) }
         }
-        return try {
-            shot.toImageBitmap()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: RuntimeException) {
-            // A hardware bitmap the graphics memory cannot hold comes back as null, which fails here.
-            null
-        }
+        val image = shot.toImageBitmap()
+        // A hardware bitmap the graphics memory cannot hold comes back as null, which toImageBitmap wraps unchecked.
+        val bitmap: Bitmap? = image.asAndroidBitmap()
+        return if (bitmap == null) null else image
     }
 
     /** The centre of the focused element, on the page; without one, of the window's Compose view. */

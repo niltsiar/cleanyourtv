@@ -20,6 +20,7 @@ internal object WallpaperHue {
      * each weighted by its saturation, and the mean hue of the heaviest bin. Null when too few pixels have a hue.
      */
     fun dominant(pixels: IntArray): Float? {
+        if (pixels.isEmpty()) return null
         val weights = FloatArray(BINS)
         val hueSums = FloatArray(BINS)
         for (pixel in pixels) {

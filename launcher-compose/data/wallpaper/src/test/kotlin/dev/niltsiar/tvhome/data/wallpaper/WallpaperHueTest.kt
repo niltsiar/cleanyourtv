@@ -31,6 +31,10 @@ val WallpaperHueTest by testSuite {
         WallpaperHue.dominant(pixels).shouldBeNull()
     }
 
+    test("a picture with no pixels gives no hue") {
+        WallpaperHue.dominant(IntArray(0)).shouldBeNull()
+    }
+
     test("a mixed picture gives the hue that weighs most and ignores its grey") {
         val pixels = picture(0xFF808080.toInt())
         val orange = 0xFFE08A20.toInt()

@@ -24,13 +24,14 @@ import kotlin.math.min
  * The outline of a focused tile's art, for what is drawn round it: in Glass the tile's own shape; for the capsule a full
  * capsule, for the cinch a rounded rectangle whose corners stay inside its band. [bandOutline] is the outer
  * edge of its focus band, and [sideReach] how far past the tile's left and right edges, at mid height, that edge lies.
- * Each is built once per size and tile and kept, so reading them in draw allocates nothing after the first frame.
+ * Each is built once per base shape, size and tile and kept, so reading them in draw allocates nothing after the first frame.
  */
 @Stable
 public class FocusedShape internal constructor(
     private val look: LookState,
 ) {
     private var builtTile: ExpressiveTile? = null
+    private var builtBase: Shape? = null
     private var builtSize = Size.Unspecified
     private var builtDensity = 0f
     private var outline: Outline? = null
@@ -91,7 +92,7 @@ public class FocusedShape internal constructor(
         density: Density,
     ) {
         val tile = look.tile
-        if (tile == builtTile && size == builtSize && density.density == builtDensity) return
+        if (tile == builtTile && base == builtBase && size == builtSize && density.density == builtDensity) return
         val ringReach = with(density) { FocusRingReach.toPx() }
         when (tile) {
             ExpressiveTile.Capsule -> {
@@ -119,6 +120,7 @@ public class FocusedShape internal constructor(
             }
         }
         builtTile = tile
+        builtBase = base
         builtSize = size
         builtDensity = density.density
     }
@@ -131,7 +133,8 @@ public fun rememberFocusedShape(): FocusedShape {
     return remember(look) { FocusedShape(look) }
 }
 
-private const val OUTLINE_SAMPLES = 720
+/** The points an outline is sampled at, along its whole length, where a shape is measured from its path. */
+internal const val OUTLINE_SAMPLES = 720
 
 /** The x of [path]'s left side where it crosses the middle height of a tile of [size], from samples along it. */
 private fun leftAtMiddle(

@@ -7,7 +7,10 @@ import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.designsystem.TvElementColors
 import dev.niltsiar.tvhome.core.designsystem.TvShapes
 
-/** The shapes of [dev.niltsiar.tvhome.core.config.Look.Expressive]: tighter tiles at rest, rounder chrome, keys on soft squares. */
+/**
+ * The shapes of [dev.niltsiar.tvhome.core.config.Look.Expressive]: rounder chrome and keys on soft squares. Its tile is the
+ * default shape of a [dev.niltsiar.tvhome.core.designsystem.FocusSurface]; Home's tiles keep their own corner at rest.
+ */
 internal val ExpressiveShapes: TvShapes =
     TvShapes(
         tile = RoundedCornerShape(12.dp),

@@ -5,21 +5,27 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PixelMap
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import de.infix.testBalloon.framework.core.JUnit4RulesContext
 import de.infix.testBalloon.framework.core.TestConfig
@@ -30,10 +36,14 @@ import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.ExpressiveTile
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.expressive.BandReach
+import dev.niltsiar.tvhome.core.designsystem.expressive.cinchArtRadius
 import dev.niltsiar.tvhome.core.designsystem.expressive.cinchOutline
+import dev.niltsiar.tvhome.core.designsystem.expressive.restRadius
 import io.kotest.assertions.withClue
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.floats.shouldBeGreaterThan
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 
 /** The tiles' art: a green that neither the band, the gap, the keyline nor the black ground has. */
 private val Art = Color(0xFF00C000)
@@ -126,6 +136,22 @@ class ExpressiveTileArtTestContent :
                         }
                     withClue("art pixels outside the band, first of them") { outside.take(8).shouldBeEmpty() }
                 }
+            }
+
+            test("a focused cinch tile's art outline follows the rest corner of the base shape it is asked for") {
+                val shape = FocusedShape(LookState(Look.Expressive) { Color.Red }.apply { tile = ExpressiveTile.Cinch })
+                val size = Size(250f, 140f)
+                val density = Density(2f)
+
+                fun corner(base: Shape) =
+                    (shape.outline(base, size, LayoutDirection.Ltr, density) as Outline.Rounded).roundRect.topLeftCornerRadius.x
+
+                fun expected(base: Shape) = with(density) { cinchArtRadius(size.width, size.height, restRadius(base, size)) }
+                val (soft, round) = RoundedCornerShape(20.dp) to RoundedCornerShape(30.dp)
+                expected(soft) shouldNotBe expected(round)
+
+                corner(soft) shouldBe expected(soft)
+                corner(round) shouldBe expected(round)
             }
 
             test("a focused cinch tile's halo starts at the outer edge of its band, so its waist shows no ground inside the glow") {

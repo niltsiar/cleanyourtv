@@ -159,7 +159,10 @@ public class LookColors internal constructor(
     public val lightTileEdge: ColorProducer = ColorProducer { if (expressive) look.scheme(dark = false).onSurface else GlassLightTileEdge }
     public val glassTileEdge: ColorProducer = ColorProducer { if (expressive) Color.Transparent else GlassGlassTileEdge }
 
-    /** The mark under the app the household usually opens now, and its edge. Expressive's is the house secondary, a hint quieter than the focus. */
+    /**
+     * The mark under the app the household usually opens now, and its edge. Expressive's is the house secondary, a hint
+     * quieter than the focus.
+     */
     public val habitMark: ColorProducer = ColorProducer { if (expressive) scheme.secondary else GlassHabitMark }
     public val habitMarkEdge: ColorProducer = ColorProducer { HabitMarkEdge }
 

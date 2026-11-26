@@ -193,11 +193,9 @@ private val GlintWidth = 200.dp
 private val GlintHeight = 20.dp
 private const val SEEN = 0.01f
 
-/**
- * The Expressive light: a cushion [CushionInset] inside the panel's top and bottom, [LightWidth] wide with [CushionCorner]
- * corners, that stretches by [STRETCH] of its lag behind the tile, up to [MostStretch], towards the tile while it moves;
- * and a crest [CrestHeight] tall on the lip above it.
- */
+// The Expressive light: a cushion CushionInset inside the panel's top and bottom, LightWidth wide with CushionCorner
+// corners, that stretches by STRETCH of its lag behind the tile, up to MostStretch, towards the tile while it moves; and a
+// crest CrestHeight tall on the lip above it.
 private val CushionInset = 8.dp
 private val CushionCorner = 28.dp
 private val MostStretch = 48.dp

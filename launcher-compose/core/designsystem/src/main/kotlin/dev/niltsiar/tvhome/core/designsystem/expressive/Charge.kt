@@ -46,7 +46,8 @@ internal val ChargeWidth = 2.dp
 
 /**
  * The line a charge runs along, from the middle of its top clockwise: [CHARGE_POINTS] points evenly spaced along it, each
- * with its outward normal, as x, y, normal x, normal y. A line is sampled when its outline is built, never per frame.
+ * with its outward normal, as x, y, normal x, normal y. A tile's line is sampled when its outline is built; a capsule's is
+ * sampled again in each charged frame, as its corner pinches, into the same array.
  */
 internal class ChargeLine {
     val points = FloatArray(CHARGE_POINTS * 4)
