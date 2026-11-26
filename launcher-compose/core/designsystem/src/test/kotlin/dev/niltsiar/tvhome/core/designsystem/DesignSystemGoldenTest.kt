@@ -27,8 +27,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -60,8 +62,11 @@ import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.ExpressiveTile
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.golden.assertMatchesGolden
+import dev.niltsiar.tvhome.core.designsystem.golden.bands
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.Canvas as ImageCanvas
 
 /** Golden images of the design system's surfaces in the Glass and Expressive looks (docs/testing.md, "Golden tests"). */
@@ -464,6 +469,27 @@ class DesignSystemGoldenTestContent :
                     }
                 }
                 golden("type-roles")
+            }
+
+            for (look in Look.entries) {
+                test("a look flip into ${look.name} from a chip at 0, 250 and 500 ms") {
+                    val hole = FlipHole()
+                    val progress = Animatable(0f)
+                    val picture = bands(320, 180, listOf(Color(0xFF2A6F97), Color(0xFF6B4E8C), Color(0xFF3B5B8C), Color(0xFF8C6B3B)))
+                    lateinit var scope: CoroutineScope
+                    show(look = look) {
+                        scope = rememberCoroutineScope()
+                        Box(
+                            Modifier.size(320.dp, 180.dp).drawWithContent {
+                                drawRect(Ember)
+                                drawRect(Mint, topLeft = Offset(0f, size.height / 2f), size = Size(size.width / 2f, size.height / 2f))
+                                with(hole) { drawFlip(picture, Offset(80.dp.toPx(), 140.dp.toPx()), progress.value) }
+                            },
+                        )
+                    }
+                    compose.runOnUiThread { scope.launch { progress.animateTo(1f, Motion(look = look).flipSpec()) } }
+                    steps(0, 250, 500) { golden("look-flip-${look.name.lowercase()}-${it}ms") }
+                }
             }
         }
     })

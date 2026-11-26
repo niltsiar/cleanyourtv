@@ -154,6 +154,9 @@ public data class Motion(
             else -> MotionScheme.expressive().fastEffectsSpec()
         }
 
+    /** How the hole of a look flip grows over the page: in the look it reveals, over about [FLIP_MS]. */
+    public fun flipSpec(): FiniteAnimationSpec<Float> = if (expressive) MotionScheme.expressive().slowSpatialSpec() else tweenSpec(FLIP_MS)
+
     public companion object {
         /**
          * How the dock's edge light catches up with a newly focused tile ([DockEdgeLight]) in [look], whatever the motion
@@ -200,6 +203,9 @@ public data class Motion(
         private const val DOCK_LIGHT_DAMPING = 1f
         private const val DOCK_LIGHT_STIFFNESS = 500f
         private const val DOCK_LIGHT_FADE_MS = 160
+
+        /** How long a look flip takes, in milliseconds. */
+        public const val FLIP_MS: Int = 500
     }
 }
 
