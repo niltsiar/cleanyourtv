@@ -15,7 +15,6 @@ import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -86,6 +85,7 @@ import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -126,7 +126,10 @@ private val PanelBottom = 31.dp
 private val HeaderTitleHeight = 37.5.dp
 private val HeaderHintHeight = KeyChipHeight
 
-/** Under the hint row: a focused top-row card's ring starts at the grid's top edge, and this keeps the key caps 16 dp clear of it. */
+/**
+ * Under the hint row: a focused top-row card's ring starts at the grid's top edge, and this keeps the key caps 16 dp clear of
+ * it; an Expressive capsule reaches [GridView.overhang] past that edge.
+ */
 private val HeaderGridGap = 11.5.dp
 private val PanelRise = 56.dp
 private const val PANEL_START_SCALE = 0.92f
@@ -137,7 +140,7 @@ private const val ROWS = 3
 private val CardGap = 20.dp
 private val RowGap = 19.dp
 
-/** A focused card's growth and ring reach 13 dp past its sides, and the grid clips at its edges. */
+/** A focused card's growth and ring reach 13 dp past its sides, and the grid clips at its edges, but for a [GridView.overhang]. */
 private val GridEdge = 13.dp
 
 /** The grid's top and bottom padding: [GridEdge], or with a pop the reach of a focused card's growth and ring at its peak. */
@@ -517,7 +520,10 @@ private fun Cards(
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val pitch = with(density) { (CardHeight + RowGap).toPx() }
     val gridEdgeY = TvTheme.motion.gridEdgeY()
-    val bringIntoView = remember(gridState, density, gridEdgeY) { RowBringIntoViewSpec(gridState, with(density) { gridEdgeY.toPx() }) }
+    val lookState = TvTheme.lookState
+    val view = remember(lookState, gridEdgeY) { GridView(lookState, GridEdge, gridEdgeY) }
+    val overhanging = remember(view) { Modifier.overhanging(view) }
+    val bringIntoView = remember(gridState, density, view) { RowBringIntoViewSpec(gridState, density, view) }
     // Read here, not in the grid's content, so a focus move does not rebuild what the grid lists.
     val cards = remember(state) { derivedStateOf { state().cards } }.value
     val statusFree = remember(cards, layout) { cards.none { it.hasStatusLine(layout) } }
@@ -534,11 +540,11 @@ private fun Cards(
             LazyVerticalGrid(
                 columns = GridCells.Fixed(COLUMNS),
                 state = gridState,
-                contentPadding = PaddingValues(horizontal = GridEdge, vertical = gridEdgeY),
+                contentPadding = view.padding,
                 horizontalArrangement = Arrangement.spacedBy(CardGap),
                 verticalArrangement = Arrangement.spacedBy(RowGap),
                 modifier =
-                    Modifier.fillMaxSize().testTag("library:cards").onPreviewKeyEvent { event ->
+                    Modifier.fillMaxSize().testTag("library:cards").then(overhanging).onPreviewKeyEvent { event ->
                         val move = event.gridMove(rtl) ?: return@onPreviewKeyEvent false
                         if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                         val from = cards.indexOfFirst { it.app.key == state().focusedKey }
@@ -567,6 +573,7 @@ private fun Cards(
                         anchor = anchor,
                         requester = focus.requester(card.app.key),
                         launching = launching,
+                        view = view,
                         modifier =
                             Modifier.animateItem(
                                 fadeInSpec = null,
@@ -637,19 +644,21 @@ private suspend fun CardFocus.moveTo(
 }
 
 /**
- * Keeps the focused card [margin] pixels inside the top and bottom of the grid, so its ring shows whole: the grid scrolls
+ * Keeps the focused card [GridView.edgeY] inside the top and bottom of the [view], so its ring shows whole: the grid scrolls
  * the one row that brings it there and no more.
  */
 @OptIn(ExperimentalFoundationApi::class)
 private class RowBringIntoViewSpec(
     private val grid: LazyGridState,
-    private val margin: Float,
+    private val density: Density,
+    private val view: GridView,
 ) : BringIntoViewSpec {
     override fun calculateScrollDistance(
         offset: Float,
         size: Float,
         containerSize: Float,
     ): Float {
+        val margin = with(density) { view.edgeY.toPx() } + view.overhangPx(density)
         // The offset comes with the focused card's growth in it, the size without; the card's slot in the grid has neither.
         val info = grid.layoutInfo
         val center = offset + size / 2f

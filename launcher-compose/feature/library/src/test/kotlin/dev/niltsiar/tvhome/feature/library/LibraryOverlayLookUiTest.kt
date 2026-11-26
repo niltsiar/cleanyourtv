@@ -58,6 +58,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.ExpressiveTile
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.FocusRingReach
@@ -174,6 +175,41 @@ class LibraryOverlayLookUiTestContent :
                         }
                     }
 
+                    if (look == Look.Expressive) {
+                        test("a focused capsule and its band show whole past the grid's top and bottom edges as past its sides") {
+                            showLibrary(twentyThree)
+
+                            val reach = (FocusOutset + FocusRingReach).value
+                            val drawn = drawnPastEveryEdge()
+                            withClue("drawn past the edge in dp, wanted $reach: $drawn") {
+                                drawn.all { abs(it.second - reach) <= 0.5f }.shouldBeTrue()
+                            }
+                        }
+                    }
+
+                    test("a row that scrolls past the grid's top or bottom edge is cut at that edge on every frame") {
+                        showLibrary(twentyThree)
+                        press(Key.DirectionDown, times = 2)
+                        val grid = bounds("library:cards")
+                        // App 02 leaves past the top; App 20, under App 14, comes in past the bottom.
+                        val column = card(app(2))
+                        val reach = FocusOutset + FocusRingReach
+                        val strips =
+                            listOf(
+                                DpRect(column.left, grid.top - reach, column.right, grid.top),
+                                DpRect(column.left, grid.bottom, column.right, grid.bottom + reach),
+                            )
+                        val still = strips.map { stripPixels(it) }
+
+                        compose.mainClock.autoAdvance = false
+                        compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+                        repeat(FRAMES) { frame ->
+                            compose.mainClock.advanceTimeByFrame()
+                            withClue("frame $frame") { strips.map { stripPixels(it) } shouldBe still }
+                        }
+                        withClue("the grid scrolled") { card(app(20)).bottom shouldBeLessThanOrEqualTo grid.bottom }
+                    }
+
                     test("a bright home does not show through the panel") {
                         bleedThrough() shouldBeLessThanOrEqualTo MAX_BLEED
                     }
@@ -247,23 +283,26 @@ class LibraryOverlayLookUiTestContent :
                         (card("App 1").top - bounds("library:cards").top).value shouldBe (peakReach plusOrMinus 0.6f)
                     }
 
-                    test("a focused top row card has its ring at least 16 dp below the hint row key caps") {
+                    // The Expressive capsule reaches past the grid's top edge.
+                    val ringRoom = if (look == Look.Expressive) 12.dp else 16.dp
+
+                    test("a focused top row card has its ring at least $ringRoom below the hint row key caps") {
                         showLibrary(nineApps)
 
-                        withClue("${ringRoomUnderKeyCaps("App 1")}") { ringRoomUnderKeyCaps("App 1") shouldBeGreaterThanOrEqualTo 16.dp }
+                        withClue("${ringRoomUnderKeyCaps("App 1")}") { ringRoomUnderKeyCaps("App 1") shouldBeGreaterThanOrEqualTo ringRoom }
                     }
 
-                    test("a focused top row card has its ring at least 16 dp below the key caps with the order chip shown") {
+                    test("a focused top row card has its ring at least $ringRoom below the key caps with the order chip shown") {
                         showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
                         press(Key.DirectionRight)
 
-                        withClue("${ringRoomUnderKeyCaps("App 2")}") { ringRoomUnderKeyCaps("App 2") shouldBeGreaterThanOrEqualTo 16.dp }
+                        withClue("${ringRoomUnderKeyCaps("App 2")}") { ringRoomUnderKeyCaps("App 2") shouldBeGreaterThanOrEqualTo ringRoom }
                     }
 
-                    test("in the chooser a focused top row card has its ring at least 16 dp below the hint row key caps") {
+                    test("in the chooser a focused top row card has its ring at least $ringRoom below the hint row key caps") {
                         showChooser()
 
-                        withClue("${ringRoomUnderKeyCaps("Aaa")}") { ringRoomUnderKeyCaps("Aaa") shouldBeGreaterThanOrEqualTo 16.dp }
+                        withClue("${ringRoomUnderKeyCaps("Aaa")}") { ringRoomUnderKeyCaps("Aaa") shouldBeGreaterThanOrEqualTo ringRoom }
                     }
 
                     test("the 23rd app is seven presses from the first and no key goes past an edge") {
@@ -1309,11 +1348,12 @@ private class LibraryOverlayLookUiFixture(
         motion: Motion = Motion(),
         focusStyle: FocusStyle = FocusStyle.Glass,
         record: OpenedRecord = OpenedRecord(),
+        tile: ExpressiveTile = ExpressiveTile.Capsule,
     ) {
         val library = FakeLibrary(apps).apply { this.record = record }
         lateinit var viewModel: MoleculeLibraryViewModel
         compose.setContent {
-            TvTheme(look = look, motion = motion, focusStyle = focusStyle) {
+            TvTheme(look = look, motion = motion, focusStyle = focusStyle, expressiveTile = tile) {
                 shapes = TvTheme.shapes
                 val scope = rememberCoroutineScope()
                 viewModel =
@@ -1555,6 +1595,76 @@ private class LibraryOverlayLookUiFixture(
         return (0 until pixels.height).flatMap { y -> (0 until pixels.width).map { x -> pixels[x, y] } }
     }
 
+    /**
+     * How far the focused card draws past each edge of the grid of [twentyThree], in dp: past its top and left edges from
+     * App 01, top and right from App 06, bottom and right from App 18 and bottom and left from App 13.
+     */
+    fun drawnPastEveryEdge(): List<Pair<String, Float>> {
+        val drawn = mutableListOf<Pair<String, Float>>()
+
+        fun read(
+            number: Int,
+            vararg sides: Side,
+        ) {
+            val pixels = compose.onRoot().captureToImage().toPixelMap()
+            for (side in sides) drawn += "${app(number)} $side" to drawnPast(pixels, app(number), side).value
+        }
+        read(1, Side.Top, Side.Left)
+        press(Key.DirectionRight, times = 5)
+        read(6, Side.Top, Side.Right)
+        press(Key.DirectionDown, times = 2)
+        read(18, Side.Bottom, Side.Right)
+        press(Key.DirectionLeft, times = 5)
+        read(13, Side.Bottom, Side.Left)
+        return drawn
+    }
+
+    /**
+     * How far past [side] of the focused card [name] of [twentyThree] it draws: the walk in from 24 dp out stops at the first
+     * pixel that differs from the same walk by an idle card, App 02 or App 14 in its row for the top and bottom, App 07 or
+     * App 12 in its column for the sides.
+     */
+    fun drawnPast(
+        pixels: PixelMap,
+        name: String,
+        side: Side,
+    ): Dp {
+        val density = compose.activity.resources.displayMetrics.density
+        val number = name.removePrefix("App ").toInt()
+        val column = (number - 1) % 6
+        val row = (number - 1) / 6
+        val ground = card(if (side == Side.Top || side == Side.Bottom) app(row * 6 + 2) else app(6 + column + 1))
+        val card = card(name)
+
+        fun px(dp: Dp) = (dp.value * density).toInt()
+        val dx = px(ground.left) - px(card.left)
+        val dy = px(ground.top) - px(card.top)
+        val start = px(24.dp)
+        val (x0, y0, stepX, stepY) =
+            when (side) {
+                Side.Top -> listOf(px((card.left + card.right) / 2), px(card.top) - start, 0, 1)
+                Side.Bottom -> listOf(px((card.left + card.right) / 2), px(card.bottom) + start - 1, 0, -1)
+                Side.Left -> listOf(px(card.left) - start, px((card.top + card.bottom) / 2), 1, 0)
+                Side.Right -> listOf(px(card.right) + start - 1, px((card.top + card.bottom) / 2), -1, 0)
+            }
+        val first =
+            (0 until start).firstOrNull { step ->
+                val at = pixels[x0 + stepX * step, y0 + stepY * step]
+                val idle = pixels[x0 + stepX * step + dx, y0 + stepY * step + dy]
+                (abs(at.red - idle.red) + abs(at.green - idle.green) + abs(at.blue - idle.blue)) * 255 >= DRAWN
+            } ?: start
+        return ((start - first) / density).dp
+    }
+
+    /** The colours of the screen in [strip], row by row. */
+    fun stripPixels(strip: DpRect): List<Color> {
+        val density = compose.activity.resources.displayMetrics.density
+        val pixels = compose.onRoot().captureToImage().toPixelMap()
+
+        fun px(dp: Dp) = (dp.value * density).toInt()
+        return (px(strip.top) until px(strip.bottom)).flatMap { y -> (px(strip.left) until px(strip.right)).map { x -> pixels[x, y] } }
+    }
+
     /** Whether the pixel at ([x], [y]) differs from the panel 40 dp to its left, where a chevron's tip would be. */
     fun cueAt(
         x: Dp,
@@ -1578,9 +1688,17 @@ private class LibraryOverlayLookUiFixture(
         return (lit.min() / density)..((lit.max() + 1) / density)
     }
 
-    /** The room between the hint row's key caps and the outer edge of the focused card's ring, as the grid shows it. */
+    /**
+     * The room between the hint row's key caps and the outer edge of the focused card's ring, as the grid shows it: in
+     * Expressive the capsule's, which the grid lets through whole.
+     */
     fun ringRoomUnderKeyCaps(name: String): Dp {
-        val ringTop = maxOf(grownCard(name).top - FocusRingReach * FOCUSED_SCALE, bounds("library:cards").top)
+        val ringTop =
+            if (look == Look.Expressive) {
+                focusedCard(name).top - FocusOutset - FocusRingReach
+            } else {
+                maxOf(grownCard(name).top - FocusRingReach * FOCUSED_SCALE, bounds("library:cards").top)
+            }
         return ringTop - hintPart("OK").getBoundsInRoot().bottom
     }
 
@@ -2030,6 +2148,9 @@ private const val FRAMES = 24
 private const val RING_STRONG = 200
 private const val RING_CORE = 300
 private const val HALO_MIN = 4
+
+/** How much, summed over red, green and blue out of 255, a pixel the focused card draws differs from the panel. */
+private const val DRAWN = 12
 private const val FOCUSED_SCALE = 1.08f
 
 /** The art of the focused-shape test, and the luminance under which a pixel is the dark gap or keyline round a focused card. */

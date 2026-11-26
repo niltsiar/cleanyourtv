@@ -24,6 +24,7 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -100,7 +101,7 @@ private const val POP_SCALE = 0.12f
 internal const val FOCUSED_SCALE = 1.08f
 
 /** How far past the card an Expressive capsule grows when focused, so the art's corners, the name and the marks stay inside it. */
-private val FocusOutset = 8.dp
+internal val FocusOutset = 8.dp
 private val StatusHeight = 14.dp
 private val MarkGap = 4.dp
 private val CheckSize = 18.dp
@@ -127,7 +128,7 @@ private const val OFF_HOME_MS = 150
  * in the chooser pulses its mark. Both run in the layer lambda. The status slot keeps its place while the card grows, so
  * it stays level with the cards beside it. [widthPx] is the narrowest the card can be. When no card of the grid has a
  * status line, [statusFree] is true and the art and name take the whole card, centred. With [LibraryLayout.pressFeedback]
- * OK dips the card and lights its ring, unless an app is [launching].
+ * OK dips the card and lights its ring, unless an app is [launching]. Without focus it draws nothing past the grid's [view].
  */
 @Composable
 internal fun LibraryCardView(
@@ -144,6 +145,7 @@ internal fun LibraryCardView(
     anchor: (Rect) -> Unit,
     requester: FocusRequester,
     launching: () -> Boolean,
+    view: GridView,
     modifier: Modifier = Modifier,
 ) {
     val key = card.app.key
@@ -193,9 +195,11 @@ internal fun LibraryCardView(
     val artAlpha = remember(focus, dim) { { lerp(1f, lerp(OFF_HOME_ART_ALPHA, OFF_HOME_FOCUSED_ART_ALPHA, focusProgress()), dim.value) } }
     val nameAlpha = remember(focus, dim) { { lerp(1f, lerp(OFF_HOME_NAME_ALPHA, 1f, focusProgress()), dim.value) } }
     val checkScale = remember(pulse) { { 1f + CHECK_PULSE_SCALE * (1f - abs(2f * pulse.value - 1f)).coerceIn(0f, 1f) } }
+    val focused = remember(focus) { derivedStateOf { focus.targetValue > 0f || focus.value > 0f } }
+    val hasFocus = remember(focused) { { focused.value } }
     Box(
         modifier =
-            modifier.popsOver(focus).fillMaxWidth().height(CardHeight).graphicsLayer {
+            modifier.popsOver(focus).fillMaxWidth().height(CardHeight).cutAtView(view, hasFocus).graphicsLayer {
                 compositingStrategy = CompositingStrategy.ModulateAlpha
                 alpha = enter.value.coerceIn(0f, 1f)
                 translationY = (1f - enter.value) * EnterRise.toPx()
