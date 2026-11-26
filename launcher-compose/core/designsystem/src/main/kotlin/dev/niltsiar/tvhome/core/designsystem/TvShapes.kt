@@ -33,6 +33,10 @@ public class TvShapes internal constructor(
     public val libraryCardCorner: Dp,
     /** The art on a library card. */
     public val libraryArt: Shape,
+    /** A notice that stays until a key, as wide as a panel's list. */
+    public val notice: Shape,
+    /** The art of an entry in a picker. */
+    public val pickerArt: Shape,
 ) {
     /** A card in the App library's grid. */
     public val libraryCard: Shape = RoundedCornerShape(libraryCardCorner)
@@ -56,4 +60,6 @@ internal val GlassShapes: TvShapes =
         chipKey = CircleShape,
         libraryCardCorner = 16.dp,
         libraryArt = RoundedCornerShape(8.dp),
+        notice = RoundedCornerShape(12.dp),
+        pickerArt = RoundedCornerShape(6.dp),
     )

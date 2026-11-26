@@ -4,7 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,7 +17,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,11 +47,11 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.OverlaySurface
-import dev.niltsiar.tvhome.core.designsystem.SCROLL_CUE_ALPHA
-import dev.niltsiar.tvhome.core.designsystem.SCROLL_CUE_PILL_ALPHA
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.drawScrollDownCue
 import dev.niltsiar.tvhome.core.designsystem.growOrigin
+import dev.niltsiar.tvhome.core.designsystem.tokenBackground
+import dev.niltsiar.tvhome.core.designsystem.tokenBorder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -70,10 +68,7 @@ private const val LEAD_ROWS = 2
 private val ArtWidth = 96.dp
 private val ArtHeight = 54.dp
 private val ArtMargin = 6.dp
-private val ArtShape = RoundedCornerShape(6.dp)
-private const val ART_SLOT_ALPHA = 0.08f
 private val SwatchOutlineWidth = 1.dp
-private val SwatchOutline = Color.White.copy(alpha = 0.20f)
 
 /**
  * One entry of a picker: its [label], a [detail] line under it or null, and the key of its [art], or null for none. An entry
@@ -158,9 +153,7 @@ internal fun <K : Any> BoxScope.PickerPanel(
                 .focusProperties { exit = { FocusRequester.Cancel } }
                 .focusGroup(),
     ) {
-        val ink = TvTheme.colors.onSurface
-        val cueInk = ink.copy(alpha = SCROLL_CUE_ALPHA)
-        val cuePill = ink.copy(alpha = SCROLL_CUE_PILL_ALPHA)
+        val colours = TvTheme.lookColors
         Column {
             PanelTitle(stringResource(title), "settings:picker:title")
             // The bottom margin is outside the list, so the rows never scroll under the cue drawn in it.
@@ -168,7 +161,9 @@ internal fun <K : Any> BoxScope.PickerPanel(
                 modifier =
                     Modifier.padding(bottom = PickerSide).drawWithContent {
                         drawContent()
-                        if (list.canScrollForward) drawScrollDownCue(size.height + PickerSide.toPx() / 2f, cueInk, cuePill)
+                        if (list.canScrollForward) {
+                            drawScrollDownCue(size.height + PickerSide.toPx() / 2f, colours.panelCue(), colours.panelCuePill())
+                        }
                     },
                 state = list,
                 contentPadding = PaddingValues(horizontal = PickerSide),
@@ -199,22 +194,23 @@ private fun <K : Any> ArtSlot(
     cache: ArtCache<K>,
     tag: String,
 ) {
+    val colours = TvTheme.lookColors
+    val shape = TvTheme.shapes.pickerArt
     Box(Modifier.size(ArtWidth, ArtHeight).testTag(tag)) {
         if (key == null) {
             if (swatch != null) {
-                Box(Modifier.matchParentSize().background(swatch, ArtShape).border(SwatchOutlineWidth, SwatchOutline, ArtShape))
+                Box(Modifier.matchParentSize().background(swatch, shape).tokenBorder(SwatchOutlineWidth, colours.swatchOutline, shape))
             }
         } else {
             LaunchedEffect(cache, key) { cache.ask(key) }
             val image = cache.images[key]
             if (image == null) {
-                val frame = TvTheme.colors.onSurface.copy(alpha = ART_SLOT_ALPHA)
-                Box(Modifier.matchParentSize().background(frame, ArtShape))
+                Box(Modifier.matchParentSize().tokenBackground(colours.pickerArtSlot, shape))
             } else {
                 Image(
                     image,
                     contentDescription = null,
-                    modifier = Modifier.matchParentSize().clip(ArtShape),
+                    modifier = Modifier.matchParentSize().clip(shape),
                     contentScale = ContentScale.Crop,
                 )
             }

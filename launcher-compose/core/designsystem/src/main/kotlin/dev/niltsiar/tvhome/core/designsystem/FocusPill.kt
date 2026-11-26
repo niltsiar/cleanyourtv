@@ -37,7 +37,7 @@ public class FocusInk internal constructor(
     /** How far the pill has filled, from 0 to 1, for content that changes with it. */
     public val progress: () -> Float,
     /** Labels and icons on a full fill: the look's colour for text on its pill fill. */
-    internal val filled: ColorProducer,
+    public val filled: ColorProducer,
 )
 
 /**

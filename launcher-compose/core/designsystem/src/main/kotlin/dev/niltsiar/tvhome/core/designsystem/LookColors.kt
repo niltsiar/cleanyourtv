@@ -52,6 +52,14 @@ private const val CHIP_KEY_FILL_ALPHA = 0.16f
 private const val CHIP_KEY_FOCUSED_ON_LIGHT_ALPHA = 0.47f
 private const val CHIP_KEY_FOCUSED_ON_DARK_ALPHA = 0.39f
 private const val EXPRESSIVE_CHIP_KEY_FOCUSED_ALPHA = 0.24f
+private const val LABEL_IDLE_ALPHA = 0.78f
+private const val HEADING_ALPHA = 0.65f
+private const val DIVIDER_ALPHA = 0.12f
+private const val SELECTED_FILL_ALPHA = 0.16f
+private const val SELECTED_RIM_ALPHA = 0.42f
+private const val ROW_FOCUS_ALPHA = 0.10f
+private const val ART_SLOT_ALPHA = 0.08f
+private val GlassSwatchOutline = Color.White.copy(alpha = 0.20f)
 private val DarkStatus by lazy { houseStatus(dark = true) }
 private val LightStatus by lazy { houseStatus(dark = false) }
 
@@ -266,6 +274,49 @@ public class LookColors internal constructor(
             }
         return ink.copy(alpha = lerpFloat(CHIP_KEY_FILL_ALPHA, focused, focus))
     }
+
+    /** A label that has no focus, as a settings row's while none of its options has focus. */
+    public val labelIdle: ColorProducer =
+        ColorProducer { if (expressive) scheme.onSurfaceVariant else colors.onSurface.copy(alpha = LABEL_IDLE_ALPHA) }
+
+    /** The heading over a group of rows, and the line between two groups. */
+    public val heading: ColorProducer =
+        ColorProducer { if (expressive) scheme.onSurfaceVariant else colors.onSurface.copy(alpha = HEADING_ALPHA) }
+    public val divider: ColorProducer =
+        ColorProducer { if (expressive) scheme.outlineVariant else colors.onSurface.copy(alpha = DIVIDER_ALPHA) }
+
+    /** The fill and rim of the selected option of a row. */
+    public val selectedFill: ColorProducer =
+        ColorProducer { if (expressive) scheme.secondaryContainer else colors.onSurface.copy(alpha = SELECTED_FILL_ALPHA) }
+    public val selectedRim: ColorProducer =
+        ColorProducer { if (expressive) Color.Transparent else colors.onSurface.copy(alpha = SELECTED_RIM_ALPHA) }
+
+    /** The faint pill behind a row while one of its options has focus; Expressive leaves the focused option the one fill. */
+    public val rowFocus: ColorProducer =
+        ColorProducer { if (expressive) Color.Transparent else colors.onSurface.copy(alpha = ROW_FOCUS_ALPHA) }
+
+    /** A notice on a panel, a [warning] (a setting not saved) or not: its fill, rim and text. */
+    public fun noticeFill(warning: Boolean): Color =
+        when {
+            !expressive -> (if (warning) surfaces.warnInk else colors.onSurface).copy(alpha = SELECTED_FILL_ALPHA)
+            warning -> scheme.errorContainer
+            else -> scheme.surfaceContainerHighest
+        }
+
+    public fun noticeRim(warning: Boolean): Color =
+        if (expressive) Color.Transparent else (if (warning) surfaces.warnInk else colors.onSurface).copy(alpha = SELECTED_RIM_ALPHA)
+
+    public fun noticeText(warning: Boolean): Color =
+        when {
+            !expressive -> if (warning) surfaces.warnInk else colors.onSurface
+            warning -> scheme.onErrorContainer
+            else -> scheme.onSurface
+        }
+
+    /** The slot of a picker entry's art while it loads, and the line round a colour swatch in that slot. */
+    public val pickerArtSlot: ColorProducer =
+        ColorProducer { if (expressive) scheme.surfaceContainerHighest else colors.onSurface.copy(alpha = ART_SLOT_ALPHA) }
+    public val swatchOutline: ColorProducer = ColorProducer { if (expressive) scheme.outlineVariant else GlassSwatchOutline }
 
     /** A cue on a panel that more lies beyond: its chevron, and the pill under it. */
     public val panelCue: ColorProducer =

@@ -20,6 +20,8 @@ internal val ExpressiveShapes: TvShapes =
         chipKey = RoundedCornerShape(6.dp),
         libraryCardCorner = 20.dp,
         libraryArt = RoundedCornerShape(12.dp),
+        notice = RoundedCornerShape(16.dp),
+        pickerArt = RoundedCornerShape(12.dp),
     )
 
 /**

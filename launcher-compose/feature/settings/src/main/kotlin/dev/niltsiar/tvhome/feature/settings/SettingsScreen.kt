@@ -8,7 +8,6 @@ import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,8 +26,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -47,6 +44,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.CacheDrawScope
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
@@ -54,7 +52,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
@@ -63,7 +60,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawOutline
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
@@ -91,13 +87,13 @@ import dev.niltsiar.tvhome.core.designsystem.FocusPill
 import dev.niltsiar.tvhome.core.designsystem.OverlayHost
 import dev.niltsiar.tvhome.core.designsystem.OverlaySurface
 import dev.niltsiar.tvhome.core.designsystem.PANEL_GROW_SCALE
-import dev.niltsiar.tvhome.core.designsystem.SCROLL_CUE_ALPHA
-import dev.niltsiar.tvhome.core.designsystem.SCROLL_CUE_PILL_ALPHA
 import dev.niltsiar.tvhome.core.designsystem.ScrollsClearOfEdge
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
 import dev.niltsiar.tvhome.core.designsystem.drawScrollDownCue
 import dev.niltsiar.tvhome.core.designsystem.fadeScrolledEdges
 import dev.niltsiar.tvhome.core.designsystem.menuRowShape
+import dev.niltsiar.tvhome.core.designsystem.tokenBackground
+import dev.niltsiar.tvhome.core.designsystem.tokenBorder
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -132,17 +128,9 @@ private val ChevronHeight = 16.dp
 private val ScrollClear = 64.dp
 private const val ROW_FOCUS_MS = 120
 
-private const val LABEL_IDLE_ALPHA = 0.78f
-private const val HEADING_ALPHA = 0.65f
-private const val DIVIDER_ALPHA = 0.12f
-private const val SELECTED_FILL_ALPHA = 0.16f
-private const val SELECTED_RIM_ALPHA = 0.42f
-private const val FOCUSED_ROW_ALPHA = 0.10f
-
 private const val NOTICE_MS = 2_000L
 private const val NOTICE_FADE_MS = 200
 private val NoticeHeight = 36.dp
-private val HeldNoticeShape = RoundedCornerShape(12.dp)
 private val HeldNoticeInset = 8.dp
 
 private const val WALLPAPER_STOP = "wallpaper"
@@ -401,9 +389,7 @@ public fun SettingsScreen(
                         .fillMaxHeight()
                         .revealed(reveal),
             ) {
-                val ink = TvTheme.colors.onSurface
-                val cueInk = ink.copy(alpha = SCROLL_CUE_ALPHA)
-                val cuePill = ink.copy(alpha = SCROLL_CUE_PILL_ALPHA)
+                val colours = TvTheme.lookColors
                 Column(Modifier.fillMaxSize()) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         PanelTitle(stringResource(R.string.settings_title), "settings:title", Modifier.weight(1f))
@@ -418,7 +404,9 @@ public fun SettingsScreen(
                                 .testTag("settings:list")
                                 .drawWithContent {
                                     drawContent()
-                                    if (scroll.canScrollForward) drawScrollDownCue(size.height - PanelSide.toPx() / 2f, cueInk, cuePill)
+                                    if (scroll.canScrollForward) {
+                                        drawScrollDownCue(size.height - PanelSide.toPx() / 2f, colours.panelCue(), colours.panelCuePill())
+                                    }
                                 }.fadeScrolledEdges(scroll)
                                 .verticalScroll(scroll)
                                 .padding(start = PanelSide, end = PanelSide, bottom = PanelSide),
@@ -618,6 +606,7 @@ internal fun PanelTitle(
         style = style,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
+        color = TvTheme.lookColors.text,
         modifier =
             modifier
                 .fillMaxWidth()
@@ -634,8 +623,9 @@ private fun NoticePill(
 ) {
     val motion = TvTheme.motion
     val typography = TvTheme.typography
-    val ink = TvTheme.colors.onSurface
-    val style = remember(typography, ink) { typography.pillLabel.copy(fontSize = 16.sp, color = ink) }
+    val style = remember(typography) { typography.pillLabel.copy(fontSize = 16.sp) }
+    val look = rememberNoticeLook(warning = false)
+    val shape = TvTheme.shapes.pill
     val alpha = remember(shown) { Animatable(0f) }
     LaunchedEffect(shown) {
         alpha.animateTo(1f, motion.tweenSpec(NOTICE_FADE_MS))
@@ -648,8 +638,8 @@ private fun NoticePill(
             .padding(top = TitleTop, bottom = TitleBottom, end = PanelSide)
             .graphicsLayer { this.alpha = alpha.value }
             .height(NoticeHeight)
-            .background(ink.copy(alpha = SELECTED_FILL_ALPHA), CircleShape)
-            .border(1.dp, ink.copy(alpha = SELECTED_RIM_ALPHA), CircleShape)
+            .tokenBackground(look.fill, shape)
+            .tokenBorder(1.dp, look.rim, shape)
             .testTag("settings:notice"),
         contentAlignment = Alignment.Center,
     ) {
@@ -657,6 +647,7 @@ private fun NoticePill(
             stringResource(shown.text, *shown.args.toTypedArray()),
             style = style,
             maxLines = 1,
+            color = look.text,
             modifier = Modifier.padding(horizontal = ChipPadding),
         )
     }
@@ -664,14 +655,15 @@ private fun NoticePill(
 
 /**
  * The [shown] message that stays until a key, under the title as wide as the list and wrapped, which fades in. A warning
- * takes the warning ink.
+ * takes the warning colours.
  */
 @Composable
 private fun HeldNotice(shown: PageNotice.Shown) {
     val motion = TvTheme.motion
     val typography = TvTheme.typography
-    val ink = if (shown.warning) TvTheme.surfaces.warnInk else TvTheme.colors.onSurface
-    val style = remember(typography, ink) { typography.pillLabel.copy(fontSize = 16.sp, color = ink) }
+    val style = remember(typography) { typography.pillLabel.copy(fontSize = 16.sp) }
+    val look = rememberNoticeLook(shown.warning)
+    val shape = TvTheme.shapes.notice
     val alpha = remember(shown) { Animatable(0f) }
     LaunchedEffect(shown) { alpha.animateTo(1f, motion.tweenSpec(NOTICE_FADE_MS)) }
     Box(
@@ -679,15 +671,31 @@ private fun HeldNotice(shown: PageNotice.Shown) {
             .padding(start = PanelSide, end = PanelSide, bottom = TitleBottom)
             .graphicsLayer { this.alpha = alpha.value }
             .fillMaxWidth()
-            .background(ink.copy(alpha = SELECTED_FILL_ALPHA), HeldNoticeShape)
-            .border(1.dp, ink.copy(alpha = SELECTED_RIM_ALPHA), HeldNoticeShape)
+            .tokenBackground(look.fill, shape)
+            .tokenBorder(1.dp, look.rim, shape)
             .testTag("settings:notice"),
     ) {
         BasicText(
             stringResource(shown.text, *shown.args.toTypedArray()),
             style = style,
+            color = look.text,
             modifier = Modifier.padding(horizontal = ChipPadding, vertical = HeldNoticeInset),
         )
+    }
+}
+
+/** The fill, rim and text of a notice, a [warning] or not, read in the draw phase. */
+private class NoticeLook(
+    val fill: ColorProducer,
+    val rim: ColorProducer,
+    val text: ColorProducer,
+)
+
+@Composable
+private fun rememberNoticeLook(warning: Boolean): NoticeLook {
+    val colours = TvTheme.lookColors
+    return remember(colours, warning) {
+        NoticeLook({ colours.noticeFill(warning) }, { colours.noticeRim(warning) }, { colours.noticeText(warning) })
     }
 }
 
@@ -698,13 +706,14 @@ private fun Heading(
     divided: Boolean,
 ) {
     val typography = TvTheme.typography
-    val ink = TvTheme.colors.onSurface
-    val style = remember(typography, ink) { typography.chipKey.copy(fontSize = 15.sp, color = ink.copy(alpha = HEADING_ALPHA)) }
+    val colours = TvTheme.lookColors
+    val style = remember(typography) { typography.chipKey.copy(fontSize = 15.sp) }
     Box(Modifier.fillMaxWidth()) {
         BasicText(
             stringResource(id),
             style = style,
             maxLines = 1,
+            color = colours.heading,
             overflow = TextOverflow.Ellipsis,
             modifier =
                 Modifier
@@ -720,7 +729,7 @@ private fun Heading(
                     .padding(top = DividerTop, start = DividerInset, end = DividerInset)
                     .fillMaxWidth()
                     .height(1.dp)
-                    .background(ink.copy(alpha = DIVIDER_ALPHA))
+                    .drawBehind { drawRect(colours.divider()) }
                     .testTag("settings:divider"),
             )
         }
@@ -740,12 +749,10 @@ private fun SettingRow(
 ) {
     val motion = TvTheme.motion
     val typography = TvTheme.typography
-    val ink = TvTheme.colors.onSurface
+    val colours = TvTheme.lookColors
     val labelStyle = remember(typography) { typography.pillLabel.copy(fontSize = 18.sp) }
-    val idle = remember(ink) { ink.copy(alpha = LABEL_IDLE_ALPHA) }
     val focus = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
-    val pill = remember(ink) { ink.copy(alpha = FOCUSED_ROW_ALPHA) }
     val shape = remember { menuRowShape() }
     Row(
         Modifier
@@ -755,7 +762,7 @@ private fun SettingRow(
                 val outline = shape.createOutline(size, layoutDirection, this)
                 onDrawBehind {
                     val shown = focus.value.coerceIn(0f, 1f)
-                    if (shown > 0f) drawOutline(outline, pill, alpha = shown)
+                    if (shown > 0f) drawOutline(outline, colours.rowFocus(), alpha = shown)
                 }
             }.padding(horizontal = RowSide)
             .testTag("setting:${row.id.name}"),
@@ -766,7 +773,7 @@ private fun SettingRow(
             style = labelStyle,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            color = ColorProducer { lerp(idle, ink, focus.value.coerceIn(0f, 1f)) },
+            color = ColorProducer { lerp(colours.labelIdle(), colours.text(), focus.value.coerceIn(0f, 1f)) },
             modifier = Modifier.weight(1f).padding(end = RowSide),
         )
         Row(
@@ -816,12 +823,12 @@ private fun OptionChip(
 ) {
     val typography = TvTheme.typography
     val style = remember(typography) { typography.pillLabel.copy(fontSize = 18.sp) }
-    val rest = TvTheme.colors.onSurface
+    val shape = TvTheme.shapes.pill
     FocusPill(
         onClick = onClick,
-        shape = CircleShape,
+        shape = shape,
         modifier = modifier.height(ChipHeight).widthIn(min = ChipMinWidth).semantics { this.selected = selected },
-        background = { if (selected) SelectedLook(rest, CircleShape) },
+        background = { if (selected) SelectedLook(shape) },
     ) { ink ->
         BasicText(
             label,
@@ -863,9 +870,7 @@ internal fun ActionRow(
     val typography = TvTheme.typography
     val style = remember(typography) { typography.pillLabel.copy(fontSize = 18.sp) }
     val detailStyle = remember(typography) { typography.pillLabel.copy(fontSize = 14.sp) }
-    val rest = TvTheme.colors.onSurface
-    val focusedInk = TvTheme.surfaces.pillContent
-    val idle = remember(rest) { rest.copy(alpha = LABEL_IDLE_ALPHA) }
+    val colours = TvTheme.lookColors
     val shape = remember { menuRowShape() }
     FocusPill(
         onClick = onClick,
@@ -901,7 +906,14 @@ internal fun ActionRow(
                     style = style,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = if (value == null) ink.content else ColorProducer { lerp(idle, focusedInk, ink.progress()) },
+                    color =
+                        if (value ==
+                            null
+                        ) {
+                            ink.content
+                        } else {
+                            remember(ink) { ColorProducer { lerp(colours.labelIdle(), ink.filled(), ink.progress()) } }
+                        },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (detail != null) {
@@ -929,7 +941,7 @@ internal fun ActionRow(
                         .padding(start = ChipGap)
                         .testTag("$tag:chevron")
                         .size(ChevronWidth, ChevronHeight)
-                        .drawBehind { drawChevron(ink.secondary()) },
+                        .drawMark(ink.secondary, CacheDrawScope::chevronPath),
                 )
             }
         }
@@ -939,7 +951,7 @@ internal fun ActionRow(
                     .align(Alignment.CenterEnd)
                     .padding(end = RowSide)
                     .size(CheckSize)
-                    .drawBehind { drawCheck(ink.content()) },
+                    .drawMark(ink.content, CacheDrawScope::checkPath),
             )
         }
     }
@@ -949,38 +961,42 @@ private val CheckSize = 20.dp
 private val CheckStroke = 2.dp
 
 @Composable
-private fun BoxScope.SelectedLook(
-    ink: Color,
-    shape: Shape,
-) {
+private fun BoxScope.SelectedLook(shape: Shape) {
+    val colours = TvTheme.lookColors
     Box(
         Modifier
             .matchParentSize()
-            .background(ink.copy(alpha = SELECTED_FILL_ALPHA), shape)
-            .border(1.dp, ink.copy(alpha = SELECTED_RIM_ALPHA), shape),
+            .tokenBackground(colours.selectedFill, shape)
+            .tokenBorder(1.dp, colours.selectedRim, shape),
     )
 }
 
-private fun DrawScope.drawCheck(color: Color) {
-    val check =
-        Path().apply {
-            moveTo(size.width * 0.12f, size.height * 0.55f)
-            lineTo(size.width * 0.40f, size.height * 0.82f)
-            lineTo(size.width * 0.88f, size.height * 0.22f)
-        }
-    drawPath(check, color, style = Stroke(CheckStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
-}
+/** The [path] a mark takes at the node's size, stroked in [colour]; the path is built once per size. */
+private fun Modifier.drawMark(
+    colour: ColorProducer,
+    path: CacheDrawScope.() -> Path,
+): Modifier =
+    drawWithCache {
+        val mark = path()
+        val stroke = Stroke(CheckStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        onDrawBehind { drawPath(mark, colour(), style = stroke) }
+    }
+
+private fun CacheDrawScope.checkPath(): Path =
+    Path().apply {
+        moveTo(size.width * 0.12f, size.height * 0.55f)
+        lineTo(size.width * 0.40f, size.height * 0.82f)
+        lineTo(size.width * 0.88f, size.height * 0.22f)
+    }
 
 /** A chevron that points to the end side, so it turns round in a right-to-left layout. */
-private fun DrawScope.drawChevron(color: Color) {
+private fun CacheDrawScope.chevronPath(): Path {
     val flip = layoutDirection == LayoutDirection.Rtl
 
     fun x(fraction: Float) = size.width * if (flip) 1f - fraction else fraction
-    val chevron =
-        Path().apply {
-            moveTo(x(0.15f), size.height * 0.1f)
-            lineTo(x(0.85f), size.height * 0.5f)
-            lineTo(x(0.15f), size.height * 0.9f)
-        }
-    drawPath(chevron, color, style = Stroke(CheckStroke.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+    return Path().apply {
+        moveTo(x(0.15f), size.height * 0.1f)
+        lineTo(x(0.85f), size.height * 0.5f)
+        lineTo(x(0.15f), size.height * 0.9f)
+    }
 }
