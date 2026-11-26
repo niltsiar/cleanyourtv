@@ -35,6 +35,7 @@ import dev.niltsiar.tvhome.core.designsystem.rememberLookFlip
 import dev.niltsiar.tvhome.feature.settings.MoleculeSettingsViewModel
 import io.kotest.assertions.withClue
 import io.kotest.matchers.collections.shouldNotContain
+import io.kotest.matchers.longs.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
 import org.robolectric.shadows.ShadowEnvironment
@@ -145,6 +146,40 @@ class LookSwitchTestContent :
                     compose.onNode(isFocused()).getBoundsInRoot() shouldBe bounds
                     withClue("the page's focus events: $pageFocus") { pageFocus.map { it.hasFocus } shouldNotContain false }
                     exists("setting:ExpressiveTile") shouldBe (to == Look.Expressive)
+                }
+            }
+
+            for (from in Look.entries) {
+                val to = Look.entries.single { it != from }
+                test(
+                    "ok on ${to.name} in a page in ${from.name} reveals the new look and lets go of the picture well before the arrival limit",
+                ) {
+                    show("""{"look": "${from.name.lowercase()}"}""")
+                    repeat(12) { if (!compose.focusedTag().startsWith("option:Look:")) press(Key.DirectionDown) }
+                    press(if (to.ordinal > from.ordinal) Key.DirectionRight else Key.DirectionLeft)
+                    compose.onRoot().captureToImage()
+                    compose.mainClock.autoAdvance = false
+                    try {
+                        val pressed = compose.mainClock.currentTime
+                        compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+                        flip.holdsPicture shouldBe true
+                        // The write takes real time on the IO thread; the clock waits for it.
+                        val written = System.currentTimeMillis() + 30_000
+                        while (graph.configRepository.config.value.look != to && System.currentTimeMillis() < written) {
+                            compose.waitForIdle()
+                            Thread.sleep(10)
+                        }
+                        graph.configRepository.config.value.look shouldBe to
+                        compose.mainClock.advanceTimeBy(100)
+                        withClue("the picture 100 ms after the press") { flip.holdsPicture shouldBe true }
+                        while (flip.holdsPicture && compose.mainClock.currentTime - pressed < LookFlip.ARRIVAL_MS) {
+                            compose.mainClock.advanceTimeByFrame()
+                        }
+                        compose.mainClock.currentTime - pressed shouldBeLessThan LookFlip.ARRIVAL_MS - 300
+                    } finally {
+                        compose.mainClock.autoAdvance = true
+                    }
+                    flip.captures shouldBe 1
                 }
             }
 

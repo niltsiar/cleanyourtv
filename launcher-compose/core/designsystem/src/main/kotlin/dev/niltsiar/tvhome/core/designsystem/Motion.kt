@@ -27,15 +27,23 @@ import dev.niltsiar.tvhome.core.config.Look
  * [MotionScheme.expressive]'s spatial springs, colours and alphas on its effects springs, which never overshoot, and a
  * press on [MotionScheme.standard]'s fast spatial spring. Gaining focus is a critically damped spring at the fast spatial
  * stiffness, or the fast spatial spring itself when it pops, whose peak stays under the pop's of [Look.Glass], so
- * [focusPeakScale] holds in both looks. [TvTheme.motion] gives the window's look.
+ * [focusPeakScale] holds in both looks. Only [TvTheme] sets [look]: [TvTheme.motion] gives the window's look, and a
+ * [Motion] made anywhere else is in [Look.Glass].
  */
 @Immutable
-public data class Motion(
+@ConsistentCopyVisibility
+public data class Motion internal constructor(
     public val animations: Boolean = true,
     public val reducedMotion: Boolean = false,
     public val focusOvershoot: Boolean = false,
-    public val look: Look = Look.Glass,
+    public val look: Look,
 ) {
+    public constructor(
+        animations: Boolean = true,
+        reducedMotion: Boolean = false,
+        focusOvershoot: Boolean = false,
+    ) : this(animations, reducedMotion, focusOvershoot, Look.Glass)
+
     private val expressive: Boolean get() = look == Look.Expressive && animated
 
     /** Springs and endless loops run. */
@@ -154,8 +162,9 @@ public data class Motion(
             else -> MotionScheme.expressive().fastEffectsSpec()
         }
 
-    /** How the hole of a look flip grows over the page: in the look it reveals, over about [FLIP_MS]. */
-    public fun flipSpec(): FiniteAnimationSpec<Float> = if (expressive) MotionScheme.expressive().slowSpatialSpec() else tweenSpec(FLIP_MS)
+    /** How the hole of a look flip grows over the page: in [reveals], the look it reveals, over about [FLIP_MS]. */
+    public fun flipSpec(reveals: Look): FiniteAnimationSpec<Float> =
+        if (reveals == Look.Expressive && animated) MotionScheme.expressive().slowSpatialSpec() else tweenSpec(FLIP_MS)
 
     public companion object {
         /**

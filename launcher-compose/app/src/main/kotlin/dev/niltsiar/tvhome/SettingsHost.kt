@@ -122,8 +122,8 @@ internal fun SettingsHost(
                     if (row != SettingsRowId.Look || option == state.value.lookSelected()) {
                         pick()
                     } else {
-                        val from = motion.look
-                        flip.flip(pick) { snapshotFlow { motion }.first { it.look != from }.flipSpec() }
+                        val from = look
+                        flip.flip(pick) { motion.flipSpec(reveals = snapshotFlow { look }.first { it != from }) }
                     }
                 },
             )

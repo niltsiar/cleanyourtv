@@ -479,7 +479,7 @@ class DesignSystemGoldenTestContent :
                             },
                         )
                     }
-                    compose.runOnUiThread { scope.launch { progress.animateTo(1f, Motion(look = look).flipSpec()) } }
+                    compose.runOnUiThread { scope.launch { progress.animateTo(1f, Motion().flipSpec(look)) } }
                     steps(0, 250, 500) { golden("look-flip-${look.name.lowercase()}-${it}ms") }
                 }
             }

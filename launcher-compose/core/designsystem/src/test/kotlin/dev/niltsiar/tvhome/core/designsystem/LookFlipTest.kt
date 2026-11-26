@@ -28,6 +28,7 @@ import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import io.kotest.assertions.withClue
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -110,7 +111,7 @@ class LookFlipTestContent :
                             colour = to
                         }) {
                             snapshotFlow { colour }.first { it == to }
-                            Motion().flipSpec()
+                            Motion().flipSpec(Look.Glass)
                         }
                     }
                 }
@@ -225,7 +226,7 @@ class LookFlipTestContent :
 
             test("before the page has drawn the change is a cut") {
                 show()
-                compose.runOnUiThread { flip.flip({ colour = New }) { Motion().flipSpec() } }
+                compose.runOnUiThread { flip.flip({ colour = New }) { Motion().flipSpec(Look.Glass) } }
 
                 flip.captures shouldBe 0
                 flip.holdsPicture shouldBe false
