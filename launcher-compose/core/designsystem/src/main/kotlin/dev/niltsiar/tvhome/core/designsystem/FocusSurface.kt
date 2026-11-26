@@ -121,7 +121,7 @@ public val FocusRingReach: Dp = RingGap + RingWidth + HairlineWidth + OuterStrok
  * ([dev.niltsiar.tvhome.core.config.ExpressiveTile]). [focusedFill], when given, fills the focused shape behind the content
  * in place of the plate, in every focus style. With [focusedOutset] and the capsule ([growsByOutset]), the surface and its
  * content keep their rest size and clip while the capsule, its fill and its band grow that far past it, under the content.
- * The look and the shape are read in the draw phase.
+ * The capsule's corner gets no rounder than [focusedCorner]. The look and the shape are read in the draw phase.
  */
 @Composable
 public fun FocusSurface(
@@ -142,6 +142,7 @@ public fun FocusSurface(
     keepsShape: (() -> Boolean)? = null,
     focusedOutset: Dp = 0.dp,
     focusedFill: ColorProducer? = null,
+    focusedCorner: Dp = Dp.Infinity,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val motion = TvTheme.motion
@@ -166,7 +167,7 @@ public fun FocusSurface(
         }
     val gloss = remember(colours) { Brush.verticalGradient(listOf(colours.tileGloss, Color.Transparent)) }
     val lookState = TvTheme.lookState
-    val painter = remember(focusedOutset) { TilePainter(focusedOutset) }
+    val painter = remember(focusedOutset, focusedCorner) { TilePainter(focusedOutset, focusedCorner) }
     val tileOutline = remember(shape, lookState, painter, focus) { TileOutline(shape, lookState, painter, focus) }
     val kept = if (keepsShape != null) keptShape(keepsShape, motion) else null
     val band =

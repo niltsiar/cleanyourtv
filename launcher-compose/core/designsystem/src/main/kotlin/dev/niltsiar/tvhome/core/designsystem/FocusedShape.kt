@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import dev.niltsiar.tvhome.core.config.ExpressiveTile
 import dev.niltsiar.tvhome.core.config.Look
@@ -26,13 +27,15 @@ import kotlin.math.min
 
 /**
  * The outline of a focused tile's art, for what is drawn round it: in Glass the tile's own shape; for the capsule a full
- * capsule, for the cinch a rounded rectangle whose corners stay inside its band. [bandOutline] is the outer
- * edge of its focus band, and [sideReach] how far past the tile's left and right edges, at mid height, that edge lies.
- * Each is built once per base shape, size and tile and kept, so reading them in draw allocates nothing after the first frame.
+ * capsule, its corners no rounder than [corner]; for the cinch a rounded rectangle whose corners stay inside its band.
+ * [bandOutline] is the outer edge of its focus band, and [sideReach] how far past the tile's left and right edges, at mid
+ * height, that edge lies. Each is built once per base shape, size and tile and kept, so reading them in draw allocates
+ * nothing after the first frame.
  */
 @Stable
 public class FocusedShape internal constructor(
     private val look: LookState,
+    private val corner: Dp = Dp.Infinity,
 ) {
     private var builtTile: ExpressiveTile? = null
     private var builtBase: Shape? = null
@@ -100,7 +103,7 @@ public class FocusedShape internal constructor(
         val ringReach = with(density) { FocusRingReach.toPx() }
         when (tile) {
             ExpressiveTile.Capsule -> {
-                val radius = min(size.width, size.height) / 2f
+                val radius = min(min(size.width, size.height) / 2f, with(density) { corner.toPx() })
                 outline = Outline.Rounded(RoundRect(0f, 0f, size.width, size.height, CornerRadius(radius)))
                 band =
                     Outline.Rounded(
@@ -147,11 +150,11 @@ public fun DrawScope.drawBandPlate(
     drawOutline(outline, edge, alpha = alpha, style = line)
 }
 
-/** Remembers a [FocusedShape] that follows [TvTheme.lookState]. */
+/** Remembers a [FocusedShape] that follows [TvTheme.lookState], for a surface whose capsule stops at [corner]. */
 @Composable
-public fun rememberFocusedShape(): FocusedShape {
+public fun rememberFocusedShape(corner: Dp = Dp.Infinity): FocusedShape {
     val look = TvTheme.lookState
-    return remember(look) { FocusedShape(look) }
+    return remember(look, corner) { FocusedShape(look, corner) }
 }
 
 /** The points an outline is sampled at, along its whole length, where a shape is measured from its path. */

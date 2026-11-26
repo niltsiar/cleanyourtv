@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.layout.ContentScale
@@ -66,6 +67,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import dev.niltsiar.tvhome.core.config.ExpressiveTile
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.FocusRingReach
 import dev.niltsiar.tvhome.core.designsystem.FocusSurface
@@ -103,7 +105,17 @@ internal val ShelfCardMinHeight = 90.dp
 /** Between a focused card's ring and the meta line over it or the dock panel under it. */
 private val ShelfRingClearance = 4.dp
 private val ShelfCardShape = RoundedCornerShape(12.dp)
+
+/** The roundest a focused card's capsule gets in Expressive, so the corners keep a text card's title and a poster's art. */
+private val ShelfFocusedCorner = 24.dp
 private val TextCardInset = 12.dp
+
+/** How far up a text card's title sits in the cinch, clear of the 6 dp its band dips into the card's foot. */
+private val CinchTitleLift = 6.dp
+
+/** The cinch's footer strip, and its line's rise over the card's foot, above the band's dip. */
+private val CinchFooter = 18.dp
+private val CinchLineRise = 12.dp
 private const val SHELF_FADE_MS = 200
 private const val TEXT_CARD_ART_ALPHA = 0.3f
 private const val MINUTE_MS = 60_000.0
@@ -335,7 +347,7 @@ private fun ShelfCard(
     val lookState = TvTheme.lookState
     val watched = progressOf(item)
     val wave = remember { ProgressWave() }
-    val focusedShape = rememberFocusedShape()
+    val focusedShape = rememberFocusedShape(ShelfFocusedCorner)
     FocusSurface(
         onClick = {
             if (press != null && !launching.value) scope.launch { press.pressDip(motion) }
@@ -348,6 +360,7 @@ private fun ShelfCard(
         plate = TvTheme.colors.onSurface,
         focus = focus,
         press = press,
+        focusedCorner = ShelfFocusedCorner,
         modifier = modifier.popsOver(focus).size(band.cardWidth, band.cardHeight).semantics { contentDescription = item.title },
     ) {
         Box(
@@ -356,7 +369,8 @@ private fun ShelfCard(
                 .drawBehind { drawRect(colours.tileFill()) }
                 .drawWithContent {
                     drawContent()
-                    if (watched != null && lookState.look == Look.Expressive) drawWatched(wave, watched, colours, focusedShape)
+                    if (watched == null || lookState.look != Look.Expressive) return@drawWithContent
+                    drawWatched(wave, watched, colours, focusedShape, lookState.tile)
                 },
             contentAlignment = Alignment.BottomStart,
         ) {
@@ -385,30 +399,52 @@ private fun ShelfCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     color = colours.tileLabel,
-                    modifier = Modifier.padding(TextCardInset).testTag("shelf:card-title"),
+                    modifier =
+                        Modifier
+                            .drawWithContent {
+                                val lift = if (lookState.look == Look.Expressive) titleLift(lookState.tile, watched != null).toPx() else 0f
+                                if (lift == 0f) drawContent() else translate(top = -lift) { this@drawWithContent.drawContent() }
+                            }.padding(TextCardInset)
+                            .testTag("shelf:card-title"),
                 )
             }
         }
     }
 }
 
+/** How far up a text card in Expressive with [tile] draws its title: over the footer of a [watched] card, else over the cinch's dip. */
+private fun titleLift(
+    tile: ExpressiveTile,
+    watched: Boolean,
+): Dp =
+    when {
+        watched -> footerOf(tile)
+        tile == ExpressiveTile.Cinch -> CinchTitleLift
+        else -> 0.dp
+    }
+
+/** The footer strip of a watched card with [tile]: as tall as a text card's inset, taller in the cinch to clear its dip. */
+private fun footerOf(tile: ExpressiveTile): Dp = if (tile == ExpressiveTile.Cinch) CinchFooter else TextCardInset
+
 /**
- * The footer of a card [watched] of the way through, in Expressive: a strip in the card's fill as tall as a text card's
- * inset, so its title stays clear, with a still progress wave across it. The line keeps inside the card's [focused]
- * outline at rest too, so focus hides none of it and changes nothing about it.
+ * The footer of a card [watched] of the way through, in Expressive with [tile]: a strip in the card's fill
+ * ([footerOf]), with a still progress wave across it, in its middle or, in the cinch, above the band's dip. The line keeps
+ * inside the card's [focused] outline at rest too, so focus hides none of it and changes nothing about it.
  */
 private fun DrawScope.drawWatched(
     wave: ProgressWave,
     watched: Float,
     colours: LookColors,
     focused: FocusedShape,
+    tile: ExpressiveTile,
 ) {
-    val footer = TextCardInset.toPx()
-    val middle = size.height - footer / 2f
+    val footer = footerOf(tile).toPx()
+    val rise = if (tile == ExpressiveTile.Cinch) CinchLineRise.toPx() else footer / 2f
+    val middle = size.height - rise
     val corner =
         (focused.outline(ShelfCardShape, size, layoutDirection, this) as? Outline.Rounded)?.roundRect?.bottomLeftCornerRadius
             ?: CornerRadius.Zero
-    val inset = max(TextCardInset.toPx(), cornerClearance(corner, footer / 2f - ProgressWaveReach.toPx()))
+    val inset = max(TextCardInset.toPx(), cornerClearance(corner, rise - ProgressWaveReach.toPx()))
     drawRect(colours.cardFooter(), topLeft = Offset(0f, size.height - footer), size = Size(size.width, footer))
     with(wave) { drawProgressWave(inset, middle, size.width - 2f * inset, watched, colours.cardProgress(), colours.cardProgressTrack()) }
 }

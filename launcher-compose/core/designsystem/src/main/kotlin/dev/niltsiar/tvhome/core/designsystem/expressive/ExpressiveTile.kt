@@ -165,6 +165,8 @@ internal object CinchHalos {
 internal class TilePainter(
     /** How far past the surface the capsule's focused shape grows, in place of the surface growing with it. */
     private val outset: Dp = 0.dp,
+    /** The roundest the capsule's focused corner gets. */
+    private val corner: Dp = Dp.Infinity,
 ) {
     private var steps: CornerSteps? = null
     private var stepsBase: Shape? = null
@@ -244,7 +246,7 @@ internal class TilePainter(
         val rest = density.restRadius(base, size)
         val steps =
             when (tile) {
-                ExpressiveTile.Capsule -> CornerSteps(size, rest)
+                ExpressiveTile.Capsule -> CornerSteps(size, rest, min(min(size.width, size.height) / 2f, with(density) { corner.toPx() }))
                 ExpressiveTile.Cinch -> CornerSteps(size, rest, density.cinchArtRadius(size.width, size.height, rest))
             }
         return steps.also {

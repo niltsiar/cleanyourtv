@@ -440,7 +440,8 @@ public class LookState internal constructor(
     public val seed: Color get() = seedSource()
 
     /** The shape a focused tile takes in [Look.Expressive]. */
-    internal var tile: ExpressiveTile by mutableStateOf(ExpressiveTile.Capsule)
+    public var tile: ExpressiveTile by mutableStateOf(ExpressiveTile.Capsule)
+        internal set
 
     private val schemes = arrayOfNulls<ColorScheme>(2)
     private val schemeSeeds = arrayOfNulls<Color>(2)
