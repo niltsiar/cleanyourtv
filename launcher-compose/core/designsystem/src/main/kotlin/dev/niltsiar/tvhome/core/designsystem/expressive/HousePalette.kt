@@ -9,6 +9,7 @@ import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cbrt
 import kotlin.math.cos
+import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -113,23 +114,24 @@ internal fun houseScheme(
 }
 
 /**
- * The focus band of an app whose colour is [accent], and the band's [tertiary]: the dark scheme's primary and tertiary
- * tones of the accent's own palettes, so the band keeps the house primary's contrast whatever the art.
+ * The focus band of an app whose colour is [accent], at the dark scheme's primary tone of the accent's own palette, so the
+ * band keeps the house primary's contrast whatever the art; and the [chargeStart] of a held OK on it, the same hue and tone
+ * at no more than the secondary role's chroma.
  */
 internal class AppBand(
     val band: Color,
-    val tertiary: Color,
+    val chargeStart: Color,
 )
 
 internal fun appBand(accent: Color): AppBand {
     val (hue, chroma) = hueAndChroma(accent)
     return AppBand(
         band = Palette(hue, chroma.coerceIn(PRIMARY_CHROMA_FLOOR, PRIMARY_CHROMA_CEILING))(BAND_TONE),
-        tertiary = Palette(hue + TERTIARY_TURN, TERTIARY_CHROMA)(BAND_TONE),
+        chargeStart = Palette(hue, min(chroma, SECONDARY_CHROMA))(BAND_TONE),
     )
 }
 
-/** The tone of the dark scheme's primary and tertiary roles, which the focus band takes. */
+/** The tone of the dark scheme's primary role, which the focus band takes. */
 private const val BAND_TONE = 80
 
 /**

@@ -137,9 +137,14 @@ public class LookColors internal constructor(
     public val cueChevron: ColorProducer = ColorProducer { if (expressive) scheme.onSecondaryContainer else GlassCueChevron }
     public val cuePill: ColorProducer = ColorProducer { if (expressive) scheme.secondaryContainer else GlassCuePill }
 
-    /** The ring of a tile carried in reorder mode, and the plate it lifts off; Glass lifts on a shadow instead. */
-    public val carriedRing: ColorProducer = ColorProducer { if (expressive) scheme.tertiary else GlassCarriedRing }
-    public val liftPlate: ColorProducer = ColorProducer { if (expressive) scheme.tertiaryContainer else Color.Transparent }
+    /** The ring of a tile carried in reorder mode whose Glass ring is [ring]: Glass's own, in Expressive the tile's [focusBand]. */
+    public fun carriedRing(
+        ring: Color,
+        neutral: Boolean,
+    ): Color = if (expressive) focusBand(ring, neutral) else GlassCarriedRing
+
+    /** The plate a carried tile lifts off: the container of the name pills on the dock; Glass lifts on a shadow instead. */
+    public val liftPlate: ColorProducer = ColorProducer { if (expressive) scheme.surfaceContainerHighest else Color.Transparent }
 
     /** A medallion behind a glyph, and the glyph on it; Glass has no medallion. */
     public val medallion: ColorProducer = ColorProducer { if (expressive) scheme.secondaryContainer else Color.Transparent }

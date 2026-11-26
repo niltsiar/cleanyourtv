@@ -2386,7 +2386,7 @@ private fun AppTile(
                 if (input.carried.value ==
                     key
                 ) {
-                    colours.carriedRing()
+                    colours.carriedRing(ring, neutralRing)
                 } else {
                     travel.colourFor(key, colours.focusBand(ring, neutralRing))
                 }

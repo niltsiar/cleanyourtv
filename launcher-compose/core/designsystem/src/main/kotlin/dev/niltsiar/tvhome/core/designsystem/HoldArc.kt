@@ -158,7 +158,7 @@ internal fun Path.addFromTopCentre(r: RoundRect) {
 /**
  * The hold cue of a [FocusPill] in [Look.Expressive]: while OK is held on it, from the [holdOk] earlier in the chain, a wave
  * runs round [shape]'s edge, [PillChargeGap] outside it, from the middle of its top clockwise, after the same dead zone as
- * a tile's charge, its colour moving from the house tertiary to the house primary of the [dark] scheme; the pill itself
+ * a tile's charge, its colour moving from the house secondary to the house primary of the [dark] scheme; the pill itself
  * does not change. Without [charges] (reduced motion) a plain line in the primary grows with the hold instead. Glass draws
  * nothing.
  */
@@ -200,7 +200,7 @@ internal class PillChargeNode(
         val progress = if (spec.charges) chargeOf(held) else held
         if (progress <= 0f) return
         val scheme = spec.look.scheme(spec.dark)
-        val colour = if (spec.charges) lerp(scheme.tertiary, scheme.primary, progress) else scheme.primary
+        val colour = if (spec.charges) lerp(scheme.secondary, scheme.primary, progress) else scheme.primary
         val width = ChargeWidth.toPx()
         val drawn =
             stroke?.takeIf { it.width == width } ?: Stroke(width, cap = StrokeCap.Round, join = StrokeJoin.Round).also { stroke = it }

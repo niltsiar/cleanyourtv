@@ -5,6 +5,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import de.infix.testBalloon.framework.core.testSuite
+import dev.niltsiar.tvhome.core.config.Look
+import dev.niltsiar.tvhome.core.designsystem.LookState
+import dev.niltsiar.tvhome.core.designsystem.lookColorSets
 import io.kotest.assertions.withClue
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -51,7 +54,7 @@ val HousePaletteTest by testSuite {
                     )
                 bands.flatMap { (accentName, band) ->
                     grounds.flatMap { (groundName, ground) ->
-                        listOf("band" to band.band, "charge start" to band.tertiary).mapNotNull { (role, colour) ->
+                        listOf("band" to band.band, "charge start" to band.chargeStart).mapNotNull { (role, colour) ->
                             contrast(colour, ground).takeIf { it < 3.0 }?.let { "$accentName $role on $seedName $groundName: $it" }
                         }
                     }
@@ -139,9 +142,50 @@ val HousePaletteTest by testSuite {
         withClue("primary ${scheme.primary}") { spread(scheme.primary) shouldNotBe 0f }
         withClue("container ${scheme.surfaceContainer}") { (spread(scheme.surfaceContainer) < 0.05f) shouldBe true }
     }
+
+    test("a carried tile's ring is its app's band, and the plate it lifts off is the name pills' container whatever the app") {
+        val red = Color(0xFFE0453A)
+        val blue = Color(0xFF2F9FD8)
+        for (seed in listOf(Ember, NightTeal)) {
+            val look = LookState(Look.Expressive) { seed }
+            val sets = lookColorSets(look)
+            for ((dark, colours) in listOf(true to sets.dark, false to sets.light)) {
+                withClue("seed $seed, ${if (dark) "dark" else "light"} ground") {
+                    val rings = listOf(red, blue).map { colours.carriedRing(it, neutral = false) }
+                    rings shouldBe listOf(AppBands[red].band, AppBands[blue].band)
+                    rings[0] shouldNotBe rings[1]
+                    colours.liftPlate() shouldBe look.scheme(dark).surfaceContainerHighest
+                }
+            }
+        }
+    }
+
+    test("the lift plate stands off the dock under it by the bound of its ground, for every seed") {
+        val failures =
+            listOf(true to MIN_PLATE_CONTRAST_DARK, false to MIN_PLATE_CONTRAST_LIGHT).flatMap { (dark, bound) ->
+                seeds().mapNotNull { (name, seed) ->
+                    val look = LookState(Look.Expressive) { seed }
+                    val sets = lookColorSets(look)
+                    val plate = (if (dark) sets.dark else sets.light).liftPlate()
+                    contrast(plate, look.scheme(dark).surfaceContainer).takeIf { it < bound }?.let {
+                        "${if (dark) "dark" else "light"} $name: $it"
+                    }
+                }
+            }
+        failures.shouldBeEmpty()
+    }
 }
 
 private val Ember = Color(0xFFFF6A3D)
+private val NightTeal = Color(0xFF1F8A8A)
+
+/**
+ * The least contrast of the lift plate against the dock: the step from the dock's container (tone 12 dark, 94 light) to
+ * the name pills' (22 dark, 90 light) that the house tones give, 1.33:1 dark and 1.11:1 light, less the 0.6 L* the tone
+ * solver may miss by. The plate only marks the place a carried tile left: the tile itself shows by its band at 3:1.
+ */
+private const val MIN_PLATE_CONTRAST_DARK = 1.3
+private const val MIN_PLATE_CONTRAST_LIGHT = 1.09
 
 /**
  * The least CIE76 distance between the error and the primary roles. At the same tone two roles differ only in hue and

@@ -476,7 +476,7 @@ internal fun DrawScope.drawExpressiveHold(
 
 /**
  * The charge of a held OK on a tile of [tile] at focus [progress]: a wave along the outer edge of the band the painter drew,
- * whose colour moves from the tertiary of [band]'s family to [band] as the [charge] closes the loop. The capsule's edge
+ * whose colour moves from [band]'s muted tone to [band] as the [charge] closes the loop. The capsule's edge
  * follows its pinched corner; the cinch's line was sampled with its band.
  */
 internal fun DrawScope.drawTileCharge(
@@ -496,7 +496,7 @@ internal fun DrawScope.drawTileCharge(
         } else {
             painter.lastBand()?.charge ?: return
         }
-    val colour = lerp(AppBands[band].tertiary, band, charge)
+    val colour = lerp(AppBands[band].chargeStart, band, charge)
     drawCharge(line, charge, colour, painter.chargePath(), painter.chargeStroke(ChargeWidth.toPx()), painter.chargeScratch)
 }
 
