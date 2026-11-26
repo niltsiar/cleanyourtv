@@ -55,8 +55,7 @@ private const val CHIP_KEY_FOCUSED_ON_DARK_ALPHA = 0.39f
 /** The colours the Glass screensaver glow turns through, deep and low in brightness: it is drawn at partial alpha on black. */
 public val ScreensaverGlows: List<Color> =
     listOf(Color(0xFF2B5CFF), Color(0xFF00A39A), Color(0xFF8A3FFC), Color(0xFFE0661B), Color(0xFFD6336C))
-private const val SCREENSAVER_SHAPE_TONES = 3
-private const val SCREENSAVER_SHAPE_DEPTH = 0.5f
+internal const val SCREENSAVER_SHAPE_DEPTH = 0.5f
 private const val LABEL_IDLE_ALPHA = 0.78f
 private const val HEADING_ALPHA = 0.65f
 private const val DIVIDER_ALPHA = 0.12f
@@ -346,17 +345,12 @@ public class LookColors internal constructor(
     public fun screensaverGlow(glass: Color): Color = if (expressive) look.scheme(dark = true).primaryContainer else glass
 
     /**
-     * The fill of the Expressive screensaver's shape on its [turn]: the dark house scheme's primary, secondary and tertiary
-     * containers in turn, taken halfway to black and opaque, so a large shape stays deep on the black ground.
+     * The fill of the Expressive screensaver's shape on its [turn]: the dark house scheme's primary and secondary containers
+     * in turn, both in the house seed's hue, taken halfway to black and opaque, so a large shape stays deep on the black ground.
      */
     public fun screensaverShape(turn: Int): Color {
         val scheme = look.scheme(dark = true)
-        val container =
-            when (turn.mod(SCREENSAVER_SHAPE_TONES)) {
-                0 -> scheme.primaryContainer
-                1 -> scheme.secondaryContainer
-                else -> scheme.tertiaryContainer
-            }
+        val container = if (turn.mod(2) == 0) scheme.primaryContainer else scheme.secondaryContainer
         return lerp(Color.Black, container, SCREENSAVER_SHAPE_DEPTH)
     }
 
