@@ -423,7 +423,12 @@ private fun OrderChip(
                         drawRoundRect(colours.chipKey(ink.content(), ink.progress()), cornerRadius = CornerRadius(size.height / 2f))
                     }.padding(horizontal = 6.dp, vertical = 1.dp),
             ) {
-                BasicText(stringResource(R.string.library_key_menu), style = key, maxLines = 1, color = ink.content)
+                BasicText(
+                    stringResource(R.string.library_key_menu),
+                    style = key,
+                    maxLines = 1,
+                    color = { colours.chipKeyName(ink.content(), ink.progress()) },
+                )
             }
         }
     }

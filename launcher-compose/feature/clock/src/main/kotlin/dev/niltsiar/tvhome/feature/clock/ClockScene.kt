@@ -21,10 +21,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
@@ -121,6 +123,7 @@ private fun ClockText(
     state: ClockSceneState,
 ) {
     val typography = TvTheme.typography
+    val colours = TvTheme.lookColors
     val breath = rememberColonBreath()
     Column {
         Row {
@@ -128,16 +131,47 @@ private fun ClockText(
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                 Row(onBaseline) {
                     val digitsOnBaseline = Modifier.alignByBaseline()
-                    FadingText(face.hours, typography.screensaverClock, state, digitsOnBaseline)
-                    FadingText(":", typography.screensaverClock, state, digitsOnBaseline, breath)
-                    FadingText(face.minutes, typography.screensaverClock, state, digitsOnBaseline)
+                    FadingText(
+                        face.hours,
+                        typography.screensaverClock,
+                        colours.screensaverTime,
+                        state,
+                        digitsOnBaseline.testTag("clock:hours"),
+                    )
+                    FadingText(
+                        ":",
+                        typography.screensaverClock,
+                        colours.screensaverTime,
+                        state,
+                        digitsOnBaseline.testTag("clock:colon"),
+                        breath,
+                    )
+                    FadingText(
+                        face.minutes,
+                        typography.screensaverClock,
+                        colours.screensaverTime,
+                        state,
+                        digitsOnBaseline.testTag("clock:minutes"),
+                    )
                 }
             }
             if (face.amPm.isNotEmpty()) {
-                FadingText(face.amPm, typography.screensaverAmPm, state, onBaseline.padding(start = 14.dp))
+                FadingText(
+                    face.amPm,
+                    typography.screensaverAmPm,
+                    colours.screensaverAmPm,
+                    state,
+                    onBaseline.padding(start = 14.dp).testTag("clock:am_pm"),
+                )
             }
         }
-        FadingText(face.date, typography.screensaverDate, state, Modifier.padding(start = 10.dp, top = 6.dp))
+        FadingText(
+            face.date,
+            typography.screensaverDate,
+            colours.screensaverDate,
+            state,
+            Modifier.padding(start = 10.dp, top = 6.dp).testTag("clock:date"),
+        )
     }
 }
 
@@ -157,14 +191,15 @@ internal fun rememberColonBreath(): State<Float> {
     )
 }
 
-/** Text whose opacity follows the scene's fade, and [breath] where given, in the draw phase. */
+/** Text in [colour] whose opacity follows the scene's fade, and [breath] where given, in the draw phase. */
 @Composable
 private fun FadingText(
     text: String,
     style: TextStyle,
+    colour: ColorProducer,
     state: ClockSceneState,
     modifier: Modifier = Modifier,
     breath: State<Float>? = null,
 ) {
-    BasicText(text, modifier = modifier, style = style, color = { style.color.withFade(state.fade.value * (breath?.value ?: 1f)) })
+    BasicText(text, modifier = modifier, style = style, color = { colour().withFade(state.fade.value * (breath?.value ?: 1f)) })
 }

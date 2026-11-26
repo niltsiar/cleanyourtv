@@ -51,7 +51,6 @@ private const val CHIP_RIM_ALPHA = 0.24f
 private const val CHIP_KEY_FILL_ALPHA = 0.16f
 private const val CHIP_KEY_FOCUSED_ON_LIGHT_ALPHA = 0.47f
 private const val CHIP_KEY_FOCUSED_ON_DARK_ALPHA = 0.39f
-private const val EXPRESSIVE_CHIP_KEY_FOCUSED_ALPHA = 0.24f
 
 /** The colours the Glass screensaver glow turns through, deep and low in brightness: it is drawn at partial alpha on black. */
 public val ScreensaverGlows: List<Color> =
@@ -250,7 +249,7 @@ public class LookColors internal constructor(
     public val onHomeCheck: ColorProducer = ColorProducer { if (expressive) scheme.onPrimary else GlassOnHomeCheckInk }
 
     /** The ring where an app not on Home would have its mark, in the chooser, and its fill. */
-    public val offHomeRing: ColorProducer = ColorProducer { if (expressive) scheme.outline else GlassOffHomeRing }
+    public val offHomeRing: ColorProducer = ColorProducer { if (expressive) scheme.onSurfaceVariant else GlassOffHomeRing }
     public val offHomeRingFill: ColorProducer = ColorProducer { if (expressive) Color.Transparent else GlassOffHomeRingFill }
 
     /** The line of an app Home never opened. */
@@ -265,19 +264,24 @@ public class LookColors internal constructor(
     public val chipRim: ColorProducer =
         ColorProducer { if (expressive) scheme.outlineVariant else colors.onSurface.copy(alpha = CHIP_RIM_ALPHA) }
 
-    /** The cap of a key inside a chip, under a key name in [ink], the chip [focus] of the way to focused. */
+    /**
+     * The cap of a key inside a chip, under a key name in [ink], the chip [focus] of the way to focused. In Expressive the
+     * focused cap is the ink itself and the key name on it is [chipKeyName], so both hold against the pill's fill.
+     */
     public fun chipKey(
         ink: Color,
         focus: Float,
     ): Color {
-        val focused =
-            when {
-                expressive -> EXPRESSIVE_CHIP_KEY_FOCUSED_ALPHA
-                surfaces.pillFill.luminance() > 0.5f -> CHIP_KEY_FOCUSED_ON_LIGHT_ALPHA
-                else -> CHIP_KEY_FOCUSED_ON_DARK_ALPHA
-            }
+        if (expressive) return lerp(ink.copy(alpha = CHIP_KEY_FILL_ALPHA), ink, focus)
+        val focused = if (surfaces.pillFill.luminance() > 0.5f) CHIP_KEY_FOCUSED_ON_LIGHT_ALPHA else CHIP_KEY_FOCUSED_ON_DARK_ALPHA
         return ink.copy(alpha = lerpFloat(CHIP_KEY_FILL_ALPHA, focused, focus))
     }
+
+    /** The key name on [chipKey]: [ink], or in Expressive the ink turning to the pill's fill as the chip fills. */
+    public fun chipKeyName(
+        ink: Color,
+        focus: Float,
+    ): Color = if (expressive) lerp(ink, look.pillFill(surfaces), focus) else ink
 
     /** A label that has no focus, as a settings row's while none of its options has focus. */
     public val labelIdle: ColorProducer =
@@ -327,6 +331,14 @@ public class LookColors internal constructor(
 
     /** The screensaver's glow, which is [glass] in Glass, one of [ScreensaverGlows]; in Expressive the house's container colour. */
     public fun screensaverGlow(glass: Color): Color = if (expressive) look.scheme(dark = true).primaryContainer else glass
+
+    /** The screensaver's time, its AM or PM and its date, on its black ground: Expressive writes them in the dark house ink. */
+    public val screensaverTime: ColorProducer =
+        ColorProducer { if (expressive) look.scheme(dark = true).onSurface else elements.screensaverClock }
+    public val screensaverAmPm: ColorProducer =
+        ColorProducer { if (expressive) look.scheme(dark = true).onSurfaceVariant else elements.screensaverAmPm }
+    public val screensaverDate: ColorProducer =
+        ColorProducer { if (expressive) look.scheme(dark = true).onSurfaceVariant else elements.screensaverDate }
 
     /** A cue on a panel that more lies beyond: its chevron, and the pill under it. */
     public val panelCue: ColorProducer =

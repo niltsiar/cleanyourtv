@@ -106,1027 +106,1153 @@ val LibraryOverlayLookUiTest by testSuite {
 
 class LibraryOverlayLookUiTestContent :
     RobolectricTestSuiteContent({
-        testFixture { LibraryOverlayLookUiFixture() } asContextForEach {
-            test("the focused card s cut name scrolls and a cut name without focus stays still") {
-                showLibrary(cutNames.map { libraryApp(it) } + nineApps)
-                val (first, second) = cutNames
-                compose.onNodeWithTag("card:${key(first)}").assertIsFocused()
-                // Waiting for idle would run a whole pass and back to its start.
-                compose.mainClock.autoAdvance = false
-                val focused = cardFrame(first)
-                val other = cardFrame(second)
+        for (look in Look.entries) {
+            testSuite(look.name) {
+                testFixture { LibraryOverlayLookUiFixture(look) } asContextForEach {
+                    test("the focused card s cut name scrolls and a cut name without focus stays still") {
+                        showLibrary(cutNames.map { libraryApp(it) } + nineApps)
+                        val (first, second) = cutNames
+                        compose.onNodeWithTag("card:${key(first)}").assertIsFocused()
+                        // Waiting for idle would run a whole pass and back to its start.
+                        compose.mainClock.autoAdvance = false
+                        val focused = cardFrame(first)
+                        val other = cardFrame(second)
 
-                compose.mainClock.advanceTimeBy(2_000)
+                        compose.mainClock.advanceTimeBy(2_000)
 
-                withClue("the focused cut name did not move") { cardFrame(first) shouldNotBe focused }
-                cardFrame(second) shouldBe other
-            }
+                        withClue("the focused cut name did not move") { cardFrame(first) shouldNotBe focused }
+                        cardFrame(second) shouldBe other
+                    }
 
-            test("with reduced motion the focused card s cut name stays still") {
-                showLibrary(cutNames.map { libraryApp(it) } + nineApps, motion = Motion(reducedMotion = true))
-                val first = cutNames.first()
-                compose.onNodeWithTag("card:${key(first)}").assertIsFocused()
-                // Waiting for idle would run a whole pass and back to its start.
-                compose.mainClock.autoAdvance = false
-                val focused = cardFrame(first)
+                    test("with reduced motion the focused card s cut name stays still") {
+                        showLibrary(cutNames.map { libraryApp(it) } + nineApps, motion = Motion(reducedMotion = true))
+                        val first = cutNames.first()
+                        compose.onNodeWithTag("card:${key(first)}").assertIsFocused()
+                        // Waiting for idle would run a whole pass and back to its start.
+                        compose.mainClock.autoAdvance = false
+                        val focused = cardFrame(first)
 
-                compose.mainClock.advanceTimeBy(2_000)
+                        compose.mainClock.advanceTimeBy(2_000)
 
-                cardFrame(first) shouldBe focused
-            }
+                        cardFrame(first) shouldBe focused
+                    }
 
-            test("a focused card shows the plate behind it with glass") {
-                showLibrary(nineApps, focusStyle = FocusStyle.Glass)
+                    test("a focused card shows the plate behind it with glass") {
+                        showLibrary(nineApps, focusStyle = FocusStyle.Glass)
 
-                val inside = insideFocusedCard("App 1")
-                withClue("inside $inside") { inside shouldBeLessThan (CARD_FILL_RED - 10) }
-            }
+                        val inside = insideFocusedCard("App 1")
+                        withClue("inside $inside") { inside shouldBeLessThan (CARD_FILL_RED - 10) }
+                    }
 
-            test("a focused card keeps its fill with rim and halo") {
-                showLibrary(nineApps, focusStyle = FocusStyle.Rim)
+                    if (look == Look.Glass) {
+                        test("a focused card keeps its fill with rim and halo") {
+                            showLibrary(nineApps, focusStyle = FocusStyle.Rim)
 
-                val inside = insideFocusedCard("App 1")
-                withClue("inside $inside") { abs(inside - CARD_FILL_RED) shouldBeLessThanOrEqualTo 2 }
-            }
-
-            test("a bright home does not show through the panel") {
-                bleedThrough() shouldBeLessThanOrEqualTo MAX_BLEED
-            }
-
-            test("three rows of six cards show whole and the fourth row waits below") {
-                showLibrary(twentyThree)
-
-                val grid = bounds("library:cards")
-                val shown = (1..18).map { card(app(it)) }
-                withClue("$shown in $grid") {
-                    shown
-                        .all {
-                            it.left >= grid.left && it.right <= grid.right && it.top >= grid.top &&
-                                it.bottom <= grid.bottom
-                        }.shouldBeTrue()
-                }
-                shown.map { it.top.value.roundToInt() }.distinct().size shouldBe 3
-                shown.map { it.left.value.roundToInt() }.distinct().size shouldBe 6
-                val fourth = compose.onAllNodesWithTag("card:${key(app(19))}").fetchSemanticsNodes()
-                (fourth.isEmpty() || card(app(19)).top >= grid.bottom).shouldBeTrue()
-            }
-
-            test("the fourth row scrolls in with its ring whole and the first row comes back the same way") {
-                showLibrary(twentyThree)
-                val grid = bounds("library:cards")
-                val reach = 7.dp * FOCUSED_SCALE
-
-                press(Key.DirectionDown, times = 3)
-                withClue("${grownCard(app(19))} in $grid") {
-                    (grownCard(app(19)).bottom + reach) shouldBeLessThanOrEqualTo
-                        (grid.bottom + 1.dp)
-                }
-
-                press(Key.DirectionUp, times = 3)
-                withClue("${grownCard(app(1))} in $grid") { (grownCard(app(1)).top - reach) shouldBeGreaterThanOrEqualTo (grid.top - 1.dp) }
-            }
-
-            test("a chevron under the grid says cards wait below and one at its top says cards wait above") {
-                showLibrary(twentyThree)
-                val grid = bounds("library:cards")
-                val middle = (grid.left + grid.right) / 2
-                // The bottom chevron's tip: its pill is centred 9 dp under the grid and the chevron is 9 dp tall.
-                val bottomTip = grid.bottom + 13.5.dp
-                val topTip = grid.top + 3.5.dp
-
-                withClue("bottom cue at the start") { cueAt(middle, bottomTip).shouldBeTrue() }
-                withClue("no top cue at the start") { cueAt(middle, topTip).shouldBeFalse() }
-
-                press(Key.DirectionDown, times = 3)
-                withClue("no bottom cue with the last row in view") { cueAt(middle, bottomTip).shouldBeFalse() }
-                withClue("top cue with the first row scrolled out") { cueAt(middle, topTip).shouldBeTrue() }
-            }
-
-            test("the panel keeps 31 dp under the grid and ends 12 dp over the screens bottom") {
-                showLibrary(twentyThree)
-
-                val panel = bounds("library:panel")
-                val screen = compose.onRoot().getBoundsInRoot()
-
-                (panel.bottom - bounds("library:cards").bottom).value shouldBe (31f plusOrMinus 0.5f)
-                (screen.bottom - panel.bottom).value shouldBe (12.5f plusOrMinus 0.5f)
-            }
-
-            test("with focus overshoot the grid leaves room over its top row for the ring at the peak of the pop") {
-                showLibrary(nineApps, motion = Motion(focusOvershoot = true))
-
-                val peakReach = 109f * (1.144f - 1f) / 2f + FocusRingReach.value * 1.144f
-                (card("App 1").top - bounds("library:cards").top).value shouldBe (peakReach plusOrMinus 0.6f)
-            }
-
-            test("a focused top row card has its ring at least 16 dp below the hint row key caps") {
-                showLibrary(nineApps)
-
-                withClue("${ringRoomUnderKeyCaps("App 1")}") { ringRoomUnderKeyCaps("App 1") shouldBeGreaterThanOrEqualTo 16.dp }
-            }
-
-            test("a focused top row card has its ring at least 16 dp below the key caps with the order chip shown") {
-                showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
-                press(Key.DirectionRight)
-
-                withClue("${ringRoomUnderKeyCaps("App 2")}") { ringRoomUnderKeyCaps("App 2") shouldBeGreaterThanOrEqualTo 16.dp }
-            }
-
-            test("in the chooser a focused top row card has its ring at least 16 dp below the hint row key caps") {
-                showChooser()
-
-                withClue("${ringRoomUnderKeyCaps("Aaa")}") { ringRoomUnderKeyCaps("Aaa") shouldBeGreaterThanOrEqualTo 16.dp }
-            }
-
-            test("the 23rd app is seven presses from the first and no key goes past an edge") {
-                showLibrary(twentyThree)
-
-                press(Key.DirectionUp)
-                press(Key.DirectionLeft)
-                focusedApps() shouldBe listOf(app(1))
-                press(Key.DirectionDown, times = 3)
-                focusedApps() shouldBe listOf(app(19))
-                press(Key.DirectionRight, times = 4)
-                focusedApps() shouldBe listOf(app(23))
-                press(Key.DirectionDown)
-                press(Key.DirectionRight)
-                focusedApps() shouldBe listOf(app(23))
-            }
-
-            test("down from the sixth column lands on the last card of the short last row") {
-                showLibrary(twentyThree)
-
-                press(Key.DirectionRight, times = 5)
-                press(Key.DirectionDown, times = 3)
-
-                focusedApps() shouldBe listOf(app(23))
-            }
-
-            test("down into the fourth row keeps the column") {
-                showLibrary(twentyThree)
-
-                press(Key.DirectionRight, times = 2)
-                press(Key.DirectionDown, times = 3)
-
-                focusedApps() shouldBe listOf(app(21))
-                press(Key.DirectionUp)
-                focusedApps() shouldBe listOf(app(15))
-            }
-
-            test("the status line sits at the bottom of every card on one baseline") {
-                val long = "Long enough a name to wrap onto two lines"
-                // Aaa takes the focus, and its growth with it; the cards measured here are idle.
-                showLibrary(listOf("Aaa", "Beta", long).map { libraryApp(it, installedAt = NOW - DAY) })
-
-                compose.onNodeWithTag("card:${key("Aaa")}").assertIsFocused()
-                val bottom = card("Beta").bottom - 6.dp
-                assertNear(bottom, statusText("New", "Beta").bottom)
-                assertNear(bottom, statusText("New", long).bottom)
-            }
-
-            test("a two line name ends at least 4 dp above the status line and a focused one at least 2 dp") {
-                showLibrary(longNames.map { libraryApp(it, installedAt = NOW - DAY) })
-
-                assertNameClearsStatus()
-            }
-
-            test("in the chooser a two line name with a descender ends at least 6 dp above the check and above the ring") {
-                showLibrary(
-                    listOf(libraryApp("Aaa"), libraryApp("Bbb $describedName", onHome = true), libraryApp("Ccc $describedName")),
-                    art = LibraryArt(red, Color.Red),
-                    config = chooser,
-                )
-
-                for ((mark, name) in listOf("card:check" to "Bbb $describedName", "card:ring" to "Ccc $describedName")) {
-                    val top = compose.onNodeWithTag("$mark:${key(name)}", useUnmergedTree = true).getBoundsInRoot().top
-                    val room = top - lastLineBottom(name)
-                    withClue("the name ends $room above the $mark") { room shouldBeGreaterThanOrEqualTo (6.dp - 0.05.dp) }
-                }
-            }
-
-            for ((mode, selection) in listOf("in the chooser" to true, "in browse mode" to false)) {
-                test("$mode a card keeps its outer size of 109 dp tall and a sixth of the grid wide") {
-                    val names = listOf("Aaa", "Bbb $describedName", "Ccc")
-                    showLibrary(
-                        listOf(libraryApp(names[0]), libraryApp(names[1], onHome = true), libraryApp(names[2], installedAt = NOW - DAY)),
-                        art = LibraryArt(red, Color.Red),
-                        config = TvConfig(appLibrary = true, appLibrarySelection = selection),
-                    )
-
-                    for (name in names) {
-                        withClue(name) {
-                            card(name).height.value shouldBe (109f plusOrMinus 0.5f)
-                            card(name).width.value shouldBe (108.3f plusOrMinus 0.5f)
+                            val inside = insideFocusedCard("App 1")
+                            withClue("inside $inside") { abs(inside - CARD_FILL_RED) shouldBeLessThanOrEqualTo 2 }
                         }
                     }
-                }
-            }
 
-            test("a library card with no status mark has the art and the two line name slot centred for a one line and a two line name") {
-                showLibrary(
-                    listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp(longNames[0])),
-                    config = TvConfig(appLibrary = true, libraryOkOpens = true),
-                )
-
-                // A two-line name fills its slot, so the slot ends where that name does.
-                val slotBottom = nameBottom(longNames[0])
-                for (name in listOf("Beta", longNames[0])) {
-                    val above = art(name).top - card(name).top
-                    val below = card(name).bottom - slotBottom
-                    withClue("$name has $above over its art and $below under the name slot") {
-                        abs(above.value - below.value) shouldBeLessThanOrEqualTo
-                            4f
-                    }
-                }
-                assertNear(art("Beta").top - card("Beta").top, art(longNames[0]).top - card(longNames[0]).top)
-            }
-
-            test("a one line name keeps its gap under the art when the library has no status mark") {
-                showLibrary(
-                    listOf(libraryApp("Aaa"), libraryApp("Beta")),
-                    config = TvConfig(appLibrary = true, libraryOkOpens = true),
-                )
-
-                assertNear(13.dp, nameTop("Beta") - art("Beta").bottom)
-            }
-
-            test("a chooser card keeps its art and name above the check") {
-                showLibrary(
-                    listOf(libraryApp("Aaa"), libraryApp("Bbb", onHome = true), libraryApp("Ccc $describedName")),
-                    art = LibraryArt(red, Color.Red),
-                    config = chooser,
-                )
-
-                val (above, below) = roomAboveAndBelow("Bbb")
-                assertNear(4.dp, above)
-                assertNear(33.dp, below)
-                val (aboveTwo, belowTwo) = roomAboveAndBelow("Ccc $describedName")
-                assertNear(4.dp, aboveTwo)
-                assertNear(28.dp, belowTwo)
-            }
-
-            test("in the least used order a two line name ends at least 4 dp above the opened line and a focused one at least 2 dp") {
-                showLibrary(
-                    longNames.map { libraryApp(it) },
-                    config = TvConfig(appLibrary = true, libraryLeastUsed = true),
-                    record = OpenedRecord(times = mapOf(key(longNames[0]) to NOW - 3 * DAY), since = NOW - 90 * DAY),
-                )
-                press(Key.Menu)
-
-                assertNameClearsStatus()
-            }
-
-            test("in the least used order the status line is the opened text alone and the art keeps the usual inset") {
-                showLibrary(
-                    listOf(libraryApp("Aaa"), libraryApp("Beta", installedAt = NOW - DAY), libraryApp("Gamma", onHome = true)),
-                    config = TvConfig(appLibrary = true, libraryLeastUsed = true),
-                    record = OpenedRecord(times = mapOf(key("Gamma") to NOW - 3 * DAY), since = NOW - 90 * DAY),
-                )
-                val inset = { name: String -> art(name).left - card(name).left }
-                assertNear(15.8.dp, inset("Beta"))
-
-                press(Key.Menu)
-
-                assertNear(15.8.dp, inset("Beta"))
-                assertNear(15.8.dp, inset("Gamma"))
-                compose.textsOnCard("Beta") shouldBe listOf("Beta", "Never opened")
-                compose.textsOnCard("Gamma").take(1) shouldBe listOf("Gamma")
-                compose.textsOnCard("Gamma").size shouldBe 2
-                compose.textsOnCard("Gamma")[1] shouldStartWith "3 days ago, "
-            }
-
-            test("an idle card draws no fill and no rim over the panel") {
-                showLibrary(nineApps)
-
-                val idle = card("App 3")
-                val middle = (idle.top + idle.bottom) / 2
-                val panel = rgbAt(idle.right + 8.dp, middle)
-                for ((what, inside) in listOf("fill" to rgbAt(idle.left + 4.dp, middle), "rim" to rgbAt(idle.left + 0.5.dp, middle))) {
-                    withClue("$what $inside, panel $panel") {
-                        inside
-                            .zip(panel)
-                            .all { (card, ground) ->
-                                abs(card - ground) <= 1
-                            }.shouldBeTrue()
-                    }
-                }
-            }
-
-            test("in the chooser the count says how many apps are on home and follows a change") {
-                showChooser()
-                compose.onNodeWithTag("library:count").assertTextEquals("2 of 4 on Home")
-
-                press(Key.DirectionCenter)
-
-                compose.onNodeWithTag("library:count").assertTextEquals("1 of 4 on Home")
-            }
-
-            test("in browse mode the count stays the number of apps") {
-                showLibrary(listOf(libraryApp("Aaa", onHome = true), libraryApp("Bbb"), libraryApp("Ccc")))
-
-                compose.onNodeWithTag("library:count").assertTextEquals("3 apps")
-            }
-
-            test("a recent install has a green dot in its top end corner unless it is on home") {
-                showLibrary(
-                    listOf(
-                        libraryApp("Aaa"),
-                        libraryApp("Beta", installedAt = NOW - DAY),
-                        libraryApp("Gamma", onHome = true, installedAt = NOW - DAY),
-                    ),
-                )
-
-                // How far, 0 to 255, green leads red in the greenest pixel of the card's top end 20 by 20 dp corner.
-                fun greenInCorner(name: String): Int {
-                    val card = card(name)
-                    val density = compose.activity.resources.displayMetrics.density
-                    val pixels = compose.onRoot().captureToImage().toPixelMap()
-                    val xs = ((card.right - 20.dp).value * density).toInt() until (card.right.value * density).toInt()
-                    val ys = (card.top.value * density).toInt() until ((card.top + 20.dp).value * density).toInt()
-                    return ys.maxOf { y -> xs.maxOf { x -> Math.round((pixels[x, y].green - pixels[x, y].red) * 255) } }
-                }
-                withClue("the recent install off home") { greenInCorner("Beta") shouldBeGreaterThan 60 }
-                withClue("the recent install on home") { greenInCorner("Gamma") shouldBeLessThan 20 }
-            }
-
-            test("the art of a one line card starts as far below the card top as the art of a two line card") {
-                showLibrary(listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp(longNames[0])))
-
-                val one = art("Beta").top - card("Beta").top
-                val two = art(longNames[0]).top - card(longNames[0]).top
-                withClue("one-line art $one below its card top, two-line art $two") {
-                    abs(one.value - two.value) shouldBeLessThanOrEqualTo
-                        1f
-                }
-            }
-
-            test("a one line name is centred between the art and the status line") {
-                showLibrary(
-                    listOf(
-                        libraryApp("Aaa", installedAt = NOW - DAY),
-                        libraryApp("Beta", installedAt = NOW - DAY),
-                        libraryApp(longNames[0]),
-                    ),
-                )
-
-                val above = nameTop("Beta") - art("Beta").bottom
-                val below = statusTop("Beta") - nameBottom("Beta")
-                withClue(
-                    "$above under the art, $below above the status line",
-                ) { abs(above.value - below.value) shouldBeLessThanOrEqualTo 2f }
-            }
-
-            test("a name cut to two lines ends in an ellipsis with no space before it") {
-                val labels = (6..14).map { words -> NAME_WORDS.take(words).joinToString(" ") }
-                showLibrary(labels.map { libraryApp(it) })
-
-                val shown =
-                    labels.map { label ->
-                        compose
-                            .onNode(
-                                hasText("Control", substring = true) and hasAnyAncestor(hasTestTag("card:${key(label)}")),
-                                useUnmergedTree = true,
-                            ).fetchSemanticsNode()
-                            .config[SemanticsProperties.Text]
-                            .joinToString("") { it.text }
+                    test("a bright home does not show through the panel") {
+                        bleedThrough() shouldBeLessThanOrEqualTo MAX_BLEED
                     }
 
-                val cut = shown.filter { it.endsWith(ELLIPSIS) }
-                withClue("$shown") { cut.size shouldBeGreaterThanOrEqualTo 3 }
-                withClue("$cut") { cut.none { it.endsWith(" " + ELLIPSIS) }.shouldBeTrue() }
-            }
+                    test("three rows of six cards show whole and the fourth row waits below") {
+                        showLibrary(twentyThree)
 
-            test("a name with a long word shrinks until no line ends inside a word") {
-                val name = "Temporizadores y reloj"
-                showLibrary(listOf(libraryApp(name)))
+                        val grid = bounds("library:cards")
+                        val shown = (1..18).map { card(app(it)) }
+                        withClue("$shown in $grid") {
+                            shown
+                                .all {
+                                    it.left >= grid.left && it.right <= grid.right && it.top >= grid.top &&
+                                        it.bottom <= grid.bottom
+                                }.shouldBeTrue()
+                        }
+                        shown.map { it.top.value.roundToInt() }.distinct().size shouldBe 3
+                        shown.map { it.left.value.roundToInt() }.distinct().size shouldBe 6
+                        val fourth = compose.onAllNodesWithTag("card:${key(app(19))}").fetchSemanticsNodes()
+                        (fourth.isEmpty() || card(app(19)).top >= grid.bottom).shouldBeTrue()
+                    }
 
-                val layout = nameLayout(name)
-                layout.layoutInput.text.text shouldBe name
-                withClue(
-                    "the name must break inside a word without autoSize",
-                ) { linesEndingInsideAWord(unshrunk(layout)).shouldNotBeEmpty() }
-                linesEndingInsideAWord(layout) shouldBe emptyList<Int>()
-                withClue("${layout.lineCount} lines") {
-                    layout.lineCount shouldBeLessThanOrEqualTo 2
-                    layout.isLineEllipsized(layout.lineCount - 1).shouldBeFalse()
+                    test("the fourth row scrolls in with its ring whole and the first row comes back the same way") {
+                        showLibrary(twentyThree)
+                        val grid = bounds("library:cards")
+                        val reach = 7.dp * FOCUSED_SCALE
+
+                        press(Key.DirectionDown, times = 3)
+                        withClue("${grownCard(app(19))} in $grid") {
+                            (grownCard(app(19)).bottom + reach) shouldBeLessThanOrEqualTo
+                                (grid.bottom + 1.dp)
+                        }
+
+                        press(Key.DirectionUp, times = 3)
+                        withClue("${grownCard(app(1))} in $grid") {
+                            (grownCard(app(1)).top - reach) shouldBeGreaterThanOrEqualTo
+                                (grid.top - 1.dp)
+                        }
+                    }
+
+                    test("a chevron under the grid says cards wait below and one at its top says cards wait above") {
+                        showLibrary(twentyThree)
+                        val grid = bounds("library:cards")
+                        val middle = (grid.left + grid.right) / 2
+                        // The bottom chevron's tip: its pill is centred 9 dp under the grid and the chevron is 9 dp tall.
+                        val bottomTip = grid.bottom + 13.5.dp
+                        val topTip = grid.top + 3.5.dp
+
+                        withClue("bottom cue at the start") { cueAt(middle, bottomTip).shouldBeTrue() }
+                        withClue("no top cue at the start") { cueAt(middle, topTip).shouldBeFalse() }
+
+                        press(Key.DirectionDown, times = 3)
+                        withClue("no bottom cue with the last row in view") { cueAt(middle, bottomTip).shouldBeFalse() }
+                        withClue("top cue with the first row scrolled out") { cueAt(middle, topTip).shouldBeTrue() }
+                    }
+
+                    test("the panel keeps 31 dp under the grid and ends 12 dp over the screens bottom") {
+                        showLibrary(twentyThree)
+
+                        val panel = bounds("library:panel")
+                        val screen = compose.onRoot().getBoundsInRoot()
+
+                        (panel.bottom - bounds("library:cards").bottom).value shouldBe (31f plusOrMinus 0.5f)
+                        (screen.bottom - panel.bottom).value shouldBe (12.5f plusOrMinus 0.5f)
+                    }
+
+                    test("with focus overshoot the grid leaves room over its top row for the ring at the peak of the pop") {
+                        showLibrary(nineApps, motion = Motion(focusOvershoot = true))
+
+                        val peakReach = 109f * (1.144f - 1f) / 2f + FocusRingReach.value * 1.144f
+                        (card("App 1").top - bounds("library:cards").top).value shouldBe (peakReach plusOrMinus 0.6f)
+                    }
+
+                    test("a focused top row card has its ring at least 16 dp below the hint row key caps") {
+                        showLibrary(nineApps)
+
+                        withClue("${ringRoomUnderKeyCaps("App 1")}") { ringRoomUnderKeyCaps("App 1") shouldBeGreaterThanOrEqualTo 16.dp }
+                    }
+
+                    test("a focused top row card has its ring at least 16 dp below the key caps with the order chip shown") {
+                        showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
+                        press(Key.DirectionRight)
+
+                        withClue("${ringRoomUnderKeyCaps("App 2")}") { ringRoomUnderKeyCaps("App 2") shouldBeGreaterThanOrEqualTo 16.dp }
+                    }
+
+                    test("in the chooser a focused top row card has its ring at least 16 dp below the hint row key caps") {
+                        showChooser()
+
+                        withClue("${ringRoomUnderKeyCaps("Aaa")}") { ringRoomUnderKeyCaps("Aaa") shouldBeGreaterThanOrEqualTo 16.dp }
+                    }
+
+                    test("the 23rd app is seven presses from the first and no key goes past an edge") {
+                        showLibrary(twentyThree)
+
+                        press(Key.DirectionUp)
+                        press(Key.DirectionLeft)
+                        focusedApps() shouldBe listOf(app(1))
+                        press(Key.DirectionDown, times = 3)
+                        focusedApps() shouldBe listOf(app(19))
+                        press(Key.DirectionRight, times = 4)
+                        focusedApps() shouldBe listOf(app(23))
+                        press(Key.DirectionDown)
+                        press(Key.DirectionRight)
+                        focusedApps() shouldBe listOf(app(23))
+                    }
+
+                    test("down from the sixth column lands on the last card of the short last row") {
+                        showLibrary(twentyThree)
+
+                        press(Key.DirectionRight, times = 5)
+                        press(Key.DirectionDown, times = 3)
+
+                        focusedApps() shouldBe listOf(app(23))
+                    }
+
+                    test("down into the fourth row keeps the column") {
+                        showLibrary(twentyThree)
+
+                        press(Key.DirectionRight, times = 2)
+                        press(Key.DirectionDown, times = 3)
+
+                        focusedApps() shouldBe listOf(app(21))
+                        press(Key.DirectionUp)
+                        focusedApps() shouldBe listOf(app(15))
+                    }
+
+                    test("the status line sits at the bottom of every card on one baseline") {
+                        val long = "Long enough a name to wrap onto two lines"
+                        // Aaa takes the focus, and its growth with it; the cards measured here are idle.
+                        showLibrary(listOf("Aaa", "Beta", long).map { libraryApp(it, installedAt = NOW - DAY) })
+
+                        compose.onNodeWithTag("card:${key("Aaa")}").assertIsFocused()
+                        val bottom = card("Beta").bottom - 6.dp
+                        assertNear(bottom, statusText("New", "Beta").bottom)
+                        assertNear(bottom, statusText("New", long).bottom)
+                    }
+
+                    test("a two line name ends at least 4 dp above the status line and a focused one at least 2 dp") {
+                        showLibrary(longNames.map { libraryApp(it, installedAt = NOW - DAY) })
+
+                        assertNameClearsStatus()
+                    }
+
+                    test("in the chooser a two line name with a descender ends at least 6 dp above the check and above the ring") {
+                        showLibrary(
+                            listOf(libraryApp("Aaa"), libraryApp("Bbb $describedName", onHome = true), libraryApp("Ccc $describedName")),
+                            art = LibraryArt(red, Color.Red),
+                            config = chooser,
+                        )
+
+                        for ((mark, name) in listOf("card:check" to "Bbb $describedName", "card:ring" to "Ccc $describedName")) {
+                            val top = compose.onNodeWithTag("$mark:${key(name)}", useUnmergedTree = true).getBoundsInRoot().top
+                            val room = top - lastLineBottom(name)
+                            withClue("the name ends $room above the $mark") { room shouldBeGreaterThanOrEqualTo (6.dp - 0.05.dp) }
+                        }
+                    }
+
+                    for ((mode, selection) in listOf("in the chooser" to true, "in browse mode" to false)) {
+                        test("$mode a card keeps its outer size of 109 dp tall and a sixth of the grid wide") {
+                            val names = listOf("Aaa", "Bbb $describedName", "Ccc")
+                            showLibrary(
+                                listOf(
+                                    libraryApp(names[0]),
+                                    libraryApp(names[1], onHome = true),
+                                    libraryApp(
+                                        names[2],
+                                        installedAt =
+                                            NOW - DAY,
+                                    ),
+                                ),
+                                art = LibraryArt(red, Color.Red),
+                                config = TvConfig(appLibrary = true, appLibrarySelection = selection),
+                            )
+
+                            for (name in names) {
+                                withClue(name) {
+                                    card(name).height.value shouldBe (109f plusOrMinus 0.5f)
+                                    card(name).width.value shouldBe (108.3f plusOrMinus 0.5f)
+                                }
+                            }
+                        }
+                    }
+
+                    test(
+                        "a library card with no status mark has the art and the two line name slot centred for a one line and a two line name",
+                    ) {
+                        showLibrary(
+                            listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp(longNames[0])),
+                            config = TvConfig(appLibrary = true, libraryOkOpens = true),
+                        )
+
+                        // A two-line name fills its slot, so the slot ends where that name does.
+                        val slotBottom = nameBottom(longNames[0])
+                        for (name in listOf("Beta", longNames[0])) {
+                            val above = art(name).top - card(name).top
+                            val below = card(name).bottom - slotBottom
+                            withClue("$name has $above over its art and $below under the name slot") {
+                                abs(above.value - below.value) shouldBeLessThanOrEqualTo
+                                    4f
+                            }
+                        }
+                        assertNear(art("Beta").top - card("Beta").top, art(longNames[0]).top - card(longNames[0]).top)
+                    }
+
+                    test("a one line name keeps its gap under the art when the library has no status mark") {
+                        showLibrary(
+                            listOf(libraryApp("Aaa"), libraryApp("Beta")),
+                            config = TvConfig(appLibrary = true, libraryOkOpens = true),
+                        )
+
+                        assertNear(13.dp, nameTop("Beta") - art("Beta").bottom)
+                    }
+
+                    test("a chooser card keeps its art and name above the check") {
+                        showLibrary(
+                            listOf(libraryApp("Aaa"), libraryApp("Bbb", onHome = true), libraryApp("Ccc $describedName")),
+                            art = LibraryArt(red, Color.Red),
+                            config = chooser,
+                        )
+
+                        val (above, below) = roomAboveAndBelow("Bbb")
+                        assertNear(4.dp, above)
+                        assertNear(33.dp, below)
+                        val (aboveTwo, belowTwo) = roomAboveAndBelow("Ccc $describedName")
+                        assertNear(4.dp, aboveTwo)
+                        assertNear(28.dp, belowTwo)
+                    }
+
+                    test(
+                        "in the least used order a two line name ends at least 4 dp above the opened line and a focused one at least 2 dp",
+                    ) {
+                        showLibrary(
+                            longNames.map { libraryApp(it) },
+                            config = TvConfig(appLibrary = true, libraryLeastUsed = true),
+                            record = OpenedRecord(times = mapOf(key(longNames[0]) to NOW - 3 * DAY), since = NOW - 90 * DAY),
+                        )
+                        press(Key.Menu)
+
+                        assertNameClearsStatus()
+                    }
+
+                    test("in the least used order the status line is the opened text alone and the art keeps the usual inset") {
+                        showLibrary(
+                            listOf(libraryApp("Aaa"), libraryApp("Beta", installedAt = NOW - DAY), libraryApp("Gamma", onHome = true)),
+                            config = TvConfig(appLibrary = true, libraryLeastUsed = true),
+                            record = OpenedRecord(times = mapOf(key("Gamma") to NOW - 3 * DAY), since = NOW - 90 * DAY),
+                        )
+                        val inset = { name: String -> art(name).left - card(name).left }
+                        assertNear(15.8.dp, inset("Beta"))
+
+                        press(Key.Menu)
+
+                        assertNear(15.8.dp, inset("Beta"))
+                        assertNear(15.8.dp, inset("Gamma"))
+                        compose.textsOnCard("Beta") shouldBe listOf("Beta", "Never opened")
+                        compose.textsOnCard("Gamma").take(1) shouldBe listOf("Gamma")
+                        compose.textsOnCard("Gamma").size shouldBe 2
+                        compose.textsOnCard("Gamma")[1] shouldStartWith "3 days ago, "
+                    }
+
+                    test("an idle card draws no fill and no rim over the panel") {
+                        showLibrary(nineApps)
+
+                        val idle = card("App 3")
+                        val middle = (idle.top + idle.bottom) / 2
+                        val panel = rgbAt(idle.right + 8.dp, middle)
+                        for ((what, inside) in listOf(
+                            "fill" to rgbAt(idle.left + 4.dp, middle),
+                            "rim" to rgbAt(idle.left + 0.5.dp, middle),
+                        )) {
+                            withClue("$what $inside, panel $panel") {
+                                inside
+                                    .zip(panel)
+                                    .all { (card, ground) ->
+                                        abs(card - ground) <= 1
+                                    }.shouldBeTrue()
+                            }
+                        }
+                    }
+
+                    test("in the chooser the count says how many apps are on home and follows a change") {
+                        showChooser()
+                        compose.onNodeWithTag("library:count").assertTextEquals("2 of 4 on Home")
+
+                        press(Key.DirectionCenter)
+
+                        compose.onNodeWithTag("library:count").assertTextEquals("1 of 4 on Home")
+                    }
+
+                    test("in browse mode the count stays the number of apps") {
+                        showLibrary(listOf(libraryApp("Aaa", onHome = true), libraryApp("Bbb"), libraryApp("Ccc")))
+
+                        compose.onNodeWithTag("library:count").assertTextEquals("3 apps")
+                    }
+
+                    test("a recent install has a green dot in its top end corner unless it is on home") {
+                        showLibrary(
+                            listOf(
+                                libraryApp("Aaa"),
+                                libraryApp("Beta", installedAt = NOW - DAY),
+                                libraryApp("Gamma", onHome = true, installedAt = NOW - DAY),
+                            ),
+                        )
+
+                        // How far, 0 to 255, green leads red in the greenest pixel of the card's top end 20 by 20 dp corner.
+                        fun greenInCorner(name: String): Int {
+                            val card = card(name)
+                            val density = compose.activity.resources.displayMetrics.density
+                            val pixels = compose.onRoot().captureToImage().toPixelMap()
+                            val xs = ((card.right - 20.dp).value * density).toInt() until (card.right.value * density).toInt()
+                            val ys = (card.top.value * density).toInt() until ((card.top + 20.dp).value * density).toInt()
+                            return ys.maxOf { y -> xs.maxOf { x -> Math.round((pixels[x, y].green - pixels[x, y].red) * 255) } }
+                        }
+
+                        // How many pixels of the card's top end 20 by 20 dp corner stand apart from the colour most of it has.
+                        fun markInCorner(name: String): Int {
+                            val card = card(name)
+                            val density = compose.activity.resources.displayMetrics.density
+                            val pixels = compose.onRoot().captureToImage().toPixelMap()
+                            val xs = ((card.right - 20.dp).value * density).toInt() until (card.right.value * density).toInt()
+                            val ys = (card.top.value * density).toInt() until ((card.top + 20.dp).value * density).toInt()
+                            val corner = ys.flatMap { y -> xs.map { x -> pixels[x, y] } }
+                            val ground =
+                                corner
+                                    .groupingBy { it }
+                                    .eachCount()
+                                    .maxBy { it.value }
+                                    .key
+                            return corner.count {
+                                maxOf(abs(it.red - ground.red), abs(it.green - ground.green), abs(it.blue - ground.blue)) >
+                                    0.15f
+                            }
+                        }
+                        if (look == Look.Glass) {
+                            withClue("the recent install off home") { greenInCorner("Beta") shouldBeGreaterThan 60 }
+                            withClue("the recent install on home") { greenInCorner("Gamma") shouldBeLessThan 20 }
+                        } else {
+                            withClue("the recent install on home") { markInCorner("Gamma") shouldBe 0 }
+                            // Expressive clips a focused card to its capsule, which leaves out the corner; its status line says New.
+                            press(Key.DirectionRight, times = 2)
+                            withClue("the recent install off home") { markInCorner("Beta") shouldBeGreaterThan 50 }
+                        }
+                    }
+
+                    test("the art of a one line card starts as far below the card top as the art of a two line card") {
+                        showLibrary(listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp(longNames[0])))
+
+                        val one = art("Beta").top - card("Beta").top
+                        val two = art(longNames[0]).top - card(longNames[0]).top
+                        withClue("one-line art $one below its card top, two-line art $two") {
+                            abs(one.value - two.value) shouldBeLessThanOrEqualTo
+                                1f
+                        }
+                    }
+
+                    test("a one line name is centred between the art and the status line") {
+                        showLibrary(
+                            listOf(
+                                libraryApp("Aaa", installedAt = NOW - DAY),
+                                libraryApp("Beta", installedAt = NOW - DAY),
+                                libraryApp(longNames[0]),
+                            ),
+                        )
+
+                        val above = nameTop("Beta") - art("Beta").bottom
+                        val below = statusTop("Beta") - nameBottom("Beta")
+                        withClue(
+                            "$above under the art, $below above the status line",
+                        ) { abs(above.value - below.value) shouldBeLessThanOrEqualTo 2f }
+                    }
+
+                    test("a name cut to two lines ends in an ellipsis with no space before it") {
+                        val labels = (6..14).map { words -> NAME_WORDS.take(words).joinToString(" ") }
+                        showLibrary(labels.map { libraryApp(it) })
+
+                        val shown =
+                            labels.map { label ->
+                                compose
+                                    .onNode(
+                                        hasText("Control", substring = true) and hasAnyAncestor(hasTestTag("card:${key(label)}")),
+                                        useUnmergedTree = true,
+                                    ).fetchSemanticsNode()
+                                    .config[SemanticsProperties.Text]
+                                    .joinToString("") { it.text }
+                            }
+
+                        val cut = shown.filter { it.endsWith(ELLIPSIS) }
+                        withClue("$shown") { cut.size shouldBeGreaterThanOrEqualTo 3 }
+                        withClue("$cut") { cut.none { it.endsWith(" " + ELLIPSIS) }.shouldBeTrue() }
+                    }
+
+                    test("a name with a long word shrinks until no line ends inside a word") {
+                        val name = "Temporizadores y reloj"
+                        showLibrary(listOf(libraryApp(name)))
+
+                        val layout = nameLayout(name)
+                        layout.layoutInput.text.text shouldBe name
+                        withClue(
+                            "the name must break inside a word without autoSize",
+                        ) { linesEndingInsideAWord(unshrunk(layout)).shouldNotBeEmpty() }
+                        linesEndingInsideAWord(layout) shouldBe emptyList<Int>()
+                        withClue("${layout.lineCount} lines") {
+                            layout.lineCount shouldBeLessThanOrEqualTo 2
+                            layout.isLineEllipsized(layout.lineCount - 1).shouldBeFalse()
+                        }
+                    }
+
+                    test("a name that fits keeps the full size") {
+                        showLibrary(listOf(libraryApp("Plex")))
+
+                        val layout = nameLayout("Plex")
+                        layout.lineWidth(0) shouldBe (unshrunk(layout).lineWidth(0) plusOrMinus WIDTH_ROUNDING)
+                    }
+
+                    test("a word too long for the smallest size ends in an ellipsis within two lines at the full size") {
+                        val name = "Supercalifragilisticexpialidocious Antidisestablishmentarianism Pneumonoultramicroscopic"
+                        showLibrary(listOf(libraryApp(name)))
+
+                        val layout = nameLayout(name)
+                        withClue("${layout.lineCount} lines") { layout.lineCount shouldBeLessThanOrEqualTo 2 }
+                        (
+                            layout.layoutInput.text.text
+                                .endsWith(ELLIPSIS)
+                        ).shouldBeTrue()
+                        layout.lineWidth(layout.lineCount - 1) shouldBe
+                            (unshrunk(layout).lineWidth(layout.lineCount - 1) plusOrMinus WIDTH_ROUNDING)
+                    }
+
+                    test("on the light menu a focused order chip keeps its key cap 3 to 1 on the chip with its text 4 5 to 1 on the cap") {
+                        val (capOnChip, textOnCap) = focusedKeyCapContrast()
+
+                        withClue("cap on chip $capOnChip") { capOnChip shouldBeGreaterThanOrEqualTo 3f }
+                        withClue("text on cap $textOnCap") { textOnCap shouldBeGreaterThanOrEqualTo 4.5f }
+                    }
                 }
-            }
-
-            test("a name that fits keeps the full size") {
-                showLibrary(listOf(libraryApp("Plex")))
-
-                val layout = nameLayout("Plex")
-                layout.lineWidth(0) shouldBe (unshrunk(layout).lineWidth(0) plusOrMinus WIDTH_ROUNDING)
-            }
-
-            test("a word too long for the smallest size ends in an ellipsis within two lines at the full size") {
-                val name = "Supercalifragilisticexpialidocious Antidisestablishmentarianism Pneumonoultramicroscopic"
-                showLibrary(listOf(libraryApp(name)))
-
-                val layout = nameLayout(name)
-                withClue("${layout.lineCount} lines") { layout.lineCount shouldBeLessThanOrEqualTo 2 }
-                (
-                    layout.layoutInput.text.text
-                        .endsWith(ELLIPSIS)
-                ).shouldBeTrue()
-                layout.lineWidth(layout.lineCount - 1) shouldBe
-                    (unshrunk(layout).lineWidth(layout.lineCount - 1) plusOrMinus WIDTH_ROUNDING)
-            }
-
-            test("on the light menu a focused order chip keeps its key cap 3 to 1 on the chip with its text 4 5 to 1 on the cap") {
-                val (capOnChip, textOnCap) = focusedKeyCapContrast()
-
-                withClue("cap on chip $capOnChip") { capOnChip shouldBeGreaterThanOrEqualTo 3f }
-                withClue("text on cap $textOnCap") { textOnCap shouldBeGreaterThanOrEqualTo 4.5f }
             }
         }
     })
 
 class LibraryOverlayLookUiNightTestContent :
     RobolectricTestSuiteContent({
-        testFixture { LibraryOverlayLookUiFixture() } asContextForEach {
-            test("the bottom chevron sits in a 36 dp wide 20 dp tall pill of 15 percent white centred under the grid") {
-                showLibrary(twentyThree)
-                val grid = bounds("library:cards")
-                val centre = grid.bottom + 9.dp
+        for (look in Look.entries) {
+            testSuite(look.name) {
+                testFixture { LibraryOverlayLookUiFixture(look) } asContextForEach {
+                    test("the bottom chevron sits in a 36 dp wide 20 dp tall pill of 15 percent white centred under the grid") {
+                        showLibrary(twentyThree)
+                        val grid = bounds("library:cards")
+                        val centre = grid.bottom + 9.dp
 
-                // 15 % white over the panel's 0x14 is 20 + 0.15 x 235 = 55; 18 is half of what it adds. Only the middle row spans the whole pill.
-                val pill = lighterColumns(centre, level = 18)
+                        // 15 % white over the panel's 0x14 is 20 + 0.15 x 235 = 55; 18 is half of what it adds. Only the middle row spans the whole pill.
+                        val pill = lighterColumns(centre, level = 18)
 
-                (pill.endInclusive - pill.start) shouldBe (36f plusOrMinus 1f)
-                ((pill.start + pill.endInclusive) / 2f) shouldBe ((grid.left.value + grid.right.value) / 2f plusOrMinus 1f)
-                withClue("the pill ends inside the panel ${bounds("library:panel")}") {
-                    (centre + 10.dp) shouldBeLessThanOrEqualTo
-                        bounds("library:panel").bottom
-                }
-            }
-
-            test("the bottom chevron pill has 12 dp clear above it to the last row and 12 dp below it to the panel") {
-                showLibrary(twentyThree)
-                val grid = bounds("library:cards")
-                val lastRow = card(app(18)).bottom
-                val panel = bounds("library:panel").bottom
-                val middle = (grid.left + grid.right) / 2
-                val density = compose.activity.resources.displayMetrics.density
-                val pixels = compose.onRoot().captureToImage().toPixelMap()
-                val x = (middle.value * density).toInt()
-                val ground = pixels[x, ((lastRow.value + 3f) * density).toInt()].red * 255
-
-                // The pill, at the centre column, is the rows lighter than the panel's inside by half of what 15 % white adds; the panel's own rim is not.
-                val lit =
-                    (((lastRow.value + 1f) * density).toInt() until ((panel.value - 1.5f) * density).toInt()).filter {
-                        pixels[x, it].red * 255 -
-                            ground >=
-                            18
+                        (pill.endInclusive - pill.start) shouldBe (36f plusOrMinus 1f)
+                        ((pill.start + pill.endInclusive) / 2f) shouldBe ((grid.left.value + grid.right.value) / 2f plusOrMinus 1f)
+                        withClue("the pill ends inside the panel ${bounds("library:panel")}") {
+                            (centre + 10.dp) shouldBeLessThanOrEqualTo
+                                bounds("library:panel").bottom
+                        }
                     }
 
-                val above = lit.min() / density - lastRow.value
-                val below = panel.value - (lit.max() + 1) / density
-                withClue("$above dp above the pill and $below dp below it") {
-                    above shouldBeGreaterThanOrEqualTo 11.5f
-                    below shouldBeGreaterThanOrEqualTo 11.5f
-                }
-            }
+                    test("the bottom chevron pill has 12 dp clear above it to the last row and 12 dp below it to the panel") {
+                        showLibrary(twentyThree)
+                        val grid = bounds("library:cards")
+                        val lastRow = card(app(18)).bottom
+                        val panel = bounds("library:panel").bottom
+                        val middle = (grid.left + grid.right) / 2
+                        val density = compose.activity.resources.displayMetrics.density
+                        val pixels = compose.onRoot().captureToImage().toPixelMap()
+                        val x = (middle.value * density).toInt()
+                        val ground = pixels[x, ((lastRow.value + 3f) * density).toInt()].red * 255
 
-            test("the bottom chevron is 18 dp wide") {
-                showLibrary(twentyThree)
-                val grid = bounds("library:cards")
-                val centre = grid.bottom + 9.dp
+                        // The pill, at the centre column, is the rows lighter than the panel's inside by half of what 15 % white adds; the panel's own rim is not.
+                        val lit =
+                            (((lastRow.value + 1f) * density).toInt() until ((panel.value - 1.5f) * density).toInt()).filter {
+                                pixels[x, it].red * 255 -
+                                    ground >=
+                                    18
+                            }
 
-                // The arms are 18 dp apart at their tops, 4.5 dp over the pill's middle, and 2 dp of stroke widen that to 20 dp.
-                val tops = lighterColumns(centre - 4.dp, level = 70)
+                        val above = lit.min() / density - lastRow.value
+                        val below = panel.value - (lit.max() + 1) / density
+                        withClue("$above dp above the pill and $below dp below it") {
+                            above shouldBeGreaterThanOrEqualTo 11.5f
+                            below shouldBeGreaterThanOrEqualTo 11.5f
+                        }
+                    }
 
-                (tops.endInclusive - tops.start) shouldBe (20f plusOrMinus 1.5f)
-            }
+                    test("the bottom chevron is 18 dp wide") {
+                        showLibrary(twentyThree)
+                        val grid = bounds("library:cards")
+                        val centre = grid.bottom + 9.dp
 
-            test("the ring of the first card shows whole at its side and top") {
-                showLibrary(nineApps)
+                        // The arms are 18 dp apart at their tops, 4.5 dp over the pill's middle, and 2 dp of stroke widen that to 20 dp.
+                        val tops = lighterColumns(centre - 4.dp, level = 70)
 
-                val grown = grownCard("App 1")
-                // The middle of the white ring: 3 dp wide, 3 dp out from the grown card, grown with it.
-                val out = 4.5.dp * FOCUSED_SCALE
-                redAt(grown.left - out, (grown.top + grown.bottom) / 2) shouldBeGreaterThanOrEqualTo WHITE
-                redAt((grown.left + grown.right) / 2, grown.top - out) shouldBeGreaterThanOrEqualTo WHITE
-            }
+                        (tops.endInclusive - tops.start) shouldBe (20f plusOrMinus 1.5f)
+                    }
 
-            test("the title ink starts at least 20 dp under the panels top edge") {
-                showLibrary(nineApps)
+                    test("the ring of the first card shows whole at its side and top") {
+                        showLibrary(nineApps)
 
-                val top = titleInkTop()
+                        val grown = grownCard("App 1")
+                        if (look == Look.Glass) {
+                            // The middle of the white ring: 3 dp wide, 3 dp out from the grown card, grown with it.
+                            val out = 4.5.dp * FOCUSED_SCALE
+                            redAt(grown.left - out, (grown.top + grown.bottom) / 2) shouldBeGreaterThanOrEqualTo WHITE
+                            redAt((grown.left + grown.right) / 2, grown.top - out) shouldBeGreaterThanOrEqualTo WHITE
+                        } else {
+                            val pixels = compose.onRoot().captureToImage().toPixelMap()
+                            scanRing(pixels, "App 1", Side.Left) shouldNotBe null
+                            scanRing(pixels, "App 1", Side.Top) shouldNotBe null
+                        }
+                    }
 
-                withClue("$top") { top shouldBeGreaterThanOrEqualTo 20.dp }
-            }
+                    test("the title ink starts at least 20 dp under the panels top edge") {
+                        showLibrary(nineApps)
 
-            test("in the chooser the title ink starts at least 20 dp under the panels top edge") {
-                showChooser()
+                        val top = titleInkTop()
 
-                val top = titleInkTop()
+                        withClue("$top") { top shouldBeGreaterThanOrEqualTo 20.dp }
+                    }
 
-                withClue("$top") { top shouldBeGreaterThanOrEqualTo 20.dp }
-            }
+                    test("in the chooser the title ink starts at least 20 dp under the panels top edge") {
+                        showChooser()
 
-            test("never opened draws at 45 percent of the alpha of a last opened line") {
-                showLibrary(
-                    listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp("Gamma")),
-                    config = TvConfig(appLibrary = true, libraryLeastUsed = true),
-                    record = OpenedRecord(times = mapOf(key("Gamma") to NOW - 3 * DAY), since = NOW - 90 * DAY),
-                )
-                press(Key.Menu)
+                        val top = titleInkTop()
 
-                fun lift(name: String): Float {
-                    val (peak, ground) =
-                        lineBrightness(
-                            compose.onNodeWithTag("card:opened:${key(name)}", useUnmergedTree = true).getBoundsInRoot(),
+                        withClue("$top") { top shouldBeGreaterThanOrEqualTo 20.dp }
+                    }
+
+                    if (look == Look.Glass) {
+                        test("never opened draws at 45 percent of the alpha of a last opened line") {
+                            showLibrary(
+                                listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp("Gamma")),
+                                config = TvConfig(appLibrary = true, libraryLeastUsed = true),
+                                record = OpenedRecord(times = mapOf(key("Gamma") to NOW - 3 * DAY), since = NOW - 90 * DAY),
+                            )
+                            press(Key.Menu)
+
+                            fun lift(name: String): Float {
+                                val (peak, ground) =
+                                    lineBrightness(
+                                        compose.onNodeWithTag("card:opened:${key(name)}", useUnmergedTree = true).getBoundsInRoot(),
+                                    )
+                                return (peak - ground).toFloat()
+                            }
+                            val ratio = lift("Beta") / lift("Gamma")
+                            withClue("never opened is $ratio of the opened line") { ratio shouldBeIn (0.38f..0.52f) }
+                        }
+                    }
+
+                    test("an idle card shows the opaque panel so a bright home does not show through it") {
+                        showLibrary(nineApps)
+                        val idle = card("App 3")
+                        val overBlack = rgbAt(idle.left + 4.dp, (idle.top + idle.bottom) / 2)
+                        home = Color.White
+                        compose.waitForIdle()
+
+                        val inside = rgbAt(idle.left + 4.dp, (idle.top + idle.bottom) / 2)
+                        val expected = if (look == Look.Glass) listOf(25, 28, 38) else overBlack
+                        withClue("card $inside") {
+                            inside
+                                .zip(expected)
+                                .all { (actual, wanted) ->
+                                    abs(actual - wanted) <= 2
+                                }.shouldBeTrue()
+                        }
+                    }
+
+                    test("a card on home has no green check badge") {
+                        showLibrary(listOf(libraryApp("Aaa"), libraryApp("Beta", onHome = true)))
+
+                        val onHome = card("Beta")
+                        val (red, green) = rgbAt(onHome.right - 15.dp, onHome.top + 15.dp)
+                        withClue("red $red, green $green") { (green - red) shouldBeLessThan 20 }
+                    }
+
+                    test("in browse mode an app on home has the chooser s check centred in its status slot and an app off home has none") {
+                        showLibrary(listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp("Gamma", onHome = true)))
+
+                        val card = card("Gamma")
+                        val slot = DpRect(card.left + 6.dp, card.bottom - 20.dp, card.right - 6.dp, card.bottom - 6.dp)
+                        val check = compose.onNodeWithTag("card:check:${key("Gamma")}", useUnmergedTree = true)
+                        check.assertContentDescriptionEquals("On Home")
+                        val box = check.getBoundsInRoot()
+                        box.width.value shouldBe (18f plusOrMinus 0.5f)
+                        ((box.left.value + box.right.value) / 2f) shouldBe ((card.left.value + card.right.value) / 2f plusOrMinus 1f)
+                        ((box.top.value + box.bottom.value) / 2f) shouldBe ((slot.top.value + slot.bottom.value) / 2f plusOrMinus 1f)
+                        compose.onAllNodes(hasContentDescription("On Home"), useUnmergedTree = true).assertCountEquals(1)
+                        compose.onNodeWithTag("card:ring:${key("Beta")}", useUnmergedTree = true).assertDoesNotExist()
+                    }
+
+                    test("a recent install off home says New alone and an app off home that is not new says nothing") {
+                        showLibrary(
+                            listOf(
+                                libraryApp("Aaa"),
+                                libraryApp("Beta", installedAt = NOW - DAY),
+                                libraryApp(
+                                    "Gamma",
+                                    onHome = true,
+                                    installedAt =
+                                        NOW - DAY,
+                                ),
+                            ),
                         )
-                    return (peak - ground).toFloat()
-                }
-                val ratio = lift("Beta") / lift("Gamma")
-                withClue("never opened is $ratio of the opened line") { ratio shouldBeIn (0.38f..0.52f) }
-            }
 
-            test("an idle card shows the opaque panel so a bright home does not show through it") {
-                showLibrary(nineApps)
-                home = Color.White
-                compose.waitForIdle()
+                        compose.textsOnCard("Aaa") shouldBe listOf("Aaa")
+                        compose.textsOnCard("Beta") shouldBe listOf("Beta", "New")
+                        compose.textsOnCard("Gamma") shouldBe listOf("Gamma")
+                    }
 
-                val idle = card("App 3")
-                val inside = rgbAt(idle.left + 4.dp, (idle.top + idle.bottom) / 2)
-                val expected = listOf(25, 28, 38)
-                withClue("card $inside") { inside.zip(expected).all { (actual, wanted) -> abs(actual - wanted) <= 2 }.shouldBeTrue() }
-            }
+                    test("in the chooser an app on home has an 18 dp check centred in its status slot and none off home") {
+                        showChooser()
 
-            test("a card on home has no green check badge") {
-                showLibrary(listOf(libraryApp("Aaa"), libraryApp("Beta", onHome = true)))
+                        val card = card("Bbb")
+                        val slot = DpRect(card.left + 6.dp, card.bottom - 20.dp, card.right - 6.dp, card.bottom - 6.dp)
+                        val check = compose.onNodeWithTag("card:check:${key("Bbb")}", useUnmergedTree = true).getBoundsInRoot()
+                        check.width.value shouldBe (18f plusOrMinus 0.5f)
+                        check.height.value shouldBe (18f plusOrMinus 0.5f)
+                        ((check.left.value + check.right.value) / 2f) shouldBe ((card.left.value + card.right.value) / 2f plusOrMinus 1f)
+                        ((check.top.value + check.bottom.value) / 2f) shouldBe ((slot.top.value + slot.bottom.value) / 2f plusOrMinus 1f)
+                        compose.onNodeWithTag("card:check:${key("Bbb")}", useUnmergedTree = true).assertContentDescriptionEquals("On Home")
+                        compose.onNodeWithTag("card:check:${key("Ccc")}", useUnmergedTree = true).assertDoesNotExist()
+                    }
 
-                val onHome = card("Beta")
-                val (red, green) = rgbAt(onHome.right - 15.dp, onHome.top + 15.dp)
-                withClue("red $red, green $green") { (green - red) shouldBeLessThan 20 }
-            }
+                    if (look == Look.Glass) {
+                        test("in the chooser the check of an idle card is a white 085 disc with a dark check") {
+                            showChooser()
 
-            test("in browse mode an app on home has the chooser s check centred in its status slot and an app off home has none") {
-                showLibrary(listOf(libraryApp("Aaa"), libraryApp("Beta"), libraryApp("Gamma", onHome = true)))
+                            val idleFill = redAt(card("Bbb").left + 4.dp, (card("Bbb").top + card("Bbb").bottom) / 2)
+                            val disc = redInMark("card:check", "Bbb", 0.5f, 0.1f)
+                            val stroke = redInMark("card:check", "Bbb", 0.58f, 0.51f)
 
-                val card = card("Gamma")
-                val slot = DpRect(card.left + 6.dp, card.bottom - 20.dp, card.right - 6.dp, card.bottom - 6.dp)
-                val check = compose.onNodeWithTag("card:check:${key("Gamma")}", useUnmergedTree = true)
-                check.assertContentDescriptionEquals("On Home")
-                val box = check.getBoundsInRoot()
-                box.width.value shouldBe (18f plusOrMinus 0.5f)
-                ((box.left.value + box.right.value) / 2f) shouldBe ((card.left.value + card.right.value) / 2f plusOrMinus 1f)
-                ((box.top.value + box.bottom.value) / 2f) shouldBe ((slot.top.value + slot.bottom.value) / 2f plusOrMinus 1f)
-                compose.onAllNodes(hasContentDescription("On Home"), useUnmergedTree = true).assertCountEquals(1)
-                compose.onNodeWithTag("card:ring:${key("Beta")}", useUnmergedTree = true).assertDoesNotExist()
-            }
-
-            test("a recent install off home says New alone and an app off home that is not new says nothing") {
-                showLibrary(
-                    listOf(
-                        libraryApp("Aaa"),
-                        libraryApp("Beta", installedAt = NOW - DAY),
-                        libraryApp(
-                            "Gamma",
-                            onHome = true,
-                            installedAt =
-                                NOW - DAY,
-                        ),
-                    ),
-                )
-
-                compose.textsOnCard("Aaa") shouldBe listOf("Aaa")
-                compose.textsOnCard("Beta") shouldBe listOf("Beta", "New")
-                compose.textsOnCard("Gamma") shouldBe listOf("Gamma")
-            }
-
-            test("in the chooser an app on home has an 18 dp check centred in its status slot and none off home") {
-                showChooser()
-
-                val card = card("Bbb")
-                val slot = DpRect(card.left + 6.dp, card.bottom - 20.dp, card.right - 6.dp, card.bottom - 6.dp)
-                val check = compose.onNodeWithTag("card:check:${key("Bbb")}", useUnmergedTree = true).getBoundsInRoot()
-                check.width.value shouldBe (18f plusOrMinus 0.5f)
-                check.height.value shouldBe (18f plusOrMinus 0.5f)
-                ((check.left.value + check.right.value) / 2f) shouldBe ((card.left.value + card.right.value) / 2f plusOrMinus 1f)
-                ((check.top.value + check.bottom.value) / 2f) shouldBe ((slot.top.value + slot.bottom.value) / 2f plusOrMinus 1f)
-                compose.onNodeWithTag("card:check:${key("Bbb")}", useUnmergedTree = true).assertContentDescriptionEquals("On Home")
-                compose.onNodeWithTag("card:check:${key("Ccc")}", useUnmergedTree = true).assertDoesNotExist()
-            }
-
-            test("in the chooser the check of an idle card is a white 085 disc with a dark check") {
-                showChooser()
-
-                val idleFill = redAt(card("Bbb").left + 4.dp, (card("Bbb").top + card("Bbb").bottom) / 2)
-                val disc = redInMark("card:check", "Bbb", 0.5f, 0.1f)
-                val stroke = redInMark("card:check", "Bbb", 0.58f, 0.51f)
-
-                withClue("the disc") { disc.toFloat() shouldBe (idleFill + 0.85f * (255 - idleFill) plusOrMinus 6f) }
-                withClue("the check is $stroke on a disc of $disc") { stroke.toFloat() shouldBeLessThanOrEqualTo (0.35f * disc) }
-            }
-
-            test("in the chooser the check of the focused card is a white disc with a dark check") {
-                showChooser()
-                compose.onNodeWithTag("card:${key("Aaa")}").assertIsFocused()
-
-                // The focused card grows about its centre, so the mark is read over its whole box, grown by 3 dp.
-                val mark = compose.onNodeWithTag("card:check:${key("Aaa")}", useUnmergedTree = true).getBoundsInRoot()
-                val density = compose.activity.resources.displayMetrics.density
-                val pixels = compose.onRoot().captureToImage().toPixelMap()
-                val reds =
-                    ((mark.left.value - 3f) * density).toInt().until(((mark.right.value + 3f) * density).toInt()).flatMap { x ->
-                        ((mark.top.value - 3f) * density).toInt().until(((mark.bottom.value + 3f) * density).toInt()).map { y ->
-                            Math.round(pixels[x, y].red * 255)
+                            withClue("the disc") { disc.toFloat() shouldBe (idleFill + 0.85f * (255 - idleFill) plusOrMinus 6f) }
+                            withClue(
+                                "the check is $stroke on a disc of $disc",
+                            ) { stroke.toFloat() shouldBeLessThanOrEqualTo (0.35f * disc) }
                         }
                     }
-                withClue("the disc: ${reds.max()}") { reds.max() shouldBeGreaterThanOrEqualTo 235 }
-                withClue("the check: ${reds.min()}") { reds.min() shouldBeLessThanOrEqualTo 40 }
-            }
 
-            test(
-                "in the chooser an app off home shows an 18 dp ring of 2 dp white 040 filled with white 010 where an app on home has its check",
-            ) {
-                showChooser()
+                    if (look == Look.Glass) {
+                        test("in the chooser the check of the focused card is a white disc with a dark check") {
+                            showChooser()
+                            compose.onNodeWithTag("card:${key("Aaa")}").assertIsFocused()
 
-                val ring = compose.onNodeWithTag("card:ring:${key("Ccc")}", useUnmergedTree = true).getBoundsInRoot()
-                val idleFill = redAt(ring.left - 4.dp, (ring.top + ring.bottom) / 2)
-                ring.width.value shouldBe (18f plusOrMinus 0.5f)
-                ring.height.value shouldBe (18f plusOrMinus 0.5f)
-                withClue("the stroke") {
-                    redInMark("card:ring", "Ccc", 1f / 18f, 0.5f).toFloat() shouldBe
-                        (idleFill + 0.40f * (255 - idleFill) plusOrMinus 6f)
-                }
-                withClue("the stroke is 2 dp") {
-                    redInMark("card:ring", "Ccc", 1.8f / 18f, 0.5f).toFloat() shouldBe
-                        (idleFill + 0.40f * (255 - idleFill) plusOrMinus 8f)
-                }
-                withClue("the inside") {
-                    redInMark("card:ring", "Ccc", 0.5f, 0.5f).toFloat() shouldBe
-                        (idleFill + 0.10f * (255 - idleFill) plusOrMinus 3f)
-                }
-                compose.onNodeWithTag("card:ring:${key("Bbb")}", useUnmergedTree = true).assertDoesNotExist()
-            }
-
-            test("in the chooser the ring of an app off home is at least 80 darker than the check disc of an app on home") {
-                showChooser()
-
-                val ring = redInMark("card:ring", "Ccc", 1f / 18f, 0.5f)
-                val disc = redInMark("card:check", "Bbb", 0.5f, 0.1f)
-                withClue("the ring stroke is $ring against a disc of $disc") { (ring + 80) shouldBeLessThanOrEqualTo disc }
-            }
-
-            test("in the chooser the ring of the focused card off home stands at least 60 over the card around it") {
-                showChooser()
-                press(Key.DirectionRight, times = 2)
-                compose.onNodeWithTag("card:${key("Ccc")}").assertIsFocused()
-
-                // The focused card grows about its centre, so the mark is read over its whole box, grown by 3 dp.
-                val mark = compose.onNodeWithTag("card:ring:${key("Ccc")}", useUnmergedTree = true).getBoundsInRoot()
-                val density = compose.activity.resources.displayMetrics.density
-                val pixels = compose.onRoot().captureToImage().toPixelMap()
-                val reds =
-                    ((mark.left.value - 3f) * density).toInt().until(((mark.right.value + 3f) * density).toInt()).flatMap { x ->
-                        ((mark.top.value - 3f) * density).toInt().until(((mark.bottom.value + 3f) * density).toInt()).map { y ->
-                            Math.round(pixels[x, y].red * 255)
+                            // The focused card grows about its centre, so the mark is read over its whole box, grown by 3 dp.
+                            val mark = compose.onNodeWithTag("card:check:${key("Aaa")}", useUnmergedTree = true).getBoundsInRoot()
+                            val density = compose.activity.resources.displayMetrics.density
+                            val pixels = compose.onRoot().captureToImage().toPixelMap()
+                            val reds =
+                                ((mark.left.value - 3f) * density).toInt().until(((mark.right.value + 3f) * density).toInt()).flatMap { x ->
+                                    ((mark.top.value - 3f) * density).toInt().until(((mark.bottom.value + 3f) * density).toInt()).map { y ->
+                                        Math.round(pixels[x, y].red * 255)
+                                    }
+                                }
+                            withClue("the disc: ${reds.max()}") { reds.max() shouldBeGreaterThanOrEqualTo 235 }
+                            withClue("the check: ${reds.min()}") { reds.min() shouldBeLessThanOrEqualTo 40 }
                         }
                     }
-                withClue("the ring at ${reds.max()} over ${reds.min()}") { (reds.max() - reds.min()) shouldBeGreaterThanOrEqualTo 60 }
-            }
 
-            test("in the chooser no white lies on the art of an app on home and none hangs past the card") {
-                showChooser()
+                    if (look == Look.Glass) {
+                        test(
+                            "in the chooser an app off home shows an 18 dp ring of 2 dp white 040 filled with white 010 where an app on home has its check",
+                        ) {
+                            showChooser()
 
-                val card = card("Bbb")
-                val art = art("Bbb")
-                withClue("on the art") { whitePixels(art) shouldBe 0 }
-                val corner = DpRect(card.right - 12.dp, card.top - 12.dp, card.right + 12.dp, card.top + 12.dp)
-                withClue("on the corner") { whitePixels(corner) shouldBe 0 }
-                val below = DpRect(card.left, card.bottom, card.right, card.bottom + 6.dp)
-                withClue("under the card") { whitePixels(below) shouldBe 0 }
-            }
+                            val ring = compose.onNodeWithTag("card:ring:${key("Ccc")}", useUnmergedTree = true).getBoundsInRoot()
+                            val idleFill = redAt(ring.left - 4.dp, (ring.top + ring.bottom) / 2)
+                            ring.width.value shouldBe (18f plusOrMinus 0.5f)
+                            ring.height.value shouldBe (18f plusOrMinus 0.5f)
+                            withClue("the stroke") {
+                                redInMark("card:ring", "Ccc", 1f / 18f, 0.5f).toFloat() shouldBe
+                                    (idleFill + 0.40f * (255 - idleFill) plusOrMinus 6f)
+                            }
+                            withClue("the stroke is 2 dp") {
+                                redInMark("card:ring", "Ccc", 1.8f / 18f, 0.5f).toFloat() shouldBe
+                                    (idleFill + 0.40f * (255 - idleFill) plusOrMinus 8f)
+                            }
+                            withClue("the inside") {
+                                redInMark("card:ring", "Ccc", 0.5f, 0.5f).toFloat() shouldBe
+                                    (idleFill + 0.10f * (255 - idleFill) plusOrMinus 3f)
+                            }
+                            compose.onNodeWithTag("card:ring:${key("Bbb")}", useUnmergedTree = true).assertDoesNotExist()
+                        }
+                    }
 
-            test("in the chooser an idle app off home draws its art at 045 and its name at 060 where an app on home draws both whole") {
-                showChooser()
+                    if (look == Look.Glass) {
+                        test("in the chooser the ring of an app off home is at least 80 darker than the check disc of an app on home") {
+                            showChooser()
 
-                artOverCard("Bbb").first shouldBe 255
-                val (off, card) = artOverCard("Ccc")
-                withClue("the art over a card of $card") { off.toFloat() shouldBe (card + 0.45f * (255 - card) plusOrMinus 6f) }
-                val ratio = nameContrast("Ccc").toFloat() / nameContrast("Bbb")
-                withClue("the name off Home is $ratio of the name on Home") { ratio shouldBeIn (0.54f..0.66f) }
-            }
+                            val ring = redInMark("card:ring", "Ccc", 1f / 18f, 0.5f)
+                            val disc = redInMark("card:check", "Bbb", 0.5f, 0.1f)
+                            withClue("the ring stroke is $ring against a disc of $disc") { (ring + 80) shouldBeLessThanOrEqualTo disc }
+                        }
+                    }
 
-            test("in the chooser ok on a focused app off home lifts its art from 075 to whole and its name stays whole") {
-                showChooser()
-                press(Key.DirectionRight, times = 2)
-                compose.onNodeWithTag("card:${key("Ccc")}").assertIsFocused()
+                    test("in the chooser the ring of the focused card off home stands at least 60 over the card around it") {
+                        showChooser()
+                        press(Key.DirectionRight, times = 2)
+                        compose.onNodeWithTag("card:${key("Ccc")}").assertIsFocused()
 
-                val (before, card) = artOverCard("Ccc", FOCUSED_SCALE)
-                val nameBefore = nameContrast("Ccc")
-                press(Key.DirectionCenter)
-                compose.onNodeWithTag("card:check:${key("Ccc")}", useUnmergedTree = true).assertExists()
-                val after = artOverCard("Ccc").first
+                        // The focused card grows about its centre, so the mark is read over its whole box, grown by 3 dp.
+                        val mark = compose.onNodeWithTag("card:ring:${key("Ccc")}", useUnmergedTree = true).getBoundsInRoot()
+                        val density = compose.activity.resources.displayMetrics.density
+                        val pixels = compose.onRoot().captureToImage().toPixelMap()
+                        val area =
+                            ((mark.left.value - 3f) * density).toInt().until(((mark.right.value + 3f) * density).toInt()).flatMap { x ->
+                                ((mark.top.value - 3f) * density).toInt().until(((mark.bottom.value + 3f) * density).toInt()).map { y ->
+                                    pixels[x, y]
+                                }
+                            }
+                        if (look == Look.Glass) {
+                            val reds = area.map { Math.round(it.red * 255) }
+                            withClue(
+                                "the ring at ${reds.max()} over ${reds.min()}",
+                            ) { (reds.max() - reds.min()) shouldBeGreaterThanOrEqualTo 60 }
+                        } else {
+                            val contrast = ratio(area.maxBy { it.luminance() }, area.minBy { it.luminance() })
+                            withClue("the ring against the card $contrast") { contrast shouldBeGreaterThanOrEqualTo 3f }
+                        }
+                    }
 
-                withClue("the art over a card of $card") { before.toFloat() shouldBe (card + 0.75f * (255 - card) plusOrMinus 8f) }
-                after shouldBe 255
-                withClue("the art goes from $before to $after") { (after - before) shouldBeGreaterThanOrEqualTo 40 }
-                val name = nameContrast("Ccc").toFloat() / nameBefore
-                withClue("the name after OK is $name of the name before") { name shouldBeIn (0.95f..1.05f) }
-            }
+                    test("in the chooser no white lies on the art of an app on home and none hangs past the card") {
+                        showChooser()
 
-            test("in browse mode an app off home draws its art and name as an app on home does") {
-                showLibrary(
-                    listOf(libraryApp("Aaa"), libraryApp("Bbb", onHome = true), libraryApp("Ccc")),
-                    art = LibraryArt(red, Color.Red),
-                )
+                        val card = card("Bbb")
+                        val art = art("Bbb")
+                        withClue("on the art") { whitePixels(art) shouldBe 0 }
+                        val corner = DpRect(card.right - 12.dp, card.top - 12.dp, card.right + 12.dp, card.top + 12.dp)
+                        withClue("on the corner") { whitePixels(corner) shouldBe 0 }
+                        val below = DpRect(card.left, card.bottom, card.right, card.bottom + 6.dp)
+                        withClue("under the card") { whitePixels(below) shouldBe 0 }
+                    }
 
-                artOverCard("Bbb").first shouldBe 255
-                artOverCard("Ccc").first shouldBe 255
-                val ratio = nameContrast("Ccc").toFloat() / nameContrast("Bbb")
-                withClue("the name off Home is $ratio of the name on Home") { ratio shouldBeIn (0.95f..1.05f) }
-            }
+                    test(
+                        "in the chooser an idle app off home draws its art at 045 and its name at 060 where an app on home draws both whole",
+                    ) {
+                        showChooser()
 
-            test("in the chooser ok fades the focused card s art to whole over about 150 ms") {
-                val (before, reds) = artFramesOfAddingCcc(chooser)
+                        artOverCard("Bbb").first shouldBe 255
+                        val (off, card) = artOverCard("Ccc")
+                        withClue("the art over a card of $card") { off.toFloat() shouldBe (card + 0.45f * (255 - card) plusOrMinus 6f) }
+                        val ratio = nameContrast("Ccc").toFloat() / nameContrast("Bbb")
+                        withClue("the name off Home is $ratio of the name on Home") { ratio shouldBeIn (0.54f..0.66f) }
+                    }
 
-                val frames = reds.indexOfFirst { it == 255 } - reds.indexOfLast { it <= before + 1 }
-                withClue("from $before: $reds") { frames shouldBeIn (7..12) }
-            }
+                    if (look == Look.Glass) {
+                        test("in the chooser ok on a focused app off home lifts its art from 075 to whole and its name stays whole") {
+                            showChooser()
+                            press(Key.DirectionRight, times = 2)
+                            compose.onNodeWithTag("card:${key("Ccc")}").assertIsFocused()
 
-            test("with motion reduced ok changes the focused card s art in one frame") {
-                assertArtJumps(chooser.copy(reducedMotion = true))
-            }
+                            val (before, card) = artOverCard("Ccc", FOCUSED_SCALE)
+                            val nameBefore = nameContrast("Ccc")
+                            press(Key.DirectionCenter)
+                            compose.onNodeWithTag("card:check:${key("Ccc")}", useUnmergedTree = true).assertExists()
+                            val after = artOverCard("Ccc").first
 
-            test("with animations off ok changes the focused card s art in one frame") {
-                assertArtJumps(chooser.copy(animations = false))
-            }
+                            withClue("the art over a card of $card") {
+                                before.toFloat() shouldBe
+                                    (card + 0.75f * (255 - card) plusOrMinus 8f)
+                            }
+                            after shouldBe 255
+                            withClue("the art goes from $before to $after") { (after - before) shouldBeGreaterThanOrEqualTo 40 }
+                            val name = nameContrast("Ccc").toFloat() / nameBefore
+                            withClue("the name after OK is $name of the name before") { name shouldBeIn (0.95f..1.05f) }
+                        }
+                    }
 
-            test("in the chooser an app off home has its ring and no status text focused or not") {
-                showChooser()
+                    test("in browse mode an app off home draws its art and name as an app on home does") {
+                        showLibrary(
+                            listOf(libraryApp("Aaa"), libraryApp("Bbb", onHome = true), libraryApp("Ccc")),
+                            art = LibraryArt(red, Color.Red),
+                        )
 
-                compose.textsOnCard("Ccc") shouldBe listOf("Ccc")
-                compose.textsOnCard("Bbb") shouldBe listOf("Bbb")
-                press(Key.DirectionRight, times = 2)
-                compose.onNodeWithTag("card:${key("Ccc")}").assertIsFocused()
+                        artOverCard("Bbb").first shouldBe 255
+                        artOverCard("Ccc").first shouldBe 255
+                        val ratio = nameContrast("Ccc").toFloat() / nameContrast("Bbb")
+                        withClue("the name off Home is $ratio of the name on Home") { ratio shouldBeIn (0.95f..1.05f) }
+                    }
 
-                compose.textsOnCard("Ccc") shouldBe listOf("Ccc")
-                compose.onNodeWithTag("card:ring:${key("Ccc")}", useUnmergedTree = true).assertExists()
-            }
+                    test("in the chooser ok fades the focused card s art to whole over about 150 ms") {
+                        val (before, reds) = artFramesOfAddingCcc(chooser)
 
-            test("in the chooser the check of a card whose shortcut changed pulses to 112 and no card scales") {
-                val (peak, art, settled) = pulseFramesOfAddingCcc(chooser)
+                        val frames = reds.indexOfFirst { it == 255 } - reds.indexOfLast { it <= before + 1 }
+                        withClue("from $before: $reds") { frames shouldBeIn (7..12) }
+                    }
 
-                withClue("the check peaks at $peak dp, settled at $settled") { peak shouldBeGreaterThanOrEqualTo (1.08f * settled) }
-                withClue("the art spans $art dp") { (art.endInclusive - art.start) shouldBeLessThanOrEqualTo 1.5f }
-            }
+                    test("with motion reduced ok changes the focused card s art in one frame") {
+                        assertArtJumps(chooser.copy(reducedMotion = true))
+                    }
 
-            test("with motion reduced the check of a card whose shortcut changed does not pulse") {
-                val (peak, _, settled) = pulseFramesOfAddingCcc(chooser.copy(reducedMotion = true))
+                    test("with animations off ok changes the focused card s art in one frame") {
+                        assertArtJumps(chooser.copy(animations = false))
+                    }
 
-                withClue("the check peaks at $peak dp, settled at $settled") { peak shouldBeLessThanOrEqualTo (1.02f * settled) }
-            }
+                    test("in the chooser an app off home has its ring and no status text focused or not") {
+                        showChooser()
 
-            test("with animations off the check of a card whose shortcut changed does not pulse") {
-                val (peak, _, settled) = pulseFramesOfAddingCcc(chooser.copy(animations = false))
+                        compose.textsOnCard("Ccc") shouldBe listOf("Ccc")
+                        compose.textsOnCard("Bbb") shouldBe listOf("Bbb")
+                        press(Key.DirectionRight, times = 2)
+                        compose.onNodeWithTag("card:${key("Ccc")}").assertIsFocused()
 
-                withClue("the check peaks at $peak dp, settled at $settled") { peak shouldBeLessThanOrEqualTo (1.02f * settled) }
-            }
+                        compose.textsOnCard("Ccc") shouldBe listOf("Ccc")
+                        compose.onNodeWithTag("card:ring:${key("Ccc")}", useUnmergedTree = true).assertExists()
+                    }
 
-            test("the no usage status is one line under the order chip and not in the hint") {
-                showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
+                    test("in the chooser the check of a card whose shortcut changed pulses to 112 and no card scales") {
+                        val (peak, art, settled) = pulseFramesOfAddingCcc(chooser)
 
-                press(Key.Menu)
+                        withClue("the check peaks at $peak dp, settled at $settled") { peak shouldBeGreaterThanOrEqualTo (1.08f * settled) }
+                        withClue("the art spans $art dp") { (art.endInclusive - art.start) shouldBeLessThanOrEqualTo 1.5f }
+                    }
 
-                val count = bounds("library:count")
-                val status = bounds("library:status")
-                compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Add to Home", "Hold OK", "Options")
-                compose.onNodeWithTag("library:status").assertTextEquals("No usage data yet")
-                assertNear(count.right, status.right)
-                withClue("status $status under count $count") { status.top shouldBeGreaterThanOrEqualTo count.bottom }
-                withClue("status $status beside the hint ${bounds("library:hint")}") {
-                    status.left shouldBeGreaterThanOrEqualTo
-                        bounds("library:hint").left
+                    test("with motion reduced the check of a card whose shortcut changed does not pulse") {
+                        val (peak, _, settled) = pulseFramesOfAddingCcc(chooser.copy(reducedMotion = true))
+
+                        withClue("the check peaks at $peak dp, settled at $settled") { peak shouldBeLessThanOrEqualTo (1.02f * settled) }
+                    }
+
+                    test("with animations off the check of a card whose shortcut changed does not pulse") {
+                        val (peak, _, settled) = pulseFramesOfAddingCcc(chooser.copy(animations = false))
+
+                        withClue("the check peaks at $peak dp, settled at $settled") { peak shouldBeLessThanOrEqualTo (1.02f * settled) }
+                    }
+
+                    test("the no usage status is one line under the order chip and not in the hint") {
+                        showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
+
+                        press(Key.Menu)
+
+                        val count = bounds("library:count")
+                        val status = bounds("library:status")
+                        compose.onNodeWithTag("library:hint").assertTextEquals("OK", "Add to Home", "Hold OK", "Options")
+                        compose.onNodeWithTag("library:status").assertTextEquals("No usage data yet")
+                        assertNear(count.right, status.right)
+                        withClue("status $status under count $count") { status.top shouldBeGreaterThanOrEqualTo count.bottom }
+                        withClue("status $status beside the hint ${bounds("library:hint")}") {
+                            status.left shouldBeGreaterThanOrEqualTo
+                                bounds("library:hint").left
+                        }
+                    }
+
+                    test("the hint is a row of key chips as tall as reorder mode draws them") {
+                        showLibrary(nineApps)
+
+                        bounds("library:hint").height.value shouldBe (32f plusOrMinus 1f)
+                    }
+
+                    if (look == Look.Glass) {
+                        test("a focused order chip is filled white with dark text and a dark glyph") {
+                            showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
+                            val chip = bounds("library:order")
+                            val middle = (chip.top + chip.bottom) / 2
+                            val glyph = compose.onNodeWithTag("library:order:glyph", useUnmergedTree = true).getBoundsInRoot()
+                            withClue(
+                                "idle fill ${rgbAt(chip.left + 3.dp, middle)}",
+                            ) { rgbAt(chip.left + 3.dp, middle).all { it < 120 }.shouldBeTrue() }
+
+                            press(Key.DirectionUp)
+
+                            compose.onNodeWithTag("library:order").assertIsFocused()
+                            withClue(
+                                "focused fill ${rgbAt(chip.left + 3.dp, middle)}",
+                            ) { rgbAt(chip.left + 3.dp, middle).all { it >= 230 }.shouldBeTrue() }
+                            withClue("glyph is dark") { darkestRed(glyph) shouldBeLessThan 90 }
+                            withClue("text is dark") {
+                                darkestRed(
+                                    DpRect(glyph.right + 4.dp, chip.top + 6.dp, chip.right - 14.dp, chip.bottom - 6.dp),
+                                ) shouldBeLessThan
+                                    90
+                            }
+                        }
+                    }
+
+                    test("the status line of the focused card stays on the line of its neighbours") {
+                        showLibrary((1..9).map { libraryApp("App $it", installedAt = NOW - DAY) })
+                        focusedCard("App 1")
+
+                        statusMiddle("App 1", 6.dp, 6.dp) shouldBe (statusMiddle("App 2", 6.dp, 6.dp) plusOrMinus 1f)
+                    }
+
+                    test("the ring of a focused card stays 16 px from the cards beside and below it") {
+                        showLibrary(nineApps)
+                        val focused = focusedCard("App 1")
+                        val beside = card("App 2")
+                        val below = card("App 7")
+                        val density = compose.activity.resources.displayMetrics.density
+                        val pixels = compose.onRoot().captureToImage().toPixelMap()
+
+                        fun px(dp: Dp) = dp.value * density
+                        val midY = px((focused.top + focused.bottom) / 2).toInt()
+                        val midX = px((focused.left + focused.right) / 2).toInt()
+                        val across = px(beside.left) - lastWhite(px(focused.right), px(beside.left)) { pixels[it, midY].red }
+                        val down = px(below.top) - lastWhite(px(focused.bottom), px(below.top)) { pixels[midX, it].red }
+
+                        withClue("beside: $across px") { across shouldBeGreaterThanOrEqualTo 16f }
+                        withClue("below: $down px") { down shouldBeGreaterThanOrEqualTo 16f }
+                    }
+
+                    test(
+                        "on every frame of a focus move the highlight sits inside the ring of the card that gains focus and the one that loses it",
+                    ) {
+                        showLibrary(nineApps)
+
+                        assertEveryFrameOfAMoveHasTheHighlightInsideTheRing()
+                    }
+
+                    test("with reduced motion the highlight is inside the ring on every frame too") {
+                        showLibrary(
+                            nineApps,
+                            config = TvConfig(appLibrary = true, reducedMotion = true),
+                            motion = Motion(reducedMotion = true),
+                        )
+
+                        assertEveryFrameOfAMoveHasTheHighlightInsideTheRing()
+                    }
+
+                    test("the ring of a focused card is as far from it on all four sides") {
+                        showLibrary(nineApps)
+                        val grown = grownCard("App 1")
+                        val density = compose.activity.resources.displayMetrics.density
+                        val pixels = compose.onRoot().captureToImage().toPixelMap()
+
+                        // The walk starts 12 dp outside the card's own edge. Walking down or right, the pixel it stops at lies one further out.
+                        fun gap(
+                            side: Side,
+                            grownBy: Dp,
+                        ): Float {
+                            val ring = scanRing(pixels, "App 1", side, strong = RING_CORE)!!
+                            val farSide = if (side == Side.Bottom || side == Side.Right) 1 else 0
+                            return (scanReach.value - grownBy.value) * density - ring.inner + farSide
+                        }
+
+                        val card = card("App 1")
+                        val gaps =
+                            listOf(
+                                Side.Top to gap(Side.Top, card.top - grown.top),
+                                Side.Bottom to gap(Side.Bottom, grown.bottom - card.bottom),
+                                Side.Left to gap(Side.Left, card.left - grown.left),
+                                Side.Right to gap(Side.Right, grown.right - card.right),
+                            )
+                        val wanted = 3f * FOCUSED_SCALE * density
+                        if (look == Look.Glass) {
+                            withClue("gaps in px $gaps, wanted $wanted") {
+                                gaps
+                                    .all { (_, gap) ->
+                                        abs(gap - wanted) <= 1.5f
+                                    }.shouldBeTrue()
+                            }
+                        }
+                        withClue("gaps in px $gaps") { (gaps.maxOf { it.second } - gaps.minOf { it.second }) shouldBeLessThanOrEqualTo 1f }
+                    }
+
+                    if (look == Look.Glass) {
+                        test("the ring of a card whose art is coloured takes that colour lifted to a lightness of 065") {
+                            showLibrary(nineApps, art = LibraryArt(white, Color(0xFFE53935)))
+
+                            assertRing(listOf(235, 100, 97), ringAtTop("App 1"))
+                        }
+                    }
+
+                    if (look == Look.Glass) {
+                        test("a ring that blends with its cards colour gets a white stroke between the gap and the ring") {
+                            showLibrary(nineApps, art = LibraryArt(white, Color(0xFFE53935)))
+
+                            val grown = grownCard("App 1")
+                            val gap = rgbAt((grown.left + grown.right) / 2, grown.top - 2.dp * FOCUSED_SCALE)
+                            withClue("the gap is $gap") { gap.all { it >= 216 }.shouldBeTrue() }
+                        }
+                    }
+
+                    if (look == Look.Glass) {
+                        test("the ring of a card whose art is near grey is white") {
+                            showLibrary(nineApps, art = LibraryArt(white, Color(0xFF808080)))
+
+                            assertRing(listOf(255, 255, 255), ringAtTop("App 1"))
+                        }
+                    }
+
+                    if (look == Look.Glass) {
+                        test("without app glow the ring is white whatever the art") {
+                            showLibrary(
+                                nineApps,
+                                art = LibraryArt(white, Color(0xFFE53935)),
+                                config = TvConfig(appLibrary = true, appGlow = false),
+                            )
+
+                            assertRing(listOf(255, 255, 255), ringAtTop("App 1"))
+                        }
+                    }
+
+                    if (look == Look.Glass) {
+                        test("with cinematic white focus the ring is white whatever the art") {
+                            showLibrary(
+                                nineApps,
+                                art = LibraryArt(white, Color(0xFFE53935)),
+                                config = TvConfig(appLibrary = true, cinematicWhiteFocus = true),
+                            )
+
+                            assertRing(listOf(255, 255, 255), ringAtTop("App 1"))
+                        }
+                    }
+
+                    test("the hints have no pill round them and each key keeps its fill") {
+                        showLibrary(nineApps)
+                        val hint = bounds("library:hint")
+                        val key = hintPart("OK").getBoundsInRoot()
+                        val middle = (hint.top + hint.bottom) / 2
+
+                        // Where a pill's backing would be: over the key's fill, in the row's top 2 dp.
+                        val ground = redAt(hint.right - 20.dp, hint.top + 2.dp)
+                        withClue("over the key: ${redAt((key.left + key.right) / 2, hint.top + 2.dp)}, panel $ground") {
+                            abs(redAt((key.left + key.right) / 2, hint.top + 2.dp) - ground) shouldBeLessThanOrEqualTo
+                                6
+                        }
+                        withClue("key fill ${redAt(key.left - 4.dp, middle)}") {
+                            (redAt(key.left - 4.dp, middle) - ground) shouldBeGreaterThanOrEqualTo
+                                20
+                        }
+                    }
+
+                    test("a hints action is plain text at 70 percent of the text colour and 16 dp lies between hints") {
+                        showLibrary(nineApps)
+
+                        val style = hintPart("Add to Home").textStyle()
+                        val gap = hintPart("Hold OK").getBoundsInRoot().left - 8.dp - hintPart("Add to Home").getBoundsInRoot().right
+
+                        if (look == Look.Glass) style.color.alpha shouldBe (0.70f plusOrMinus 0.005f)
+                        gap.value shouldBe (16f plusOrMinus 1f)
+                    }
+
+                    if (look == Look.Glass) {
+                        test("the order chip has a 1 dp rim of 24 percent white at rest") {
+                            showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
+                            val chip = bounds("library:order")
+                            val x = (chip.left + chip.right) / 2
+
+                            val inside = redAt(x, chip.top + 3.dp)
+                            val rim = maxOf(redAt(x, chip.top + 0.25.dp), redAt(x, chip.top + 0.75.dp))
+
+                            rim.toFloat() shouldBe (Math.round(inside + 0.24f * (255 - inside)).toFloat() plusOrMinus 3f)
+                        }
+                    }
+
+                    test("the order chip ends with the menu key cap after its label and 4 dp clear of its top and bottom") {
+                        showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
+                        val chip = bounds("library:order")
+                        val cap = compose.onNodeWithTag("library:order:key", useUnmergedTree = true).getBoundsInRoot()
+                        val label =
+                            compose
+                                .onNode(hasText("Usual order") and hasAnyAncestor(hasTestTag("library:order")), useUnmergedTree = true)
+                                .getBoundsInRoot()
+
+                        withClue("chip ${chip.width}, cap $cap, label $label") {
+                            cap.left shouldBeGreaterThanOrEqualTo label.right
+                            cap.right shouldBeLessThanOrEqualTo chip.right
+                        }
+                        withClue("cap $cap in chip $chip") {
+                            (cap.top - chip.top) shouldBeGreaterThanOrEqualTo 4.dp
+                            (chip.bottom - cap.bottom) shouldBeGreaterThanOrEqualTo 4.dp
+                        }
+                    }
+
+                    test("a focused order chip draws its menu key cap text dark") {
+                        showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
+                        val cap = compose.onNodeWithTag("library:order:key", useUnmergedTree = true).getBoundsInRoot()
+
+                        press(Key.DirectionUp)
+
+                        compose.onNodeWithTag("library:order").assertIsFocused()
+                        withClue("cap text is dark") { darkestRed(cap) shouldBeLessThan 90 }
+                    }
+
+                    test("a focused order chip keeps its key cap 3 to 1 on the chip with its text 4 5 to 1 on the cap") {
+                        val (capOnChip, textOnCap) = focusedKeyCapContrast()
+
+                        withClue("cap on chip $capOnChip") { capOnChip shouldBeGreaterThanOrEqualTo 3f }
+                        withClue("text on cap $textOnCap") { textOnCap shouldBeGreaterThanOrEqualTo 4.5f }
+                    }
+
+                    test("the no usage status is set in the hints size at 70 percent of the text colour") {
+                        showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
+                        press(Key.Menu)
+
+                        val status = compose.onNodeWithTag("library:status").textStyle()
+
+                        status.fontSize shouldBe hintPart("Add to Home").textStyle().fontSize
+                        if (look == Look.Glass) status.color.alpha shouldBe (0.70f plusOrMinus 0.005f)
+                    }
                 }
-            }
-
-            test("the hint is a row of key chips as tall as reorder mode draws them") {
-                showLibrary(nineApps)
-
-                bounds("library:hint").height.value shouldBe (32f plusOrMinus 1f)
-            }
-
-            test("a focused order chip is filled white with dark text and a dark glyph") {
-                showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
-                val chip = bounds("library:order")
-                val middle = (chip.top + chip.bottom) / 2
-                val glyph = compose.onNodeWithTag("library:order:glyph", useUnmergedTree = true).getBoundsInRoot()
-                withClue("idle fill ${rgbAt(chip.left + 3.dp, middle)}") { rgbAt(chip.left + 3.dp, middle).all { it < 120 }.shouldBeTrue() }
-
-                press(Key.DirectionUp)
-
-                compose.onNodeWithTag("library:order").assertIsFocused()
-                withClue(
-                    "focused fill ${rgbAt(chip.left + 3.dp, middle)}",
-                ) { rgbAt(chip.left + 3.dp, middle).all { it >= 230 }.shouldBeTrue() }
-                withClue("glyph is dark") { darkestRed(glyph) shouldBeLessThan 90 }
-                withClue("text is dark") {
-                    darkestRed(DpRect(glyph.right + 4.dp, chip.top + 6.dp, chip.right - 14.dp, chip.bottom - 6.dp)) shouldBeLessThan
-                        90
-                }
-            }
-
-            test("the status line of the focused card stays on the line of its neighbours") {
-                showLibrary((1..9).map { libraryApp("App $it", installedAt = NOW - DAY) })
-                focusedCard("App 1")
-
-                statusMiddle("App 1", 6.dp, 6.dp) shouldBe (statusMiddle("App 2", 6.dp, 6.dp) plusOrMinus 1f)
-            }
-
-            test("the ring of a focused card stays 16 px from the cards beside and below it") {
-                showLibrary(nineApps)
-                val focused = focusedCard("App 1")
-                val beside = card("App 2")
-                val below = card("App 7")
-                val density = compose.activity.resources.displayMetrics.density
-                val pixels = compose.onRoot().captureToImage().toPixelMap()
-
-                fun px(dp: Dp) = dp.value * density
-                val midY = px((focused.top + focused.bottom) / 2).toInt()
-                val midX = px((focused.left + focused.right) / 2).toInt()
-                val across = px(beside.left) - lastWhite(px(focused.right), px(beside.left)) { pixels[it, midY].red }
-                val down = px(below.top) - lastWhite(px(focused.bottom), px(below.top)) { pixels[midX, it].red }
-
-                withClue("beside: $across px") { across shouldBeGreaterThanOrEqualTo 16f }
-                withClue("below: $down px") { down shouldBeGreaterThanOrEqualTo 16f }
-            }
-
-            test(
-                "on every frame of a focus move the highlight sits inside the ring of the card that gains focus and the one that loses it",
-            ) {
-                showLibrary(nineApps)
-
-                assertEveryFrameOfAMoveHasTheHighlightInsideTheRing()
-            }
-
-            test("with reduced motion the highlight is inside the ring on every frame too") {
-                showLibrary(
-                    nineApps,
-                    config = TvConfig(appLibrary = true, reducedMotion = true),
-                    motion = Motion(reducedMotion = true),
-                )
-
-                assertEveryFrameOfAMoveHasTheHighlightInsideTheRing()
-            }
-
-            test("the ring of a focused card is as far from it on all four sides") {
-                showLibrary(nineApps)
-                val grown = grownCard("App 1")
-                val density = compose.activity.resources.displayMetrics.density
-                val pixels = compose.onRoot().captureToImage().toPixelMap()
-
-                // The walk starts 12 dp outside the card's own edge. Walking down or right, the pixel it stops at lies one further out.
-                fun gap(
-                    side: Side,
-                    grownBy: Dp,
-                ): Float {
-                    val ring = scanRing(pixels, "App 1", side, strong = RING_CORE)!!
-                    val farSide = if (side == Side.Bottom || side == Side.Right) 1 else 0
-                    return (scanReach.value - grownBy.value) * density - ring.inner + farSide
-                }
-
-                val card = card("App 1")
-                val gaps =
-                    listOf(
-                        Side.Top to gap(Side.Top, card.top - grown.top),
-                        Side.Bottom to gap(Side.Bottom, grown.bottom - card.bottom),
-                        Side.Left to gap(Side.Left, card.left - grown.left),
-                        Side.Right to gap(Side.Right, grown.right - card.right),
-                    )
-                val wanted = 3f * FOCUSED_SCALE * density
-                withClue("gaps in px $gaps, wanted $wanted") { gaps.all { (_, gap) -> abs(gap - wanted) <= 1.5f }.shouldBeTrue() }
-                withClue("gaps in px $gaps") { (gaps.maxOf { it.second } - gaps.minOf { it.second }) shouldBeLessThanOrEqualTo 1f }
-            }
-
-            test("the ring of a card whose art is coloured takes that colour lifted to a lightness of 065") {
-                showLibrary(nineApps, art = LibraryArt(white, Color(0xFFE53935)))
-
-                assertRing(listOf(235, 100, 97), ringAtTop("App 1"))
-            }
-
-            test("a ring that blends with its cards colour gets a white stroke between the gap and the ring") {
-                showLibrary(nineApps, art = LibraryArt(white, Color(0xFFE53935)))
-
-                val grown = grownCard("App 1")
-                val gap = rgbAt((grown.left + grown.right) / 2, grown.top - 2.dp * FOCUSED_SCALE)
-                withClue("the gap is $gap") { gap.all { it >= 216 }.shouldBeTrue() }
-            }
-
-            test("the ring of a card whose art is near grey is white") {
-                showLibrary(nineApps, art = LibraryArt(white, Color(0xFF808080)))
-
-                assertRing(listOf(255, 255, 255), ringAtTop("App 1"))
-            }
-
-            test("without app glow the ring is white whatever the art") {
-                showLibrary(nineApps, art = LibraryArt(white, Color(0xFFE53935)), config = TvConfig(appLibrary = true, appGlow = false))
-
-                assertRing(listOf(255, 255, 255), ringAtTop("App 1"))
-            }
-
-            test("with cinematic white focus the ring is white whatever the art") {
-                showLibrary(
-                    nineApps,
-                    art = LibraryArt(white, Color(0xFFE53935)),
-                    config = TvConfig(appLibrary = true, cinematicWhiteFocus = true),
-                )
-
-                assertRing(listOf(255, 255, 255), ringAtTop("App 1"))
-            }
-
-            test("the hints have no pill round them and each key keeps its fill") {
-                showLibrary(nineApps)
-                val hint = bounds("library:hint")
-                val key = hintPart("OK").getBoundsInRoot()
-                val middle = (hint.top + hint.bottom) / 2
-
-                // Where a pill's backing would be: over the key's fill, in the row's top 2 dp.
-                val ground = redAt(hint.right - 20.dp, hint.top + 2.dp)
-                withClue("over the key: ${redAt((key.left + key.right) / 2, hint.top + 2.dp)}, panel $ground") {
-                    abs(redAt((key.left + key.right) / 2, hint.top + 2.dp) - ground) shouldBeLessThanOrEqualTo
-                        6
-                }
-                withClue("key fill ${redAt(key.left - 4.dp, middle)}") {
-                    (redAt(key.left - 4.dp, middle) - ground) shouldBeGreaterThanOrEqualTo
-                        20
-                }
-            }
-
-            test("a hints action is plain text at 70 percent of the text colour and 16 dp lies between hints") {
-                showLibrary(nineApps)
-
-                val style = hintPart("Add to Home").textStyle()
-                val gap = hintPart("Hold OK").getBoundsInRoot().left - 8.dp - hintPart("Add to Home").getBoundsInRoot().right
-
-                style.color.alpha shouldBe (0.70f plusOrMinus 0.005f)
-                gap.value shouldBe (16f plusOrMinus 1f)
-            }
-
-            test("the order chip has a 1 dp rim of 24 percent white at rest") {
-                showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
-                val chip = bounds("library:order")
-                val x = (chip.left + chip.right) / 2
-
-                val inside = redAt(x, chip.top + 3.dp)
-                val rim = maxOf(redAt(x, chip.top + 0.25.dp), redAt(x, chip.top + 0.75.dp))
-
-                rim.toFloat() shouldBe (Math.round(inside + 0.24f * (255 - inside)).toFloat() plusOrMinus 3f)
-            }
-
-            test("the order chip ends with the menu key cap after its label and 4 dp clear of its top and bottom") {
-                showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
-                val chip = bounds("library:order")
-                val cap = compose.onNodeWithTag("library:order:key", useUnmergedTree = true).getBoundsInRoot()
-                val label =
-                    compose
-                        .onNode(hasText("Usual order") and hasAnyAncestor(hasTestTag("library:order")), useUnmergedTree = true)
-                        .getBoundsInRoot()
-
-                withClue("chip ${chip.width}, cap $cap, label $label") {
-                    cap.left shouldBeGreaterThanOrEqualTo label.right
-                    cap.right shouldBeLessThanOrEqualTo chip.right
-                }
-                withClue("cap $cap in chip $chip") {
-                    (cap.top - chip.top) shouldBeGreaterThanOrEqualTo 4.dp
-                    (chip.bottom - cap.bottom) shouldBeGreaterThanOrEqualTo 4.dp
-                }
-            }
-
-            test("a focused order chip draws its menu key cap text dark") {
-                showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
-                val cap = compose.onNodeWithTag("library:order:key", useUnmergedTree = true).getBoundsInRoot()
-
-                press(Key.DirectionUp)
-
-                compose.onNodeWithTag("library:order").assertIsFocused()
-                withClue("cap text is dark") { darkestRed(cap) shouldBeLessThan 90 }
-            }
-
-            test("a focused order chip keeps its key cap 3 to 1 on the chip with its text 4 5 to 1 on the cap") {
-                val (capOnChip, textOnCap) = focusedKeyCapContrast()
-
-                withClue("cap on chip $capOnChip") { capOnChip shouldBeGreaterThanOrEqualTo 3f }
-                withClue("text on cap $textOnCap") { textOnCap shouldBeGreaterThanOrEqualTo 4.5f }
-            }
-
-            test("the no usage status is set in the hints size at 70 percent of the text colour") {
-                showLibrary(nineApps, config = TvConfig(appLibrary = true, libraryLeastUsed = true))
-                press(Key.Menu)
-
-                val status = compose.onNodeWithTag("library:status").textStyle()
-
-                status.fontSize shouldBe hintPart("Add to Home").textStyle().fontSize
-                status.color.alpha shouldBe (0.70f plusOrMinus 0.005f)
             }
         }
     })
 
-private class LibraryOverlayLookUiFixture : JUnit4RulesContext() {
+private class LibraryOverlayLookUiFixture(
+    private val look: Look,
+) : JUnit4RulesContext() {
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
     var home by mutableStateOf(Color.Black)
@@ -1155,7 +1281,7 @@ private class LibraryOverlayLookUiFixture : JUnit4RulesContext() {
         val library = FakeLibrary(apps).apply { this.record = record }
         lateinit var viewModel: MoleculeLibraryViewModel
         compose.setContent {
-            TvTheme(look = Look.Glass, motion = motion, focusStyle = focusStyle) {
+            TvTheme(look = look, motion = motion, focusStyle = focusStyle) {
                 val scope = rememberCoroutineScope()
                 viewModel =
                     remember {
@@ -1582,7 +1708,13 @@ private class LibraryOverlayLookUiFixture : JUnit4RulesContext() {
         val top = ((line.top - above).value * density).toInt()
         val bottom = ((line.bottom + below).value * density).toInt()
         val ground = pixels[left, (top + bottom) / 2].red
-        val rows = (top until bottom).filter { y -> (left until right).any { x -> (pixels[x, y].red - ground) * 255 > TEXT_OVER_GROUND } }
+        val rows =
+            (top until bottom).filter { y ->
+                (left until right).any { x ->
+                    val over = pixels[x, y].red - ground
+                    (if (look == Look.Glass) over else abs(over)) * 255 > TEXT_OVER_GROUND
+                }
+            }
         withClue("no text in $card between $top and $bottom") { rows.shouldNotBeEmpty() }
         return (rows.first() + rows.last()) / 2f
     }

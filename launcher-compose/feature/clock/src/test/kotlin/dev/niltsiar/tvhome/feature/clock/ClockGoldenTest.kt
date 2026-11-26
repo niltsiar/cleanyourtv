@@ -1,6 +1,10 @@
 package dev.niltsiar.tvhome.feature.clock
 
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.test.captureToImage
@@ -15,9 +19,12 @@ import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.designsystem.focus.sameInBothLooks
+import dev.niltsiar.tvhome.core.designsystem.focus.taggedLeafPixels
 import dev.niltsiar.tvhome.core.designsystem.golden.assertMatchesGolden
 import dev.niltsiar.tvhome.core.designsystem.golden.bands
 import dev.niltsiar.tvhome.core.designsystem.motion
+import io.kotest.matchers.collections.shouldBeEmpty
 import java.time.LocalDateTime
 import java.util.Locale
 import kotlin.random.Random
@@ -40,6 +47,9 @@ class ClockGoldenTestContent :
             object : JUnit4RulesContext() {
                 val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
+                /** The look the scene draws in; a new value builds the scene again, from the same random spot. */
+                var shownLook by mutableStateOf(Look.Glass)
+
                 /** A dark picture in two bands, as Home's darkened wallpaper. */
                 val picture = bands(32, 18, listOf(Color(0xFF1B2A3A), Color(0xFF3A2A1B)))
 
@@ -55,15 +65,28 @@ class ClockGoldenTestContent :
                 ) {
                     val face = clockFace(LocalDateTime.of(2026, 11, 4, 21, 41), hour24 = false, "EEEE  d MMMM", Locale.ENGLISH)
                     compose.mainClock.autoAdvance = false
+                    shownLook = look
                     compose.setContent {
-                        TvTheme(
-                            look = look,
-                            seed = { Ember },
-                            motion = config.motion(),
-                        ) { ClockScene(face, glow = glow, picture = over, random = Random(2)) }
+                        key(shownLook) {
+                            TvTheme(
+                                look = shownLook,
+                                seed = { Ember },
+                                motion = config.motion(),
+                            ) { ClockScene(face, glow = glow, picture = over, random = Random(2)) }
+                        }
                     }
                     compose.mainClock.advanceTimeBy(2_000)
                     compose.waitForIdle()
+                }
+
+                /** The tagged leaves of the scene [show] put up in Glass that draw the same when it is built in Expressive. */
+                fun sameLeaves(): List<String> {
+                    val glass = compose.taggedLeafPixels()
+                    compose.runOnUiThread { shownLook = Look.Expressive }
+                    compose.waitForIdle()
+                    compose.mainClock.advanceTimeBy(2_000)
+                    compose.waitForIdle()
+                    return sameInBothLooks(glass, compose.taggedLeafPixels())
                 }
 
                 fun golden(scene: String) =
@@ -103,6 +126,26 @@ class ClockGoldenTestContent :
                     compose.waitForIdle()
                     golden("${prefix}glow-change-1")
                 }
+            }
+
+            test("every tagged leaf of the screensaver with the glow draws differently in Expressive") {
+                show(glow = true)
+                sameLeaves().shouldBeEmpty()
+            }
+
+            test("every tagged leaf of the screensaver without the glow draws differently in Expressive") {
+                show(glow = false)
+                sameLeaves().shouldBeEmpty()
+            }
+
+            test("every tagged leaf of the screensaver over the wallpaper draws differently in Expressive") {
+                show(glow = true, over = picture)
+                sameLeaves().shouldBeEmpty()
+            }
+
+            test("every tagged leaf of the screensaver with animations off draws differently in Expressive") {
+                show(glow = true, config = TvConfig(animations = false))
+                sameLeaves().shouldBeEmpty()
             }
 
             // Each colour of the Glass glow palette, one change apart; the first is in glow-on, the second in glow-change-1.

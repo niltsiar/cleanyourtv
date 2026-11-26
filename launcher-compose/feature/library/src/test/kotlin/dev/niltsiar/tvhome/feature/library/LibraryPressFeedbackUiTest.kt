@@ -55,49 +55,55 @@ val LibraryPressFeedbackUiTest by testSuite {
 
 class LibraryPressFeedbackUiTestContent :
     RobolectricTestSuiteContent({
-        testFixture { LibraryPressFeedbackUiTestFixture() } asContextForEach {
-            test("ok on a card dips it to 96 percent of its focused size over 80 ms and back") {
-                showLibrary(TvConfig(appLibrary = true, pressFeedback = true))
-                val rest = artWidth()
+        for (look in Look.entries) {
+            testSuite(look.name) {
+                testFixture { LibraryPressFeedbackUiTestFixture(look) } asContextForEach {
+                    test("ok on a card dips it to 96 percent of its focused size over 80 ms and back") {
+                        showLibrary(TvConfig(appLibrary = true, pressFeedback = true))
+                        val rest = artWidth()
 
-                val widths = afterOk().map { it / rest }
-                // Whole pixels turn the bottom of the dip into a run of equal widths; the deepest frame is its middle.
-                val lows = widths.indices.filter { widths[it] == widths.min() }
-                val deepest = (lows.first() + lows.last()) / 2
-                // The art is about 165 px wide, and its anti-aliased edges cost up to 2 px against the red threshold.
-                val edge = 2f / rest
+                        val widths = afterOk().map { it / rest }
+                        // Whole pixels turn the bottom of the dip into a run of equal widths; the deepest frame is its middle.
+                        val lows = widths.indices.filter { widths[it] == widths.min() }
+                        val deepest = (lows.first() + lows.last()) / 2
+                        // The art is about 165 px wide, and its anti-aliased edges cost up to 2 px against the red threshold.
+                        val edge = 2f / rest
 
-                withClue("widths $widths") { widths.min() shouldBeIn (0.96f - edge)..(0.96f + edge) }
-                withClue("deepest at frame $deepest of 16 ms: $widths") { deepest shouldBeIn 4..6 }
-                withClue("back at rest: $widths") { widths.last() shouldBe 1f }
-                launched() shouldBe listOf("Gamma")
-                compose.onNodeWithTag("card:${key("Gamma")}").assertIsFocused()
-            }
+                        withClue("widths $widths") { widths.min() shouldBeIn (0.96f - edge)..(0.96f + edge) }
+                        if (look == Look.Glass) withClue("deepest at frame $deepest of 16 ms: $widths") { deepest shouldBeIn 4..6 }
+                        withClue("back at rest: $widths") { widths.last() shouldBe 1f }
+                        launched() shouldBe listOf("Gamma")
+                        compose.onNodeWithTag("card:${key("Gamma")}").assertIsFocused()
+                    }
 
-            test("a second ok while the app opens neither dips the card nor starts anything") {
-                showLibrary(TvConfig(appLibrary = true, pressFeedback = true))
-                afterOk()
-                val rest = artWidth()
+                    test("a second ok while the app opens neither dips the card nor starts anything") {
+                        showLibrary(TvConfig(appLibrary = true, pressFeedback = true))
+                        afterOk()
+                        val rest = artWidth()
 
-                val widths = afterOk()
+                        val widths = afterOk()
 
-                withClue("widths $widths against $rest") { widths.all { it == rest }.shouldBeTrue() }
-                launched() shouldBe listOf("Gamma")
-            }
+                        withClue("widths $widths against $rest") { widths.all { it == rest }.shouldBeTrue() }
+                        launched() shouldBe listOf("Gamma")
+                    }
 
-            test("without the key ok on a card opens its app and closes the library at once") {
-                showLibrary(TvConfig(appLibrary = true))
+                    test("without the key ok on a card opens its app and closes the library at once") {
+                        showLibrary(TvConfig(appLibrary = true))
 
-                ok()
-                compose.waitForIdle()
+                        ok()
+                        compose.waitForIdle()
 
-                launched() shouldBe listOf("Gamma")
-                compose.onNodeWithTag("library").assertDoesNotExist()
+                        launched() shouldBe listOf("Gamma")
+                        compose.onNodeWithTag("library").assertDoesNotExist()
+                    }
+                }
             }
         }
     })
 
-private class LibraryPressFeedbackUiTestFixture : JUnit4RulesContext() {
+private class LibraryPressFeedbackUiTestFixture(
+    private val look: Look,
+) : JUnit4RulesContext() {
     val compose = rule(createAndroidComposeRule<ComponentActivity>())
 
     val effects = mutableListOf<LibraryEffect>()
@@ -118,7 +124,7 @@ private class LibraryPressFeedbackUiTestFixture : JUnit4RulesContext() {
                 .requestFocusFromTouch()
         }
         compose.setContent {
-            TvTheme(look = Look.Glass) {
+            TvTheme(look = look) {
                 val scope = rememberCoroutineScope()
                 val viewModel =
                     remember {
@@ -160,7 +166,8 @@ private class LibraryPressFeedbackUiTestFixture : JUnit4RulesContext() {
     fun afterOk(): List<Float> {
         compose.mainClock.autoAdvance = false
         ok()
-        return List(16) {
+        // Glass dips over two 80 ms tweens; Expressive's spatial spring takes longer to settle.
+        return List(if (look == Look.Glass) 16 else 40) {
             compose.mainClock.advanceTimeBy(16)
             artWidth()
         }

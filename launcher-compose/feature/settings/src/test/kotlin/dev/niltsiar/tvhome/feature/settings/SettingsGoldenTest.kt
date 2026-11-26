@@ -25,12 +25,15 @@ import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.designsystem.focus.sameInBothLooks
+import dev.niltsiar.tvhome.core.designsystem.focus.taggedLeafPixels
 import dev.niltsiar.tvhome.core.designsystem.focusStyle
 import dev.niltsiar.tvhome.core.designsystem.golden.assertMatchesGolden
 import dev.niltsiar.tvhome.core.designsystem.golden.bands
 import dev.niltsiar.tvhome.core.designsystem.motion
 import dev.niltsiar.tvhome.core.model.OpenOnStartApp
 import dev.niltsiar.tvhome.core.model.WallpaperPicture
+import io.kotest.matchers.collections.shouldBeEmpty
 
 /** Golden images of the settings page in each look, over a fixed state (docs/testing.md, "Golden tests"). */
 val SettingsGoldenTest by testSuite {
@@ -50,65 +53,21 @@ class SettingsGoldenTestContent :
             for (look in Look.entries) {
                 val prefix = if (look == Look.Expressive) "expressive-" else ""
                 val named = if (look == Look.Expressive) ", in Expressive" else ""
-
-                test("the top of the page$named") {
-                    show(look)
-                    golden("${prefix}page-top")
+                for (scene in SettingsScenes.all) {
+                    test("${scene.name}$named") {
+                        scene.reach(this, look)
+                        golden("$prefix${scene.golden}")
+                    }
                 }
+            }
 
-                test("the top of the page with night mode off$named") {
-                    show(look, dark = false)
-                    golden("${prefix}page-top-light")
-                }
+            for (scene in SettingsScenes.all) {
+                test("every tagged leaf of ${scene.name} draws differently in Expressive") {
+                    scene.reach(this, Look.Glass)
+                    val glass = compose.taggedLeafPixels()
+                    switchLook(Look.Expressive)
 
-                test("the end of the page, with its dividers and action rows$named") {
-                    show(look)
-                    focus("settings:tv_settings")
-                    golden("${prefix}page-end")
-                }
-
-                test("a focused row with a value and a chevron$named") {
-                    show(look)
-                    focus("settings:wallpaper")
-                    golden("${prefix}value-row-focus")
-                }
-
-                test("the open on start picker$named") {
-                    picker = sixApps
-                    show(look)
-                    compose.onNodeWithTag("picker:0").assertExists()
-                    golden("${prefix}picker-open")
-                }
-
-                test("the wallpaper picker with colour swatches and a picture still loading$named") {
-                    wallpaper = threeWallpapers
-                    show(look)
-                    compose.onNodeWithTag("picker:1:art", useUnmergedTree = true).assertExists()
-                    golden("${prefix}wallpaper-picker")
-                }
-
-                test("a failed save$named") {
-                    show(look)
-                    compose.runOnUiThread { notice.showWarning(R.string.settings_save_failed) }
-                    settle()
-                    compose.onNodeWithTag("settings:notice").assertExists()
-                    golden("${prefix}notice")
-                }
-
-                test("a held notice that is not a warning$named") {
-                    show(look)
-                    compose.runOnUiThread { notice.showHeld(R.string.settings_save_failed) }
-                    settle()
-                    compose.onNodeWithTag("settings:notice").assertExists()
-                    golden("${prefix}held-notice")
-                }
-
-                test("a short notice beside the title$named") {
-                    show(look)
-                    compose.runOnUiThread { notice.show(R.string.settings_save_failed) }
-                    settle()
-                    compose.onNodeWithTag("settings:notice").assertExists()
-                    golden("${prefix}notice-pill")
+                    sameInBothLooks(glass, compose.taggedLeafPixels()).shouldBeEmpty()
                 }
             }
 
@@ -126,6 +85,62 @@ class SettingsGoldenTestContent :
             }
         }
     })
+
+/** A Settings scene: its golden, what its test says, and how a test reaches it in a look. */
+private class Scene(
+    val golden: String,
+    val name: String,
+    val reach: SettingsGoldenFixture.(Look) -> Unit,
+)
+
+/** The scenes, in an object of their own, as a top-level value of this file would register the suite again. */
+private object SettingsScenes {
+    val all =
+        listOf(
+            Scene("page-top", "the top of the page") { look ->
+                show(look)
+            },
+            Scene("page-top-light", "the top of the page with night mode off") { look ->
+                show(look, dark = false)
+            },
+            Scene("page-end", "the end of the page, with its dividers and action rows") { look ->
+                show(look)
+                focus("settings:tv_settings")
+            },
+            Scene("value-row-focus", "a focused row with a value and a chevron") { look ->
+                show(look)
+                focus("settings:wallpaper")
+            },
+            Scene("picker-open", "the open on start picker") { look ->
+                picker = sixApps
+                show(look)
+                compose.onNodeWithTag("picker:0").assertExists()
+            },
+            Scene("wallpaper-picker", "the wallpaper picker with colour swatches and a picture still loading") { look ->
+                wallpaper = threeWallpapers
+                show(look)
+                compose.onNodeWithTag("picker:1:art", useUnmergedTree = true).assertExists()
+            },
+            Scene("notice", "a failed save") { look ->
+                show(look)
+                compose.runOnUiThread { notice.showWarning(R.string.settings_save_failed) }
+                settle()
+                compose.onNodeWithTag("settings:notice").assertExists()
+            },
+            Scene("held-notice", "a held notice that is not a warning") { look ->
+                show(look)
+                compose.runOnUiThread { notice.showHeld(R.string.settings_save_failed) }
+                settle()
+                compose.onNodeWithTag("settings:notice").assertExists()
+            },
+            Scene("notice-pill", "a short notice beside the title") { look ->
+                show(look)
+                compose.runOnUiThread { notice.show(R.string.settings_save_failed) }
+                settle()
+                compose.onNodeWithTag("settings:notice").assertExists()
+            },
+        )
+}
 
 /** The house seed of the Expressive scenes, the warm one the design-system goldens use. */
 private val Ember = Color(0xFFFF6A3D)
@@ -169,11 +184,15 @@ private class SettingsGoldenFixture : JUnit4RulesContext() {
             },
         )
 
+    /** The look the page draws in, which a test can switch while the page stays as it is. */
+    private var look by mutableStateOf(Look.Glass)
+
     fun show(
         look: Look = Look.Glass,
         dark: Boolean = true,
     ) {
         val config = TvConfig()
+        this.look = look
         compose.mainClock.autoAdvance = false
         // A TV has no touch screen; the native graphics mode starts in touch mode, where nothing takes key focus.
         compose.runOnUiThread {
@@ -181,7 +200,7 @@ private class SettingsGoldenFixture : JUnit4RulesContext() {
                 .requestFocusFromTouch()
         }
         compose.setContent {
-            TvTheme(look = look, seed = { Ember }, motion = config.motion(), focusStyle = config.focusStyle(), darkTheme = dark) {
+            TvTheme(look = this.look, seed = { Ember }, motion = config.motion(), focusStyle = config.focusStyle(), darkTheme = dark) {
                 // The settings activities have a black window.
                 Box(Modifier.fillMaxSize().background(Color.Black))
                 SettingsScreen(
@@ -206,6 +225,12 @@ private class SettingsGoldenFixture : JUnit4RulesContext() {
         }
         compose.mainClock.advanceTimeBy(2_000)
         compose.waitForIdle()
+    }
+
+    /** Draws the page in [to] without building it again. */
+    fun switchLook(to: Look) {
+        compose.runOnUiThread { look = to }
+        settle()
     }
 
     fun settle() {
