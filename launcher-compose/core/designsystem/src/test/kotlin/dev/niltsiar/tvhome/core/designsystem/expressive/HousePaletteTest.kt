@@ -54,7 +54,7 @@ val HousePaletteTest by testSuite {
                     )
                 bands.flatMap { (accentName, band) ->
                     grounds.flatMap { (groundName, ground) ->
-                        listOf("band" to band.band, "charge start" to band.chargeStart).mapNotNull { (role, colour) ->
+                        listOf("band" to band.band, "charge start" to chargeStart(band.band, FloatArray(3))).mapNotNull { (role, colour) ->
                             contrast(colour, ground).takeIf { it < 3.0 }?.let { "$accentName $role on $seedName $groundName: $it" }
                         }
                     }

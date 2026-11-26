@@ -504,7 +504,7 @@ internal fun DrawScope.drawTileCharge(
         } else {
             painter.lastBand()?.charge ?: return
         }
-    val colour = lerp(AppBands[band].chargeStart, band, charge)
+    val colour = lerp(chargeStart(band, painter.chargeScratch), band, charge)
     drawCharge(line, charge, colour, painter.chargePath(), painter.chargeStroke(ChargeWidth.toPx()), painter.chargeScratch)
 }
 

@@ -9,7 +9,6 @@ import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cbrt
 import kotlin.math.cos
-import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -115,20 +114,36 @@ internal fun houseScheme(
 
 /**
  * The focus band of an app whose colour is [accent], at the dark scheme's primary tone of the accent's own palette, so the
- * band keeps the house primary's contrast whatever the art; and the [chargeStart] of a held OK on it, the same hue and tone
- * at no more than the secondary role's chroma.
+ * band keeps the house primary's contrast whatever the art.
  */
 internal class AppBand(
     val band: Color,
-    val chargeStart: Color,
 )
 
 internal fun appBand(accent: Color): AppBand {
     val (hue, chroma) = hueAndChroma(accent)
-    return AppBand(
-        band = Palette(hue, chroma.coerceIn(PRIMARY_CHROMA_FLOOR, PRIMARY_CHROMA_CEILING))(BAND_TONE),
-        chargeStart = Palette(hue, min(chroma, SECONDARY_CHROMA))(BAND_TONE),
-    )
+    return AppBand(band = Palette(hue, chroma.coerceIn(PRIMARY_CHROMA_FLOOR, PRIMARY_CHROMA_CEILING))(BAND_TONE))
+}
+
+/**
+ * Where the charge of a held OK on a focus [band] starts: the band's OKLCH hue at no more than the secondary role's chroma,
+ * its OKLab lightness eased toward the grey of the band's luminance as the chroma drops, so the tone stays close to the
+ * band's. Plain arithmetic in [scratch] (3 or more floats), so a band that changes on every frame, as one travelling
+ * between two apps' colours does, solves nothing and allocates nothing.
+ */
+internal fun chargeStart(
+    band: Color,
+    scratch: FloatArray,
+): Color {
+    val r = linear(band.red)
+    val g = linear(band.green)
+    val b = linear(band.blue)
+    val lab = oklab(r, g, b, scratch)
+    val chroma = sqrt(lab[1] * lab[1] + lab[2] * lab[2])
+    if (chroma <= SECONDARY_CHROMA) return band
+    val keep = SECONDARY_CHROMA / chroma
+    val grey = cbrt(0.2126f * r + 0.7152f * g + 0.0722f * b)
+    return encode(linearRgb(grey + (lab[0] - grey) * keep, lab[1] * keep, lab[2] * keep, scratch))
 }
 
 /** The tone of the dark scheme's primary role, which the focus band takes. */
@@ -218,6 +233,10 @@ private fun hueAndChroma(colour: Color): Pair<Float, Float> {
     return atan2(lab[2], lab[1]) to sqrt(lab[1] * lab[1] + lab[2] * lab[2])
 }
 
+/** How many tones [toneColour] has solved in this process, for a test that a path builds no palette. */
+internal var toneSolves = 0
+    private set
+
 /**
  * The colour of OKLCH [hue] whose CIE L* is [tone], with [chroma] or, where sRGB has no such colour, the most chroma it has
  * at that tone. A grey of any tone is in sRGB, so the search always ends in gamut.
@@ -227,6 +246,7 @@ private fun toneColour(
     chroma: Float,
     tone: Float,
 ): Color {
+    toneSolves++
     if (tone <= 0f) return Color.Black
     if (tone >= 100f) return Color.White
     val y = luminanceOfTone(tone)
@@ -293,15 +313,15 @@ private fun oklab(
     r: Float,
     g: Float,
     b: Float,
+    out: FloatArray = FloatArray(3),
 ): FloatArray {
     val l = cbrt(0.4122214708f * r + 0.5363325363f * g + 0.0514459929f * b)
     val m = cbrt(0.2119034982f * r + 0.6806995451f * g + 0.1073969566f * b)
     val s = cbrt(0.0883024619f * r + 0.2817188376f * g + 0.6299787005f * b)
-    return floatArrayOf(
-        0.2104542553f * l + 0.7936177850f * m - 0.0040720468f * s,
-        1.9779984951f * l - 2.4285922050f * m + 0.4505937099f * s,
-        0.0259040371f * l + 0.7827717662f * m - 0.8086757660f * s,
-    )
+    out[0] = 0.2104542553f * l + 0.7936177850f * m - 0.0040720468f * s
+    out[1] = 1.9779984951f * l - 2.4285922050f * m + 0.4505937099f * s
+    out[2] = 0.0259040371f * l + 0.7827717662f * m - 0.8086757660f * s
+    return out
 }
 
 /** Linear sRGB of OKLab ([lightness], [a], [b]); out of gamut it may leave 0 to 1. */
@@ -309,13 +329,13 @@ private fun linearRgb(
     lightness: Float,
     a: Float,
     b: Float,
+    out: FloatArray = FloatArray(3),
 ): FloatArray {
     val l = (lightness + 0.3963377774f * a + 0.2158037573f * b).let { it * it * it }
     val m = (lightness - 0.1055613458f * a - 0.0638541728f * b).let { it * it * it }
     val s = (lightness - 0.0894841775f * a - 1.2914855480f * b).let { it * it * it }
-    return floatArrayOf(
-        4.0767416621f * l - 3.3077115913f * m + 0.2309699292f * s,
-        -1.2684380046f * l + 2.6097574011f * m - 0.3413193965f * s,
-        -0.0045160939f * l - 0.0782771729f * m + 1.0742872363f * s,
-    )
+    out[0] = 4.0767416621f * l - 3.3077115913f * m + 0.2309699292f * s
+    out[1] = -1.2684380046f * l + 2.6097574011f * m - 0.3413193965f * s
+    out[2] = -0.0045160939f * l - 0.0782771729f * m + 1.0742872363f * s
+    return out
 }

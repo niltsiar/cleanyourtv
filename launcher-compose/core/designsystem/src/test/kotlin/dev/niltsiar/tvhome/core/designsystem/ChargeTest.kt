@@ -13,6 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorProducer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
@@ -32,6 +34,7 @@ import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
 import dev.niltsiar.tvhome.core.config.ExpressiveTile
 import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.expressive.ChargeLine
+import dev.niltsiar.tvhome.core.designsystem.expressive.toneSolves
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
 
@@ -199,6 +202,25 @@ class ChargeTestContent :
                         withClue("the scene at 300 ms") { scene().contentEquals(rest) shouldBe true }
                     }
                 }
+            }
+
+            test("a hold while the band travels between two app colours solves no palette tone") {
+                val red = Color(0xFFE0453A)
+                val blue = Color(0xFF2F9FD8)
+                show { held ->
+                    // A band that moves on every frame, as a ring travelling from one app's colour to the next does.
+                    val travel = ColorProducer { lerp(red, blue, (compose.mainClock.currentTime % 997) / 997f) }
+                    FocusSurface({}, held.size(100.dp, 60.dp), glow = false, ring = travel) {
+                        Box(Modifier.size(100.dp, 60.dp).background(Color(0xFF3B5B8C)))
+                    }
+                }
+                okDown()
+                frames(140, drawn = true)
+                val solved = toneSolves
+
+                frames(260, drawn = true)
+
+                toneSolves shouldBe solved
             }
 
             test("a round button shows nothing 100 ms into a held ok, a wave by 300 ms, and the up clears it on the next frame") {

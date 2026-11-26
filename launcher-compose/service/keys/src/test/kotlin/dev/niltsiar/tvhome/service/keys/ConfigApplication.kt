@@ -30,6 +30,11 @@ class ConfigApplication :
 
     override val houseSeed = MutableStateFlow(Color(0xFF8B93E8))
 
+    /** What [houseSeedNow] gives; [houseSeed] keeps its last value, as the app's does while no window collects it. */
+    var seedNow = houseSeed.value
+
+    override fun houseSeedNow(): Color = seedNow
+
     val recordConfig = MutableStateFlow(TvConfig())
     val lastOpened by lazy { LastOpened(this, recordConfig, Dispatchers.Unconfined) }
     private val appLauncher by lazy {

@@ -263,7 +263,7 @@ public class KeyService : AccessibilityService() {
      * The card reads the look from the running config and the seed from the app when it shows: a timer outlives a restart
      * of the service, and the seed changes with the wallpaper and the time of day.
      */
-    private fun sleepCard() = OverlaySleepCard(this, { config.panelLook.look }, { (application as HouseSeedOwner).houseSeed.value })
+    private fun sleepCard() = OverlaySleepCard(this, { config.panelLook.look }, { (application as HouseSeedOwner).houseSeedNow() })
 
     /** sleep_timer: the next step, or null while the key is off or Android is older than 9. */
     internal fun stepSleepTimer(): Int? = sleepTimer?.step()

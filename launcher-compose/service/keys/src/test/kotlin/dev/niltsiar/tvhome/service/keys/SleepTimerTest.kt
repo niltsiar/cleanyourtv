@@ -10,6 +10,7 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import de.infix.testBalloon.framework.core.TestConfig
 import de.infix.testBalloon.framework.core.testSuite
@@ -177,6 +178,18 @@ class SleepTimerTestContent :
 
                 val expressive = overlayCardLook(Look.Expressive, seed).fill.toArgb()
                 expressive shouldNotBe overlayCardLook(Look.Glass, seed).fill.toArgb()
+                cardFill() shouldBeWithin (expressive to 1)
+            }
+
+            test("the sleep card in Expressive takes the house seed of the moment it shows, not the last one a window collected") {
+                service.start(SleepOn.copy(look = Look.Expressive))
+                setTimer(15)
+                val now = Color(0xFFE8A33D)
+                (app as ConfigApplication).seedNow = now
+                idleFor(14 * MINUTE)
+
+                val expressive = overlayCardLook(Look.Expressive, now).fill.toArgb()
+                expressive shouldNotBe overlayCardLook(Look.Expressive, (app as ConfigApplication).houseSeed.value).fill.toArgb()
                 cardFill() shouldBeWithin (expressive to 1)
             }
 

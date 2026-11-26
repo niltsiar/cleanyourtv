@@ -9,4 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
  */
 public interface HouseSeedOwner {
     public val houseSeed: StateFlow<Color>
+
+    /** The seed at this moment, from the config, the wallpaper's last hue and the clock, for a window that does not collect [houseSeed]. */
+    public fun houseSeedNow(): Color
 }
