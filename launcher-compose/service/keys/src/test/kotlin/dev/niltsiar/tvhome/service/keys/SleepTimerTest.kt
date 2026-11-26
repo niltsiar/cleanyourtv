@@ -10,16 +10,21 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
+import androidx.compose.ui.graphics.toArgb
 import de.infix.testBalloon.framework.core.TestConfig
 import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
+import dev.niltsiar.tvhome.core.designsystem.overlayCardLook
+import io.kotest.assertions.withClue
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +36,7 @@ import org.robolectric.shadow.api.Shadow
 import org.robolectric.shadows.ShadowToast
 import org.robolectric.shadows.ShadowWindowManagerImpl
 import java.time.Duration
+import kotlin.math.abs
 
 val SleepTimerTest by testSuite {
     robolectricTestSuite<SleepTimerTestContent>(
@@ -89,6 +95,13 @@ class SleepTimerTestContent :
                             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
                     }
 
+                /** The card's fill in its start padding, beside the text. */
+                fun cardFill(): Int {
+                    val card = cards().single()
+                    val density = card.resources.displayMetrics.density
+                    return card.drawn().getPixel((12 * density).toInt(), card.height / 2)
+                }
+
                 /** Sets the timer to [minutes], stepping from Off. */
                 fun setTimer(minutes: Int) {
                     while (SleepTimer.state.value.step != minutes) service.stepSleepTimer()
@@ -145,6 +158,26 @@ class SleepTimerTestContent :
                 (flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE != 0).shouldBeTrue()
                 (flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE != 0).shouldBeTrue()
                 (card as TextView).text.toString() shouldBe "The TV turns off in 60 s. OK: 15 more minutes. Back: cancel."
+            }
+
+            test("the sleep card keeps its Glass grey in Glass") {
+                service.start(SleepOn)
+                setTimer(15)
+                idleFor(14 * MINUTE)
+
+                cardFill() shouldBeWithin (0xE6202124.toInt() to 1)
+            }
+
+            test("the sleep card takes the look and house seed of the moment it shows, after the timer was set") {
+                service.start(SleepOn)
+                setTimer(15)
+                service.start(SleepOn.copy(look = Look.Expressive))
+                val seed = (app as ConfigApplication).houseSeed.value
+                idleFor(14 * MINUTE)
+
+                val expressive = overlayCardLook(Look.Expressive, seed).fill.toArgb()
+                expressive shouldNotBe overlayCardLook(Look.Glass, seed).fill.toArgb()
+                cardFill() shouldBeWithin (expressive to 1)
             }
 
             test("ok on the sleep card adds 15 minutes and hides it") {
@@ -308,3 +341,10 @@ class SleepTimerTestContent :
             }
         }
     })
+
+/** Each channel of this ARGB colour is within the given distance of the given colour's. */
+private infix fun Int.shouldBeWithin(expected: Pair<Int, Int>) {
+    val (colour, tolerance) = expected
+    val far = listOf(24, 16, 8, 0).filter { abs((this shr it and 0xFF) - (colour shr it and 0xFF)) > tolerance }
+    withClue("${Integer.toHexString(this)} against ${Integer.toHexString(colour)}") { far.shouldBeEmpty() }
+}

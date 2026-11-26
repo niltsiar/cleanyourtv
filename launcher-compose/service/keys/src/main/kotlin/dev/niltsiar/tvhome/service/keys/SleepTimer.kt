@@ -12,6 +12,10 @@ import android.view.Gravity
 import android.view.KeyEvent
 import android.view.WindowManager
 import android.widget.TextView
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import dev.niltsiar.tvhome.core.config.Look
+import dev.niltsiar.tvhome.core.designsystem.overlayCardLook
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -189,10 +193,13 @@ internal class SleepCountdown(
 
 /**
  * The card in a corner over whatever plays, in an accessibility overlay window that takes no focus and no touch, so the
- * playing app keeps both. A TV that refuses the window still sleeps on time.
+ * playing app keeps both. A TV that refuses the window still sleeps on time. It takes the [look] and house [seed] of the
+ * moment it shows.
  */
 internal class OverlaySleepCard(
     private val context: Context,
+    private val look: () -> Look,
+    private val seed: () -> Color,
 ) {
     private val windows = context.getSystemService(WindowManager::class.java)
     private var view: TextView? = null
@@ -200,18 +207,19 @@ internal class OverlaySleepCard(
     fun show(seconds: Int) {
         hide()
         val density = context.resources.displayMetrics.density
+        val colours = overlayCardLook(look(), seed())
         val card =
             TextView(context).apply {
                 text = context.getString(R.string.sleep_card, seconds)
-                setTextColor(0xFFFFFFFF.toInt())
+                setTextColor(colours.text.toArgb())
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
                 val padH = (24 * density).toInt()
                 val padV = (16 * density).toInt()
                 setPadding(padH, padV, padH, padV)
                 background =
                     GradientDrawable().apply {
-                        setColor(0xE6202124.toInt())
-                        cornerRadius = 16 * density
+                        setColor(colours.fill.toArgb())
+                        cornerRadius = colours.corner.value * density
                     }
             }
         val params =

@@ -243,7 +243,7 @@ public class KeyService : AccessibilityService() {
         val boot = Settings.Global.getInt(contentResolver, Settings.Global.BOOT_COUNT, -1)
         val prefs = getSharedPreferences(BOOT_PREFS, MODE_PRIVATE)
         val countdown =
-            SleepCountdown(timer, SystemClock::elapsedRealtime, boot, prefs, SleepTimer.state, OverlaySleepCard(this)) {
+            SleepCountdown(timer, SystemClock::elapsedRealtime, boot, prefs, SleepTimer.state, sleepCard()) {
                 performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
             }
         sleepTimer = countdown
@@ -258,6 +258,12 @@ public class KeyService : AccessibilityService() {
         registerReceiver(receiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
         countdown.restore()
     }
+
+    /**
+     * The card reads the look from the running config and the seed from the app when it shows: a timer outlives a restart
+     * of the service, and the seed changes with the wallpaper and the time of day.
+     */
+    private fun sleepCard() = OverlaySleepCard(this, { config.panelLook.look }, { (application as HouseSeedOwner).houseSeed.value })
 
     /** sleep_timer: the next step, or null while the key is off or Android is older than 9. */
     internal fun stepSleepTimer(): Int? = sleepTimer?.step()

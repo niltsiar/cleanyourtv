@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.test.platform.app.InstrumentationRegistry
 import de.infix.testBalloon.framework.core.JUnit4RulesContext
 import de.infix.testBalloon.framework.core.TestConfig
 import de.infix.testBalloon.framework.core.testSuite
@@ -45,6 +46,11 @@ class QuickPanelContentTestContent :
                 val picked = mutableListOf<PanelRow>()
                 var backs = 0
                 val muted = mutableStateOf(false)
+
+                init {
+                    // The native canvas starts in touch mode, where the panel takes no key focus; a TV has no touch.
+                    InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
+                }
 
                 fun show(
                     rows: List<PanelRow> = MainRows,

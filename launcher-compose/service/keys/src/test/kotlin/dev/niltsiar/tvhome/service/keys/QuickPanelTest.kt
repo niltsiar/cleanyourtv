@@ -14,12 +14,15 @@ import android.provider.Settings
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
+import androidx.test.platform.app.InstrumentationRegistry
 import de.infix.testBalloon.framework.core.TestConfig
 import de.infix.testBalloon.framework.core.testSuite
 import de.infix.testBalloon.integration.robolectric.RobolectricTestSuiteContent
 import de.infix.testBalloon.integration.robolectric.robolectric
 import de.infix.testBalloon.integration.robolectric.robolectricTestSuite
+import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.model.LauncherIntents
 import io.kotest.matchers.booleans.shouldBeFalse
@@ -29,6 +32,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import org.robolectric.Robolectric
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
@@ -74,6 +78,10 @@ class ToggleMuteAudioManager : ShadowAudioManager() {
 
 private val PanelOn = TvConfig(quickPanel = true)
 
+/** Two house seeds far apart in hue. */
+private val Periwinkle = Color(0xFF8B93E8)
+private val Ember = Color(0xFFFF6A3D)
+
 class QuickPanelTestContent :
     RobolectricTestSuiteContent({
         testFixture {
@@ -83,6 +91,8 @@ class QuickPanelTestContent :
                 var device = 100
 
                 init {
+                    // The native canvas starts in touch mode, where the panel takes no key focus; a TV has no touch.
+                    InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
                     SharedPresses.reset()
                     SleepTimer.state.value = SleepState()
                     Settings.Global.putInt(app.contentResolver, Settings.Global.BOOT_COUNT, 1)
@@ -136,6 +146,21 @@ class QuickPanelTestContent :
                     idleFor(HOLD_MS)
                     up(KeyEvent.KEYCODE_HOME, downAt = 1_000, at = 1_600)
                     panels() shouldHaveSize 1
+                }
+
+                /** The panel's fill at its right edge, in a row that has no focus, in [look] with the house [seed]. */
+                fun panelFill(
+                    look: Look,
+                    seed: Color,
+                ): Int {
+                    (app as ConfigApplication).houseSeed.value = seed
+                    open(PanelOn.copy(look = look, animations = false))
+                    val panel = panels().single()
+                    val density = panel.resources.displayMetrics.density
+                    val fill = panel.drawn().getPixel(panel.width - (60 * density).toInt(), (177 * density).toInt())
+                    press(KeyEvent.KEYCODE_BACK)
+                    panels().shouldBeEmpty()
+                    return fill
                 }
 
                 /** A key pressed while the panel shows: whether the service took its DOWN and its UP. */
@@ -249,6 +274,15 @@ class QuickPanelTestContent :
 
                 (panels().single() as ComposeView).hasComposition.shouldBeTrue()
                 panels().single().findFocus().shouldNotBeNull()
+            }
+
+            test("the panel window draws in the look and house seed the service runs with") {
+                val glass = panelFill(Look.Glass, Periwinkle)
+                val expressive = panelFill(Look.Expressive, Periwinkle)
+                val otherSeed = panelFill(Look.Expressive, Ember)
+
+                expressive shouldNotBe glass
+                otherSeed shouldNotBe expressive
             }
 
             test("back closes the panel and its up is taken") {
