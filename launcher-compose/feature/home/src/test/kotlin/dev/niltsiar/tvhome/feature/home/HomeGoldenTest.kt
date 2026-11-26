@@ -41,6 +41,8 @@ import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.config.TvConfig
 import dev.niltsiar.tvhome.core.designsystem.FocusedShape
 import dev.niltsiar.tvhome.core.designsystem.TvTheme
+import dev.niltsiar.tvhome.core.designsystem.focus.ownPixels
+import dev.niltsiar.tvhome.core.designsystem.focus.sameOwnPixels
 import dev.niltsiar.tvhome.core.designsystem.focusStyle
 import dev.niltsiar.tvhome.core.designsystem.golden.assertMatchesGolden
 import dev.niltsiar.tvhome.core.designsystem.golden.bands
@@ -418,26 +420,18 @@ class HomeLeafLookTestContent :
                     settle()
                     val expressive = compose.onRoot().captureToImage().toPixelMap()
 
-                    val same = leaves.filter { (_, bounds) -> bounds.all { samePixels(glass, expressive, it) } }.keys
+                    // A leaf that shows nothing over its ground in either look, as under an opaque panel, is not compared.
+                    val same =
+                        leaves
+                            .filter { (_, bounds) ->
+                                val shown = bounds.map { glass.ownPixels(it) to expressive.ownPixels(it) }.filter { it.first.isNotEmpty() }
+                                shown.isNotEmpty() && shown.all { (a, b) -> sameOwnPixels(a, b) }
+                            }.keys
                     withClue("of $leaves") { same shouldBe emptySet() }
                 }
             }
         }
     })
-
-/** Whether [a] and [b] hold the same pixels inside [bounds], which lie on the screen. */
-private fun samePixels(
-    a: PixelMap,
-    b: PixelMap,
-    bounds: Rect,
-): Boolean {
-    for (y in bounds.top.toInt() until bounds.bottom.toInt()) {
-        for (x in bounds.left.toInt() until bounds.right.toInt()) {
-            if (a[x, y] != b[x, y]) return false
-        }
-    }
-    return true
-}
 
 /** The corner of Home's tiles at rest. */
 private val TileCorner = 12.dp

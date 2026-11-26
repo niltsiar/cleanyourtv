@@ -12,6 +12,7 @@ import io.kotest.assertions.withClue
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import kotlin.math.abs
@@ -175,6 +176,36 @@ val HousePaletteTest by testSuite {
         failures.shouldBeEmpty()
     }
 
+    test("over a swept ground the lift plate falls under its bound on the dock container at its least alpha no more often than measured") {
+        val grounds =
+            (0..255 step 3).map { Color(it, it, it) } +
+                (0 until 360 step 15).flatMap { hue -> listOf(0.25f, 0.5f, 0.75f).map { lightness -> hsl(hue.toFloat(), 1f, lightness) } }
+        var worst = Double.MAX_VALUE
+        var where = ""
+        var cases = 0
+        var under = 0
+        for (dark in listOf(true, false)) {
+            for ((name, seed) in seeds()) {
+                val look = LookState(Look.Expressive) { seed }
+                val plate = lookColorSets(look).let { if (dark) it.dark else it.light }.liftPlate()
+                val container = look.scheme(dark).surfaceContainer.copy(alpha = LEAST_DOCK_ALPHA)
+                for (ground in grounds) {
+                    val dock = composite(container, ground)
+                    val ratio = contrast(composite(plate, dock), dock)
+                    cases++
+                    if (ratio < (if (dark) MIN_PLATE_CONTRAST_DARK else MIN_PLATE_CONTRAST_LIGHT)) under++
+                    if (ratio < worst) {
+                        worst = ratio
+                        where = "${if (dark) "dark" else "light"} $name over $ground"
+                    }
+                }
+            }
+        }
+        // A mid ground sinks the plate to about 1:1 (dark, over #800000); the dock's opacity decision sets what may pass.
+        withClue("worst $worst, $where") { under shouldBeLessThanOrEqual PLATE_UNDER_BOUND_CASES }
+        cases shouldBe PLATE_GROUND_CASES
+    }
+
     test(
         "on the dock container at its least alpha over black and over white a name reads at 45 to 1 on its pill and the lift plate stands off it",
     ) {
@@ -217,6 +248,10 @@ private val NightTeal = Color(0xFF1F8A8A)
  */
 private const val MIN_PLATE_CONTRAST_DARK = 1.3
 private const val MIN_PLATE_CONTRAST_LIGHT = 1.09
+
+/** The seed and ground pairs of the lift plate's ground sweep, and how many fell under the bound when it was measured. */
+private const val PLATE_GROUND_CASES = 156_736
+private const val PLATE_UNDER_BOUND_CASES = 24_008
 
 /**
  * The least CIE76 distance between the error and the primary roles. At the same tone two roles differ only in hue and

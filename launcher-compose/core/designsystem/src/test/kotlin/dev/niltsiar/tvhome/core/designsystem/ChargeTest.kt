@@ -36,7 +36,11 @@ import dev.niltsiar.tvhome.core.config.Look
 import dev.niltsiar.tvhome.core.designsystem.expressive.ChargeLine
 import dev.niltsiar.tvhome.core.designsystem.expressive.toneSolves
 import io.kotest.assertions.withClue
+import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
+import kotlin.math.abs
+
+private val Art = Color(0xFF3B5B8C)
 
 /** In Expressive a held OK charges the held tile or pill after a dead zone, and the up or the menu ends it. */
 val ChargeTest by testSuite {
@@ -65,7 +69,7 @@ class ChargeTestContent :
                     motion: Motion = Motion(look = Look.Expressive),
                     content: @Composable (Modifier) -> Unit = { held ->
                         FocusSurface({}, held.size(100.dp, 60.dp), glow = false) {
-                            Box(Modifier.size(100.dp, 60.dp).background(Color(0xFF3B5B8C)))
+                            Box(Modifier.size(100.dp, 60.dp).background(Art))
                         }
                     },
                 ) {
@@ -100,6 +104,15 @@ class ChargeTestContent :
                 fun leftEdgeRow(): IntArray =
                     compose.onNodeWithTag("scene").captureToImage().toPixelMap().let { map ->
                         IntArray(70) { map[60 + it, 100].toArgb() }
+                    }
+
+                /** The x of the art's left edge on the row through the tile's middle: its first pixel in the art's colour. */
+                fun artLeft(): Int =
+                    compose.onNodeWithTag("scene").captureToImage().toPixelMap().let { map ->
+                        (0 until map.width).first { x ->
+                            val pixel = map[x, 100]
+                            abs(pixel.red - Art.red) < 0.02f && abs(pixel.green - Art.green) < 0.02f && abs(pixel.blue - Art.blue) < 0.02f
+                        }
                     }
 
                 fun okDown() = compose.onRoot().performKeyInput { keyDown(Key.DirectionCenter) }
@@ -149,14 +162,14 @@ class ChargeTestContent :
                 }
             }
 
-            test("a charged tile tightens, so its left edge moves in by the end of the hold") {
+            test("a charged tile tightens, so its art's left edge moves in by the end of the hold") {
                 show()
-                val rest = leftEdgeRow()
+                val rest = artLeft()
 
                 okDown()
                 frames(540)
 
-                leftEdgeRow().contentEquals(rest) shouldBe false
+                artLeft() shouldBeGreaterThan rest
             }
 
             test("with reduced motion a held ok draws a line from the first frame and the tile keeps its size") {
@@ -211,7 +224,7 @@ class ChargeTestContent :
                     // A band that moves on every frame, as a ring travelling from one app's colour to the next does.
                     val travel = ColorProducer { lerp(red, blue, (compose.mainClock.currentTime % 997) / 997f) }
                     FocusSurface({}, held.size(100.dp, 60.dp), glow = false, ring = travel) {
-                        Box(Modifier.size(100.dp, 60.dp).background(Color(0xFF3B5B8C)))
+                        Box(Modifier.size(100.dp, 60.dp).background(Art))
                     }
                 }
                 okDown()

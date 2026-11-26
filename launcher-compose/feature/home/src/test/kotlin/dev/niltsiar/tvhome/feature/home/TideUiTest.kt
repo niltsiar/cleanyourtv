@@ -14,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import de.infix.testBalloon.framework.core.JUnit4RulesContext
@@ -56,7 +57,7 @@ private val Blue = Color(0xFF2F9FD8)
 class TideUiTestContent :
     RobolectricTestSuiteContent({
         testFixture { TideUiTestFixture() } asContextForEach {
-            test("two app colours give the same title, meta, top bar and dock tint, and a different band, dock light and focused segment") {
+            test("a second app colour changes only the band, the dock light and the focused segment, each of them") {
                 showHome()
                 val red = screen()
 
@@ -64,14 +65,14 @@ class TideUiTestContent :
                 settle()
                 val blue = screen()
 
-                for ((name, area) in listOf(
-                    "title" to bounds("shelf:name"),
-                    "meta" to bounds("shelf:meta"),
-                    "top bar" to topBar(),
-                    "dock tint" to dockTint(),
-                )) {
-                    withClue("the $name") { samePixels(red, blue, area) shouldBe true }
-                }
+                val allowed =
+                    listOf(
+                        "band" to bandRing(1),
+                        "dock light" to dockLightArea(1),
+                        "focused segment" to bounds("shelf:dots").grown(2.dp),
+                    )
+                val outside = changedOutside(red, blue, allowed.map { it.second })
+                withClue("changed pixels outside the band, the dock light and the segment: ${outside.take(5)}") { outside.size shouldBe 0 }
                 for ((name, area) in listOf(
                     "band" to bandColumn(1),
                     "dock light" to dockLight(1),
@@ -157,16 +158,41 @@ private class TideUiTestFixture : JUnit4RulesContext() {
 
     fun tile(n: Int): DpRect = bounds("tile:pkg.$n")
 
-    /** The top bar, from the top of the screen to just under the clock, the greeting beside it. */
-    fun topBar(): DpRect {
-        val clock = bounds("clock")
-        return DpRect(0.dp, 0.dp, compose.onRoot().getBoundsInRoot().right, clock.bottom + 8.dp)
+    /** Tile [n] grown to its focus scale with its band round it, and a margin. */
+    fun bandRing(n: Int): DpRect {
+        val box = tile(n)
+        val grow = (box.right - box.left) * 0.04f + 12.dp
+        return DpRect(box.left - grow, box.top - grow, box.right + grow, box.bottom + grow)
     }
 
-    /** The dock under its right half, under the tiles and away from the light of the first tile. */
-    fun dockTint(): DpRect {
+    /** The dock's light round tile [n]: the cushion behind it, stretched as far as it goes, and the crest on the dock's lip. */
+    fun dockLightArea(n: Int): DpRect {
+        val box = tile(n)
         val dock = bounds("dock")
-        return DpRect((dock.left + dock.right) / 2, tile(1).bottom + 2.dp, dock.right - 40.dp, dock.bottom - 2.dp)
+        val centre = (box.left + box.right) / 2
+        return DpRect(centre - 120.dp, dock.top - 2.dp, centre + 120.dp, dock.bottom)
+    }
+
+    fun DpRect.grown(by: Dp) = DpRect(left - by, top - by, right + by, bottom + by)
+
+    /** The pixels, in px, where [a] and [b] differ outside every one of [allowed]. */
+    fun changedOutside(
+        a: PixelMap,
+        b: PixelMap,
+        allowed: List<DpRect>,
+    ): List<Pair<Int, Int>> {
+        val boxes =
+            allowed.map {
+                (it.left.value * density).toInt()..(it.right.value * density).toInt() to
+                    (it.top.value * density).toInt()..(it.bottom.value * density).toInt()
+            }
+        val out = mutableListOf<Pair<Int, Int>>()
+        for (y in 0 until a.height) {
+            for (x in 0 until a.width) {
+                if (a[x, y] != b[x, y] && boxes.none { (xs, ys) -> x in xs && y in ys }) out += x to y
+            }
+        }
+        return out
     }
 
     /** A column over tile [n]'s middle, from its top edge out past its focus band. */

@@ -2,7 +2,6 @@ package dev.niltsiar.tvhome.core.designsystem
 
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
-import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +30,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -430,25 +430,26 @@ internal fun besideAnchor(
 /** The corner of a row of a Glass panel padded by [padding], concentric with the panel's ([TvShapes.menuRow] of the theme's shapes). */
 public fun menuRowShape(padding: Dp = PanelPadding): Shape = GlassShapes.menuRow(padding)
 
-/** A faint line between two groups of rows, [MenuDividerHeight] tall, in the text colour at [alpha]. */
+/** A faint line between two groups of rows, [MenuDividerHeight] tall, in the look's text colour at [alpha]. */
 @Composable
 public fun MenuDivider(
     modifier: Modifier = Modifier,
     alpha: Float = TvTheme.elementColors.menuDividerAlpha,
 ) {
+    val ink = TvTheme.lookColors.text
     Box(
         modifier
             .testTag("menu:divider")
             .fillMaxWidth()
             .height(MenuDividerHeight)
             .padding(horizontal = 12.dp, vertical = 2.dp)
-            .background(TvTheme.colors.onSurface.copy(alpha = alpha)),
+            .drawBehind { drawRect(ink().copy(alpha = alpha)) },
     )
 }
 
 @Composable
 private fun MenuTitle(text: String) {
-    val ink = TvTheme.colors.onSurface
+    val ink = TvTheme.lookColors.text
     val colours = TvTheme.elementColors
     Column(verticalArrangement = Arrangement.spacedBy(TitleRuleGap)) {
         BasicText(
@@ -464,7 +465,7 @@ private fun MenuTitle(text: String) {
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp)
                 .height(1.dp)
-                .background(ink.copy(alpha = colours.menuDividerAlpha)),
+                .drawBehind { drawRect(ink().copy(alpha = colours.menuDividerAlpha)) },
         )
     }
 }

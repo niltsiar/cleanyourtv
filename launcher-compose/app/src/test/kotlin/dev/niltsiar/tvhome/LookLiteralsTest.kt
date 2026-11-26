@@ -12,8 +12,8 @@ import java.io.File
  * Feature code reads its look from design-system tokens: a colour, shape, gradient or alpha written in a feature is a Glass
  * value the Expressive look cannot reach. Each form is counted in every file under `feature/<name>/src/main`, previews
  * included, comments, strings and imports aside, across line breaks and in any case. A count must equal its [Allowed]
- * entries, and a file with no entry must have none, so an entry only shrinks: when a literal moves to a token, its count
- * goes down with it.
+ * entries, and a file with no entry must have none. Each form's entries add up to its [PINNED] total, so the list only
+ * shrinks: when a literal moves to a token, its entry and its pin go down with it.
  */
 val LookLiteralsTest by testSuite {
     val root = File(System.getProperty("user.dir")).parentFile
@@ -32,6 +32,7 @@ val LookLiteralsTest by testSuite {
                 LookForm.CircleShape to "shape = circleShape",
                 LookForm.RoundedCornerShape to "RoundedCornerShape\n(8.dp)",
                 LookForm.CutCornerShape to "CutCornerShape (4.dp)",
+                LookForm.CornerRadius to "drawRoundRect(ink, cornerRadius = cornerRadius\n(8f))",
                 LookForm.Brush to "brush\n    .verticalGradient(x)",
                 LookForm.Alpha to "graphicsLayer { Alpha\n= 0.5f }",
                 LookForm.CopyAlpha to "ink.copy(\n    ALPHA = 0.4f)",
@@ -44,6 +45,12 @@ val LookLiteralsTest by testSuite {
         withClue("an import is not a use") { LookForm.CircleShape.count("import androidx.compose.foundation.shape.CircleShape") shouldBe 0 }
         withClue("an extension on Color is not a named colour") { LookForm.NamedColor.count("fun Color.withFade(f: Float)") shouldBe 0 }
         withClue("a value named alpha is not an alpha") { LookForm.Alpha.count("val alpha = fade.value") shouldBe 0 }
+        withClue("a computed corner is not a literal") { LookForm.CornerRadius.count("CornerRadius(size.height / 2f)") shouldBe 0 }
+    }
+
+    test("each form's allow entries add up to its pinned total, which only goes down") {
+        val totals = LookForm.entries.associateWith { form -> ALLOWED.filter { it.form == form }.sumOf { it.count } }
+        withClue("an entry that shrinks lowers its pin with it; one that grows is a new look literal") { totals shouldBe PINNED }
     }
 
     test("feature code has no look literal beyond its allow list") {
@@ -78,6 +85,7 @@ private enum class LookForm(
     CircleShape("CircleShape", """\bCircleShape\b"""),
     RoundedCornerShape("RoundedCornerShape(", """\bRoundedCornerShape\s*\("""),
     CutCornerShape("CutCornerShape(", """\bCutCornerShape\s*\("""),
+    CornerRadius("CornerRadius(literal)", """\bCornerRadius\s*\(\s*(?:x\s*=\s*)?(?:[0-9]|\.[0-9])"""),
     Brush("Brush.", """\bBrush\s*\."""),
     Alpha("alpha =", """(?<!va[lr]\s)\balpha\s*=(?!=)"""),
     CopyAlpha("copy(alpha", """\.\s*copy\s*\(\s*alpha\b"""),
@@ -146,6 +154,20 @@ private const val THEME_GROUND = "the theme's background colour, content, and it
 private const val WALLPAPER_SCRIM =
     "a legibility scrim or text shadow over the wallpaper, black in both looks; the sky and sun gradients take their colours " +
         "from the time-of-day sky, which is content"
+
+/** The sum of each form's [ALLOWED] counts. */
+private val PINNED =
+    mapOf(
+        LookForm.ColorLiteral to 20,
+        LookForm.NamedColor to 26,
+        LookForm.CircleShape to 1,
+        LookForm.RoundedCornerShape to 3,
+        LookForm.CutCornerShape to 0,
+        LookForm.CornerRadius to 0,
+        LookForm.Brush to 18,
+        LookForm.Alpha to 76,
+        LookForm.CopyAlpha to 26,
+    )
 
 private val ALLOWED =
     listOf(
